@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Sistema de Pedidos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <h2>AdminPanel</h2>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#dashboard" class="nav-link active"><i class="fas fa-chart-pie"></i> Dashboard</a></li>
+            <li><a href="#pedidos" class="nav-link"><i class="fas fa-box"></i> Gestión de Pedidos</a></li>
+            <li><a href="#clientes" class="nav-link"><i class="fas fa-users"></i> Clientes</a></li>
+            <li><a href="#productos" class="nav-link"><i class="fas fa-tag"></i> Productos</a></li>
+            <li><a href="#descuentos" class="nav-link"><i class="fas fa-percent"></i> Descuentos</a></li>
+            <li><a href="#reportes" class="nav-link"><i class="fas fa-file-alt"></i> Reportes</a></li>
+            <li><a href="#configuracion" class="nav-link"><i class="fas fa-cog"></i> Configuración</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <h1>Bienvenido, Administrador</h1>
+            <div class="header-actions">
+                <button id="add-order-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nuevo Pedido</button>
+            </div>
+        </header>
+        
+        <main>
+            <section id="dashboard" class="page active">
+                <div class="cards-container">
+                    <div class="card card-pending">
+                        <h3>Pendientes</h3>
+                        <p id="pending-orders-count">0</p>
+                    </div>
+                    <div class="card card-in-process">
+                        <h3>En Proceso</h3>
+                        <p id="in-process-orders-count">0</p>
+                    </div>
+                    <div class="card card-completed">
+                        <h3>Completados</h3>
+                        <p id="completed-orders-count">0</p>
+                    </div>
+                    <div class="card card-cancelled">
+                        <h3>Cancelados</h3>
+                        <p id="cancelled-orders-count">0</p>
+                    </div>
+                </div>
+
+                <div class="cards-container">
+                    <div class="card">
+                        <h3>Ventas del Día</h3>
+                        <p id="sales-today">$0.00</p>
+                    </div>
+                    <div class="card">
+                        <h3>Ventas de la Semana</h3>
+                        <p id="sales-week">$0.00</p>
+                    </div>
+                    <div class="card">
+                        <h3>Ventas del Mes</h3>
+                        <p id="sales-month">$0.00</p>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Ventas por Día</h3>
+                        <canvas id="salesByDayChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Ventas por Categoría</h3>
+                        <canvas id="salesByCategoryChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <section id="pedidos" class="page">
+                <h2>Gestión de Pedidos</h2>
+                <table id="orders-table" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Cliente</th>
+                            <th>Dirección</th>
+                            <th>Estado</th>
+                            <th>Total</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </section>
+
+             <section id="clientes" class="page">
+                <h2>Gestión de Clientes</h2>
+                 <table id="customers-table" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Teléfono</th>
+                            <th>Último Pedido</th>
+                            <th>Total Pedidos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                     <tbody>
+                        </tbody>
+                </table>
+            </section>
+
+            <section id="productos" class="page">
+                <h2>Gestión de Productos</h2>
+                <button class="btn btn-success" id="add-product-btn">Agregar Producto</button>
+                <table id="products-table" class="display" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </section>
+
+             </main>
+    </div>
+
+    <div id="order-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Detalles del Pedido: <span id="modal-order-code"></span></h2>
+            <div class="modal-body">
+                <div class="order-info">
+                    <p><strong>Cliente:</strong> <span id="modal-customer-name"></span></p>
+                    <p><strong>Teléfono:</strong> <span id="modal-customer-phone"></span></p>
+                    <p><strong>Dirección:</strong> <span id="modal-customer-address"></span></p>
+                    <p><strong>Notas:</strong> <span id="modal-customer-notes"></span></p>
+                </div>
+                <div id="map" style="height: 200px; width: 100%; margin-top: 15px;"></div>
+                <h3>Productos</h3>
+                <ul id="modal-product-list">
+                    </ul>
+                <p class="total"><strong>Total:</strong> <span id="modal-order-total"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-whatsapp"><i class="fab fa-whatsapp"></i> Reenviar a WhatsApp</button>
+                <button class="btn btn-secondary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification">
+        <p><i class="fas fa-bell"></i> ¡Nuevo pedido recibido!</p>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
