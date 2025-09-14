@@ -153,4 +153,29 @@
 
 .whatsappButton:hover {
   background-color: #1ebe57;
+
+}
+
+.whatsappButton:hover {
+  background-color: #1ebe57;
+}
+
+/* --- NUEVOS ESTILOS PARA EL BOTÓN DE AUTOCOMPLETAR --- */
+.useLastAddressButton {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  background-color: #3498db; /* Un color azul para diferenciarlo */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.useLastAddressButton:hover {
+  background-color: #2980b9;
 }
