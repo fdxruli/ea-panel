@@ -1,6 +1,6 @@
-// src/pages/Cart.jsx (CORREGIDO)
+// src/pages/Cart.jsx (MODIFICADO)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // <-- Importa useEffect
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
 import styles from './Cart.module.css';
@@ -8,7 +8,51 @@ import styles from './Cart.module.css';
 export default function Cart() {
     const { cartItems, updateQuantity, removeFromCart, total, clearCart, isCartOpen, toggleCart } = useCart();
     const [customer, setCustomer] = useState({ name: '', phone: '', address: '', address_reference: '' });
-    const [isSubmitting, setIsSubmitting] = useState(false); // <-- ¡LÍNEA AÑADIDA!
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [foundCustomer, setFoundCustomer] = useState(null); // <-- NUEVO: Para guardar el cliente encontrado
+
+    // --- NUEVA LÓGICA PARA BUSCAR CLIENTE ---
+    useEffect(() => {
+        // Se ejecuta cuando el usuario deja de escribir en el campo de teléfono
+        const phoneInputTimer = setTimeout(() => {
+            if (customer.phone && customer.phone.length >= 10) {
+                searchCustomerByPhone(customer.phone);
+            } else {
+                setFoundCustomer(null); // Limpia si el teléfono es muy corto
+            }
+        }, 500); // Esperamos 500ms para no buscar en cada pulsación
+
+        return () => clearTimeout(phoneInputTimer);
+    }, [customer.phone]);
+
+    // Función para buscar en Supabase por número de teléfono
+    const searchCustomerByPhone = async (phone) => {
+        const { data, error } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('phone', phone)
+            .single(); // Usamos .single() para esperar solo un resultado
+
+        if (data) {
+            setFoundCustomer(data);
+        } else {
+            setFoundCustomer(null);
+        }
+    };
+
+    // Función para rellenar el formulario con los datos encontrados
+    const useLastAddress = () => {
+        if (foundCustomer) {
+            setCustomer({
+                name: foundCustomer.name,
+                phone: foundCustomer.phone,
+                address: foundCustomer.address,
+                address_reference: foundCustomer.address_reference || ''
+            });
+            setFoundCustomer(null); // Ocultamos el botón una vez usado
+        }
+    };
+    // ------------------------------------------
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -33,7 +77,7 @@ export default function Cart() {
         setIsSubmitting(true);
 
         try {
-            // 2. Guardar el cliente en Supabase
+            // 2. Guardar el cliente en Supabase (upsert se encarga de crear o actualizar)
             const { data: customerData, error: customerError } = await supabase
                 .from('customers')
                 .upsert({ 
@@ -47,6 +91,7 @@ export default function Cart() {
 
             if (customerError) throw customerError;
 
+            // ... El resto de la función (crear pedido, items y WhatsApp) sigue igual ...
             // 3. Crear el pedido en la tabla 'orders'
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
@@ -148,6 +193,15 @@ export default function Cart() {
 
                             <div className={styles.checkoutForm}>
                                 <h4>Completa tus datos para finalizar</h4>
+
+                                {/* --- NUEVO BOTÓN PARA AUTOCOMPLETAR --- */}
+                                {foundCustomer && (
+                                    <button onClick={useLastAddress} className={styles.useLastAddressButton}>
+                                        ¿Eres {foundCustomer.name}? Usar mi última dirección
+                                    </button>
+                                )}
+                                {/* --------------------------------------- */}
+
                                 <input type="text" name="name" placeholder="Tu nombre completo" value={customer.name} onChange={handleInputChange} />
                                 <input type="tel" name="phone" placeholder="Tu número de WhatsApp" value={customer.phone} onChange={handleInputChange} />
                                 <input type="text" name="address" placeholder="Tu dirección de entrega" value={customer.address} onChange={handleInputChange} />
