@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import LoadingSpinner from "../components/LoadingSpinner"; // <-- Importa el spinner
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -57,7 +58,7 @@ export default function Customers() {
     return data || [];
   };
 
-  if (loading) return <p>Cargando clientes...</p>;
+  if (loading) return <LoadingSpinner />; // <-- Usa el spinner
 
   return (
     <div>

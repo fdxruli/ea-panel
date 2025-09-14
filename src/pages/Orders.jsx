@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import LoadingSpinner from "../components/LoadingSpinner"; // <-- Importa el spinner
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -54,7 +55,7 @@ export default function Orders() {
     else fetchOrders();
   };
 
-  if (loading) return <p>Cargando pedidos...</p>;
+  if (loading) return <LoadingSpinner />; // <-- Usa el spinner
 
   return (
     <div>

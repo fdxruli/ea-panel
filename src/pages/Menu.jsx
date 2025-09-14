@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import styles from './Menu.module.css';
 import { useCart } from '../context/CartContext';
+import LoadingSpinner from '../components/LoadingSpinner'; // <-- Importa el spinner
 
 export default function Menu() {
   const { addToCart } = useCart();
@@ -37,7 +38,7 @@ export default function Menu() {
   })).filter(category => category.products.length > 0);
 
 
-  if (loading) return <p>Cargando menú...</p>;
+  if (loading) return <LoadingSpinner />; // <-- Usa el spinner
 
   return (
     <div className={styles.menuContainer}>
