@@ -1,0 +1,156 @@
+/* src/pages/Cart.module.css */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1010;
+}
+
+.cartSidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 400px;
+  height: 100%;
+  background-color: white;
+  box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+  z-index: 1020;
+  display: flex;
+  flex-direction: column;
+  color: #333;
+}
+
+.cartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.cartHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 2.5rem;
+  font-weight: 300;
+  cursor: pointer;
+  color: #888;
+}
+
+.emptyMessage {
+  text-align: center;
+  margin-top: 4rem;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.cartItemsList {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.cartItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 1rem;
+}
+
+.cartItem img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.itemInfo {
+  flex-grow: 1;
+}
+
+.itemName {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.itemPrice {
+  color: #888;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.itemActions input {
+  width: 45px;
+  text-align: center;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.itemActions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #c92a2a;
+}
+
+.cartFooter {
+  padding: 1.5rem;
+  border-top: 2px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.total {
+  font-size: 1.75rem;
+  text-align: right;
+  margin-bottom: 1.5rem;
+}
+
+.checkoutForm h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.checkoutForm input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box; /* Importante para que el padding no desborde */
+}
+
+.whatsappButton {
+  width: 100%;
+  padding: 1rem;
+  background-color: #25d366;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.whatsappButton:hover {
+  background-color: #1ebe57;
+}
