@@ -1,87 +1,124 @@
 // src/pages/Menu.jsx
 
-import React, { useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
-import styles from './Menu.module.css';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import { useCart } from '../context/CartContext';
-import LoadingSpinner from '../components/LoadingSpinner'; // <-- Importa el spinner
+import styles from './Menu.module.css';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function Menu() {
-  const { addToCart } = useCart();
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState(null); // null para "Todos"
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const { addToCart } = useCart();
+    const [categories, setCategories] = useState([]);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      const { data: productData } = await supabase.from("products").select("*").eq("is_active", true);
-      const { data: categoryData } = await supabase.from("categories").select("*").order("name");
-      
-      setProducts(productData || []);
-      setCategories(categoryData || []);
-      setLoading(false);
-    }
-    fetchData();
-  }, []);
+    // --- NUEVO: Estado para el mensaje de notificación ---
+    const [toastMessage, setToastMessage] = useState('');
 
-  // Filtra los productos que se mostrarán
-  const filteredProducts = selectedCategory
-    ? products.filter(p => p.category_id === selectedCategory)
-    : products;
+    useEffect(() => {
+        const fetchProductsAndCategories = async () => {
+            try {
+                setLoading(true);
+                // Obtener productos activos
+                const { data: productsData, error: productsError } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('is_active', true);
+                if (productsError) throw productsError;
 
-  // Agrupa los productos por categoría solo para la vista
-  const groupedMenu = categories.map(category => ({
-      ...category,
-      products: filteredProducts.filter(p => p.category_id === category.id)
-  })).filter(category => category.products.length > 0);
+                // Obtener categorías
+                const { data: categoriesData, error: categoriesError } = await supabase
+                    .from('categories')
+                    .select('*');
+                if (categoriesError) throw categoriesError;
 
+                // Extraer y ordenar categorías únicas de los productos
+                const uniqueCategories = [...new Set(productsData.map(p => p.category_id))];
+                const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
 
-  if (loading) return <LoadingSpinner />; // <-- Usa el spinner
+                setProducts(productsData);
+                setCategories(productCategories);
 
-  return (
-    <div className={styles.menuContainer}>
-      {/* Navbar de Categorías */}
-      <nav className={styles.categoryNav}>
-        <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>
-          Todos
-        </button>
-        {categories.map(category => (
-          <button 
-            key={category.id} 
-            onClick={() => setSelectedCategory(category.id)}
-            className={selectedCategory === category.id ? styles.active : ''}
-          >
-            {category.name}
-          </button>
-        ))}
-      </nav>
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-      {/* Grid de Productos */}
-      <div className={styles.productsGrid}>
-        {filteredProducts.map(product => (
-          <div key={product.id} className={styles.productCard}>
-            <img src={product.image_url || 'https://via.placeholder.com/300'} alt={product.name} className={styles.productImage} />
-            <div className={styles.productInfo}>
-              <h3 className={styles.productName}>{product.name}</h3>
-              <p className={styles.productDescription}>{product.description}</p>
-              <div className={styles.productFooter}>
-                <span className={styles.productPrice}>${product.price}</span>
-                <button 
-                  className={styles.addToCartButton}
-                  onClick={() => {
-                    addToCart(product);
-                    alert(`${product.name} ha sido añadido al carrito!`);
-                  }}
-                >
-                  Agregar
-                </button>
-              </div>
+        fetchProductsAndCategories();
+    }, []);
+
+    // --- NUEVO: Lógica para manejar la notificación ---
+    const handleAddToCart = (product) => {
+        addToCart(product);
+        // Muestra el mensaje
+        setToastMessage(`${product.name} añadido al carrito!`);
+        // Oculta el mensaje después de 3 segundos
+        setTimeout(() => {
+            setToastMessage('');
+        }, 3000);
+    };
+
+    const filteredProducts = products
+        .filter(product => selectedCategory ? product.category_id === selectedCategory : true)
+        .filter(product => product.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (loading) return <LoadingSpinner />;
+    if (error) return <p className={styles.error}>Error: {error}</p>;
+
+    return (
+        <div className={styles.menuContainer}>
+            <h1>Nuestro Menú</h1>
+
+            <div className={styles.filters}>
+                
+                <div className={styles.categoryButtons}>
+                    <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>
+                        Todos
+                    </button>
+                    {categories.map(category => (
+                        <button
+                            key={category.id}
+                            onClick={() => setSelectedCategory(category.id)}
+                            className={selectedCategory === category.id ? styles.active : ''}
+                        >
+                            {category.name}
+                        </button>
+                    ))}
+                </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+
+            <div className={styles.productList}>
+                {filteredProducts.length > 0 ? filteredProducts.map(product => (
+                    <div key={product.id} className={styles.productCard}>
+                        <img src={product.image_url || 'https://via.placeholder.com/150'} alt={product.name} />
+
+                        {/* --- DIV CONTENEDOR PARA EL TEXTO --- */}
+                        <div className={styles.cardContent}>
+                            <h3>{product.name}</h3>
+                            <p>{product.description}</p>
+
+                            {/* --- DIV FOOTER PARA PRECIO Y BOTÓN --- */}
+                            <div className={styles.cardFooter}>
+                                <span className={styles.price}>${product.price.toFixed(2)}</span>
+                                <button onClick={() => handleAddToCart(product)}>Añadir</button>
+                            </div>
+                        </div>
+
+                    </div>
+                )) : <p>No se encontraron productos.</p>}
+            </div>
+
+            {/* --- NUEVO: Elemento de la notificación --- */}
+            {toastMessage && (
+                <div className={styles.toast}>
+                    {toastMessage}
+                </div>
+            )}
+        </div>
+    );
 }

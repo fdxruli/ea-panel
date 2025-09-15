@@ -4,23 +4,40 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 
 const CartContext = createContext();
 
+const CART_STORAGE_KEY = 'ea-panel-cart';
+
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [total, setTotal] = useState(0); // <-- Total ahora es un estado
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const storedCartItems = window.localStorage.getItem(CART_STORAGE_KEY);
+      return storedCartItems ? JSON.parse(storedCartItems) : [];
+    } catch (error) {
+      console.error("Error al cargar el carrito desde localStorage:", error);
+      return [];
+    }
+  });
 
-  // --- useEffect para recalcular el total dinámicamente ---
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [total, setTotal] = useState(0);
+
   useEffect(() => {
-    // Cada vez que cartItems cambie, calculamos el nuevo total.
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+    } catch (error) {
+      console.error("Error al guardar el carrito en localStorage:", error);
+    }
+  }, [cartItems]);
+
+  useEffect(() => {
     const newTotal = cartItems.reduce((sum, item) => {
-        const quantity = Number(item.quantity) || 0;
-        const price = Number(item.price) || 0;
-        return sum + price * quantity;
+      const quantity = Number(item.quantity) || 0;
+      const price = Number(item.price) || 0;
+      return sum + price * quantity;
     }, 0);
     setTotal(newTotal);
-  }, [cartItems]); // <-- Dependencia: se ejecuta si cartItems cambia
+  }, [cartItems]);
 
   const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
   const openCart = useCallback(() => setIsCartOpen(true), []);
@@ -30,36 +47,47 @@ export const CartProvider = ({ children }) => {
       const existingItem = prevItems.find(item => item.id === product.id);
       if (existingItem) {
         return prevItems.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.id === product.id ? { ...item, quantity: Number(item.quantity || 0) + 1 } : item
         );
       }
       return [...prevItems, { ...product, quantity: 1 }];
     });
-    openCart();
-  }, [openCart]);
+    // openCart(); // <-- LÍNEA ELIMINADA/COMENTADA: Ya no se abre el carrito automáticamente.
+  }, []); // Se elimina 'openCart' de las dependencias ya que no se usa.
 
   const removeFromCart = useCallback((productId) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
   }, []);
 
   const updateQuantity = useCallback((productId, quantity) => {
+    if (quantity === '') {
+        setCartItems(prevItems =>
+            prevItems.map(item =>
+                item.id === productId ? { ...item, quantity: '' } : item
+            )
+        );
+        return;
+    }
+
     const numQuantity = parseInt(quantity, 10);
 
-    // Si la cantidad es 0 o un número inválido, eliminamos el item.
-    if (isNaN(numQuantity) || numQuantity <= 0) {
-      removeFromCart(productId);
-      return;
+    if (isNaN(numQuantity) || numQuantity < 0) return;
+    
+    if (numQuantity === 0) {
+        removeFromCart(productId);
+        return;
     }
 
     setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === productId ? { ...item, quantity: numQuantity } : item
-      )
+        prevItems.map(item =>
+            item.id === productId ? { ...item, quantity: numQuantity } : item
+        )
     );
   }, [removeFromCart]);
 
   const clearCart = useCallback(() => {
     setCartItems([]);
+    window.localStorage.removeItem(CART_STORAGE_KEY);
   }, []);
   
   const value = {
@@ -68,7 +96,7 @@ export const CartProvider = ({ children }) => {
     removeFromCart,
     updateQuantity,
     clearCart,
-    total, // <-- Usamos el total del estado
+    total,
     isCartOpen,
     toggleCart,
   };
