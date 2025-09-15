@@ -1,61 +1,55 @@
 // src/layouts/ClientLayout.jsx
 
 import React from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, NavLink } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import Cart from "../pages/Cart"; // Importa el componente del carrito
+import Cart from "../pages/Cart";
+import PhoneModal from "../components/PhoneModal";
+import './ClientLayout.css'; // Importamos los nuevos estilos
 
-// Estilos
-const headerStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '1rem 2rem',
-  backgroundColor: '#2c3e50',
-  color: 'white',
-  position: 'sticky',
-  top: 0,
-  zIndex: 1000,
-};
+// Importamos iconos (ejemplo con SVGs como componentes)
+const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
+const ShoppingCartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>;
 
-const logoStyle = {
-  margin: 0,
-  fontSize: '1.5rem'
-};
-
-const cartLinkStyle = {
-  backgroundColor: '#e03131',
-  color: 'white',
-  padding: '0.75rem 1.5rem',
-  borderRadius: '5px',
-  textDecoration: 'none',
-  fontWeight: 'bold',
-  textAlign: 'center',
-  cursor: 'pointer' // <-- Cambiado a cursor pointer
-};
 
 export default function ClientLayout() {
-  const { toggleCart, cartItems } = useCart(); // Obtén la función y los items del contexto
+  const { toggleCart, cartItems } = useCart();
+  const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   return (
-    <div>
-      <header style={headerStyle}>
-        <div>
-          <h1 style={logoStyle}>Alitas "El Jefe" 翼</h1>
-          <p style={{ margin: 0, opacity: 0.9 }}>
-            ¡Las mejores alitas de la ciudad!
-          </p>
-        </div>
-        {/* El botón ahora abre el panel lateral */}
-        <button onClick={toggleCart} style={cartLinkStyle}>
-          Ver Carrito 🛒 ({cartItems.length})
-        </button>
+    <div className="client-layout">
+      <PhoneModal />
+
+      <header className="client-header">
+        <Link to="/" className="logo">
+          <h1>Alitas "El Jefe" 翼</h1>
+        </Link>
+        
+        <nav className="client-nav">
+          <NavLink to="/mi-perfil" className="nav-link">
+            <UserIcon />
+            <span className="nav-text">Mi Perfil</span>
+          </NavLink>
+
+          <NavLink to="/mis-pedidos" className="nav-link">
+            <ClipboardIcon />
+            <span className="nav-text">Mis Pedidos</span>
+          </NavLink>
+
+          <button onClick={toggleCart} className="nav-link cart-button">
+            <ShoppingCartIcon />
+            <span className="nav-text">Carrito</span>
+            {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
+          </button>
+        </nav>
       </header>
       
-      <Cart /> {/* El componente del carrito ahora es una sidebar */}
+      {/* El componente Cart ahora se controla por su propio estado de visibilidad */}
+      <Cart />
 
-      <main>
-        <Outlet /> {/* Aquí se renderizará Menu.jsx */}
+      <main className="client-main">
+        <Outlet />
       </main>
     </div>
   );

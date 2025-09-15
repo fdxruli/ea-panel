@@ -1,191 +1,156 @@
-/* Paleta de colores sugerida */
-:root {
-    --primary-color: #ff6f61; /* Un coral vibrante */
-    --secondary-color: #4a4a4a; /* Gris oscuro para texto */
-    --background-color: #f9f9f9; /* Un fondo gris muy claro */
-    --card-background: #ffffff; /* Blanco para las tarjetas */
-    --border-color: #eeeeee; /* Un borde muy sutil */
-}
+/* src/pages/Menu.module.css */
 
 .menuContainer {
-    padding: 2rem;
-    background-color: var(--background-color);
-    font-family: 'Poppins', sans-serif; /* Considera añadir esta fuente en tu index.html */
+  padding: 1rem 0;
 }
 
 .menuContainer h1 {
-    text-align: center;
-    color: var(--secondary-color);
-    margin-bottom: 2rem;
-    font-size: 2.5rem;
-    font-weight: 600;
+  text-align: center;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+  font-size: 2.2rem;
 }
 
-/* --- Filtros y Búsqueda --- */
+/* --- Filtros --- */
 .filters {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
-    align-items: center;
-}
-
-.searchInput {
-    width: 100%;
-    max-width: 500px;
-    padding: 0.8rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 50px; /* Forma de píldora */
-    font-size: 1rem;
-    transition: all 0.3s ease;
-}
-
-.searchInput:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(255, 111, 97, 0.2);
+  margin-bottom: 2.5rem;
+  position: sticky;
+  top: 70px; /* Debajo del header */
+  background: var(--bg-primary);
+  padding: 1rem 0;
+  z-index: 900;
 }
 
 .categoryButtons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    justify-content: center;
+  display: flex;
+  overflow-x: auto;
+  gap: 0.8rem;
+  padding: 0.5rem 1rem;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.categoryButtons::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
+
 .categoryButtons button {
-    background-color: #fff;
-    color: var(--secondary-color);
-    border: 1px solid var(--border-color);
-    padding: 0.6rem 1.2rem;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.3s ease;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
+  font-weight: 500;
+  white-space: nowrap; /* Evita que el texto se parta */
 }
 
 .categoryButtons button:hover {
-    background-color: #f1f1f1;
-    border-color: #ddd;
+  border-color: var(--color-primary);
 }
 
 .categoryButtons button.active {
-    background-color: var(--primary-color);
-    color: #fff;
-    border-color: var(--primary-color);
+  background-color: var(--color-primary);
+  color: var(--text-light);
+  border-color: var(--color-primary);
 }
-
 
 /* --- Lista de Productos --- */
 .productList {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2rem;
+  display: grid;
+  grid-template-columns: 1fr; /* Una columna en móvil */
+  gap: 1.5rem;
 }
 
 .productCard {
-    background-color: var(--card-background);
-    border-radius: 16px; /* Esquinas más redondeadas */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Sombra sutil */
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: all 0.3s ease;
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  box-shadow: 0 4px 15px var(--shadow-color);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .productCard:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .productCard img {
-    width: 100%;
-    height: 200px;
-    object-fit: cover; /* Asegura que la imagen cubra el espacio sin deformarse */
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
 }
 
-/* Contenedor para el texto de la tarjeta */
-.productCard .cardContent {
-    padding: 1.5rem;
-    flex-grow: 1; /* Empuja el footer hacia abajo */
-    display: flex;
-    flex-direction: column;
+.cardContent {
+  padding: 1rem;
+  flex-grow: 1;
 }
 
-.productCard h3 {
-    margin: 0 0 0.5rem;
-    font-size: 1.25rem;
-    color: var(--secondary-color);
-    font-weight: 600;
+.cardContent h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  color: var(--text-primary);
 }
 
-.productCard p {
-    margin: 0 0 1rem;
-    color: #757575;
-    flex-grow: 1; /* Ocupa el espacio disponible */
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
-
-/* Contenedor para el precio y el botón */
-.productCard .cardFooter {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: auto; /* Empuja al fondo */
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem 1rem;
 }
 
 .price {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--primary-color);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .productCard button {
-    background-color: var(--primary-color);
-    color: #fff;
-    border: none;
-    padding: 0.7rem 1.2rem;
-    border-radius: 50px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+  background-color: var(--color-primary);
+  color: var(--text-light);
+  font-weight: 600;
+  padding: 0.7rem 1.2rem;
+  border-radius: 50px;
 }
 
 .productCard button:hover {
-    background-color: #e65a4e; /* Un tono de coral más oscuro */
+  background-color: var(--color-primary-dark);
 }
 
-/* --- Notificación Toast (sin cambios, ya estaba bien) --- */
+/* --- Toast --- */
 .toast {
     position: fixed;
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: #28a745;
+    background-color: var(--color-accent);
     color: white;
     padding: 12px 24px;
     border-radius: 8px;
     z-index: 1000;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    animation: fadeInOut 3s ease-in-out;
 }
 
-/* ... (keyframes fadeInOut) ... */
 
-/* --- Diseño Responsivo --- */
-@media (max-width: 768px) {
-    .menuContainer {
-        padding: 1.5rem;
-    }
+/* --- Media Queries --- */
+@media (min-width: 600px) {
+  .productList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
-    .productList {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1.5rem;
-    }
+@media (min-width: 900px) {
+  .productList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+   .categoryButtons {
+    justify-content: center;
+  }
+}
 
-    .menuContainer h1 {
-        font-size: 2rem;
-    }
+@media (min-width: 1200px) {
+  .productList {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }

@@ -1,6 +1,9 @@
+// src/pages/Products.jsx (CON DESCRIPCIÓN EN LA TABLA)
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import LoadingSpinner from "../components/LoadingSpinner"; // <-- Importa el spinner
+import LoadingSpinner from "../components/LoadingSpinner";
+import ManageImagesModal from "../components/ManageImagesModal";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -15,19 +18,21 @@ export default function Products() {
     image_url: ""
   });
 
-  // Traer productos
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const fetchProducts = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select(`*, product_images(*)`)
       .order("created_at", { ascending: false });
+      
     if (error) console.error(error);
     else setProducts(data);
     setLoading(false);
   };
 
-  // Traer categorías
   const fetchCategories = async () => {
     const { data, error } = await supabase
       .from("categories")
@@ -42,7 +47,6 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  // Validación básica antes de agregar
   const validateProduct = () => {
     if (!newProduct.name || !newProduct.price || !newProduct.cost || !newProduct.category_id) {
       alert("Por favor completa todos los campos obligatorios (Nombre, Precio, Costo y Categoría).");
@@ -54,11 +58,9 @@ export default function Products() {
     }
     return true;
   };
-
-  // Crear nuevo producto
+  
   const addProduct = async () => {
     if (!validateProduct()) return;
-
     const { error } = await supabase.from("products").insert([newProduct]);
     if (error) console.error(error);
     else {
@@ -67,7 +69,6 @@ export default function Products() {
     }
   };
 
-  // Activar/Desactivar producto
   const toggleActive = async (id, isActive) => {
     const { error } = await supabase
       .from("products")
@@ -77,7 +78,12 @@ export default function Products() {
     else fetchProducts();
   };
 
-  if (loading) return <LoadingSpinner />; // <-- Usa el spinner
+  const openImageManager = (product) => {
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
@@ -86,51 +92,19 @@ export default function Products() {
       {/* Formulario para agregar producto */}
       <div className="form-container">
         <h3>Agregar nuevo producto</h3>
-        <input
-          type="text"
-          placeholder="Nombre"
-          value={newProduct.name}
-          onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-        />
-        <input
-          type="text"
-          placeholder="Descripción"
-          value={newProduct.description}
-          onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-        />
-        <input
-          type="number"
-          placeholder="Precio"
-          value={newProduct.price}
-          onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-        />
-        <input
-          type="number"
-          placeholder="Costo"
-          value={newProduct.cost}
-          onChange={(e) => setNewProduct({ ...newProduct, cost: e.target.value })}
-        />
-        <select
-          value={newProduct.category_id}
-          onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}
-        >
-          <option value="">Selecciona categoría</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+        <input type="text" placeholder="Nombre del Producto" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+        <input type="text" placeholder="Descripción" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+        <input type="number" placeholder="Precio de Venta ($)" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
+        <input type="number" placeholder="Costo ($)" value={newProduct.cost} onChange={(e) => setNewProduct({ ...newProduct, cost: e.target.value })} />
+        <select value={newProduct.category_id} onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}>
+          <option value="">-- Selecciona una Categoría --</option>
+          {categories.map(category => (<option key={category.id} value={category.id}>{category.name}</option>))}
         </select>
-        <input
-          type="text"
-          placeholder="URL Imagen (opcional)"
-          value={newProduct.image_url}
-          onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })}
-        />
-        <button onClick={addProduct}>Agregar</button>
+        <input type="text" placeholder="URL Imagen Principal (Portada)" value={newProduct.image_url} onChange={(e) => setNewProduct({ ...newProduct, image_url: e.target.value })} />
+        <button onClick={addProduct}>Agregar Producto</button>
       </div>
 
-      {/* Tabla de productos */}
+      {/* --- TABLA ACTUALIZADA CON DESCRIPCIÓN --- */}
       <table className="products-table">
         <thead>
           <tr>
@@ -139,7 +113,7 @@ export default function Products() {
             <th>Categoría</th>
             <th>Precio</th>
             <th>Costo</th>
-            <th>Activo</th>
+            <th>Imágenes</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -147,11 +121,18 @@ export default function Products() {
           {products.map((p) => (
             <tr key={p.id}>
               <td>{p.name}</td>
-              <td>{p.description}</td>
-              <td>{categories.find((c) => c.id === p.category_id)?.name || "Sin categoría"}</td>
+              <td>{p.description || 'N/A'}</td> {/* <-- AQUÍ SE AÑADIÓ */}
+              <td>
+                {categories.find(c => c.id === p.category_id)?.name || 'N/A'}
+              </td>
               <td>${p.price}</td>
               <td>${p.cost}</td>
-              <td>{p.is_active ? "Sí" : "No"}</td>
+              <td>
+                Principal + {p.product_images.length}
+                <button onClick={() => openImageManager(p)} style={{marginLeft: '10px'}}>
+                  Gestionar
+                </button>
+              </td>
               <td>
                 <button onClick={() => toggleActive(p.id, p.is_active)}>
                   {p.is_active ? "Desactivar" : "Activar"}
@@ -161,6 +142,18 @@ export default function Products() {
           ))}
         </tbody>
       </table>
+      {/* ------------------------------------------- */}
+
+      {isModalOpen && (
+        <ManageImagesModal
+          product={selectedProduct}
+          onClose={() => setIsModalOpen(false)}
+          onImagesUpdate={() => {
+            fetchProducts();
+            setIsModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

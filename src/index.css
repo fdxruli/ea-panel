@@ -1,38 +1,76 @@
+/* src/index.css */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* --- PALETA DE COLORES PERSONALIZABLE --- */
+  /* Primarios */
+  --color-primary: #d94f45; /* Un rojo anaranjado, cálido y apetitoso */
+  --color-primary-dark: #b93e36;
+  --color-primary-light: #fce8e6;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* Acentos y Acciones */
+  --color-accent: #2a9d8f; /* Un verde azulado para contrastar */
+  --color-success: #4caf50;
+  --color-error: #f44336;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  /* Fondos */
+  --bg-primary: #f8f7f5; /* Un blanco roto muy sutil */
+  --bg-secondary: #ffffff;
+
+  /* Texto */
+  --text-primary: #2d3436;
+  --text-secondary: #636e72;
+  --text-light: #ffffff;
+
+  /* Bordes y Sombras */
+  --border-color: #dfe6e9;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+
+  /* --- TIPOGRAFÍA --- */
+  --font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-size-base: 16px;
+  --line-height-base: 1.6;
+
+  /* --- OTROS --- */
+  --border-radius: 12px;
+  --transition-speed: 0.3s;
+}
+
+/* --- RESET BÁSICO Y ESTILOS GLOBALES --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: #f0f2f5; /* Un fondo más suave */
-}
-
 #root {
   width: 100%;
+  min-height: 100vh;
 }
 
-/* Mejoras para modo claro */
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Estilos base para enlaces y botones para consistencia */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-speed) ease;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius);
+  transition: all var(--transition-speed) ease;
 }

@@ -3,14 +3,18 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
-import Login from "./pages/Login"; // <-- Importa la página de Login
+import { CustomerProvider } from "./context/CustomerContext";
+import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import 'leaflet/dist/leaflet.css';
 
 // Importa tus componentes y páginas
 import AdminLayout from "./layouts/AdminLayout";
 import ClientLayout from "./layouts/ClientLayout";
 import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
+import MyOrders from "./pages/MyOrders";
+import MyProfile from "./pages/MyProfile"; // <-- 1. IMPORTA LA NUEVA PÁGINA
 import Dashboard from "./pages/Dashboard";
 import Orders from "./pages/Orders";
 import Products from "./pages/Products";
@@ -24,9 +28,20 @@ function App() {
       <Route path="/login" element={<Login />} />
 
       {/* --- RUTAS PARA EL CLIENTE (PÚBLICAS) --- */}
-      <Route path="/" element={<CartProvider><ClientLayout /></CartProvider>}>
+      <Route
+        path="/"
+        element={
+          <CustomerProvider>
+            <CartProvider>
+              <ClientLayout />
+            </CartProvider>
+          </CustomerProvider>
+        }
+      >
         <Route index element={<Menu />} />
         <Route path="carrito" element={<Cart />} />
+        <Route path="mis-pedidos" element={<MyOrders />} />
+        <Route path="mi-perfil" element={<MyProfile />} />
       </Route>
 
       {/* --- RUTAS PARA EL ADMINISTRADOR (PROTEGIDAS) --- */}
@@ -42,6 +57,5 @@ function App() {
     </Routes>
   );
 }
-
 
 export default App;

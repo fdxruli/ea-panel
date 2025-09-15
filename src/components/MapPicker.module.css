@@ -21,7 +21,7 @@
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.6);
-    color: white;
+    color: red;
     padding: 8px 15px;
     border-radius: 20px;
     z-index: 1000; /* Asegura que esté sobre el mapa */

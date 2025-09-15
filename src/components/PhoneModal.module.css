@@ -1,0 +1,88 @@
+/* src/components/PhoneModal.module.css */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+.modalContent {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 450px;
+  text-align: center;
+  color: #333;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.25);
+}
+
+.modalContent h2 {
+  margin-top: 0;
+  font-size: 1.8rem;
+  color: #e03131;
+}
+
+.modalContent p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.privacy {
+  font-size: 0.9rem;
+  color: #555;
+  background-color: #f8f9fa;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.phoneInput {
+  width: 100%;
+  padding: 12px;
+  margin: 1rem 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.error {
+  color: #d9534f;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.saveButton {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.laterButton {
+  background: none;
+  border: 1px solid #ccc;
+  color: #555;
+  padding: 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+}

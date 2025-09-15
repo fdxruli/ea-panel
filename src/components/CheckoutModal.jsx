@@ -1,11 +1,11 @@
-// src/components/CheckoutModal.jsx (MODIFICADO)
+// src/components/CheckoutModal.jsx (CORREGIDO)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // <-- 1. Importa useCallback
 import { supabase } from '../lib/supabaseClient';
 import { useCart } from '../context/CartContext';
 import styles from './CheckoutModal.module.css';
 import DynamicMapPicker from './DynamicMapPicker';
-import ClientOnly from './ClientOnly'; // <-- 1. Importa el nuevo componente
+import ClientOnly from './ClientOnly';
 
 export default function CheckoutModal({ phone, onClose }) {
     // ... (el resto del código del modal no cambia)
@@ -56,9 +56,11 @@ export default function CheckoutModal({ phone, onClose }) {
         findCustomer();
     }, [phone]);
 
-    const handleLocationSelect = (coords) => {
+    // --- 👇 AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
+    const handleLocationSelect = useCallback((coords) => {
         setNewLocation(prev => ({ ...prev, coords }));
-    };
+    }, []); // <-- 2. Usa un array de dependencias vacío
+    // -----------------------------------------
 
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;

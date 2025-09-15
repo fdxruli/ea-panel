@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Navigate, Outlet } from 'react-router-dom';
-import LoadingSpinner from './LoadingSpinner'; // <-- Importa el spinner
+import LoadingSpinner from '../components/LoadingSpinner'; // <-- Importa el spinner
 
 export default function ProtectedRoute() {
   const [session, setSession] = useState(null);

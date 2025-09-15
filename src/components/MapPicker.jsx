@@ -1,83 +1,134 @@
-// src/components/MapPicker.jsx
+// src/components/MapPicker.jsx (Con mayor zoom)
 
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import React, { useState, useCallback, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
 import styles from './MapPicker.module.css';
 
-function MapEvents({ setPosition }) {
-  const map = useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
-      map.flyTo(e.latlng, map.getZoom());
-    },
-    locationfound(e) {
-      setPosition(e.latlng);
-      map.flyTo(e.latlng, 16);
-    },
-  });
-  return null;
-}
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+// Zona de reparto con puntos reordenados
+const deliveryAreaCoordinates = [
+  { lat: 15.888856, lng: -92.003376 },
+  { lat: 15.859375, lng: -91.966981 },
+  { lat: 15.850525, lng: -91.961287 },
+  { lat: 15.847137, lng: -91.966816 },
+  { lat: 15.845281, lng: -91.971451 },
+  { lat: 15.846072, lng: -92.007089 },
+  { lat: 15.849822, lng: -92.015858 },
+  { lat: 15.884673, lng: -92.004707 },
+];
+
+// Estilos para el polígono que representa la zona de entrega
+const deliveryAreaOptions = {
+  fillColor: "#00FF00",
+  fillOpacity: 0.1,
+  strokeColor: "#00FF00",
+  strokeOpacity: 0.8,
+  strokeWeight: 2,
+};
+
+// Estilos para el contenedor del mapa
+const containerStyle = {
+  width: '100%',
+  height: '100%'
+};
+
+// Opciones para ocultar controles no deseados del mapa
+const mapOptions = {
+  streetViewControl: false,
+  mapTypeControl: false,
+  fullscreenControl: false,
+  mapTypeId: 'satellite', // Mapa satelital
+  tilt: 0
+};
 
 export default function MapPicker({ onLocationSelect }) {
-  const initialPosition = { lat: 16.2519, lng: -92.1364 };
-  const [position, setPosition] = useState(initialPosition);
-  const markerRef = useRef(null);
-  const mapRef = useRef(null);
+  // Punto de inicio actualizado
+  const initialCenter = {
+    lat: 15.852182,
+    lng: -91.977533
+  };
   
-  useEffect(() => {
-    onLocationSelect(initialPosition);
-  }, [onLocationSelect]);
+  const [markerPosition, setMarkerPosition] = useState(initialCenter);
+  const [lastValidPosition, setLastValidPosition] = useState(initialCenter);
+  const polygonRef = useRef(null);
 
-  const eventHandlers = useMemo(
-    () => ({
-      dragend() {
-        const marker = markerRef.current;
-        if (marker != null) {
-          const newPos = marker.getLatLng();
-          setPosition(newPos);
-          onLocationSelect(newPos);
-        }
-      },
-    }),
-    [onLocationSelect]
-  );
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries: ['geometry'],
+  });
 
-  const handleGetMyLocation = useCallback(() => {
-    const map = mapRef.current;
-    if (map) {
-      map.locate();
-    }
+  const onPolygonLoad = useCallback(polygon => {
+    polygonRef.current = polygon;
   }, []);
+  
+  const onMarkerDragEnd = useCallback(event => {
+    const newPosition = {
+      lat: event.latLng.lat(),
+      lng: event.latLng.lng()
+    };
+    
+    if (
+      isLoaded &&
+      polygonRef.current &&
+      google.maps.geometry.poly.containsLocation(event.latLng, polygonRef.current)
+    ) {
+      setMarkerPosition(newPosition);
+      setLastValidPosition(newPosition);
+      if (onLocationSelect) {
+        onLocationSelect(newPosition);
+      }
+    } else {
+      alert("Lo sentimos, solo hacemos entregas dentro de la zona marcada en verde. Por favor, mueve el pin a una ubicación válida.");
+      setMarkerPosition(lastValidPosition);
+    }
+  }, [onLocationSelect, isLoaded, lastValidPosition]);
+
+  React.useEffect(() => {
+    if (onLocationSelect) {
+        onLocationSelect(initialCenter);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loadError) {
+    return (
+        <div style={{ padding: '20px', textAlign: 'center', color: 'red' }}>
+          <strong>Error al cargar el mapa:</strong> Por favor, verifica tu clave de API de Google Maps.
+        </div>
+      );
+  }
 
   return (
     <div className={styles.mapContainer}>
-      <p className={styles.instruction}>
-        Mueve el mapa o el marcador hasta tu ubicación exacta.
+       <p className={styles.instruction}>
+        Mueve el pin rojo hasta tu ubicación exacta.
       </p>
-      
-      <MapContainer
-        center={initialPosition}
-        zoom={15}
-        scrollWheelZoom={true}
-        className={styles.map}
-        ref={mapRef}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker
-          draggable={true}
-          eventHandlers={eventHandlers}
-          position={position}
-          ref={markerRef}
-        />
-        <MapEvents setPosition={setPosition} />
-      </MapContainer>
 
-      <button onClick={handleGetMyLocation} className={styles.locationButton}>
-        📍 Usar mi ubicación actual
-      </button>
+      {isLoaded ? (
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={initialCenter}
+          zoom={17} // <-- Nivel de zoom aumentado
+          options={mapOptions}
+        >
+          <Marker
+            position={markerPosition}
+            draggable={true}
+            onDragEnd={onMarkerDragEnd}
+          />
+          
+          <Polygon
+            paths={deliveryAreaCoordinates}
+            options={deliveryAreaOptions}
+            onLoad={onPolygonLoad}
+          />
+
+        </GoogleMap>
+      ) : (
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>Cargando mapa...</div>
+      )}
     </div>
   );
 }

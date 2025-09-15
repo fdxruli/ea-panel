@@ -1,0 +1,136 @@
+/* src/pages/MyOrders.module.css */
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    font-family: 'Poppins', sans-serif;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    color: #333; /* <-- AÑADE ESTA LÍNEA PARA ARREGLAR EL TEXTO BLANCO */
+}
+
+.container h1, .container h2, .container h3 {
+    text-align: center;
+    color: #333;
+}
+
+.searchForm {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    justify-content: center;
+}
+
+.phoneInput {
+    padding: 0.8rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    width: 300px;
+    font-size: 1rem;
+}
+
+.searchButton {
+    padding: 0.8rem 1.5rem;
+    background-color: #e03131;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.searchButton:disabled {
+    background-color: #aaa;
+}
+
+.error {
+    color: red;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.ordersSection {
+    margin-top: 2rem;
+}
+
+.latestOrderContainer, .historyContainer {
+    margin-top: 2rem;
+}
+
+.orderCard, .latestOrderCard {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.latestOrderCard {
+    border: 2px solid #e03131;
+}
+
+.orderHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.orderHeader h3 {
+    margin: 0;
+}
+
+.status {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.pendiente { background-color: #f0ad4e; }
+.en_proceso { background-color: #3498db; }
+.completado { background-color: #28a745; }
+.cancelado { background-color: #d9534f; }
+
+.orderCard ul {
+    list-style: none;
+    padding: 0;
+}
+
+.orderCard li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.orderFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    font-size: 1.2rem;
+}
+
+.editButton {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.prompt {
+    text-align: center;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.prompt h2 {
+    margin-top: 0;
+}

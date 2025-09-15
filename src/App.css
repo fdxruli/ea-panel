@@ -62,12 +62,18 @@ body {
 }
 
 /* Estilos para tablas */
+.table-wrapper {
+  overflow-x: auto; /* Mueve el scroll horizontal aquí */
+  width: 100%;
+  margin-top: 20px;
+}
+
 .products-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
   overflow-x: auto; /* Para scroll horizontal en móvil */
-  display: block;
+  border-collapse: collapse;
 }
 
 .products-table th,

@@ -1,4 +1,4 @@
-/* src/pages/Cart.module.css */
+/* src/pages/Cart.module.css (VERSIÓN FINAL) */
 
 .overlay {
   position: fixed;
@@ -8,21 +8,37 @@
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1010;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
 }
+
+.cartSidebar.open + .overlay,
+.overlay:has(+ .cartSidebar.open) {
+  opacity: 1;
+  visibility: visible;
+}
+
 
 .cartSidebar {
   position: fixed;
-  top: 0;
-  right: 0;
+  left: 0;
+  bottom: 0;
   width: 100%;
-  max-width: 400px;
-  height: 100%;
-  background-color: white;
-  box-shadow: -4px 0 15px rgba(0,0,0,0.15);
+  max-height: 90vh;
+  background-color: var(--bg-secondary);
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.15);
   z-index: 1020;
   display: flex;
   flex-direction: column;
-  color: #333;
+  color: var(--text-primary);
+  border-radius: 1.5rem 1.5rem 0 0;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.cartSidebar.open {
+    transform: translateY(0);
 }
 
 .cartHeader {
@@ -30,151 +46,73 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
-.cartHeader h2 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.closeButton {
-  background: none;
-  border: none;
-  font-size: 2.5rem;
-  font-weight: 300;
-  cursor: pointer;
-  color: #888;
-}
-
-.emptyMessage {
-  text-align: center;
-  margin-top: 4rem;
-  font-size: 1.1rem;
-  color: #666;
-}
-
-.cartItemsList {
+/* --- 👇 NUEVA CLASE PARA EL SCROLL --- */
+.cartBody {
   flex-grow: 1;
   overflow-y: auto;
+}
+/* --- 👆 FIN DE LA NUEVA CLASE --- */
+
+.cartHeader h2 { margin: 0; font-size: 1.5rem; }
+.closeButton { background: none; font-size: 2.5rem; cursor: pointer; color: var(--text-secondary); }
+.emptyMessage { text-align: center; padding: 4rem 1rem; font-size: 1.1rem; color: var(--text-secondary); }
+
+/* --- 👇 SE SIMPLIFICA ESTA CLASE --- */
+.cartItemsList {
   padding: 1rem;
+  /* Se quitaron flex-grow y overflow-y de aquí */
 }
 
 .cartItem {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
   gap: 1rem;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 1rem;
-}
-
-.cartItem img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.itemInfo {
-  flex-grow: 1;
-}
-
-.itemName {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.itemPrice {
-  color: #888;
-}
-
-.itemActions {
-  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
+.cartItem:last-child { border-bottom: none; }
+.cartItem img { width: 80px; height: 80px; object-fit: cover; border-radius: var(--border-radius); }
+.itemInfo { display: flex; flex-direction: column; }
+.itemName { font-weight: 600; }
+.itemPrice { color: var(--text-secondary); }
 
-.itemActions input {
-  width: 45px;
-  text-align: center;
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-.itemActions button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.2rem;
-  color: #c92a2a;
-}
+.itemActions { display: flex; align-items: center; gap: 0.5rem; }
+.itemActions input { width: 45px; text-align: center; padding: 5px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
+.itemActions button { background: none; cursor: pointer; font-size: 1.2rem; color: var(--color-error); }
 
 .cartFooter {
   padding: 1.5rem;
-  border-top: 2px solid #eee;
-  background-color: #f8f9fa;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  flex-shrink: 0;
 }
 
-.total {
-  font-size: 1.75rem;
-  text-align: right;
-  margin-bottom: 1.5rem;
-}
-
-.checkoutForm h4 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-
-.checkoutForm input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  box-sizing: border-box; /* Importante para que el padding no desborde */
-}
+.discountSection { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.discountInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
+.applyButton { padding: 10px 15px; background-color: var(--color-accent); color: white; border-radius: 8px; }
+.discountMessage { font-size: 0.9rem; text-align: center; margin-bottom: 1rem; }
+.totals p { display: flex; justify-content: space-between; margin: 0.5rem 0; }
+.discountApplied button { background: none; color: var(--color-error); cursor: pointer; font-size: 0.8rem; margin-left: 10px; text-decoration: underline; }
+.total { font-size: 1.75rem; display: flex; justify-content: space-between; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
 
 .whatsappButton {
-  width: 100%;
-  padding: 1rem;
-  background-color: #25d366;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  width: 100%; padding: 1rem; background: var(--color-success); color: white;
+  border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; margin-top: 1rem;
 }
+.whatsappButton:hover { background: #388e3c; }
 
-.whatsappButton:hover {
-  background-color: #1ebe57;
-}
+@media (min-width: 768px) {
+  .cartSidebar {
+    left: auto; right: 0; bottom: 0; top: 0; width: 100%;
+    max-width: 400px; height: 100%; border-radius: 0;
+    transform: translateX(100%); box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+  }
 
-.whatsappButton:hover {
-  background-color: #1ebe57;
-}
-
-/* --- NUEVOS ESTILOS PARA EL BOTÓN DE AUTOCOMPLETAR --- */
-.useLastAddressButton {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  background-color: #3498db; /* Un color azul para diferenciarlo */
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-align: center;
-  transition: background-color 0.2s;
-}
-
-.useLastAddressButton:hover {
-  background-color: #2980b9;
+  .cartSidebar.open { transform: translateX(0); }
 }

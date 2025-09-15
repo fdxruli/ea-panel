@@ -1,0 +1,98 @@
+/* src/layouts/ClientLayout.css */
+
+.client-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.client-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1rem;
+  background-color: var(--bg-secondary);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.logo h1 {
+  font-size: 1.5rem;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.client-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--border-radius);
+  color: var(--text-secondary);
+  background-color: transparent;
+  position: relative;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.nav-link.active {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.nav-text {
+  display: none; /* Oculto en mobile-first */
+}
+
+.cart-badge {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  background-color: var(--color-primary);
+  color: var(--text-light);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.client-main {
+  flex-grow: 1;
+  padding: 1rem;
+}
+
+
+/* --- Estilos para pantallas grandes --- */
+@media (min-width: 768px) {
+  .client-header {
+    padding: 1rem 2rem;
+  }
+
+  .client-nav {
+    gap: 1rem;
+  }
+
+  .nav-text {
+    display: inline; /* Mostramos el texto en pantallas grandes */
+  }
+  
+  .client-main {
+    padding: 2rem;
+  }
+}
