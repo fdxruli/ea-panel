@@ -1,6 +1,6 @@
-// src/pages/Menu.jsx (CORREGIDO)
+// src/pages/Menu.jsx (MODIFICADO PARA CACHÉ Y TIEMPO REAL)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCart } from '../context/CartContext';
 import styles from './Menu.module.css';
@@ -18,15 +18,17 @@ export default function Menu() {
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [toastMessage, setToastMessage] = useState('');
-    const [toastKey, setToastKey] = useState(0); // <-- NUEVO ESTADO PARA LA CLAVE
+    const [toastKey, setToastKey] = useState(0);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [layout, setLayout] = useState('list');
     const [flyingImages, setFlyingImages] = useState([]);
 
+    // --- LÓGICA DE CARGA DE DATOS MEJORADA ---
     useEffect(() => {
-        const fetchProductsAndCategories = async () => {
+        // Función para obtener productos y actualizar el estado/cache
+        const getProductsAndCategories = async () => {
+            console.log("Intentando obtener productos y categorías...");
             try {
-                setLoading(true);
                 const { data: productsData, error: productsError } = await supabase
                     .from('products')
                     .select(`*, product_images ( id, image_url )`)
@@ -38,30 +40,66 @@ export default function Menu() {
                     .select('*');
                 if (categoriesError) throw categoriesError;
 
+                // Actualizar el estado y el localStorage
+                setProducts(productsData);
+                localStorage.setItem('productsCache', JSON.stringify(productsData));
+
                 const uniqueCategories = [...new Set(productsData.map(p => p.category_id))];
                 const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
-
-                setProducts(productsData);
                 setCategories(productCategories);
+                localStorage.setItem('categoriesCache', JSON.stringify(productCategories));
+
+                console.log("Productos y categorías actualizados desde Supabase y cacheados.");
 
             } catch (err) {
                 setError(err.message);
+                console.error("Error fetching data:", err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchProductsAndCategories();
+
+        // 1. Carga inicial desde el caché para una UI instantánea
+        try {
+            const cachedProducts = localStorage.getItem('productsCache');
+            const cachedCategories = localStorage.getItem('categoriesCache');
+            if (cachedProducts) {
+                setProducts(JSON.parse(cachedProducts));
+            }
+            if (cachedCategories) {
+                setCategories(JSON.parse(cachedCategories));
+            }
+        } catch (error) {
+            console.error("Error al leer el caché", error);
+        }
+
+        // 2. Primera carga desde la base de datos (Stale-While-Revalidate)
+        getProductsAndCategories();
+
+        // 3. Suscripción a cambios en tiempo real en las tablas
+        const productsChannel = supabase.channel('products-realtime-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+                console.log('Cambio detectado en productos, actualizando...', payload);
+                getProductsAndCategories(); // Vuelve a cargar todo para mantener la consistencia
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, (payload) => {
+                console.log('Cambio detectado en categorías, actualizando...', payload);
+                getProductsAndCategories();
+            })
+            .subscribe();
+
+        // 4. Limpieza al desmontar el componente
+        return () => {
+            supabase.removeChannel(productsChannel);
+        };
     }, []);
 
     const handleAddToCart = (product, quantity, event) => {
         addToCart(product, quantity);
         const quantityAdded = quantity || 1;
-        
-        // Lógica del toast de texto
         setToastMessage(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
-        setToastKey(prevKey => prevKey + 1); // <-- CAMBIA LA CLAVE PARA REINICIAR LA ANIMACIÓN
+        setToastKey(prevKey => prevKey + 1);
 
-        // Lógica de la animación de imagen
         if (event && event.currentTarget) {
             const rect = event.currentTarget.getBoundingClientRect();
             const newImage = {
@@ -70,22 +108,20 @@ export default function Menu() {
                 top: rect.top + rect.height / 2,
                 left: rect.left + rect.width / 2,
             };
-            
             setFlyingImages(prev => [...prev, newImage]);
-            
             setTimeout(() => {
                 setFlyingImages(prev => prev.filter(img => img.id !== newImage.id));
             }, 1000);
         }
     };
-    
+
     const toggleLayout = () => {
         setLayout(prevLayout => (prevLayout === 'list' ? 'grid' : 'list'));
     };
 
     const filteredProducts = products.filter(product => selectedCategory ? product.category_id === selectedCategory : true);
 
-    if (loading) return <LoadingSpinner />;
+    if (loading && products.length === 0) return <LoadingSpinner />;
     if (error) return <p className={styles.error}>Error: {error}</p>;
 
     return (
@@ -99,8 +135,7 @@ export default function Menu() {
                     style={{ top: `${img.top}px`, left: `${img.left}px` }}
                 />
             ))}
-            
-            {/* SE APLICA LA CLAVE AL TOAST */}
+
             {toastMessage && <div key={toastKey} className={styles.toast}>{toastMessage}</div>}
 
             <h1>Nuestro Menú</h1>
