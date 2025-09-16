@@ -47,10 +47,18 @@ export const CartProvider = ({ children }) => {
         const validCartItems = cartItems.filter(item => liveProductIds.has(item.id));
 
         if (validCartItems.length < cartItems.length) {
-            const removedItemsCount = cartItems.length - validCartItems.length;
-            const itemText = removedItemsCount > 1 ? 'productos que ya no están disponibles' : 'un producto que ya no está disponible';
+            // --- 👇 1. IDENTIFICAMOS LOS PRODUCTOS ELIMINADOS ---
+            const removedItems = cartItems.filter(item => !liveProductIds.has(item.id));
             
-            setCartNotification(`Se ha eliminado ${itemText} de tu carrito.`);
+            // --- 👇 2. OBTENEMOS SUS NOMBRES ---
+            const removedProductNames = removedItems.map(item => item.name).join(', ');
+            
+            // --- 👇 3. CONSTRUIMOS EL MENSAJE ESPECÍFICO ---
+            const singularOrPlural = removedItems.length > 1;
+            const notificationMessage = `Se ${singularOrPlural ? 'han eliminado' : 'ha eliminado'} "${removedProductNames}" de tu carrito por no estar disponible.`;
+
+            // --- 👇 4. ACTUALIZAMOS ESTADO CON EL NUEVO MENSAJE ---
+            setCartNotification(notificationMessage);
             setCartItems(validCartItems);
         }
     }, [liveProducts, productsLoading, cartItems]); // <-- Se corrige la dependencia a cartItems.length
