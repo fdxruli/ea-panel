@@ -1,4 +1,4 @@
-// src/context/ProductContext.jsx (CORREGIDO Y OPTIMIZADO)
+// src/context/ProductContext.jsx (MODIFICADO PARA USAR NOTIFICACIONES)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -14,24 +14,18 @@ export const ProductProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // --- 👇 1. NUEVO ESTADO PARA LA NOTIFICACIÓN ---
+  const [notification, setNotification] = useState('');
 
-  // --- 👇 1. LÓGICA DE CARGA DE DATOS MEJORADA Y AISLADA ---
-  const fetchAndCacheProducts = useCallback(async (isUpdate = false) => {
+  const fetchAndCacheProducts = useCallback(async () => {
     try {
-      // Solo mostramos el spinner si no hay datos en caché o si es una actualización en tiempo real
       const hasCache = localStorage.getItem(PRODUCTS_CACHE_KEY);
-      if (!hasCache || isUpdate) {
+      // Solo mostramos el spinner la primera vez que no hay nada en caché
+      if (!hasCache) {
         setLoading(true);
       }
       
-      // Si no es una actualización forzada, intenta cargar el caché para mostrar algo mientras
-      if (hasCache && !isUpdate) {
-        const { products: cachedProducts, categories: cachedCategories } = JSON.parse(hasCache);
-        setProducts(cachedProducts);
-        setCategories(cachedCategories);
-      }
-
-      // Siempre busca los datos más recientes de la base de datos
+      // ... (El resto de la lógica de fetch y caché no cambia)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`*, product_images ( id, image_url )`)
@@ -46,7 +40,6 @@ export const ProductProvider = ({ children }) => {
       const uniqueCategories = [...new Set(productsData.map(p => p.category_id))];
       const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
 
-      // Actualiza el estado y el caché con los datos frescos
       setProducts(productsData);
       setCategories(productCategories);
       localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ products: productsData, categories: productCategories }));
@@ -55,37 +48,42 @@ export const ProductProvider = ({ children }) => {
       console.error("Error al obtener productos:", err);
       setError(err.message);
     } finally {
-      // --- ✅ 2. LA CORRECCIÓN CLAVE: ESTO SE EJECUTA SIEMPRE ---
-      // Nos aseguramos de que el spinner se oculte sin importar si hubo éxito o error.
+      // Siempre nos aseguramos de que el spinner principal se oculte
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // Carga inicial
     fetchAndCacheProducts();
 
-    // Suscripción a cambios en tiempo real
     const productsSubscription = supabase
       .channel('public:products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        console.log('¡Cambio detectado en productos! Recargando...', payload);
-        // Llama a la función con 'true' para indicar que es una actualización y debe mostrar el spinner
-        fetchAndCacheProducts(true);
+        console.log('¡Cambio detectado! Actualizando en segundo plano...', payload);
+        
+        // --- 👇 2. LÓGICA DE NOTIFICACIÓN EN LUGAR DE SPINNER ---
+        // Llama a la función para que se actualice en segundo plano (sin spinner)
+        fetchAndCacheProducts(); 
+        
+        // Muestra el mensaje de notificación
+        setNotification('¡El menú se ha actualizado!');
+        
+        // Oculta el mensaje después de 4 segundos
+        setTimeout(() => setNotification(''), 4000);
       })
       .subscribe();
 
-    // Limpieza de la suscripción
     return () => {
       supabase.removeChannel(productsSubscription);
     };
-  }, [fetchAndCacheProducts]); // <-- Se añade fetchAndCacheProducts como dependencia
+  }, [fetchAndCacheProducts]);
 
   const value = {
     products,
     categories,
     loading,
     error,
+    notification, // <-- 3. EXPONEMOS LA NOTIFICACIÓN EN EL CONTEXTO
   };
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

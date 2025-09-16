@@ -158,3 +158,38 @@
     padding: 2rem;
   }
 }
+
+/* --- ESTILOS PARA LA NOTIFICACIÓN DE ACTUALIZACIÓN --- */
+.update-toast {
+  position: fixed;
+  top: 80px; /* Debajo del header en móvil */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-accent); /* Un color de acento que llame la atención */
+  color: var(--text-light);
+  padding: 12px 24px;
+  border-radius: 50px; /* Bordes redondeados */
+  z-index: 2000; /* Por encima de la mayoría de los elementos */
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  /* Animación de entrada */
+  animation: slide-down 0.5s ease forwards;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Ajuste para escritorio */
+@media (min-width: 768px) {
+  .update-toast {
+    top: 90px; /* Un poco más abajo del header de escritorio */
+  }
+}
