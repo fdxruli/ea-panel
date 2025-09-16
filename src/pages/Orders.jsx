@@ -1,6 +1,6 @@
-}// src/pages/Orders.jsx (MODIFICADO PARA TIEMPO REAL)
+// src/pages/Orders.jsx (MODIFICADO)
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -10,49 +10,30 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
 
-  // --- FUNCIÓN DE CARGA DE DATOS SEPARADA ---
-  // Usamos useCallback para evitar que la función se recree innecesariamente
-  const fetchOrders = useCallback(async () => {
-    // No establecemos loading a true aquí para que las actualizaciones en tiempo real sean fluidas
+  const fetchOrders = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from("orders")
       .select(`
-        id, order_code, customer_id, status, total_amount, created_at,
-        cancellation_reason, customers(name, phone)
+        id,
+        order_code,
+        customer_id,
+        status,
+        total_amount,
+        created_at,
+        cancellation_reason,
+        customers(name, phone)
       `)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error(error);
-    } else {
-      setOrders(data);
-    }
-    setLoading(false); // El loading principal solo se desactiva una vez
-  }, []);
+    if (error) console.error(error);
+    else setOrders(data);
+    setLoading(false);
+  };
 
-  // --- USEEFFECT PARA CARGA INICIAL Y SUSCRIPCIÓN ---
   useEffect(() => {
-    // 1. Carga inicial de los pedidos
     fetchOrders();
-
-    // 2. Suscripción a cambios en la tabla 'orders'
-    const ordersChannel = supabase.channel('orders-realtime-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        (payload) => {
-          console.log('Cambio en pedidos recibido!', payload);
-          // Cuando hay un cambio, simplemente volvemos a cargar la lista de pedidos
-          fetchOrders();
-        }
-      )
-      .subscribe();
-
-    // 3. Limpieza: Nos desuscribimos cuando el componente se desmonta
-    return () => {
-      supabase.removeChannel(ordersChannel);
-    };
-  }, [fetchOrders]); // La dependencia ahora es la función memoizada
+  }, []);
 
   const fetchOrderItems = async (orderId) => {
     const { data, error } = await supabase
@@ -64,11 +45,13 @@ export default function Orders() {
     else setOrderItems(data);
   };
 
+  // --- 👇 FUNCIÓN DE ACTUALIZAR ESTADO MODIFICADA ---
   const updateStatus = async (orderId, newStatus) => {
     let updateData = { status: newStatus };
     
     if (newStatus === 'cancelado') {
       const reason = prompt("Por favor, introduce el motivo de la cancelación:");
+      // Si el admin presiona "Cancelar" en el prompt, no hacemos nada.
       if (reason === null) return;
       updateData.cancellation_reason = reason || 'Cancelado por el administrador.';
     }
@@ -78,11 +61,8 @@ export default function Orders() {
       .update(updateData)
       .eq("id", orderId);
 
-    if (error) {
-        console.error(error);
-        alert("Error al actualizar el estado: " + error.message);
-    }
-    // No es necesario llamar a fetchOrders() aquí, la suscripción en tiempo real se encargará
+    if (error) console.error(error);
+    else fetchOrders();
   };
 
   if (loading) return <LoadingSpinner />;
@@ -142,7 +122,9 @@ export default function Orders() {
       {selectedOrder && (
         <div className="form-container">
           <h3>Detalle del pedido</h3>
-          {/* ... (el detalle del pedido no cambia) ... */}
+          <table className="products-table">
+            {/* ... (contenido del detalle del pedido sin cambios) ... */}
+          </table>
           <button onClick={() => setSelectedOrder(null)}>Cerrar detalle</button>
         </div>
       )}

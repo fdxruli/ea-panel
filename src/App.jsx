@@ -1,9 +1,10 @@
-// src/App.jsx (CORREGIDO)
+// src/App.jsx (MODIFICADO)
 
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { CustomerProvider } from "./context/CustomerContext";
+import { ProductProvider } from "./context/ProductContext"; // <-- 1. IMPORTA EL NUEVO PROVIDER
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import 'leaflet/dist/leaflet.css';
@@ -14,13 +15,13 @@ import ClientLayout from "./layouts/ClientLayout";
 import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
 import MyOrders from "./pages/MyOrders";
-import MyProfile from "./pages/MyProfile"; // <-- 1. IMPORTA LA NUEVA PÁGINA
+import MyProfile from "./pages/MyProfile";
 import Dashboard from "./pages/Dashboard";
 import Orders from "./pages/Orders";
 import Products from "./pages/Products";
 import Customers from "./pages/Customers";
 import Discounts from "./pages/Discounts";
-import TermsAndConditions from "./pages/TermsAndConditions"; // <-- 1. IMPORTA EL NUEVO COMPONENTE ADMIN
+import TermsAndConditions from "./pages/TermsAndConditions";
 import TermsPage from "./pages/TermsPage";
 
 function App() {
@@ -29,38 +30,28 @@ function App() {
       {/* --- RUTA DE LOGIN (PÚBLICA) --- */}
       <Route path="/login" element={<Login />} />
 
-      {/* --- RUTAS PARA EL CLIENTE (PÚBLICAS) --- */}
+      {/* --- RUTAS PARA EL CLIENTE (PÚBLICAS Y CON CACHÉ) --- */}
       <Route
         path="/"
         element={
           <CustomerProvider>
             <CartProvider>
-              <ClientLayout />
+              {/* --- 👇 2. AQUÍ LA CLAVE: ENVOLVEMOS SOLO EL LAYOUT DEL CLIENTE --- */}
+              <ProductProvider>
+                <ClientLayout />
+              </ProductProvider>
             </CartProvider>
           </CustomerProvider>
         }
       >
-        {/* --- RUTA PÚBLICA PARA TÉRMINOS Y CONDICIONES --- */}
-      <Route path="/terminos" element={<TermsPage />} />
-
-      {/* --- RUTAS PARA EL CLIENTE (PÚBLICAS) --- */}
-      <Route
-        path="/"
-        element={
-          <CustomerProvider>
-            {/* ... */}
-          </CustomerProvider>
-        }
-      >
-        {/* ... */}
-      </Route>
+        <Route path="/terminos" element={<TermsPage />} />
         <Route index element={<Menu />} />
         <Route path="carrito" element={<Cart />} />
         <Route path="mis-pedidos" element={<MyOrders />} />
         <Route path="mi-perfil" element={<MyProfile />} />
       </Route>
 
-      {/* --- RUTAS PARA EL ADMINISTRADOR (PROTEGIDAS) --- */}
+      {/* --- RUTAS PARA EL ADMINISTRADOR (PROTEGIDAS Y SIN CACHÉ) --- */}
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />

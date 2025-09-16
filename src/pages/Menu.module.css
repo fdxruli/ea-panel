@@ -238,3 +238,44 @@
     grid-template-columns: repeat(5, 1fr);
   }
 }
+
+.orderFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    font-size: 1.2rem;
+}
+
+/* --- 👇 NUEVOS ESTILOS AÑADIDOS --- */
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+}
+
+.editButton, .cancelButton {
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.editButton {
+    background-color: #3498db; /* Azul */
+}
+
+.cancelButton {
+    background-color: #d9534f; /* Rojo */
+}
+/* --- 👆 FIN DE NUEVOS ESTILOS --- */
+
+
+.prompt {
+    text-align: center;
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
