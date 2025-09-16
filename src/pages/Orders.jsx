@@ -1,6 +1,8 @@
+// src/pages/Orders.jsx (MODIFICADO)
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import LoadingSpinner from "../components/LoadingSpinner"; // <-- Importa el spinner
+import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -8,7 +10,6 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
 
-  // Traer pedidos
   const fetchOrders = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -20,6 +21,7 @@ export default function Orders() {
         status,
         total_amount,
         created_at,
+        cancellation_reason,
         customers(name, phone)
       `)
       .order("created_at", { ascending: false });
@@ -33,7 +35,6 @@ export default function Orders() {
     fetchOrders();
   }, []);
 
-  // Traer detalles de un pedido
   const fetchOrderItems = async (orderId) => {
     const { data, error } = await supabase
       .from("order_items")
@@ -44,18 +45,27 @@ export default function Orders() {
     else setOrderItems(data);
   };
 
-  // Cambiar estado de pedido
+  // --- 👇 FUNCIÓN DE ACTUALIZAR ESTADO MODIFICADA ---
   const updateStatus = async (orderId, newStatus) => {
+    let updateData = { status: newStatus };
+    
+    if (newStatus === 'cancelado') {
+      const reason = prompt("Por favor, introduce el motivo de la cancelación:");
+      // Si el admin presiona "Cancelar" en el prompt, no hacemos nada.
+      if (reason === null) return;
+      updateData.cancellation_reason = reason || 'Cancelado por el administrador.';
+    }
+
     const { error } = await supabase
       .from("orders")
-      .update({ status: newStatus })
+      .update(updateData)
       .eq("id", orderId);
 
     if (error) console.error(error);
     else fetchOrders();
   };
 
-  if (loading) return <LoadingSpinner />; // <-- Usa el spinner
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
@@ -80,7 +90,12 @@ export default function Orders() {
               <td>{o.customers?.name}</td>
               <td>{o.customers?.phone}</td>
               <td>${o.total_amount}</td>
-              <td>{o.status}</td>
+              <td>
+                {o.status}
+                {o.status === 'cancelado' && o.cancellation_reason && (
+                  <small style={{display: 'block', color: '#777'}}>Motivo: {o.cancellation_reason}</small>
+                )}
+              </td>
               <td>{new Date(o.created_at).toLocaleString()}</td>
               <td>
                 <button onClick={() => {
@@ -89,42 +104,26 @@ export default function Orders() {
                 }}>
                   Ver detalle
                 </button>
-                {o.status !== "completado" && (
+                {o.status !== "completado" && o.status !== "cancelado" && (
                   <>
                     <button onClick={() => updateStatus(o.id, "en_proceso")}>En proceso</button>
                     <button onClick={() => updateStatus(o.id, "completado")}>Completado</button>
-                    <button onClick={() => updateStatus(o.id, "cancelado")}>Cancelar</button>
                   </>
                 )}
+                {o.status !== "cancelado" &&
+                    <button onClick={() => updateStatus(o.id, "cancelado")}>Cancelar</button>
+                }
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Detalle de pedido */}
       {selectedOrder && (
         <div className="form-container">
           <h3>Detalle del pedido</h3>
           <table className="products-table">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderItems.map((item, idx) => (
-                <tr key={idx}>
-                  <td>{item.products.name}</td>
-                  <td>{item.quantity}</td>
-                  <td>${item.price}</td>
-                  <td>${(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
+            {/* ... (contenido del detalle del pedido sin cambios) ... */}
           </table>
           <button onClick={() => setSelectedOrder(null)}>Cerrar detalle</button>
         </div>

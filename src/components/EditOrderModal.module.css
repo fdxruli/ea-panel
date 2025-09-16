@@ -1,4 +1,4 @@
-/* src/components/EditOrderModal.module.css */
+/* src/components/EditOrderModal.module.css (MODIFICADO) */
 .modalOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.6); display: flex;
@@ -21,7 +21,27 @@
     padding: 0.8rem 0; border-bottom: 1px solid #eee;
 }
 .item span { font-weight: 500; }
-.actions input { width: 50px; text-align: center; padding: 5px; border-radius: 5px; border: 1px solid #ccc; }
+
+/* --- 👇 ESTILOS MODIFICADOS Y AÑADIDOS --- */
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem; /* Espacio entre los elementos */
+}
+.actions input { 
+    width: 50px; text-align: center; padding: 5px; 
+    border-radius: 5px; border: 1px solid #ccc; 
+}
+.removeButton {
+    background-color: #e74c3c; /* Rojo */
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+/* --- 👆 FIN DE LA MODIFICACIÓN --- */
 
 .addProductSection { border-top: 1px solid #ddd; padding-top: 1rem; }
 .productList { display: flex; flex-wrap: wrap; gap: 0.5rem; }

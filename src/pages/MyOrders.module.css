@@ -6,7 +6,7 @@
     font-family: 'Poppins', sans-serif;
     background-color: #f9f9f9;
     border-radius: 8px;
-    color: #333; /* <-- AÑADE ESTA LÍNEA PARA ARREGLAR EL TEXTO BLANCO */
+    color: #333;
 }
 
 .container h1, .container h2, .container h3 {
@@ -114,14 +114,29 @@
     font-size: 1.2rem;
 }
 
-.editButton {
-    background-color: #3498db;
+/* --- ESTILOS CORREGIDOS Y AÑADIDOS --- */
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+}
+
+.editButton, .cancelButton {
     color: white;
     border: none;
     padding: 0.6rem 1rem;
     border-radius: 5px;
     cursor: pointer;
+    font-size: 0.9rem;
 }
+
+.editButton {
+    background-color: #3498db; /* Azul */
+}
+
+.cancelButton {
+    background-color: #d9534f; /* Rojo */
+}
+/* --- FIN DE LA CORRECCIÓN --- */
 
 .prompt {
     text-align: center;

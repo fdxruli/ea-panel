@@ -1,4 +1,4 @@
-// src/components/EditOrderModal.jsx
+// src/components/EditOrderModal.jsx (MODIFICADO)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -15,7 +15,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     useEffect(() => {
         const fetchProducts = async () => {
             setLoading(true);
-            // Cargar todos los productos disponibles para que el cliente pueda añadir más
             const { data: productsData, error: productsError } = await supabase
                 .from('products')
                 .select('*')
@@ -23,15 +22,14 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             
             if (productsError) {
                 console.error("Error fetching products:", productsError);
-                onClose(); // Cierra el modal si hay un error
+                onClose();
                 return;
             }
             
             setAllProducts(productsData);
             
-            // Mapear los items del pedido actual
             const initialItems = order.order_items.map(item => ({
-                ...item.products, // Info completa del producto
+                ...item.products,
                 product_id: item.product_id,
                 quantity: item.quantity,
                 price: item.price,
@@ -42,9 +40,8 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
         };
 
         fetchProducts();
-    }, [order]);
+    }, [order, onClose]);
 
-    // Calcular el total cada vez que los items cambian
     useEffect(() => {
         const newTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         setTotal(newTotal);
@@ -52,16 +49,16 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
     const updateQuantity = (productId, newQuantity) => {
         const numQuantity = parseInt(newQuantity, 10);
-        if (isNaN(numQuantity) || numQuantity < 0) return;
+        if (isNaN(numQuantity) || numQuantity <= 0) return;
 
-        setOrderItems(prevItems => {
-            if (numQuantity === 0) {
-                return prevItems.filter(item => item.id !== productId);
-            }
-            return prevItems.map(item =>
-                item.id === productId ? { ...item, quantity: numQuantity } : item
-            );
-        });
+        setOrderItems(prevItems => prevItems.map(item =>
+            item.id === productId ? { ...item, quantity: numQuantity } : item
+        ));
+    };
+
+    // --- 👇 NUEVA FUNCIÓN PARA ELIMINAR UN ITEM ---
+    const removeItem = (productId) => {
+        setOrderItems(prevItems => prevItems.filter(item => item.id !== productId));
     };
     
     const addProduct = (product) => {
@@ -83,14 +80,12 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
         }
         setIsSubmitting(true);
         try {
-            // 1. Borrar los items antiguos del pedido
             const { error: deleteError } = await supabase
                 .from('order_items')
                 .delete()
                 .eq('order_id', order.id);
             if (deleteError) throw deleteError;
 
-            // 2. Crear los nuevos items
             const newOrderItems = orderItems.map(item => ({
                 order_id: order.id,
                 product_id: item.product_id,
@@ -102,7 +97,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 .insert(newOrderItems);
             if (insertError) throw insertError;
             
-            // 3. Actualizar el total en la tabla de pedidos
             const { error: updateOrderError } = await supabase
                 .from('orders')
                 .update({ total_amount: total })
@@ -110,7 +104,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             if (updateOrderError) throw updateOrderError;
 
             alert("¡Pedido actualizado con éxito!");
-            onOrderUpdated(); // Llama a la función para refrescar la lista de pedidos
+            onOrderUpdated();
             onClose();
 
         } catch (error) {
@@ -129,7 +123,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 
                 {loading ? <LoadingSpinner /> : (
                     <>
-                        {/* Lista de productos en el pedido */}
                         <div className={styles.itemsList}>
                             {orderItems.map(item => (
                                 <div key={item.id} className={styles.item}>
@@ -139,14 +132,17 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                             type="number"
                                             value={item.quantity}
                                             onChange={(e) => updateQuantity(item.id, e.target.value)}
-                                            min="0"
+                                            min="1"
                                         />
+                                        {/* --- 👇 BOTÓN DE ELIMINAR AÑADIDO --- */}
+                                        <button onClick={() => removeItem(item.id)} className={styles.removeButton}>
+                                            Quitar
+                                        </button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                         
-                        {/* Lista para añadir nuevos productos */}
                         <div className={styles.addProductSection}>
                             <h4>Añadir más productos</h4>
                              <div className={styles.productList}>
@@ -158,7 +154,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                             </div>
                         </div>
 
-                        {/* Footer con total y botones */}
                         <div className={styles.footer}>
                             <h3>Total: ${total.toFixed(2)}</h3>
                             <button onClick={handleUpdateOrder} disabled={isSubmitting} className={styles.updateButton}>

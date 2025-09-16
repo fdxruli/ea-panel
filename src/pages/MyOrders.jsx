@@ -1,19 +1,26 @@
-// src/pages/MyOrders.jsx (CORREGIDO)
+// src/pages/MyOrders.jsx (MODIFICADO)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useCustomer } from '../context/CustomerContext'; // <-- 1. IMPORTA EL CONTEXT
+import { useCustomer } from '../context/CustomerContext';
 import styles from './MyOrders.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EditOrderModal from '../components/EditOrderModal';
+import ConfirmModal from '../components/ConfirmModal'; // Importamos el modal de confirmación
+import CancellationRequestModal from '../components/CancellationRequestModal'; // Importamos el nuevo modal
 
 export default function MyOrders() {
-    const { phone, setPhoneModalOpen } = useCustomer(); // <-- 2. USA EL CONTEXT
+    const { phone, setPhoneModalOpen } = useCustomer();
     const [customer, setCustomer] = useState(null);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [editingOrder, setEditingOrder] = useState(null);
+
+    // --- Estados para los modales de cancelación ---
+    const [orderToCancel, setOrderToCancel] = useState(null);
+    const [isRequestingCancel, setIsRequestingCancel] = useState(false);
+
 
     const fetchOrders = useCallback(async (phoneNumber) => {
         if (!phoneNumber) return;
@@ -41,7 +48,6 @@ export default function MyOrders() {
         }
     }, []);
 
-    // 3. Llama a fetchOrders cuando el teléfono del context cambie
     useEffect(() => {
         if (phone) {
             fetchOrders(phone);
@@ -50,7 +56,34 @@ export default function MyOrders() {
             setOrders([]);
         }
     }, [phone, fetchOrders]);
-    
+
+    // --- Lógica de cancelación ---
+    const handleCancelClick = (order) => {
+        if (order.status === 'pendiente') {
+            setOrderToCancel(order);
+        } else if (order.status === 'en_proceso') {
+            setIsRequestingCancel(true);
+            setOrderToCancel(order);
+        }
+    };
+
+    const confirmDirectCancel = async () => {
+        if (!orderToCancel) return;
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: 'cancelado', cancellation_reason: 'Cancelado por el cliente.' })
+            .eq('id', orderToCancel.id);
+
+        if (error) {
+            alert('Error al cancelar el pedido: ' + error.message);
+        } else {
+            alert('Pedido cancelado con éxito.');
+            fetchOrders(phone);
+        }
+        setOrderToCancel(null);
+    };
+
+
     const handleOrderUpdated = useCallback(() => { fetchOrders(phone); }, [fetchOrders, phone]);
     const handleCloseModal = useCallback(() => { setEditingOrder(null); }, []);
 
@@ -66,8 +99,15 @@ export default function MyOrders() {
             </ul>
             <div className={styles.orderFooter}>
                 <strong>Total: ${order.total_amount.toFixed(2)}</strong>
-                {isLatest && order.status === 'pendiente' && (
-                    <button className={styles.editButton} onClick={() => setEditingOrder(order)}>✏️ Editar</button>
+                {isLatest && (order.status === 'pendiente' || order.status === 'en_proceso') && (
+                    <div className={styles.actionsContainer}>
+                        {order.status === 'pendiente' &&
+                            <button className={styles.editButton} onClick={() => setEditingOrder(order)}>✏️ Editar</button>
+                        }
+                        <button className={styles.cancelButton} onClick={() => handleCancelClick(order)}>
+                            Cancelar Pedido
+                        </button>
+                    </div>
                 )}
             </div>
         </div>
@@ -80,7 +120,6 @@ export default function MyOrders() {
         <div className={styles.container}>
             <h1>Mis Pedidos</h1>
             
-            {/* 4. Lógica de renderizado condicional */}
             {!phone ? (
                 <div className={styles.prompt}>
                     <h2>Ingresa tu número para ver tus pedidos</h2>
@@ -117,6 +156,25 @@ export default function MyOrders() {
 
             {editingOrder && (
                 <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />
+            )}
+
+            <ConfirmModal
+                isOpen={!!orderToCancel && !isRequestingCancel}
+                onClose={() => setOrderToCancel(null)}
+                onConfirm={confirmDirectCancel}
+                title="¿Confirmar Cancelación?"
+            >
+                Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
+            </ConfirmModal>
+
+            {isRequestingCancel && orderToCancel && (
+                <CancellationRequestModal
+                    order={orderToCancel}
+                    onClose={() => {
+                        setIsRequestingCancel(false);
+                        setOrderToCancel(null);
+                    }}
+                />
             )}
         </div>
     );
