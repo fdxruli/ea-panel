@@ -159,3 +159,36 @@
   color: #555;
   padding: 0.5rem 1rem;
 }
+
+.addButton {
+  background-color: #ff6f61;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  min-width: 180px; /* Ancho mínimo para evitar que el texto cambie el tamaño */
+  text-align: center;
+}
+
+.addButton:hover {
+  background-color: #e65a4e;
+}
+
+/* --- ESTILO PARA EL BOTÓN CUANDO SE AÑADE UN PRODUCTO --- */
+.addButton.added {
+  background-color: var(--color-success); /* Verde de éxito */
+  cursor: not-allowed;
+}
+/* -------------------------------------------------------- */
+
+.quantitySelector {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 50px;
+}

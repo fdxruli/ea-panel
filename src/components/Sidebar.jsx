@@ -1,7 +1,8 @@
+// src/components/Sidebar.jsx (LÍNEA AÑADIDA)
+
 import React from "react";
 import { Link } from "react-router-dom";
 
-// Recibe el estado 'isOpen' para aplicar la clase CSS
 export default function Sidebar({ isOpen }) {
   return (
     <div className={`sidebar ${isOpen ? "open" : ""}`}>
@@ -10,6 +11,7 @@ export default function Sidebar({ isOpen }) {
       <Link to="/admin/clientes">Clientes</Link>
       <Link to="/admin/productos">Productos</Link>
       <Link to="/admin/descuentos">Descuentos</Link>
+      <Link to="/admin/terminos">Términos y Cond.</Link> {/* <-- AÑADE ESTA LÍNEA */}
     </div>
   );
 }

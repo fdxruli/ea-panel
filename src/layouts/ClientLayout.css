@@ -96,11 +96,16 @@
 }
 /* -------------------------------------------------------- */
 
-
 .client-main {
   flex-grow: 1;
   padding: 1rem;
 }
+
+/* --- NAVEGACIÓN DE ESCRITORIO (NUEVO) --- */
+.desktop-nav {
+    display: none; /* Oculta en móvil por defecto */
+}
+/* --- FIN DE ESTILOS NUEVOS --- */
 
 
 /* --- Estilos para pantallas grandes --- */
@@ -118,6 +123,37 @@
     display: none;
   }
   
+  /* --- ESTILOS PARA LA NAVEGACIÓN DE ESCRITORIO (NUEVO) --- */
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .desktop-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    position: relative;
+    padding: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .desktop-nav-link:hover {
+    color: var(--color-primary);
+  }
+  .desktop-nav-link.active {
+    color: var(--color-primary);
+  }
+  .cart-button-desktop .cart-badge {
+    top: 0;
+    right: 0;
+  }
+  /* --- FIN DE ESTILOS NUEVOS --- */
+
   .client-main {
     padding: 2rem;
   }

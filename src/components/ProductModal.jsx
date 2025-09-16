@@ -1,4 +1,4 @@
-// src/components/ProductModal.jsx (CORREGIDO Y RESTAURADO)
+// src/components/ProductModal.jsx (MODIFICADO)
 
 import React, { useState, useEffect } from 'react';
 import styles from './ProductModal.module.css';
@@ -6,17 +6,17 @@ import styles from './ProductModal.module.css';
 export default function ProductModal({ product, onClose, onAddToCart }) {
     const [quantity, setQuantity] = useState(1);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [wasAdded, setWasAdded] = useState(false); // <-- Estado para confirmación
 
-    // Combina la imagen principal con las de la galería
     const galleryImages = [
         product?.image_url,
         ...(product?.product_images?.map(img => img.image_url) || [])
-    ].filter(Boolean); // Filtra para eliminar URLs nulas o vacías
+    ].filter(Boolean);
 
-    // Resetea la cantidad y la imagen cuando el producto cambia
     useEffect(() => {
         setQuantity(1);
         setCurrentImageIndex(0);
+        setWasAdded(false); // <-- Resetea la confirmación si cambia el producto
     }, [product]);
 
     if (!product) {
@@ -31,9 +31,11 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         setCurrentImageIndex((prevIndex) => (prevIndex - 1 + galleryImages.length) % galleryImages.length);
     };
 
-    const handleAddToCartClick = () => {
-        onAddToCart(product, quantity);
-        onClose(); // Cierra el modal después de agregar
+    const handleAddToCartClick = (event) => {
+        onAddToCart(product, quantity, event);
+        setWasAdded(true); // Muestra la confirmación
+        setTimeout(() => setWasAdded(false), 2000); // La oculta después de 2 segundos
+        // Ya no se llama a onClose() para mantener el modal abierto
     };
 
     const incrementQuantity = () => setQuantity(q => q + 1);
@@ -70,8 +72,12 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             <span>{quantity}</span>
                             <button onClick={incrementQuantity}>+</button>
                         </div>
-                        <button onClick={handleAddToCartClick} className={styles.addButton}>
-                            Añadir por ${ (product.price * quantity).toFixed(2) }
+                        <button 
+                            onClick={handleAddToCartClick} 
+                            className={`${styles.addButton} ${wasAdded ? styles.added : ''}`}
+                            disabled={wasAdded}
+                        >
+                            {wasAdded ? '¡Añadido!' : `Añadir por $${ (product.price * quantity).toFixed(2) }`}
                         </button>
                     </div>
                 </div>

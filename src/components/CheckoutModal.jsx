@@ -94,6 +94,26 @@ export default function CheckoutModal({ phone, onClose }) {
                 .single();
             if (customerError) throw customerError;
 
+            const { data: latestTerms, error: termsError } = await supabase
+                .from('terms_and_conditions')
+                .select('id')
+                .order('version', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (termsError || !latestTerms) throw new Error("No se pudieron cargar los términos y condiciones.");
+
+            const { error: acceptanceError } = await supabase
+                .from('customer_terms_acceptances')
+                .insert({
+                    customer_id: customerData.id,
+                    terms_version_id: latestTerms.id
+                });
+
+            if (acceptanceError && acceptanceError.code !== '23505') {
+                throw acceptanceError;
+            }
+
             let finalAddressDetails = selectedAddress;
 
             if (!selectedAddress) {

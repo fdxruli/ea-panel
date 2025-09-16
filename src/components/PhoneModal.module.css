@@ -135,3 +135,21 @@
   margin-top: 2rem;
   margin-bottom: 0;
 }
+
+.terms {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.terms label {
+    color: var(--text-secondary);
+}
+
+.terms a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}

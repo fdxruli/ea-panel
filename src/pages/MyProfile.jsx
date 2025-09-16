@@ -3,22 +3,24 @@ import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import styles from './MyProfile.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import AddressModal from '../components/AddressModal'; // <-- 1. IMPORTA EL MODAL
+import AddressModal from '../components/AddressModal';
+import ConfirmModal from '../components/ConfirmModal'; // <-- 1. IMPORTAMOS EL NUEVO MODAL
 
 export default function MyProfile() {
-    const { phone, savePhone, setPhoneModalOpen } = useCustomer();
+    const { phone, savePhone, setPhoneModalOpen, clearPhone } = useCustomer();
     const [customer, setCustomer] = useState(null);
     const [addresses, setAddresses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
 
-    // --- 2. ESTADOS PARA MANEJAR EL MODAL ---
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAddress, setEditingAddress] = useState(null);
 
+    // --- 2. ESTADO PARA CONTROLAR EL MODAL DE CONFIRMACIÓN ---
+    const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
+
     const fetchCustomerData = useCallback(async () => {
-        // ... (lógica de fetchCustomerData sin cambios)
         if (!phone) {
             setLoading(false);
             return;
@@ -49,7 +51,6 @@ export default function MyProfile() {
         fetchCustomerData();
     }, [fetchCustomerData]);
     
-    // ... (handleInfoSubmit y deleteAddress sin cambios)
     const handleInfoSubmit = async (e) => {
         e.preventDefault();
         if (editForm.phone !== phone) {
@@ -88,17 +89,14 @@ export default function MyProfile() {
         }
     };
 
-    // --- 3. LÓGICA PARA GUARDAR/ACTUALIZAR DIRECCIÓN ---
     const handleSaveAddress = async (addressData, addressId) => {
         let response;
         if (addressId) {
-            // Actualizar dirección existente
             response = await supabase
                 .from('customer_addresses')
                 .update(addressData)
                 .eq('id', addressId);
         } else {
-            // Insertar nueva dirección
             response = await supabase
                 .from('customer_addresses')
                 .insert(addressData);
@@ -109,7 +107,7 @@ export default function MyProfile() {
         }
         
         alert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
-        fetchCustomerData(); // Refrescar los datos
+        fetchCustomerData();
     };
 
     const openAddressModal = (address = null) => {
@@ -117,7 +115,19 @@ export default function MyProfile() {
         setIsModalOpen(true);
     };
 
-    // ... (renderizado sin cambios hasta la sección de direcciones)
+    // --- 3. LÓGICA DE CIERRE DE SESIÓN ACTUALIZADA ---
+    const handleLogout = () => {
+        // Simplemente abre el modal de confirmación
+        setConfirmModalOpen(true);
+    };
+
+    const confirmLogout = () => {
+        // Esta función se ejecuta si el usuario confirma en el modal
+        clearPhone();
+        setConfirmModalOpen(false);
+    };
+    // ------------------------------------------------
+
     if (loading) return <LoadingSpinner />;
 
     if (!phone) {
@@ -152,7 +162,6 @@ export default function MyProfile() {
                         </form>
                     </div>
 
-                    {/* --- 4. SECCIÓN DE DIRECCIONES ACTUALIZADA --- */}
                     <div className={styles.card}>
                         <div className={styles.addressHeader}>
                             <h2>Mis Direcciones</h2>
@@ -181,10 +190,15 @@ export default function MyProfile() {
                             <p>No tienes direcciones guardadas.</p>
                         )}
                     </div>
+
+                    <div className={styles.logoutSection}>
+                        <button onClick={handleLogout} className={styles.logoutButton}>
+                            Cerrar Sesión (Cambiar de número)
+                        </button>
+                    </div>
                 </>
             )}
 
-            {/* --- 5. RENDERIZADO DEL MODAL --- */}
             <AddressModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -192,6 +206,16 @@ export default function MyProfile() {
                 address={editingAddress}
                 customerId={customer?.id}
             />
+
+            {/* --- 4. RENDERIZADO DEL NUEVO MODAL DE CONFIRMACIÓN --- */}
+            <ConfirmModal
+                isOpen={isConfirmModalOpen}
+                onClose={() => setConfirmModalOpen(false)}
+                onConfirm={confirmLogout}
+                title="¿Cerrar Sesión?"
+            >
+                Tu número se eliminará de este dispositivo y tendrás que volver a ingresarlo para ver tu perfil y pedidos.
+            </ConfirmModal>
         </div>
     );
 }

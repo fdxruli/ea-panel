@@ -26,17 +26,31 @@ export default function ClientLayout() {
           <h1>Alitas "El Jefe" 翼</h1>
         </Link>
         
-        {/* La navegación principal se moverá al nuevo footer */}
+        {/* --- NAVEGACIÓN PARA ESCRITORIO (AÑADIDA) --- */}
+        <nav className="desktop-nav">
+            <NavLink to="/mi-perfil" className="desktop-nav-link">
+                <UserIcon />
+                <span>Mi Perfil</span>
+            </NavLink>
+            <NavLink to="/mis-pedidos" className="desktop-nav-link">
+                <ClipboardIcon />
+                <span>Mis Pedidos</span>
+            </NavLink>
+            <button onClick={toggleCart} className="desktop-nav-link cart-button-desktop">
+                <ShoppingCartIcon />
+                <span>Carrito</span>
+                {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
+            </button>
+        </nav>
       </header>
       
-      {/* El componente Cart ahora se controla por su propio estado de visibilidad */}
       <Cart />
 
       <main className="client-main">
         <Outlet />
       </main>
 
-      {/* --- NUEVA BARRA DE NAVEGACIÓN INFERIOR --- */}
+      {/* --- BARRA DE NAVEGACIÓN INFERIOR (PARA MÓVIL) --- */}
       <footer className="bottom-nav">
         <NavLink to="/mi-perfil" className="bottom-nav-link">
           <UserIcon />

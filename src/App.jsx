@@ -20,6 +20,8 @@ import Orders from "./pages/Orders";
 import Products from "./pages/Products";
 import Customers from "./pages/Customers";
 import Discounts from "./pages/Discounts";
+import TermsAndConditions from "./pages/TermsAndConditions"; // <-- 1. IMPORTA EL NUEVO COMPONENTE ADMIN
+import TermsPage from "./pages/TermsPage";
 
 function App() {
   return (
@@ -38,6 +40,20 @@ function App() {
           </CustomerProvider>
         }
       >
+        {/* --- RUTA PÚBLICA PARA TÉRMINOS Y CONDICIONES --- */}
+      <Route path="/terminos" element={<TermsPage />} />
+
+      {/* --- RUTAS PARA EL CLIENTE (PÚBLICAS) --- */}
+      <Route
+        path="/"
+        element={
+          <CustomerProvider>
+            {/* ... */}
+          </CustomerProvider>
+        }
+      >
+        {/* ... */}
+      </Route>
         <Route index element={<Menu />} />
         <Route path="carrito" element={<Cart />} />
         <Route path="mis-pedidos" element={<MyOrders />} />
@@ -52,6 +68,7 @@ function App() {
           <Route path="productos" element={<Products />} />
           <Route path="clientes" element={<Customers />} />
           <Route path="descuentos" element={<Discounts />} />
+          <Route path="terminos" element={<TermsAndConditions />}/>
         </Route>
       </Route>
     </Routes>
