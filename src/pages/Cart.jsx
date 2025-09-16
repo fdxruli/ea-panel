@@ -17,7 +17,9 @@ export default function Cart() {
         applyDiscount,
         removeDiscount,
         isCartOpen,
-        toggleCart
+        toggleCart,
+        cartNotification,
+        clearCartNotification
     } = useCart();
 
     const { phone, setPhoneModalOpen } = useCustomer();
@@ -73,6 +75,12 @@ export default function Cart() {
                     <button onClick={toggleCart} className={styles.closeButton}>×</button>
                 </div>
 
+                {cartNotification && (
+                    <div className={styles.cartNotification}>
+                        <p>{cartNotification}</p>
+                        <button onClick={clearCartNotification}>&times;</button>
+                    </div>
+                )}
                 {cartItems.length === 0 ? (
                     <p className={styles.emptyMessage}>Tu carrito está vacío. ¡Añade unas alitas!</p>
                 ) : (

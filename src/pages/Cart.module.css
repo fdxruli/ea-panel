@@ -123,3 +123,30 @@
 
   .cartSidebar.open { transform: translateX(0); }
 }
+
+.cartNotification {
+  background-color: var(--color-primary-light);
+  border-left: 4px solid var(--color-primary);
+  color: var(--text-primary);
+  padding: 1rem;
+  margin: 1rem;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.cartNotification p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cartNotification button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0 0.5rem;
+}

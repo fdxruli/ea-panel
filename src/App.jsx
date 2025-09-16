@@ -35,12 +35,12 @@ function App() {
         path="/"
         element={
           <CustomerProvider>
-            <CartProvider>
-              {/* --- 👇 2. AQUÍ LA CLAVE: ENVOLVEMOS SOLO EL LAYOUT DEL CLIENTE --- */}
-              <ProductProvider>
+            {/* --- 👇 AQUÍ EL CAMBIO: ProductProvider envuelve a CartProvider --- */}
+            <ProductProvider>
+              <CartProvider>
                 <ClientLayout />
-              </ProductProvider>
-            </CartProvider>
+              </CartProvider>
+            </ProductProvider>
           </CustomerProvider>
         }
       >

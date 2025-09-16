@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import styles from './ProductModal.module.css';
+import { useProducts } from '../context/ProductContext';
 
 export default function ProductModal({ product, onClose, onAddToCart }) {
     const [quantity, setQuantity] = useState(1);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [wasAdded, setWasAdded] = useState(false); // <-- Estado para confirmación
+
+    const { products: liveProducts } = useProducts();
 
     const galleryImages = [
         product?.image_url,
@@ -32,6 +35,14 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     };
 
     const handleAddToCartClick = (event) => {
+        // --- VERIFICACIÓN JUSTO ANTES DE AÑADIR ---
+        const isStillAvailable = liveProducts.some(p => p.id === product.id);
+
+        if (!isStillAvailable) {
+            alert("Lo sentimos, este producto ya no se encuentra disponible.");
+            onClose(); // Cierra el modal ya que el producto es inválido
+            return;
+        }
         onAddToCart(product, quantity, event);
         setWasAdded(true); // Muestra la confirmación
         setTimeout(() => setWasAdded(false), 2000); // La oculta después de 2 segundos
