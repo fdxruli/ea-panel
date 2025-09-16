@@ -1,4 +1,4 @@
-// src/pages/Menu.jsx (CORREGIDO)
+// src/pages/Menu.jsx (CON BOTÓN ÚNICO Y LÓGICA REFINADA)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -7,6 +7,10 @@ import styles from './Menu.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProductModal from '../components/ProductModal';
 
+// --- Iconos para el botón de vista ---
+const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
+const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
+
 export default function Menu() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -14,22 +18,18 @@ export default function Menu() {
     const { addToCart } = useCart();
     const [categories, setCategories] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
     const [toastMessage, setToastMessage] = useState('');
-
-    // Estado para controlar el modal
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [layout, setLayout] = useState('list'); // 'list' o 'grid'
     
     useEffect(() => {
+        // ... (lógica de fetch sin cambios)
         const fetchProductsAndCategories = async () => {
             try {
                 setLoading(true);
                 const { data: productsData, error: productsError } = await supabase
                     .from('products')
-                    .select(`
-                        *, 
-                        product_images ( id, image_url ) 
-                    `)
+                    .select(`*, product_images ( id, image_url )`)
                     .eq('is_active', true);
                 if (productsError) throw productsError;
 
@@ -54,22 +54,20 @@ export default function Menu() {
         fetchProductsAndCategories();
     }, []);
 
-    // --- AQUÍ ESTÁ LA CORRECCIÓN ---
-    // La función ahora acepta un segundo argumento "quantity".
-    // Cuando se llama desde el botón "Añadir", quantity es undefined y el contexto usa 1 por defecto.
-    // Cuando se llama desde el modal, quantity tiene el valor seleccionado.
     const handleAddToCart = (product, quantity) => {
+        // ... (lógica sin cambios)
         addToCart(product, quantity);
         const quantityAdded = quantity || 1;
         setToastMessage(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
-        setTimeout(() => {
-            setToastMessage('');
-        }, 3000);
+        setTimeout(() => setToastMessage(''), 3000);
+    };
+    
+    // --- 👇 NUEVA FUNCIÓN PARA ALTERNAR LA VISTA ---
+    const toggleLayout = () => {
+        setLayout(prevLayout => (prevLayout === 'list' ? 'grid' : 'list'));
     };
 
-    const filteredProducts = products
-        .filter(product => selectedCategory ? product.category_id === selectedCategory : true)
-        .filter(product => product.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredProducts = products.filter(product => selectedCategory ? product.category_id === selectedCategory : true);
 
     if (loading) return <LoadingSpinner />;
     if (error) return <p className={styles.error}>Error: {error}</p>;
@@ -93,21 +91,25 @@ export default function Menu() {
                         </button>
                     ))}
                 </div>
+                
+                {/* --- 👇 BOTÓN ÚNICO QUE CAMBIA DE ICONO --- */}
+                <div className={styles.layoutToggle}>
+                    <button onClick={toggleLayout} title="Cambiar vista">
+                        {layout === 'list' ? <GridIcon /> : <ListIcon />}
+                    </button>
+                </div>
             </div>
-
-            <div className={styles.productList}>
+            
+            <div className={`${styles.productList} ${styles[layout]}`}>
+                {/* ... (mapeo de productos sin cambios) ... */}
                 {filteredProducts.length > 0 ? filteredProducts.map(product => (
                     <div key={product.id} className={styles.productCard}>
-                        
-                        {/* Este div abre el modal al hacer clic en la imagen o el texto */}
                         <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                             <img src={product.image_url || 'https://via.placeholder.com/150'} alt={product.name} />
                             <div className={styles.cardContent}>
                                 <h3>{product.name}</h3>
                             </div>
                         </div>
-                        
-                        {/* El footer con el botón "Añadir" que agrega 1 producto */}
                         <div className={styles.cardFooter}>
                             <span className={styles.price}>${product.price.toFixed(2)}</span>
                             <button onClick={() => handleAddToCart(product)}>Añadir</button>
@@ -116,13 +118,8 @@ export default function Menu() {
                 )) : <p>No se encontraron productos.</p>}
             </div>
             
-            {toastMessage && (
-                <div className={styles.toast}>
-                    {toastMessage}
-                </div>
-            )}
+            {toastMessage && <div className={styles.toast}>{toastMessage}</div>}
 
-            {/* Renderiza el modal y le pasa la función handleAddToCart corregida */}
             <ProductModal 
                 product={selectedProduct} 
                 onClose={() => setSelectedProduct(null)}

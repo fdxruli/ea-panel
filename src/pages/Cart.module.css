@@ -1,4 +1,4 @@
-/* src/pages/Cart.module.css (VERSIÓN FINAL) */
+/* src/pages/Cart.module.css (CON TRANSICIÓN AJUSTADA) */
 
 .overlay {
   position: fixed;
@@ -10,13 +10,14 @@
   z-index: 1010;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.4s ease, visibility 0.4s ease;
+  transition: opacity 0.5s ease, visibility 0s 0.5s; /* Oculta la visibilidad al final */
 }
 
 .cartSidebar.open + .overlay,
 .overlay:has(+ .cartSidebar.open) {
   opacity: 1;
   visibility: visible;
+  transition: opacity 0.5s ease;
 }
 
 
@@ -33,12 +34,19 @@
   flex-direction: column;
   color: var(--text-primary);
   border-radius: 1.5rem 1.5rem 0 0;
-  transform: translateY(100%);
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+  transform-origin: center bottom;
+  transform: translateY(100%) scale(0.5);
+  opacity: 0;
+  
+  /* --- 👇 AQUÍ ESTÁ EL AJUSTE DE VELOCIDAD --- */
+  transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.9s ease;
+  /* --- 👆 FIN DEL AJUSTE --- */
 }
 
 .cartSidebar.open {
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    opacity: 1;
 }
 
 .cartHeader {
@@ -50,21 +58,17 @@
   flex-shrink: 0;
 }
 
-/* --- 👇 NUEVA CLASE PARA EL SCROLL --- */
 .cartBody {
   flex-grow: 1;
   overflow-y: auto;
 }
-/* --- 👆 FIN DE LA NUEVA CLASE --- */
 
 .cartHeader h2 { margin: 0; font-size: 1.5rem; }
 .closeButton { background: none; font-size: 2.5rem; cursor: pointer; color: var(--text-secondary); }
 .emptyMessage { text-align: center; padding: 4rem 1rem; font-size: 1.1rem; color: var(--text-secondary); }
 
-/* --- 👇 SE SIMPLIFICA ESTA CLASE --- */
 .cartItemsList {
   padding: 1rem;
-  /* Se quitaron flex-grow y overflow-y de aquí */
 }
 
 .cartItem {
@@ -111,7 +115,10 @@
   .cartSidebar {
     left: auto; right: 0; bottom: 0; top: 0; width: 100%;
     max-width: 400px; height: 100%; border-radius: 0;
-    transform: translateX(100%); box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+    
+    transform-origin: unset;
+    transform: translateX(100%);
+    opacity: 1;
   }
 
   .cartSidebar.open { transform: translateX(0); }

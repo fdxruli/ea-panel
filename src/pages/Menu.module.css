@@ -1,4 +1,4 @@
-/* src/pages/Menu.module.css */
+/* src/pages/Menu.module.css (AJUSTADO PARA UN SOLO BOTÓN MÓVIL) */
 
 .menuContainer {
   padding: 1rem 0;
@@ -15,24 +15,27 @@
 .filters {
   margin-bottom: 2.5rem;
   position: sticky;
-  top: 70px; /* Debajo del header */
+  top: 70px;
   background: var(--bg-primary);
-  padding: 1rem 0;
+  padding: 1rem;
   z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: nowrap; /* <-- CLAVE: Evita que el botón se vaya abajo */
 }
 
 .categoryButtons {
   display: flex;
-  overflow-x: auto;
+  overflow-x: auto; /* Permite scroll horizontal si no caben las categorías */
   gap: 0.8rem;
-  padding: 0.5rem 1rem;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  padding: 0.5rem 0;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .categoryButtons::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
-
 
 .categoryButtons button {
   background-color: var(--bg-secondary);
@@ -41,7 +44,7 @@
   padding: 0.6rem 1.2rem;
   border-radius: 50px;
   font-weight: 500;
-  white-space: nowrap; /* Evita que el texto se parta */
+  white-space: nowrap;
 }
 
 .categoryButtons button:hover {
@@ -54,11 +57,43 @@
   border-color: var(--color-primary);
 }
 
+/* --- Estilos para el botón de vista único --- */
+.layoutToggle {
+  flex-shrink: 0; /* Evita que el botón se encoja */
+}
+
+.layoutToggle button {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--color-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%; /* Botón circular */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.layoutToggle button:hover {
+    background-color: var(--color-primary-light);
+}
+
 /* --- Lista de Productos --- */
-.productList {
+/* Vista de Lista (móvil) */
+.productList.list {
   display: grid;
-  grid-template-columns: 1fr; /* Una columna en móvil */
+  grid-template-columns: 1fr;
   gap: 1.5rem;
+  padding: 0 1rem;
+}
+
+/* Vista de Cuadrícula (móvil) */
+.productList.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem; /* Un poco menos de espacio en cuadrícula */
+  padding: 0 1rem;
 }
 
 .productCard {
@@ -68,6 +103,22 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* --- 👇 AQUÍ ESTÁ LA MAGIA --- */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  animation: fadeIn 0.5s ease forwards;
+  opacity: 0; /* Inicia invisible para la animación */
+  /* --- 👆 FIN DEL CAMBIO --- */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .productCard:hover {
@@ -113,11 +164,7 @@
   border-radius: 50px;
 }
 
-.productCard button:hover {
-  background-color: var(--color-primary-dark);
-}
-
-/* --- Toast --- */
+/* --- Toast sin cambios --- */
 .toast {
     position: fixed;
     bottom: 20px;
@@ -128,21 +175,27 @@
     padding: 12px 24px;
     border-radius: 8px;
     z-index: 1000;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 
-/* --- Media Queries --- */
-@media (min-width: 600px) {
+/* --- Media Queries (Tablet y Escritorio) --- */
+@media (min-width: 768px) {
+  .layoutToggle {
+    display: none; /* <-- OCULTA el botón en pantallas grandes */
+  }
+
+  /* FORZAR VISTA DE CUADRÍCULA EN PANTALLAS GRANDES */
   .productList {
-    grid-template-columns: repeat(2, 1fr);
+    display: grid;
+    gap: 1.5rem;
+    padding: 0;
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas por defecto */
   }
 }
 
 @media (min-width: 900px) {
   .productList {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr); /* 4 columnas */
   }
    .categoryButtons {
     justify-content: center;
@@ -151,6 +204,6 @@
 
 @media (min-width: 1200px) {
   .productList {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr); /* 5 columnas */
   }
 }

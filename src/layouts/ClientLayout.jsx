@@ -26,23 +26,7 @@ export default function ClientLayout() {
           <h1>Alitas "El Jefe" 翼</h1>
         </Link>
         
-        <nav className="client-nav">
-          <NavLink to="/mi-perfil" className="nav-link">
-            <UserIcon />
-            <span className="nav-text">Mi Perfil</span>
-          </NavLink>
-
-          <NavLink to="/mis-pedidos" className="nav-link">
-            <ClipboardIcon />
-            <span className="nav-text">Mis Pedidos</span>
-          </NavLink>
-
-          <button onClick={toggleCart} className="nav-link cart-button">
-            <ShoppingCartIcon />
-            <span className="nav-text">Carrito</span>
-            {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
-          </button>
-        </nav>
+        {/* La navegación principal se moverá al nuevo footer */}
       </header>
       
       {/* El componente Cart ahora se controla por su propio estado de visibilidad */}
@@ -51,6 +35,23 @@ export default function ClientLayout() {
       <main className="client-main">
         <Outlet />
       </main>
+
+      {/* --- NUEVA BARRA DE NAVEGACIÓN INFERIOR --- */}
+      <footer className="bottom-nav">
+        <NavLink to="/mi-perfil" className="bottom-nav-link">
+          <UserIcon />
+          <span>Mi Perfil</span>
+        </NavLink>
+        <button onClick={toggleCart} className="bottom-nav-link cart-button">
+          <ShoppingCartIcon />
+          <span>Carrito</span>
+          {totalItems > 0 && <span className="cart-badge">{totalItems}</span>}
+        </button>
+        <NavLink to="/mis-pedidos" className="bottom-nav-link">
+          <ClipboardIcon />
+          <span>Mis Pedidos</span>
+        </NavLink>
+      </footer>
     </div>
   );
 }
