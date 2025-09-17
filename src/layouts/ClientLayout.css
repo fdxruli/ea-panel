@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-bottom: 80px; /* <-- Añade espacio para la barra inferior */
+  padding-bottom: 80px;
 }
 
 .client-header {
@@ -25,7 +25,6 @@
   margin: 0;
 }
 
-/* --- ESTILOS PARA LA NUEVA BARRA DE NAVEGACIÓN INFERIOR --- */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -65,7 +64,7 @@
 }
 
 .bottom-nav-link.cart-button {
-  transform: translateY(-15px); /* Eleva el botón del carrito */
+  transform: translateY(-15px);
 }
 
 .bottom-nav-link.cart-button svg {
@@ -94,36 +93,27 @@
   font-weight: bold;
   border: 2px solid var(--bg-secondary);
 }
-/* -------------------------------------------------------- */
 
 .client-main {
   flex-grow: 1;
   padding: 1rem;
 }
 
-/* --- NAVEGACIÓN DE ESCRITORIO (NUEVO) --- */
 .desktop-nav {
-    display: none; /* Oculta en móvil por defecto */
+    display: none;
 }
-/* --- FIN DE ESTILOS NUEVOS --- */
 
 
-/* --- Estilos para pantallas grandes --- */
 @media (min-width: 768px) {
   .client-layout {
-    padding-bottom: 0; /* <-- Quita el padding en escritorio */
+    padding-bottom: 0;
   }
-
   .client-header {
     padding: 1rem 2rem;
   }
-
-  /* Oculta la barra inferior y muestra la navegación superior en escritorio */
   .bottom-nav {
     display: none;
   }
-  
-  /* --- ESTILOS PARA LA NAVEGACIÓN DE ESCRITORIO (NUEVO) --- */
   .desktop-nav {
     display: flex;
     align-items: center;
@@ -152,27 +142,55 @@
     top: 0;
     right: 0;
   }
-  /* --- FIN DE ESTILOS NUEVOS --- */
-
   .client-main {
     padding: 2rem;
   }
 }
 
-/* --- ESTILOS PARA LA NOTIFICACIÓN DE ACTUALIZACIÓN --- */
-.update-toast {
+/* --- 👇 ESTILOS PARA LA NOTIFICACIÓN GLOBAL --- */
+.toast-notification {
   position: fixed;
-  top: 80px; /* Debajo del header en móvil */
+  bottom: 90px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--color-accent); /* Un color de acento que llame la atención */
+  background-color: var(--color-accent);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 2100; /* Z-index alto para estar sobre todo */
+  pointer-events: none;
+  opacity: 0;
+  animation: toast-fade-in-out 3s ease forwards;
+  font-weight: 500;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+@keyframes toast-fade-in-out {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 10px); }
+}
+
+@media (min-width: 768px) {
+  .toast-notification {
+    bottom: 2rem; /* En escritorio, se ve mejor un poco más abajo */
+  }
+}
+/* ------------------------------------------- */
+
+.update-toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-accent);
   color: var(--text-light);
   padding: 12px 24px;
-  border-radius: 50px; /* Bordes redondeados */
-  z-index: 2000; /* Por encima de la mayoría de los elementos */
+  border-radius: 50px;
+  z-index: 2000;
   font-weight: 500;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-  /* Animación de entrada */
   animation: slide-down 0.5s ease forwards;
 }
 
@@ -187,9 +205,8 @@
   }
 }
 
-/* Ajuste para escritorio */
 @media (min-width: 768px) {
   .update-toast {
-    top: 90px; /* Un poco más abajo del header de escritorio */
+    top: 90px;
   }
 }

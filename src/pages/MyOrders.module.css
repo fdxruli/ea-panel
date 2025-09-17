@@ -118,9 +118,10 @@
 .actionsContainer {
     display: flex;
     gap: 1rem;
+    flex-wrap: wrap; /* Para que los botones se ajusten en pantallas pequeñas */
 }
 
-.editButton, .cancelButton {
+.editButton, .cancelButton, .reorderButton { /* <-- AÑADIDO .reorderButton */
     color: white;
     border: none;
     padding: 0.6rem 1rem;
@@ -135,6 +136,11 @@
 
 .cancelButton {
     background-color: #d9534f; /* Rojo */
+}
+
+/* --- NUEVO ESTILO PARA EL BOTÓN DE REORDENAR --- */
+.reorderButton {
+    background-color: #28a745; /* Verde */
 }
 /* --- FIN DE LA CORRECCIÓN --- */
 

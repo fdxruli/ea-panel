@@ -1,4 +1,4 @@
-/* src/pages/Menu.module.css (CON ESTILOS DE ANIMACIÓN) */
+/* src/pages/Menu.module.css (CON ESTILOS DE NOTIFICACIÓN ELIMINADOS) */
 
 .menuContainer {
   padding: 1rem 0;
@@ -157,28 +157,7 @@
   border-radius: 50px;
 }
 
-/* --- ESTILOS DEL TOAST Y ANIMACIÓN MODIFICADOS --- */
-.toast {
-    position: fixed;
-    bottom: 90px; /* Elevado para estar sobre la barra de navegación */
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--color-accent);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 8px;
-    z-index: 1100; /* Asegura que esté por encima de la barra */
-    pointer-events: none;
-    opacity: 0;
-    animation: toast-fade-in-out 3s ease forwards;
-}
-
-@keyframes toast-fade-in-out {
-  0% { opacity: 0; transform: translate(-50%, 10px); }
-  15% { opacity: 1; transform: translate(-50%, 0); }
-  85% { opacity: 1; transform: translate(-50%, 0); }
-  100% { opacity: 0; transform: translate(-50%, 10px); }
-}
+/* --- ESTILOS DEL TOAST ELIMINADOS DE AQUÍ --- */
 
 .flyImage {
   position: fixed;
@@ -201,21 +180,17 @@
     transform: scale(1.2);
   }
   100% {
-    /* Destino aproximado del botón del carrito */
     left: 50% !important; 
     top: calc(100vh - 45px) !important; 
     transform: translateX(-50%) scale(0.1);
     opacity: 0;
   }
 }
-/* --------------------------------------------- */
-
 
 @media (min-width: 768px) {
   .layoutToggle {
     display: none;
   }
-
   .productList {
     display: grid;
     gap: 1.5rem;
@@ -247,7 +222,6 @@
     font-size: 1.2rem;
 }
 
-/* --- 👇 NUEVOS ESTILOS AÑADIDOS --- */
 .actionsContainer {
     display: flex;
     gap: 1rem;
@@ -263,14 +237,12 @@
 }
 
 .editButton {
-    background-color: #3498db; /* Azul */
+    background-color: #3498db;
 }
 
 .cancelButton {
-    background-color: #d9534f; /* Rojo */
+    background-color: #d9534f;
 }
-/* --- 👆 FIN DE NUEVOS ESTILOS --- */
-
 
 .prompt {
     text-align: center;

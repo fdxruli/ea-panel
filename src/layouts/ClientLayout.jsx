@@ -3,6 +3,7 @@
 import React from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useProducts } from "../context/ProductContext";
 import Cart from "../pages/Cart";
 import PhoneModal from "../components/PhoneModal";
 import './ClientLayout.css';
@@ -14,12 +15,14 @@ const ShoppingCartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24
 
 
 export default function ClientLayout() {
-  const { toggleCart, cartItems } = useCart();
+  const { toggleCart, cartItems, toast } = useCart();
+  const { notification } = useProducts(); // <-- CORRECCIÓN: Se obtiene 'notification' (singular)
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   return (
     <div className="client-layout">
       <PhoneModal />
+      {notification && <div className="update-toast">{notification}</div>}
 
       <header className="client-header">
         <Link to="/" className="logo">

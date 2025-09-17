@@ -1,30 +1,35 @@
-// src/pages/MyOrders.jsx (MODIFICADO)
+// src/pages/MyOrders.jsx (MODIFICADO CON LÓGICA DE CONFIRMACIÓN)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
+import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 import styles from './MyOrders.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EditOrderModal from '../components/EditOrderModal';
-import ConfirmModal from '../components/ConfirmModal'; // Importamos el modal de confirmación
-import CancellationRequestModal from '../components/CancellationRequestModal'; // Importamos el nuevo modal
+import ConfirmModal from '../components/ConfirmModal';
+import CancellationRequestModal from '../components/CancellationRequestModal';
 
 export default function MyOrders() {
     const { phone, setPhoneModalOpen } = useCustomer();
+    const { cartItems, replaceCart, toggleCart, showToast } = useCart(); // <-- Obtenemos 'cartItems' y 'replaceCart'
+    const navigate = useNavigate();
+
     const [customer, setCustomer] = useState(null);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [editingOrder, setEditingOrder] = useState(null);
-
-    // --- Estados para los modales de cancelación ---
     const [orderToCancel, setOrderToCancel] = useState(null);
     const [isRequestingCancel, setIsRequestingCancel] = useState(false);
-
+    
+    // --- 👇 1. NUEVO ESTADO PARA CONTROLAR LA CONFIRMACIÓN DE RE-ORDENAR ---
+    const [orderToReorder, setOrderToReorder] = useState(null);
 
     const fetchOrders = useCallback(async (phoneNumber) => {
+        // ... (código de fetchOrders sin cambios)
         if (!phoneNumber) return;
-
         setLoading(true);
         setError('');
         try {
@@ -57,7 +62,6 @@ export default function MyOrders() {
         }
     }, [phone, fetchOrders]);
 
-    // --- Lógica de cancelación ---
     const handleCancelClick = (order) => {
         if (order.status === 'pendiente') {
             setOrderToCancel(order);
@@ -66,22 +70,56 @@ export default function MyOrders() {
             setOrderToCancel(order);
         }
     };
-
+    
     const confirmDirectCancel = async () => {
+        // ... (código de confirmDirectCancel sin cambios)
         if (!orderToCancel) return;
         const { error } = await supabase
             .from('orders')
             .update({ status: 'cancelado', cancellation_reason: 'Cancelado por el cliente.' })
             .eq('id', orderToCancel.id);
-
         if (error) {
-            alert('Error al cancelar el pedido: ' + error.message);
+            showToast('Error al cancelar el pedido.');
         } else {
-            alert('Pedido cancelado con éxito.');
+            showToast('Pedido cancelado con éxito.');
             fetchOrders(phone);
         }
         setOrderToCancel(null);
     };
+
+    // --- 👇 2. LÓGICA DE RE-ORDENAR ACTUALIZADA ---
+    const handleReorder = (orderToRepeat) => {
+        if (!orderToRepeat || !orderToRepeat.order_items) return;
+
+        // Si el carrito tiene items, pide confirmación.
+        if (cartItems.length > 0) {
+            setOrderToReorder(orderToRepeat);
+        } else { // Si el carrito está vacío, procede directamente.
+            performReorder(orderToRepeat);
+        }
+    };
+
+    const performReorder = (order) => {
+        const newCartItems = order.order_items
+            .filter(item => item.products) // Asegura que el producto aún existe
+            .map(item => ({
+                ...item.products,
+                quantity: item.quantity
+            }));
+        
+        replaceCart(newCartItems);
+
+        showToast('¡Pedido añadido al carrito!');
+        navigate('/');
+        setTimeout(toggleCart, 500);
+    };
+
+    const confirmReorder = () => {
+        if (!orderToReorder) return;
+        performReorder(orderToReorder);
+        setOrderToReorder(null); // Cierra el modal
+    };
+    // ---------------------------------------------
 
 
     const handleOrderUpdated = useCallback(() => { fetchOrders(phone); }, [fetchOrders, phone]);
@@ -95,31 +133,36 @@ export default function MyOrders() {
             </div>
             <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleString()}</p>
             <ul>
-                {order.order_items.map(item => ( <li key={item.id}>{item.quantity}x {item.products.name}</li> ))}
+                {order.order_items.map(item => ( <li key={item.id}>{item.quantity}x {item.products?.name || 'Producto no disponible'}</li> ))}
             </ul>
             <div className={styles.orderFooter}>
                 <strong>Total: ${order.total_amount.toFixed(2)}</strong>
-                {isLatest && (order.status === 'pendiente' || order.status === 'en_proceso') && (
-                    <div className={styles.actionsContainer}>
-                        {order.status === 'pendiente' &&
-                            <button className={styles.editButton} onClick={() => setEditingOrder(order)}>✏️ Editar</button>
-                        }
-                        <button className={styles.cancelButton} onClick={() => handleCancelClick(order)}>
+                <div className={styles.actionsContainer}>
+                    {isLatest && order.status === 'pendiente' &&
+                        <button className={styles.editButton} onClick={() => setEditingOrder(order)}>✏️ Editar</button>
+                    }
+                    {isLatest && (order.status === 'pendiente' || order.status === 'en_proceso') && (
+                         <button className={styles.cancelButton} onClick={() => handleCancelClick(order)}>
                             Cancelar Pedido
                         </button>
-                    </div>
-                )}
+                    )}
+                    {order.status === 'completado' && (
+                        <button className={styles.reorderButton} onClick={() => handleReorder(order)}>
+                            Volver a Pedir
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
-
+    
+    // ... (resto del return y JSX sin cambios, excepto por el nuevo ConfirmModal)
     const latestOrder = orders.length > 0 ? orders[0] : null;
     const pastOrders = orders.length > 1 ? orders.slice(1) : [];
 
     return (
         <div className={styles.container}>
             <h1>Mis Pedidos</h1>
-            
             {!phone ? (
                 <div className={styles.prompt}>
                     <h2>Ingresa tu número para ver tus pedidos</h2>
@@ -132,7 +175,6 @@ export default function MyOrders() {
                 <>
                     {loading && <LoadingSpinner />}
                     {error && <p className={styles.error}>{error}</p>}
-
                     {customer && latestOrder && (
                         <div className={styles.ordersSection}>
                             <h2>¡Hola, {customer.name}!</h2>
@@ -144,38 +186,32 @@ export default function MyOrders() {
                             {pastOrders.length > 0 && (
                                 <div className={styles.historyContainer}>
                                     <h3>Historial de Pedidos</h3>
-                                    {pastOrders.map(order => renderOrder(order))}
+                                    {pastOrders.map(order => renderOrder(order, false))}
                                 </div>
                             )}
                         </div>
                     )}
-                    
                     {!loading && customer && orders.length === 0 && ( <p>No tienes pedidos registrados con este número.</p> )}
                 </>
             )}
 
-            {editingOrder && (
-                <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />
-            )}
-
-            <ConfirmModal
-                isOpen={!!orderToCancel && !isRequestingCancel}
-                onClose={() => setOrderToCancel(null)}
-                onConfirm={confirmDirectCancel}
-                title="¿Confirmar Cancelación?"
-            >
+            {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}
+            
+            <ConfirmModal isOpen={!!orderToCancel && !isRequestingCancel} onClose={() => setOrderToCancel(null)} onConfirm={confirmDirectCancel} title="¿Confirmar Cancelación?">
                 Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
             </ConfirmModal>
 
-            {isRequestingCancel && orderToCancel && (
-                <CancellationRequestModal
-                    order={orderToCancel}
-                    onClose={() => {
-                        setIsRequestingCancel(false);
-                        setOrderToCancel(null);
-                    }}
-                />
-            )}
+            {/* --- 👇 3. NUEVO MODAL DE CONFIRMACIÓN PARA RE-ORDENAR --- */}
+            <ConfirmModal
+                isOpen={!!orderToReorder}
+                onClose={() => setOrderToReorder(null)}
+                onConfirm={confirmReorder}
+                title="¿Reemplazar Carrito?"
+            >
+                Tu carrito ya tiene productos. ¿Deseas vaciarlo y agregar los productos de este pedido?
+            </ConfirmModal>
+
+            {isRequestingCancel && orderToCancel && <CancellationRequestModal order={orderToCancel} onClose={() => { setIsRequestingCancel(false); setOrderToCancel(null); }} />}
         </div>
     );
 }

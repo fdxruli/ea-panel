@@ -1,7 +1,7 @@
-// src/pages/Menu.jsx (MODIFICADO)
+// src/pages/Menu.jsx (LIMPIADO Y ACTUALIZADO)
 
-import React, { useState } from 'react';
-import { useProducts } from '../context/ProductContext'; // <-- 1. USA EL HOOK DEL NUEVO CONTEXTO
+import React, { useState, useEffect } from 'react';
+import { useProducts } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
 import styles from './Menu.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -10,26 +10,25 @@ import ProductModal from '../components/ProductModal';
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
 const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
 
+const LAYOUT_STORAGE_KEY = 'product-layout-preference';
+
 export default function Menu() {
-    // --- 👇 2. OBTIENE LOS DATOS DIRECTAMENTE DEL CONTEXTO ---
     const { products, categories, loading, error } = useProducts();
-    
-    const { addToCart } = useCart();
+    const { addToCart, showToast } = useCart(); // <-- Usamos showToast del contexto
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [toastMessage, setToastMessage] = useState('');
-    const [toastKey, setToastKey] = useState(0);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [layout, setLayout] = useState('list');
+    const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'list');
     const [flyingImages, setFlyingImages] = useState([]);
 
-    // --- ❌ 3. ¡ADIÓS AL useEffect! YA NO ES NECESARIO HACER EL FETCH AQUÍ ---
+    useEffect(() => {
+        localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
+    }, [layout]);
 
     const handleAddToCart = (product, quantity, event) => {
         addToCart(product, quantity);
         const quantityAdded = quantity || 1;
         
-        setToastMessage(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
-        setToastKey(prevKey => prevKey + 1);
+        showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`); // <-- Usamos la notificación global
 
         if (event && event.currentTarget) {
             const rect = event.currentTarget.getBoundingClientRect();
@@ -39,9 +38,7 @@ export default function Menu() {
                 top: rect.top + rect.height / 2,
                 left: rect.left + rect.width / 2,
             };
-            
             setFlyingImages(prev => [...prev, newImage]);
-            
             setTimeout(() => {
                 setFlyingImages(prev => prev.filter(img => img.id !== newImage.id));
             }, 1000);
@@ -59,8 +56,7 @@ export default function Menu() {
 
     return (
         <div className={styles.menuContainer}>
-            {/* ... El resto del JSX del componente permanece exactamente igual ... */}
-             {flyingImages.map(img => (
+            {flyingImages.map(img => (
                 <img
                     key={img.id}
                     src={img.src}
@@ -70,9 +66,7 @@ export default function Menu() {
                 />
             ))}
             
-            {toastMessage && <div key={toastKey} className={styles.toast}>{toastMessage}</div>}
-
-            <h1>Nuestro Menú</h1>
+            {/* El elemento de la notificación ya no se renderiza aquí, sino en ClientLayout */}
 
             <div className={styles.filters}>
                 <div className={styles.categoryButtons}>
@@ -80,16 +74,11 @@ export default function Menu() {
                         Todos
                     </button>
                     {categories.map(category => (
-                        <button
-                            key={category.id}
-                            onClick={() => setSelectedCategory(category.id)}
-                            className={selectedCategory === category.id ? styles.active : ''}
-                        >
+                        <button key={category.id} onClick={() => setSelectedCategory(category.id)} className={selectedCategory === category.id ? styles.active : ''}>
                             {category.name}
                         </button>
                     ))}
                 </div>
-                
                 <div className={styles.layoutToggle}>
                     <button onClick={toggleLayout} title="Cambiar vista">
                         {layout === 'list' ? <GridIcon /> : <ListIcon />}
