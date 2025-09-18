@@ -1,12 +1,12 @@
-// src/components/ProductModal.jsx (LÓGICA DE RESEÑAS AJUSTADA)
+// src/components/ProductModal.jsx (CON CARRUSEL AUTOMÁTICO)
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ProductModal.module.css';
 import { useProducts } from '../context/ProductContext';
 import { useCustomer } from '../context/CustomerContext';
 import { useProductExtras } from '../context/ProductExtrasContext';
 import { supabase } from '../lib/supabaseClient';
-import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
+import { useAlert } from '../context/AlertContext';
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -60,16 +60,14 @@ const AverageRating = ({ reviews }) => {
 
 
 export default function ProductModal({ product, onClose, onAddToCart }) {
-    const { showAlert } = useAlert(); // <-- INICIALIZAR
+    const { showAlert } = useAlert();
     const [quantity, setQuantity] = useState(1);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [wasAdded, setWasAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('details');
     
-    // --- 👇 USAMOS LOS DATOS DEL CONTEXTO (SIN CAMBIOS AQUÍ) ---
     const { reviews: allReviews, favorites, customerId, refetch: refetchExtras } = useProductExtras();
     
-    // Estados locales del modal que dependen del producto seleccionado
     const [productReviews, setProductReviews] = useState([]);
     const [isFavorite, setIsFavorite] = useState(false);
     const [hasUserReviewed, setHasUserReviewed] = useState(false);
@@ -81,19 +79,46 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const { phone, setPhoneModalOpen } = useCustomer();
     const [isReviewFormVisible, setIsReviewFormVisible] = useState(false);
 
+    // --- LÓGICA DEL CARRUSEL ---
+    const intervalRef = useRef(null);
     const galleryImages = product ? [
         product.image_url,
         ...(product.product_images?.map(img => img.image_url) || [])
     ].filter(Boolean) : [];
 
-    // --- 👇 LÓGICA DE ACTUALIZACIÓN (AJUSTADA Y SIMPLIFICADA) ---
+    const handleNextImage = useCallback(() => {
+        setCurrentImageIndex(prev => (prev + 1) % galleryImages.length);
+    }, [galleryImages.length]);
+
+    const handlePrevImage = () => {
+        setCurrentImageIndex(prev => (prev - 1 + galleryImages.length) % galleryImages.length);
+    };
+
+    const startCarousel = useCallback(() => {
+        stopCarousel(); // Asegura que no haya intervalos duplicados
+        if (galleryImages.length > 1) {
+            intervalRef.current = setInterval(handleNextImage, 4000); // Cambia cada 4 segundos
+        }
+    }, [galleryImages.length, handleNextImage]);
+
+    const stopCarousel = () => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+    };
+
+    useEffect(() => {
+        startCarousel();
+        return () => stopCarousel(); // Limpia el intervalo cuando el componente se desmonta
+    }, [startCarousel]);
+    // --- FIN DE LÓGICA DEL CARRUSEL ---
+
+
     useEffect(() => {
         if (product) {
-            // Filtra las reseñas para este producto desde la lista global del contexto.
             const currentProductReviews = allReviews.filter(r => r.products.id === product.id);
             setProductReviews(currentProductReviews);
 
-            // La lógica para favoritos y si el usuario ya ha opinado no cambia.
             if (customerId) {
                 setIsFavorite(favorites.some(f => f.products.id === product.id));
                 setHasUserReviewed(currentProductReviews.some(r => r.customer_id === customerId));
@@ -102,9 +127,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                 setHasUserReviewed(false);
             }
 
-            // Resetea el estado del modal para el nuevo producto.
             setQuantity(1);
-            setCurrentImageIndex(0);
+            setCurrentImageIndex(0); // Reinicia el carrusel al cambiar de producto
             setWasAdded(false);
             setActiveTab('details');
             setUserRating(0);
@@ -116,10 +140,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     if (!product) return null;
 
-    // --- (El resto de las funciones y el JSX no necesitan cambios) ---
-
-    const handleNextImage = () => setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
-    const handlePrevImage = () => setCurrentImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
 
     const handleAddToCartClick = (event) => {
         const isStillAvailable = liveProducts.some(p => p.id === product.id);
@@ -140,13 +160,13 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             return;
         }
         const isCurrentlyFavorite = isFavorite;
-        setIsFavorite(!isCurrentlyFavorite); // Actualización optimista
+        setIsFavorite(!isCurrentlyFavorite);
         if (isCurrentlyFavorite) {
             await supabase.from('customer_favorites').delete().match({ product_id: product.id, customer_id: customerId });
         } else {
             await supabase.from('customer_favorites').insert({ product_id: product.id, customer_id: customerId });
         }
-        refetchExtras(); // Refresca los datos en el contexto
+        refetchExtras();
     };
 
     const handleReviewSubmit = async (e) => {
@@ -169,7 +189,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         } else {
             setUserRating(0);
             setUserComment('');
-            refetchExtras(); // Refresca los datos en el contexto
+            refetchExtras();
             setIsReviewFormVisible(false);
         }
         setIsSubmittingReview(false);
@@ -181,14 +201,25 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <div className={styles.galleryContainer}>
+                <div
+                    className={styles.galleryContainer}
+                    onMouseEnter={stopCarousel}
+                    onMouseLeave={startCarousel}
+                >
                     {galleryImages.length > 1 && (
                       <>
                         <button onClick={handlePrevImage} className={`${styles.navButton} ${styles.prev}`}>&#10094;</button>
                         <button onClick={handleNextImage} className={`${styles.navButton} ${styles.next}`}>&#10095;</button>
                       </>
                     )}
-                    <img src={galleryImages[currentImageIndex] || 'https://via.placeholder.com/400'} alt={product.name} className={styles.productImage} />
+                    {galleryImages.map((src, index) => (
+                         <img
+                            key={index}
+                            src={src || 'https://via.placeholder.com/400'}
+                            alt={`${product.name} ${index + 1}`}
+                            className={`${styles.productImage} ${index === currentImageIndex ? styles.active : ''}`}
+                        />
+                    ))}
                     <button onClick={onClose} className={styles.closeButton}>×</button>
                 </div>
 
@@ -274,3 +305,4 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         </div>
     );
 }
+
