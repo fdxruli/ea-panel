@@ -92,7 +92,7 @@ export default function CheckoutModal({ phone, onClose }) {
                 .from('customers')
                 .upsert({ phone: phone, name: finalName }, { onConflict: 'phone' })
                 .select()
-                .single();
+                .maybeSingle();
             if (customerError) throw customerError;
 
             const { data: latestTerms, error: termsError } = await supabase
