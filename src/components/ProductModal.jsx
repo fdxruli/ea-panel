@@ -1,13 +1,12 @@
-// src/components/ProductModal.jsx (ULTRA RÁPIDO CON CONTEXTO)
+// src/components/ProductModal.jsx (LÓGICA DE RESEÑAS AJUSTADA)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './ProductModal.module.css';
 import { useProducts } from '../context/ProductContext';
 import { useCustomer } from '../context/CustomerContext';
-import { useProductExtras } from '../context/ProductExtrasContext'; // <-- 1. IMPORTAR
+import { useProductExtras } from '../context/ProductExtrasContext';
 import { supabase } from '../lib/supabaseClient';
 
-// ... (Componentes StarRating, HeartIcon, AverageRating no cambian)
 
 const StarRating = ({ rating, onRatingChange }) => {
     const [hoverRating, setHoverRating] = useState(0);
@@ -65,8 +64,10 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const [wasAdded, setWasAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('details');
     
-    // --- 👇 2. USAR DATOS DEL CONTEXTO ---
-    const { reviews: allReviews, favorites: allFavorites, customerId, refetch: refetchExtras } = useProductExtras();
+    // --- 👇 USAMOS LOS DATOS DEL CONTEXTO (SIN CAMBIOS AQUÍ) ---
+    const { reviews: allReviews, favorites, customerId, refetch: refetchExtras } = useProductExtras();
+    
+    // Estados locales del modal que dependen del producto seleccionado
     const [productReviews, setProductReviews] = useState([]);
     const [isFavorite, setIsFavorite] = useState(false);
     const [hasUserReviewed, setHasUserReviewed] = useState(false);
@@ -83,24 +84,23 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         ...(product.product_images?.map(img => img.image_url) || [])
     ].filter(Boolean) : [];
 
-    // --- 👇 3. LÓGICA SIMPLIFICADA PARA ACTUALIZAR EL ESTADO DEL MODAL ---
+    // --- 👇 LÓGICA DE ACTUALIZACIÓN (AJUSTADA Y SIMPLIFICADA) ---
     useEffect(() => {
         if (product) {
-            // Filtra las reseñas para este producto específico desde el contexto
-            const currentReviews = allReviews.filter(r => r.products.id === product.id);
-            setProductReviews(currentReviews);
+            // Filtra las reseñas para este producto desde la lista global del contexto.
+            const currentProductReviews = allReviews.filter(r => r.products.id === product.id);
+            setProductReviews(currentProductReviews);
 
+            // La lógica para favoritos y si el usuario ya ha opinado no cambia.
             if (customerId) {
-                // Comprueba si el producto es favorito desde el contexto
-                setIsFavorite(allFavorites.some(f => f.products.id === product.id));
-                // Comprueba si el usuario ya ha dejado una reseña desde el contexto
-                setHasUserReviewed(currentReviews.some(r => r.customer_id === customerId));
+                setIsFavorite(favorites.some(f => f.products.id === product.id));
+                setHasUserReviewed(currentProductReviews.some(r => r.customer_id === customerId));
             } else {
                 setIsFavorite(false);
                 setHasUserReviewed(false);
             }
 
-            // Resetea el estado del formulario y las pestañas
+            // Resetea el estado del modal para el nuevo producto.
             setQuantity(1);
             setCurrentImageIndex(0);
             setWasAdded(false);
@@ -109,10 +109,12 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             setUserComment('');
             setIsReviewFormVisible(false);
         }
-    }, [product, allReviews, allFavorites, customerId]);
+    }, [product, allReviews, favorites, customerId]);
 
 
     if (!product) return null;
+
+    // --- (El resto de las funciones y el JSX no necesitan cambios) ---
 
     const handleNextImage = () => setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
     const handlePrevImage = () => setCurrentImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
@@ -174,7 +176,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const incrementQuantity = () => setQuantity(q => q + 1);
     const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
 
-    // --- 👇 4. EL RESTO DEL JSX NO CAMBIA, SOLO USA LAS VARIABLES ACTUALIZADAS ---
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>

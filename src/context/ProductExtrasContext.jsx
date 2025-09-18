@@ -1,4 +1,4 @@
-// src/context/ProductExtrasContext.jsx
+// src/context/ProductExtrasContext.jsx (CORREGIDO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -8,7 +8,8 @@ const ProductExtrasContext = createContext();
 
 export const useProductExtras = () => useContext(ProductExtrasContext);
 
-const EXTRAS_CACHE_KEY = 'ea-extras-cache';
+// Ya no guardaremos las reseñas en caché local, ya que pueden ser muchas.
+const FAVORITES_CACHE_KEY = 'ea-favorites-cache';
 
 export const ProductExtrasProvider = ({ children }) => {
     const { phone } = useCustomer();
@@ -17,27 +18,31 @@ export const ProductExtrasProvider = ({ children }) => {
     const [customerId, setCustomerId] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // --- 👇 FUNCIÓN MODIFICADA ---
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
-        if (!currentCustomerId) {
-            setReviews([]);
-            setFavorites([]);
-            localStorage.removeItem(EXTRAS_CACHE_KEY);
-            setLoading(false);
-            return;
-        }
         setLoading(true);
         try {
-            const { data: favData } = await supabase
-                .from('customer_favorites').select('*, products(id, name, image_url, is_active)')
-                .eq('customer_id', currentCustomerId);
-
+            // 1. Obtenemos TODAS las reseñas.
             const { data: revData } = await supabase
-                .from('product_reviews').select('*, products(id, name, image_url, is_active)')
-                .eq('customer_id', currentCustomerId);
+                .from('product_reviews')
+                .select('*, products(id), customers(name)') // Pedimos el nombre del cliente
+                .order('created_at', { ascending: false });
 
-            setFavorites(favData || []);
             setReviews(revData || []);
-            localStorage.setItem(EXTRAS_CACHE_KEY, JSON.stringify({ favorites: favData || [], reviews: revData || [] }));
+
+            // 2. Obtenemos solo los favoritos del usuario actual (si existe).
+            if (currentCustomerId) {
+                const { data: favData } = await supabase
+                    .from('customer_favorites')
+                    .select('*, products(id, name, image_url, is_active)')
+                    .eq('customer_id', currentCustomerId);
+
+                setFavorites(favData || []);
+                localStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify(favData || []));
+            } else {
+                setFavorites([]);
+                localStorage.removeItem(FAVORITES_CACHE_KEY);
+            }
         } catch (error) {
             console.error("Error fetching extras:", error);
         } finally {
@@ -46,54 +51,44 @@ export const ProductExtrasProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        const getCustomerId = async () => {
-            if (phone) {
-                const { data } = await supabase.from('customers').select('id').eq('phone', phone).single();
-                if (data) {
-                    setCustomerId(data.id);
-                    const cachedData = localStorage.getItem(EXTRAS_CACHE_KEY);
-                    if (cachedData) {
-                        const {favorites: cachedFav, reviews: cachedRev} = JSON.parse(cachedData);
-                        setFavorites(cachedFav || []);
-                        setReviews(cachedRev || []);
-                        setLoading(false);
-                    }
-                    fetchAndCacheExtras(data.id);
-                } else {
-                    setCustomerId(null);
-                }
-            } else {
+        const getCustomerIdAndFetch = async () => {
+            if (!phone) {
                 setCustomerId(null);
+                setFavorites([]);
+                // Aunque no haya sesión, igual queremos ver las reseñas públicas.
+                fetchAndCacheExtras(null);
+                return;
             }
+
+            const { data } = await supabase.from('customers').select('id').eq('phone', phone).single();
+            const currentId = data ? data.id : null;
+            setCustomerId(currentId);
+            
+            // Cargamos favoritos de la caché para una carga inicial rápida.
+            const cachedFavs = localStorage.getItem(FAVORITES_CACHE_KEY);
+            if (cachedFavs) {
+                setFavorites(JSON.parse(cachedFavs));
+            }
+
+            // Siempre buscamos datos frescos.
+            fetchAndCacheExtras(currentId);
         };
-        getCustomerId();
+        getCustomerIdAndFetch();
     }, [phone, fetchAndCacheExtras]);
 
-
+    // ... (El useEffect para las suscripciones en tiempo real se mantiene igual)
     useEffect(() => {
         if (!customerId) return;
         const channel = supabase.channel(`customer-extras-${customerId}`);
 
-        const reviewsSubscription = {
-            table: 'product_reviews',
-            schema: 'public',
-            filter: `customer_id=eq.${customerId}`
-        };
-        const favoritesSubscription = {
-            table: 'customer_favorites',
-            schema: 'public',
-            filter: `customer_id=eq.${customerId}`
+        const handleChanges = (payload) => {
+             console.log(`Real-time change detected in ${payload.table}, refetching extras...`);
+             fetchAndCacheExtras(customerId);
         };
 
         channel
-            .on('postgres_changes', { event: '*', ...reviewsSubscription }, payload => {
-                console.log('Real-time change in reviews:', payload);
-                fetchAndCacheExtras(customerId);
-            })
-            .on('postgres_changes', { event: '*', ...favoritesSubscription }, payload => {
-                console.log('Real-time change in favorites:', payload);
-                fetchAndCacheExtras(customerId);
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews', filter: `customer_id=eq.${customerId}` }, handleChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites', filter: `customer_id=eq.${customerId}` }, handleChanges)
             .subscribe();
 
         return () => {
@@ -101,8 +96,13 @@ export const ProductExtrasProvider = ({ children }) => {
         };
     }, [customerId, fetchAndCacheExtras]);
 
-
-    const value = { reviews, favorites, customerId, loading, refetch: () => fetchAndCacheExtras(customerId) };
+    const value = { 
+        reviews, 
+        favorites, 
+        customerId, 
+        loading, 
+        refetch: () => fetchAndCacheExtras(customerId) 
+    };
 
     return (
         <ProductExtrasContext.Provider value={value}>
