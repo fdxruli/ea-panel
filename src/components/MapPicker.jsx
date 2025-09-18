@@ -7,6 +7,8 @@ import { useAlert } from '../context/AlertContext';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+const libraries = ['geometry'];
+
 // Zona de reparto con puntos reordenados
 const deliveryAreaCoordinates = [
   { lat: 15.888856, lng: -92.003376 },
@@ -58,7 +60,7 @@ export default function MapPicker({ onLocationSelect }) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['geometry'],
+    libraries: libraries,
   });
 
   const onPolygonLoad = useCallback(polygon => {

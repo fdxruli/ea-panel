@@ -38,7 +38,7 @@ export default function CheckoutModal({ phone, onClose }) {
                 .from('customers')
                 .select(`*, customer_addresses(*)`)
                 .eq('phone', phone)
-                .single();
+                .maybeSingle();
 
             if (data) {
                 setCustomer(data);

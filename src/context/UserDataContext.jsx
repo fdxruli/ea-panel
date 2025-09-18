@@ -32,7 +32,7 @@ export const UserDataProvider = ({ children }) => {
         setError(null);
         try {
             const { data: customerData, error: customerError } = await supabase
-                .from('customers').select('*').eq('phone', phoneNumber).single();
+                .from('customers').select('*').eq('phone', phoneNumber).maybeSingle();
 
             if (customerError || !customerData) {
                 throw new Error("Cliente no encontrado.");
