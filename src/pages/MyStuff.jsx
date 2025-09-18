@@ -1,10 +1,10 @@
-// src/pages/MyStuff.jsx (USANDO AMBOS NUEVOS CONTEXTOS)
+// src/pages/MyStuff.jsx (CORREGIDO Y MÁS SEGURO)
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react'; // Importa useMemo
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
-import { useUserData } from '../context/UserDataContext'; // <-- 1. IMPORTAR
-import { useProductExtras } from '../context/ProductExtrasContext'; // <-- 2. IMPORTAR
+import { useUserData } from '../context/UserDataContext';
+import { useProductExtras } from '../context/ProductExtrasContext';
 import styles from './MyStuff.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
@@ -19,15 +19,23 @@ export default function MyStuff() {
     const { addToCart, showToast } = useCart();
     const { products: liveProducts } = useProducts();
 
-    // --- 👇 3. USAR DATOS DE LOS NUEVOS CONTEXTOS ---
     const { customer, loading: userLoading } = useUserData();
-    const { favorites, reviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
+    const { favorites, reviews: allReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
     
     const [editingReview, setEditingReview] = useState(null);
     const [reviewToDelete, setReviewToDelete] = useState(null);
     const [favoriteToRemove, setFavoriteToRemove] = useState(null);
 
     const loading = userLoading || extrasLoading;
+
+    // --- 👇 AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
+    // Filtramos las reseñas para que solo muestren las del cliente actual.
+    // useMemo optimiza el rendimiento para no recalcular en cada render.
+    const myReviews = useMemo(() => {
+        if (!customer) return [];
+        return allReviews.filter(review => review.customer_id === customer.id);
+    }, [allReviews, customer]);
+    // -----------------------------------------
 
     const handleRemoveFavorite = async () => {
         if (!favoriteToRemove || !customer) return;
@@ -89,7 +97,6 @@ export default function MyStuff() {
         );
     }
 
-    // --- 👇 4. EL RESTO DEL JSX NO CAMBIA ---
     return (
         <div className={styles.container}>
             <h1>Hola, {customer.name}</h1>
@@ -124,10 +131,11 @@ export default function MyStuff() {
             </div>
 
             <div className={styles.card}>
-                 <div className={styles.cardHeader}> <StarIcon /> <h2>Mis Reseñas ({reviews.length})</h2> </div>
-                {reviews.length > 0 ? (
+                 {/* Usamos la nueva variable 'myReviews' que ya está filtrada */}
+                 <div className={styles.cardHeader}> <StarIcon /> <h2>Mis Reseñas ({myReviews.length})</h2> </div>
+                {myReviews.length > 0 ? (
                     <div className={styles.reviewList}>
-                        {reviews.map(rev => {
+                        {myReviews.map(rev => {
                              const isAvailable = rev.products?.is_active ?? false;
                             return (
                                 rev.products && (
