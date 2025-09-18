@@ -1,10 +1,12 @@
-// src/App.jsx (CON NUEVA RUTA)
+// src/App.jsx (CON NUEVOS PROVEEDORES DE CONTEXTO)
 
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { CustomerProvider } from "./context/CustomerContext";
 import { ProductProvider } from "./context/ProductContext";
+import { UserDataProvider } from "./context/UserDataContext"; // <-- 1. IMPORTAR
+import { ProductExtrasProvider } from "./context/ProductExtrasContext"; // <-- 2. IMPORTAR
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import 'leaflet/dist/leaflet.css';
@@ -16,7 +18,7 @@ import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
 import MyOrders from "./pages/MyOrders";
 import MyProfile from "./pages/MyProfile";
-import MyStuff from "./pages/MyStuff"; // <-- 1. IMPORTAR LA NUEVA PÁGINA
+import MyStuff from "./pages/MyStuff";
 import Dashboard from "./pages/Dashboard";
 import Orders from "./pages/Orders";
 import Products from "./pages/Products";
@@ -38,7 +40,12 @@ function App() {
           <CustomerProvider>
             <ProductProvider>
               <CartProvider>
-                <ClientLayout />
+                {/* --- 👇 3. ENVOLVER CON LOS NUEVOS PROVEEDORES --- */}
+                <UserDataProvider>
+                  <ProductExtrasProvider>
+                    <ClientLayout />
+                  </ProductExtrasProvider>
+                </UserDataProvider>
               </CartProvider>
             </ProductProvider>
           </CustomerProvider>
@@ -49,7 +56,7 @@ function App() {
         <Route path="carrito" element={<Cart />} />
         <Route path="mis-pedidos" element={<MyOrders />} />
         <Route path="mi-perfil" element={<MyProfile />} />
-        <Route path="mi-actividad" element={<MyStuff />} /> {/* <-- 2. AÑADIR LA NUEVA RUTA */}
+        <Route path="mi-actividad" element={<MyStuff />} />
       </Route>
 
       {/* --- RUTAS PARA EL ADMINISTRADOR (PROTEGIDAS Y SIN CACHÉ) --- */}

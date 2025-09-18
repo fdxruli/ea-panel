@@ -1,8 +1,9 @@
-// src/pages/MyOrders.jsx (MODIFICADO CON LÓGICA DE CONFIRMACIÓN)
+// src/pages/MyOrders.jsx (USANDO USERDATACONTEXT)
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
+import { useUserData } from '../context/UserDataContext'; // <-- 1. IMPORTAR
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import styles from './MyOrders.module.css';
@@ -13,54 +14,17 @@ import CancellationRequestModal from '../components/CancellationRequestModal';
 
 export default function MyOrders() {
     const { phone, setPhoneModalOpen } = useCustomer();
-    const { cartItems, replaceCart, toggleCart, showToast } = useCart(); // <-- Obtenemos 'cartItems' y 'replaceCart'
+    const { cartItems, replaceCart, toggleCart, showToast } = useCart();
     const navigate = useNavigate();
 
-    const [customer, setCustomer] = useState(null);
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    // --- 👇 2. USAR DATOS DEL NUEVO CONTEXTO ---
+    const { customer, orders, loading, error, refetch } = useUserData();
+
     const [editingOrder, setEditingOrder] = useState(null);
     const [orderToCancel, setOrderToCancel] = useState(null);
     const [isRequestingCancel, setIsRequestingCancel] = useState(false);
-    
-    // --- 👇 1. NUEVO ESTADO PARA CONTROLAR LA CONFIRMACIÓN DE RE-ORDENAR ---
     const [orderToReorder, setOrderToReorder] = useState(null);
 
-    const fetchOrders = useCallback(async (phoneNumber) => {
-        // ... (código de fetchOrders sin cambios)
-        if (!phoneNumber) return;
-        setLoading(true);
-        setError('');
-        try {
-            const { data: customerData, error: customerError } = await supabase
-                .from('customers').select('id, name').eq('phone', phoneNumber).single();
-            if (customerError || !customerData) throw new Error("No se encontró un cliente con este número.");
-            setCustomer(customerData);
-
-            const { data: ordersData, error: ordersError } = await supabase
-                .from('orders').select('*, order_items(*, products(*))')
-                .eq('customer_id', customerData.id).order('created_at', { ascending: false });
-            if (ordersError) throw new Error("Error al cargar los pedidos.");
-
-            setOrders(ordersData || []);
-        } catch (err) {
-            setError(err.message);
-            setCustomer(null);
-            setOrders([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (phone) {
-            fetchOrders(phone);
-        } else {
-            setCustomer(null);
-            setOrders([]);
-        }
-    }, [phone, fetchOrders]);
 
     const handleCancelClick = (order) => {
         if (order.status === 'pendiente') {
@@ -72,7 +36,6 @@ export default function MyOrders() {
     };
     
     const confirmDirectCancel = async () => {
-        // ... (código de confirmDirectCancel sin cambios)
         if (!orderToCancel) return;
         const { error } = await supabase
             .from('orders')
@@ -82,33 +45,26 @@ export default function MyOrders() {
             showToast('Error al cancelar el pedido.');
         } else {
             showToast('Pedido cancelado con éxito.');
-            fetchOrders(phone);
+            refetch(); // Refresca los datos en el contexto
         }
         setOrderToCancel(null);
     };
 
-    // --- 👇 2. LÓGICA DE RE-ORDENAR ACTUALIZADA ---
     const handleReorder = (orderToRepeat) => {
         if (!orderToRepeat || !orderToRepeat.order_items) return;
-
-        // Si el carrito tiene items, pide confirmación.
         if (cartItems.length > 0) {
             setOrderToReorder(orderToRepeat);
-        } else { // Si el carrito está vacío, procede directamente.
+        } else {
             performReorder(orderToRepeat);
         }
     };
 
     const performReorder = (order) => {
         const newCartItems = order.order_items
-            .filter(item => item.products) // Asegura que el producto aún existe
-            .map(item => ({
-                ...item.products,
-                quantity: item.quantity
-            }));
+            .filter(item => item.products)
+            .map(item => ({ ...item.products, quantity: item.quantity }));
         
         replaceCart(newCartItems);
-
         showToast('¡Pedido añadido al carrito!');
         navigate('/');
         setTimeout(toggleCart, 500);
@@ -117,14 +73,13 @@ export default function MyOrders() {
     const confirmReorder = () => {
         if (!orderToReorder) return;
         performReorder(orderToReorder);
-        setOrderToReorder(null); // Cierra el modal
+        setOrderToReorder(null);
     };
-    // ---------------------------------------------
 
-
-    const handleOrderUpdated = useCallback(() => { fetchOrders(phone); }, [fetchOrders, phone]);
+    const handleOrderUpdated = useCallback(() => { refetch(); }, [refetch]);
     const handleCloseModal = useCallback(() => { setEditingOrder(null); }, []);
 
+    // --- 👇 3. EL RESTO DEL JSX NO CAMBIA ---
     const renderOrder = (order, isLatest = false) => (
         <div key={order.id} className={isLatest ? styles.latestOrderCard : styles.orderCard}>
             <div className={styles.orderHeader}>
@@ -156,7 +111,6 @@ export default function MyOrders() {
         </div>
     );
     
-    // ... (resto del return y JSX sin cambios, excepto por el nuevo ConfirmModal)
     const latestOrder = orders.length > 0 ? orders[0] : null;
     const pastOrders = orders.length > 1 ? orders.slice(1) : [];
 
@@ -201,7 +155,6 @@ export default function MyOrders() {
                 Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
             </ConfirmModal>
 
-            {/* --- 👇 3. NUEVO MODAL DE CONFIRMACIÓN PARA RE-ORDENAR --- */}
             <ConfirmModal
                 isOpen={!!orderToReorder}
                 onClose={() => setOrderToReorder(null)}

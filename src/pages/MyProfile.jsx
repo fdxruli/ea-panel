@@ -1,19 +1,19 @@
-// src/pages/MyProfile.jsx (VERSIÓN SIMPLIFICADA)
+// src/pages/MyProfile.jsx (USANDO USERDATACONTEXT)
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
+import { useUserData } from '../context/UserDataContext'; // <-- 1. IMPORTAR
 import styles from './MyProfile.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddressModal from '../components/AddressModal';
 import ConfirmModal from '../components/ConfirmModal';
 
 export default function MyProfile() {
-    const { phone, savePhone, setPhoneModalOpen, clearPhone } = useCustomer();
-    const [customer, setCustomer] = useState(null);
-    const [addresses, setAddresses] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const { phone, setPhoneModalOpen, clearPhone } = useCustomer();
+    
+    // --- 👇 2. USAR DATOS DEL NUEVO CONTEXTO ---
+    const { customer, addresses, loading, error, refetch } = useUserData();
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -21,40 +21,12 @@ export default function MyProfile() {
     const [addressToDelete, setAddressToDelete] = useState(null);
     const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
     
-
-    const fetchCustomerData = useCallback(async () => {
-        if (!phone) {
-            setLoading(false);
-            setCustomer(null);
-            return;
-        }
-        setLoading(true);
-        setError('');
-        try {
-            const { data: custData, error: custErr } = await supabase
-                .from('customers').select('*').eq('phone', phone).single();
-
-            if (custErr || !custData) {
-                throw new Error("No se pudo cargar tu información. Asegúrate de que el número sea correcto.");
-            }
-            setCustomer(custData);
-            setEditForm({ name: custData.name, phone: custData.phone });
-
-            const { data: addrData } = await supabase.from('customer_addresses').select('*').eq('customer_id', custData.id);
-            setAddresses(addrData || []);
-
-        } catch (err) {
-            setError(err.message);
-            setCustomer(null);
-            setAddresses([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [phone]);
-
     useEffect(() => {
-        fetchCustomerData();
-    }, [fetchCustomerData]);
+        if (customer) {
+            setEditForm({ name: customer.name, phone: customer.phone });
+        }
+    }, [customer]);
+
 
     const handleInfoSubmit = async (e) => {
         e.preventDefault();
@@ -64,13 +36,14 @@ export default function MyProfile() {
             .eq('id', customer.id);
 
         if (error) {
-            setError("Error al actualizar la información.");
+            alert("Error al actualizar la información.");
         } else {
             alert("Información actualizada con éxito.");
             if (editForm.phone !== phone) {
-                savePhone(editForm.phone);
+                savePhone(editForm.phone); // Esto disparará el refetch en UserDataContext
+            } else {
+                refetch();
             }
-            fetchCustomerData();
         }
     };
 
@@ -78,7 +51,7 @@ export default function MyProfile() {
         if (!addressToDelete) return;
         await supabase.from('customer_addresses').delete().eq('id', addressToDelete.id);
         setAddressToDelete(null);
-        fetchCustomerData();
+        refetch(); // Refresca los datos en el contexto
     };
 
     const handleSaveAddress = async (addressData, addressId) => {
@@ -91,7 +64,7 @@ export default function MyProfile() {
         if (response.error) throw new Error(response.error.message);
 
         alert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
-        fetchCustomerData();
+        refetch(); // Refresca los datos en el contexto
     };
 
     const openAddressModal = (address = null) => {
@@ -101,8 +74,6 @@ export default function MyProfile() {
 
     const confirmLogout = () => {
         clearPhone();
-        setCustomer(null);
-        setAddresses([]);
         setLogoutModalOpen(false);
     };
 
@@ -123,6 +94,7 @@ export default function MyProfile() {
         );
     }
 
+    // --- 👇 3. EL RESTO DEL JSX NO CAMBIA ---
     return (
         <div className={styles.container}>
             <h1>Mi Perfil</h1>
