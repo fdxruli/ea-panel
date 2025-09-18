@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner"; // <-- Importa el spinner
+import { useAlert } from "../context/AlertContext";
 
 export default function Customers() {
+    const { showAlert } = useAlert();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -26,7 +28,7 @@ export default function Customers() {
   // Guardar cambios
   const saveCustomer = async () => {
     if (!editingCustomer.name || !editingCustomer.phone || !editingCustomer.address) {
-      alert("Nombre, teléfono y dirección son obligatorios.");
+      showAlert("Nombre, teléfono y dirección son obligatorios.");
       return;
     }
 

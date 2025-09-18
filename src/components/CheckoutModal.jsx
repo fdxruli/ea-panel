@@ -6,9 +6,10 @@ import { useCart } from '../context/CartContext';
 import styles from './CheckoutModal.module.css';
 import DynamicMapPicker from './DynamicMapPicker';
 import ClientOnly from './ClientOnly';
+import { useAlert } from '../context/AlertContext'; // <-- 1. IMPORTAR
 
 export default function CheckoutModal({ phone, onClose }) {
-    // ... (el resto del código del modal no cambia)
+    const { showAlert } = useAlert(); // <-- 2. INICIALIZAR
     const { cartItems, total, clearCart, toggleCart } = useCart();
     const [step, setStep] = useState(2);
     const [customer, setCustomer] = useState(null);
@@ -77,11 +78,11 @@ export default function CheckoutModal({ phone, onClose }) {
     const handlePlaceOrder = async () => {
         const finalName = customer ? customer.name : customerName;
         if (!finalName) {
-            alert("Por favor, dinos tu nombre.");
+            showAlert("Por favor, dinos tu nombre.");
             return;
         }
         if (!selectedAddress && !newLocation.coords) {
-            alert("Por favor, selecciona tu ubicación en el mapa.");
+            showAlert("Por favor, selecciona tu ubicación en el mapa.");
             return;
         }
 
@@ -164,14 +165,14 @@ export default function CheckoutModal({ phone, onClose }) {
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${tuNumeroDeWhatsApp}&text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
 
-            alert("¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.");
+            showAlert("¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.");
             clearCart();
             toggleCart();
             onClose();
 
         } catch (error) {
             console.error("Error al procesar el pedido:", error);
-            alert(`Hubo un error al procesar tu pedido: ${error.message}`);
+            showAlert(`Hubo un error al procesar tu pedido: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }

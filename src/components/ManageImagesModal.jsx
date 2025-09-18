@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageImagesModal.module.css';
+import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
 
 export default function ManageImagesModal({ product, onClose, onImagesUpdate }) {
+  const { showAlert } = useAlert(); // <-- INICIALIZAR
   const [images, setImages] = useState([]);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
 
   const addImage = async () => {
     if (!newImageUrl.trim()) {
-      alert("La URL de la imagen no puede estar vacía.");
+      showAlert("La URL de la imagen no puede estar vacía.");
       return;
     }
     setLoading(true);
@@ -29,7 +31,7 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
       .insert({ product_id: product.id, image_url: newImageUrl });
 
     if (error) {
-      alert(`Error al añadir la imagen: ${error.message}`);
+      showAlert(`Error al añadir la imagen: ${error.message}`);
     } else {
       setNewImageUrl('');
       onImagesUpdate(); // Llama a la función para refrescar los datos en la página de Productos
@@ -39,7 +41,7 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
 
   const deleteImage = async (imageId, isMain) => {
     if (isMain) {
-      alert("No puedes eliminar la imagen principal desde aquí. Puedes cambiarla editando el producto.");
+      showAlert("No puedes eliminar la imagen principal desde aquí. Puedes cambiarla editando el producto.");
       return;
     }
     if (!window.confirm("¿Estás seguro de que quieres eliminar esta imagen?")) return;
@@ -51,7 +53,7 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
       .eq('id', imageId);
 
     if (error) {
-      alert(`Error al eliminar la imagen: ${error.message}`);
+      showAlert(`Error al eliminar la imagen: ${error.message}`);
     } else {
       onImagesUpdate();
     }

@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
 import styles from './MapPicker.module.css';
+import { useAlert } from '../context/AlertContext';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -43,6 +44,7 @@ const mapOptions = {
 };
 
 export default function MapPicker({ onLocationSelect }) {
+  const { showAlert } = useAlert();
   // Punto de inicio actualizado
   const initialCenter = {
     lat: 15.852182,
@@ -80,7 +82,7 @@ export default function MapPicker({ onLocationSelect }) {
         onLocationSelect(newPosition);
       }
     } else {
-      alert("Lo sentimos, solo hacemos entregas dentro de la zona marcada en verde. Por favor, mueve el pin a una ubicación válida.");
+      showAlert("Lo sentimos, solo hacemos entregas dentro de la zona marcada en verde. Por favor, mueve el pin a una ubicación válida.");
       setMarkerPosition(lastValidPosition);
     }
   }, [onLocationSelect, isLoaded, lastValidPosition]);

@@ -1,21 +1,21 @@
-// src/App.jsx (CON NUEVOS PROVEEDORES DE CONTEXTO)
+// src/App.jsx (CORREGIDO)
 
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { CustomerProvider } from "./context/CustomerContext";
 import { ProductProvider } from "./context/ProductContext";
-import { UserDataProvider } from "./context/UserDataContext"; // <-- 1. IMPORTAR
-import { ProductExtrasProvider } from "./context/ProductExtrasContext"; // <-- 2. IMPORTAR
+import { UserDataProvider } from "./context/UserDataContext";
+import { ProductExtrasProvider } from "./context/ProductExtrasContext";
+import { AlertProvider } from "./context/AlertContext"; // <-- SOLO UNA IMPORTACIÓN
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import 'leaflet/dist/leaflet.css';
 
-// Importa tus componentes y páginas
+// Componentes y páginas
 import AdminLayout from "./layouts/AdminLayout";
 import ClientLayout from "./layouts/ClientLayout";
 import Menu from "./pages/Menu";
-import Cart from "./pages/Cart";
 import MyOrders from "./pages/MyOrders";
 import MyProfile from "./pages/MyProfile";
 import MyStuff from "./pages/MyStuff";
@@ -30,20 +30,20 @@ import TermsPage from "./pages/TermsPage";
 function App() {
   return (
     <Routes>
-      {/* --- RUTA DE LOGIN (PÚBLICA) --- */}
       <Route path="/login" element={<Login />} />
 
-      {/* --- RUTAS PARA EL CLIENTE (PÚBLICAS Y CON CACHÉ) --- */}
+      {/* --- RUTAS PARA EL CLIENTE --- */}
       <Route
         path="/"
         element={
           <CustomerProvider>
             <ProductProvider>
               <CartProvider>
-                {/* --- 👇 3. ENVOLVER CON LOS NUEVOS PROVEEDORES --- */}
                 <UserDataProvider>
                   <ProductExtrasProvider>
-                    <ClientLayout />
+                    <AlertProvider>
+                      <ClientLayout />
+                    </AlertProvider>
                   </ProductExtrasProvider>
                 </UserDataProvider>
               </CartProvider>
@@ -53,21 +53,27 @@ function App() {
       >
         <Route path="/terminos" element={<TermsPage />} />
         <Route index element={<Menu />} />
-        <Route path="carrito" element={<Cart />} />
         <Route path="mis-pedidos" element={<MyOrders />} />
         <Route path="mi-perfil" element={<MyProfile />} />
         <Route path="mi-actividad" element={<MyStuff />} />
       </Route>
 
-      {/* --- RUTAS PARA EL ADMINISTRADOR (PROTEGIDAS Y SIN CACHÉ) --- */}
+      {/* --- RUTAS PARA EL ADMINISTRADOR (AHORA CON ALERTAS) --- */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route
+          path="/admin"
+          element={
+            <AlertProvider> {/* <-- 1. ENVOLVEMOS EL ADMINLAYOUT */}
+              <AdminLayout />
+            </AlertProvider>
+          }
+        >
           <Route index element={<Dashboard />} />
           <Route path="pedidos" element={<Orders />} />
           <Route path="productos" element={<Products />} />
           <Route path="clientes" element={<Customers />} />
           <Route path="descuentos" element={<Discounts />} />
-          <Route path="terminos" element={<TermsAndConditions />}/>
+          <Route path="terminos" element={<TermsAndConditions />} />
         </Route>
       </Route>
     </Routes>

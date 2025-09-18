@@ -5,8 +5,10 @@ import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import styles from './Cart.module.css';
 import CheckoutModal from '../components/CheckoutModal';
+import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
 
 export default function Cart() {
+    const { showAlert } = useAlert(); // <-- INICIALIZAR
     const {
         cartItems,
         updateQuantity,
@@ -46,11 +48,11 @@ export default function Cart() {
     // --- LÓGICA QUE FALTABA ---
     const handleProceedToCheckout = () => {
         if (cartItems.length === 0) {
-            alert("Tu carrito está vacío.");
+            showAlert("Tu carrito está vacío.");
             return;
         }
         if (cartItems.some(item => !item.quantity || item.quantity <= 0)) {
-            alert("Por favor, revisa que todos los productos tengan una cantidad válida.");
+            showAlert("Por favor, revisa que todos los productos tengan una cantidad válida.");
             return;
         }
 

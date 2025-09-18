@@ -6,6 +6,7 @@ import { useProducts } from '../context/ProductContext';
 import { useCustomer } from '../context/CustomerContext';
 import { useProductExtras } from '../context/ProductExtrasContext';
 import { supabase } from '../lib/supabaseClient';
+import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -59,6 +60,7 @@ const AverageRating = ({ reviews }) => {
 
 
 export default function ProductModal({ product, onClose, onAddToCart }) {
+    const { showAlert } = useAlert(); // <-- INICIALIZAR
     const [quantity, setQuantity] = useState(1);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [wasAdded, setWasAdded] = useState(false);
@@ -122,7 +124,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const handleAddToCartClick = (event) => {
         const isStillAvailable = liveProducts.some(p => p.id === product.id);
         if (!isStillAvailable) {
-            alert("Lo sentimos, este producto ya no se encuentra disponible.");
+            showAlert("Lo sentimos, este producto ya no se encuentra disponible.");
             onClose();
             return;
         }
@@ -133,7 +135,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     const handleToggleFavorite = async () => {
         if (!phone || !customerId) {
-            alert("Para guardar favoritos, primero necesitas ingresar tu número.");
+            showAlert("Para guardar favoritos, primero necesitas ingresar tu número.");
             setPhoneModalOpen(true);
             return;
         }
@@ -150,12 +152,12 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const handleReviewSubmit = async (e) => {
         e.preventDefault();
         if (!phone || !customerId) {
-            alert("Para dejar una reseña, primero necesitas ingresar tu número.");
+            showAlert("Para dejar una reseña, primero necesitas ingresar tu número.");
             setPhoneModalOpen(true);
             return;
         }
         if (userRating === 0) {
-            alert("Por favor, selecciona una calificación de estrellas.");
+            showAlert("Por favor, selecciona una calificación de estrellas.");
             return;
         }
         setIsSubmittingReview(true);
@@ -163,7 +165,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             product_id: product.id, customer_id: customerId, rating: userRating, comment: userComment
         });
         if (error) {
-            alert("Hubo un error al enviar tu reseña. Es posible que ya hayas calificado este producto.");
+            showAlert("Hubo un error al enviar tu reseña. Es posible que ya hayas calificado este producto.");
         } else {
             setUserRating(0);
             setUserComment('');

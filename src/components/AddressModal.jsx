@@ -1,9 +1,13 @@
+// src/components/AddressModal.jsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './AddressModal.module.css';
 import ClientOnly from './ClientOnly';
 import DynamicMapPicker from './DynamicMapPicker';
+import { useAlert } from '../context/AlertContext'; // <-- 1. IMPORTAR
 
 export default function AddressModal({ isOpen, onClose, onSave, address = null, customerId }) {
+    const { showAlert } = useAlert(); // <-- 2. INICIALIZAR
     const [formData, setFormData] = useState({
         label: '',
         address_reference: '',
@@ -35,7 +39,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.coords) {
-            alert("Por favor, selecciona una ubicación en el mapa.");
+            showAlert("Por favor, selecciona una ubicación en el mapa."); // <-- 3. REEMPLAZAR
             return;
         }
         setIsSubmitting(true);
@@ -47,10 +51,10 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 latitude: formData.coords.lat,
                 longitude: formData.coords.lng
             };
-            await onSave(addressData, address?.id); // Pasa los datos y el ID (si existe)
+            await onSave(addressData, address?.id);
             onClose();
         } catch (error) {
-            alert(`Error al guardar la dirección: ${error.message}`);
+            showAlert(`Error al guardar la dirección: ${error.message}`); // <-- 3. REEMPLAZAR
         } finally {
             setIsSubmitting(false);
         }

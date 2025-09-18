@@ -8,8 +8,10 @@ import styles from './MyProfile.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddressModal from '../components/AddressModal';
 import ConfirmModal from '../components/ConfirmModal';
+import { useAlert } from '../context/AlertContext';
 
 export default function MyProfile() {
+    const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone } = useCustomer();
     
     // --- 👇 2. USAR DATOS DEL NUEVO CONTEXTO ---
@@ -36,9 +38,9 @@ export default function MyProfile() {
             .eq('id', customer.id);
 
         if (error) {
-            alert("Error al actualizar la información.");
+            showAlert("Error al actualizar la información.");
         } else {
-            alert("Información actualizada con éxito.");
+            showAlert("Información actualizada con éxito.");
             if (editForm.phone !== phone) {
                 savePhone(editForm.phone); // Esto disparará el refetch en UserDataContext
             } else {
@@ -63,7 +65,7 @@ export default function MyProfile() {
         }
         if (response.error) throw new Error(response.error.message);
 
-        alert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
+        showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         refetch(); // Refresca los datos en el contexto
     };
 

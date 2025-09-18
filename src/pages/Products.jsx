@@ -4,8 +4,10 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 import ManageImagesModal from "../components/ManageImagesModal";
+import { useAlert } from "../context/AlertContext";
 
 export default function Products() {
+    const { showAlert } = useAlert();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,11 +51,11 @@ export default function Products() {
 
   const validateProduct = () => {
     if (!newProduct.name || !newProduct.price || !newProduct.cost || !newProduct.category_id) {
-      alert("Por favor completa todos los campos obligatorios (Nombre, Precio, Costo y Categoría).");
+      showAlert("Por favor completa todos los campos obligatorios (Nombre, Precio, Costo y Categoría).");
       return false;
     }
     if (parseFloat(newProduct.price) < parseFloat(newProduct.cost)) {
-      alert("El precio no puede ser menor al costo.");
+      showAlert("El precio no puede ser menor al costo.");
       return false;
     }
     return true;

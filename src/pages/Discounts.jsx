@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner"; // <-- Importa el spinner
+import { useAlert } from "../context/AlertContext";
 
 export default function Discounts() {
+    const { showAlert } = useAlert();
   const [discounts, setDiscounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -51,15 +53,15 @@ export default function Discounts() {
   // Validación simple antes de agregar
   const validateDiscount = () => {
     if (!newDiscount.code || !newDiscount.value) {
-      alert("Código y valor son obligatorios");
+      showAlert("Código y valor son obligatorios");
       return false;
     }
     if (newDiscount.type !== "global" && !newDiscount.target_id) {
-      alert("Debe seleccionar un producto o categoría para este tipo de descuento");
+      showAlert("Debe seleccionar un producto o categoría para este tipo de descuento");
       return false;
     }
     if (newDiscount.start_date && newDiscount.end_date && newDiscount.end_date < newDiscount.start_date) {
-      alert("La fecha final no puede ser anterior a la inicial");
+      showAlert("La fecha final no puede ser anterior a la inicial");
       return false;
     }
     return true;

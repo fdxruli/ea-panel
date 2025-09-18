@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabaseClient';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
 import styles from './TermsAndConditions.module.css'; // Crearemos este archivo a continuación
+import { useAlert } from '../context/AlertContext';
 
 export default function TermsAndConditions() {
+    const { showAlert } = useAlert();
     const [terms, setTerms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editingTerm, setEditingTerm] = useState(null);
@@ -19,7 +21,7 @@ export default function TermsAndConditions() {
             .order('version', { ascending: false });
         if (error) {
             console.error('Error fetching terms:', error);
-            alert(error.message);
+            showAlert(error.message);
         } else {
             setTerms(data);
         }
@@ -32,7 +34,7 @@ export default function TermsAndConditions() {
 
     const handleSave = async () => {
         if (!editingTerm?.content || !editingTerm?.version) {
-            alert('La versión y el contenido no pueden estar vacíos.');
+            showAlert('La versión y el contenido no pueden estar vacíos.');
             return;
         }
 
@@ -45,7 +47,7 @@ export default function TermsAndConditions() {
                     content: editingTerm.content
                 });
             if (error) {
-                 alert('Error al crear la nueva versión: ' + error.message);
+                 showAlert('Error al crear la nueva versión: ' + error.message);
             }
         } else { // Si está editando una existente
              const { error } = await supabase
@@ -56,7 +58,7 @@ export default function TermsAndConditions() {
                 })
                 .eq('id', editingTerm.id);
              if (error) {
-                alert('Error al actualizar la versión: ' + error.message);
+                showAlert('Error al actualizar la versión: ' + error.message);
             }
         }
         
@@ -84,7 +86,7 @@ export default function TermsAndConditions() {
             .eq('id', termToDelete.id);
         
         if (error) {
-            alert('Error al eliminar: ' + error.message);
+            showAlert('Error al eliminar: ' + error.message);
         }
         setTermToDelete(null);
         fetchTerms();

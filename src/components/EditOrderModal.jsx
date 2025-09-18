@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './EditOrderModal.module.css';
 import LoadingSpinner from './LoadingSpinner';
+import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
 
 export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
+    const { showAlert } = useAlert(); // <-- INICIALIZAR
     const [orderItems, setOrderItems] = useState([]);
     const [allProducts, setAllProducts] = useState([]);
     const [total, setTotal] = useState(0);
@@ -75,7 +77,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
     const handleUpdateOrder = async () => {
         if (orderItems.length === 0) {
-            alert("No puedes dejar el pedido vacío. Si quieres cancelarlo, usa la opción correspondiente.");
+            showAlert("No puedes dejar el pedido vacío. Si quieres cancelarlo, usa la opción correspondiente.");
             return;
         }
         setIsSubmitting(true);
@@ -103,13 +105,13 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 .eq('id', order.id);
             if (updateOrderError) throw updateOrderError;
 
-            alert("¡Pedido actualizado con éxito!");
+            showAlert("¡Pedido actualizado con éxito!");
             onOrderUpdated();
             onClose();
 
         } catch (error) {
             console.error("Error al actualizar el pedido:", error);
-            alert(`Error: ${error.message}`);
+            showAlert(`Error: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
