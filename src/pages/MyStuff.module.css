@@ -1,0 +1,212 @@
+/* src/pages/MyStuff.module.css (CON NUEVOS ESTILOS) */
+
+/* --- (Estilos anteriores sin cambios) --- */
+.container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 1rem;
+    font-family: 'Poppins', sans-serif;
+}
+.container h1 {
+    text-align: center;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+.subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+.cardHeader h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+.gridItem {
+    text-align: center;
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative; /* Necesario para el badge */
+    overflow: hidden; /* Para que el badge no se salga */
+}
+.gridItem:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}
+.gridItem img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+.gridItem h3 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+    flex-grow: 1;
+    color: var(--text-primary);
+}
+.gridItemActions {
+    display: flex;
+    gap: 0.5rem;
+}
+.gridItemActions .addButton {
+    background-color: var(--color-primary);
+    color: white;
+    font-weight: 600;
+    flex-grow: 1;
+    padding: 0.6rem;
+    border-radius: 50px;
+}
+.gridItemActions .removeButton {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+     flex-grow: 1;
+    padding: 0.6rem;
+    border-radius: 50px;
+}
+.reviewList {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+.reviewItem {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 2rem;
+}
+.reviewItem:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.reviewProductInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.reviewProductInfo img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.reviewProductInfo h4 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+.reviewComment {
+    font-style: italic;
+    color: var(--text-secondary);
+    margin: 0 0 1rem;
+    padding-left: 76px;
+}
+.reviewActions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: flex-end;
+}
+.reviewActions button, .actionButton, .cancelButton {
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 500;
+}
+.actionButton {
+    background-color: var(--color-accent);
+    color: white;
+}
+.removeButton {
+    background-color: #f1f3f5;
+    color: var(--color-error);
+    border: 1px solid #dee2e6;
+}
+.cancelButton {
+     background-color: #f1f3f5;
+    color: var(--text-secondary);
+    border: 1px solid #dee2e6;
+}
+.reviewEditor textarea {
+    width: 100%;
+    margin: 0.5rem 0;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    resize: vertical;
+}
+.prompt {
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+
+/* --- 👇 ESTILOS NUEVOS AÑADIDOS --- */
+
+/* Estilo para el contenedor del producto no disponible */
+.unavailable {
+    background-color: #f8f9fa; /* Un gris muy claro */
+}
+.unavailable img {
+    filter: grayscale(80%); /* Pone la imagen en blanco y negro */
+    opacity: 0.7;
+}
+.unavailable h3 {
+    color: #adb5bd; /* Un color de texto más opaco */
+}
+.unavailable .addButton {
+    background-color: #ced4da;
+    cursor: not-allowed;
+}
+
+/* Badge para los favoritos */
+.unavailableBadge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    z-index: 2;
+}
+
+/* Texto para las reseñas */
+.unavailableText {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: 0.5rem;
+}

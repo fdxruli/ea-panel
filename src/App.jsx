@@ -1,10 +1,10 @@
-// src/App.jsx (MODIFICADO)
+// src/App.jsx (CON NUEVA RUTA)
 
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { CustomerProvider } from "./context/CustomerContext";
-import { ProductProvider } from "./context/ProductContext"; // <-- 1. IMPORTA EL NUEVO PROVIDER
+import { ProductProvider } from "./context/ProductContext";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import 'leaflet/dist/leaflet.css';
@@ -16,6 +16,7 @@ import Menu from "./pages/Menu";
 import Cart from "./pages/Cart";
 import MyOrders from "./pages/MyOrders";
 import MyProfile from "./pages/MyProfile";
+import MyStuff from "./pages/MyStuff"; // <-- 1. IMPORTAR LA NUEVA PÁGINA
 import Dashboard from "./pages/Dashboard";
 import Orders from "./pages/Orders";
 import Products from "./pages/Products";
@@ -35,7 +36,6 @@ function App() {
         path="/"
         element={
           <CustomerProvider>
-            {/* --- 👇 AQUÍ EL CAMBIO: ProductProvider envuelve a CartProvider --- */}
             <ProductProvider>
               <CartProvider>
                 <ClientLayout />
@@ -49,6 +49,7 @@ function App() {
         <Route path="carrito" element={<Cart />} />
         <Route path="mis-pedidos" element={<MyOrders />} />
         <Route path="mi-perfil" element={<MyProfile />} />
+        <Route path="mi-actividad" element={<MyStuff />} /> {/* <-- 2. AÑADIR LA NUEVA RUTA */}
       </Route>
 
       {/* --- RUTAS PARA EL ADMINISTRADOR (PROTEGIDAS Y SIN CACHÉ) --- */}
