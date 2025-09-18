@@ -1,4 +1,4 @@
-// src/context/ProductContext.jsx (MODIFICADO PARA USAR NOTIFICACIONES)
+// src/context/ProductContext.jsx (CON SUSCRIPCIÓN CORREGIDA)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -14,18 +14,15 @@ export const ProductProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // --- 👇 1. NUEVO ESTADO PARA LA NOTIFICACIÓN ---
   const [notification, setNotification] = useState('');
 
   const fetchAndCacheProducts = useCallback(async () => {
     try {
       const hasCache = localStorage.getItem(PRODUCTS_CACHE_KEY);
-      // Solo mostramos el spinner la primera vez que no hay nada en caché
       if (!hasCache) {
         setLoading(true);
       }
       
-      // ... (El resto de la lógica de fetch y caché no cambia)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`*, product_images ( id, image_url )`)
@@ -48,7 +45,6 @@ export const ProductProvider = ({ children }) => {
       console.error("Error al obtener productos:", err);
       setError(err.message);
     } finally {
-      // Siempre nos aseguramos de que el spinner principal se oculte
       setLoading(false);
     }
   }, []);
@@ -56,26 +52,38 @@ export const ProductProvider = ({ children }) => {
   useEffect(() => {
     fetchAndCacheProducts();
 
-    const productsSubscription = supabase
-      .channel('public:products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        console.log('¡Cambio detectado! Actualizando en segundo plano...', payload);
-        
-        // --- 👇 2. LÓGICA DE NOTIFICACIÓN EN LUGAR DE SPINNER ---
-        // Llama a la función para que se actualice en segundo plano (sin spinner)
-        fetchAndCacheProducts(); 
-        
-        // Muestra el mensaje de notificación
-        setNotification('¡El menú se ha actualizado!');
-        
-        // Oculta el mensaje después de 4 segundos
-        setTimeout(() => setNotification(''), 4000);
-      })
+    const handleProductChange = (payload) => {
+      console.log('¡Cambio detectado en productos! Actualizando...', payload);
+      fetchAndCacheProducts();
+      setNotification('¡El menú se ha actualizado!');
+      setTimeout(() => setNotification(''), 4000);
+    };
+    
+    // --- 👇 AQUÍ ESTÁ LA LÓGICA MEJORADA ---
+    // Creamos un solo canal para escuchar múltiples cambios
+    const channel = supabase.channel('public-db-changes');
+
+    channel
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'products' }, 
+        handleProductChange
+      )
+      .on(
+        'postgres_changes', 
+        { event: '*', schema: 'public', table: 'product_images' },
+        (payload) => {
+            console.log('¡Cambio detectado en las imágenes! Actualizando...', payload);
+            fetchAndCacheProducts(); // Simplemente recargamos todo
+        }
+      )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(productsSubscription);
+      supabase.removeChannel(channel);
     };
+    // --- 👆 FIN DE LA LÓGICA MEJORADA ---
+
   }, [fetchAndCacheProducts]);
 
   const value = {
@@ -83,7 +91,7 @@ export const ProductProvider = ({ children }) => {
     categories,
     loading,
     error,
-    notification, // <-- 3. EXPONEMOS LA NOTIFICACIÓN EN EL CONTEXTO
+    notification,
   };
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
