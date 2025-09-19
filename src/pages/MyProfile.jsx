@@ -1,9 +1,9 @@
-// src/pages/MyProfile.jsx (USANDO USERDATACONTEXT)
+// src/pages/MyProfile.jsx (CORREGIDO)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
-import { useUserData } from '../context/UserDataContext'; // <-- 1. IMPORTAR
+import { useUserData } from '../context/UserDataContext';
 import styles from './MyProfile.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddressModal from '../components/AddressModal';
@@ -12,9 +12,8 @@ import { useAlert } from '../context/AlertContext';
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
-    const { phone, setPhoneModalOpen, clearPhone } = useCustomer();
+    const { phone, setPhoneModalOpen, clearPhone, savePhone, setCheckoutModalOpen } = useCustomer();
     
-    // --- 👇 2. USAR DATOS DEL NUEVO CONTEXTO ---
     const { customer, addresses, loading, error, refetch } = useUserData();
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
@@ -42,7 +41,7 @@ export default function MyProfile() {
         } else {
             showAlert("Información actualizada con éxito.");
             if (editForm.phone !== phone) {
-                savePhone(editForm.phone); // Esto disparará el refetch en UserDataContext
+                savePhone(editForm.phone);
             } else {
                 refetch();
             }
@@ -53,7 +52,7 @@ export default function MyProfile() {
         if (!addressToDelete) return;
         await supabase.from('customer_addresses').delete().eq('id', addressToDelete.id);
         setAddressToDelete(null);
-        refetch(); // Refresca los datos en el contexto
+        refetch();
     };
 
     const handleSaveAddress = async (addressData, addressId) => {
@@ -66,7 +65,7 @@ export default function MyProfile() {
         if (response.error) throw new Error(response.error.message);
 
         showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
-        refetch(); // Refresca los datos en el contexto
+        refetch();
     };
 
     const openAddressModal = (address = null) => {
@@ -79,12 +78,9 @@ export default function MyProfile() {
         setLogoutModalOpen(false);
     };
 
-
-    if (loading) return <LoadingSpinner />;
-
-    if (!phone) {
-        return (
-            <div className={styles.container}>
+    const renderContent = () => {
+        if (!phone) {
+            return (
                 <div className={styles.prompt}>
                     <h2>Ingresa tu número para ver tu perfil</h2>
                     <p>Para ver y editar tu información, necesitamos tu número de WhatsApp.</p>
@@ -92,18 +88,35 @@ export default function MyProfile() {
                         Ingresar Número
                     </button>
                 </div>
-            </div>
-        );
-    }
+            );
+        }
 
-    // --- 👇 3. EL RESTO DEL JSX NO CAMBIA ---
-    return (
-        <div className={styles.container}>
-            <h1>Mi Perfil</h1>
-            {error && <p className={styles.error} style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+        if (loading) return <LoadingSpinner />;
 
-            {customer && (
-                <>
+        if (error) {
+            return (
+                <div className={styles.prompt}>
+                    <h2>Error Inesperado</h2>
+                    <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p>
+                </div>
+            );
+        }
+
+        if (!customer) {
+            return (
+                 <div className={styles.prompt}>
+                    <h2>¡Bienvenido!</h2>
+                    <p>Parece que eres nuevo por aquí. Completa tu perfil para guardar tus datos y direcciones.</p>
+                    <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>
+                        Completar mi perfil
+                    </button>
+                </div>
+            );
+        }
+
+        if (customer) {
+            return (
+                 <>
                     <div className={styles.card}>
                         <h2>Mis Datos</h2>
                         <form onSubmit={handleInfoSubmit} className={styles.form}>
@@ -144,7 +157,16 @@ export default function MyProfile() {
                         </button>
                     </div>
                 </>
-            )}
+            );
+        }
+
+        return null;
+    };
+
+    return (
+        <div className={styles.container}>
+            <h1>Mi Perfil</h1>
+            {renderContent()}
 
             <AddressModal
                 isOpen={isAddressModalOpen}

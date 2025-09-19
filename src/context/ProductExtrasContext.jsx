@@ -60,7 +60,7 @@ export const ProductExtrasProvider = ({ children }) => {
                 return;
             }
 
-            const { data } = await supabase.from('customers').select('id').eq('phone', phone).single();
+            const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
             const currentId = data ? data.id : null;
             setCustomerId(currentId);
             

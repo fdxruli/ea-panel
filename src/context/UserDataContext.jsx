@@ -1,4 +1,4 @@
-// src/context/UserDataContext.jsx
+// src/context/UserDataContext.jsx (CORREGIDO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -34,10 +34,20 @@ export const UserDataProvider = ({ children }) => {
             const { data: customerData, error: customerError } = await supabase
                 .from('customers').select('*').eq('phone', phoneNumber).maybeSingle();
 
-            if (customerError || !customerData) {
-                throw new Error("Cliente no encontrado.");
+            // Si hay un error real con la base de datos, lo lanzamos.
+            if (customerError) throw customerError;
+
+            // Si no se encuentra el cliente, es un usuario nuevo. No es un error.
+            if (!customerData) {
+                const emptyUserData = { customer: null, addresses: [], orders: [] };
+                setUserData(emptyUserData);
+                // Guardamos en caché que para este número no hay datos.
+                localStorage.setItem(USER_DATA_CACHE_KEY, JSON.stringify(emptyUserData));
+                setLoading(false);
+                return; // Salimos de la función exitosamente.
             }
 
+            // Si el cliente fue encontrado, procedemos a buscar sus datos.
             const { data: addressesData } = await supabase
                 .from('customer_addresses').select('*').eq('customer_id', customerData.id);
 
@@ -54,7 +64,7 @@ export const UserDataProvider = ({ children }) => {
             setUserData(fullUserData);
             localStorage.setItem(USER_DATA_CACHE_KEY, JSON.stringify(fullUserData));
 
-        } catch (err) {
+        } catch (err) { // Esto ahora solo atrapará errores reales (ej. de red).
             setError(err.message);
             setUserData({ customer: null, addresses: [], orders: [] });
             localStorage.removeItem(USER_DATA_CACHE_KEY);

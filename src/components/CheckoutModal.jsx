@@ -1,17 +1,19 @@
-// src/components/CheckoutModal.jsx (CORREGIDO)
+// src/components/CheckoutModal.jsx (CORREGIDO Y AHORA CONTEXTUAL)
 
-import React, { useState, useEffect, useCallback } from 'react'; // <-- 1. Importa useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCart } from '../context/CartContext';
 import styles from './CheckoutModal.module.css';
 import DynamicMapPicker from './DynamicMapPicker';
 import ClientOnly from './ClientOnly';
-import { useAlert } from '../context/AlertContext'; // <-- 1. IMPORTAR
+import { useAlert } from '../context/AlertContext';
+import { useUserData } from '../context/UserDataContext';
 
-export default function CheckoutModal({ phone, onClose }) {
-    const { showAlert } = useAlert(); // <-- 2. INICIALIZAR
+export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
+    const { showAlert } = useAlert();
     const { cartItems, total, clearCart, toggleCart } = useCart();
-    const [step, setStep] = useState(2);
+    const { refetch: refetchUserData } = useUserData();
+    
     const [customer, setCustomer] = useState(null);
     const [addresses, setAddresses] = useState([]);
     const [selectedAddress, setSelectedAddress] = useState(null);
@@ -57,11 +59,9 @@ export default function CheckoutModal({ phone, onClose }) {
         findCustomer();
     }, [phone]);
 
-    // --- 👇 AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
     const handleLocationSelect = useCallback((coords) => {
         setNewLocation(prev => ({ ...prev, coords }));
-    }, []); // <-- 2. Usa un array de dependencias vacío
-    // -----------------------------------------
+    }, []);
 
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -75,122 +75,103 @@ export default function CheckoutModal({ phone, onClose }) {
         }
     };
 
-    const handlePlaceOrder = async () => {
+    // --- 👇 LA LÓGICA DE GUARDADO AHORA ES CONTEXTUAL ---
+    const handleSubmit = async () => {
         const finalName = customer ? customer.name : customerName;
         if (!finalName) {
             showAlert("Por favor, dinos tu nombre.");
             return;
         }
-        if (!selectedAddress && !newLocation.coords) {
-            showAlert("Por favor, selecciona tu ubicación en el mapa.");
+
+        // En modo 'profile', la ubicación no es obligatoria.
+        if (mode === 'checkout' && !selectedAddress && !newLocation.coords) {
+            showAlert("Por favor, selecciona tu ubicación en el mapa para la entrega.");
             return;
         }
 
         setIsSubmitting(true);
         try {
+            // Paso 1: Crear o actualizar el cliente (común para ambos modos).
             const { data: customerData, error: customerError } = await supabase
                 .from('customers')
                 .upsert({ phone: phone, name: finalName }, { onConflict: 'phone' })
                 .select()
-                .maybeSingle();
+                .single();
             if (customerError) throw customerError;
 
-            const { data: latestTerms, error: termsError } = await supabase
-                .from('terms_and_conditions')
-                .select('id')
-                .order('version', { ascending: false })
-                .limit(1)
-                .single();
-
-            if (termsError || !latestTerms) throw new Error("No se pudieron cargar los términos y condiciones.");
-
-            const { error: acceptanceError } = await supabase
-                .from('customer_terms_acceptances')
-                .insert({
-                    customer_id: customerData.id,
-                    terms_version_id: latestTerms.id
-                });
-
-            if (acceptanceError && acceptanceError.code !== '23505') {
-                throw acceptanceError;
-            }
-
-            let finalAddressDetails = selectedAddress;
-
-            if (!selectedAddress) {
-                const newAddr = {
+            // Paso 2: Si se añadió una nueva ubicación, guardarla.
+            if (!selectedAddress && newLocation.coords && newLocation.saveAddress) {
+                await supabase.from('customer_addresses').insert({
                     customer_id: customerData.id,
                     latitude: newLocation.coords.lat,
                     longitude: newLocation.coords.lng,
                     label: newLocation.label,
                     address_reference: newLocation.reference
-                };
-                if (newLocation.saveAddress) {
-                    const { data: newAddressData, error: addressError } = await supabase
-                        .from('customer_addresses')
-                        .insert(newAddr)
-                        .select()
-                        .single();
-                    if (addressError) throw addressError;
-                    finalAddressDetails = newAddressData;
-                } else {
-                    finalAddressDetails = newAddr;
-                }
+                });
             }
 
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
-                .insert({ customer_id: customerData.id, total_amount: total, status: 'pendiente' })
-                .select().single();
-            if (orderError) throw orderError;
-
-            const orderItemsToInsert = cartItems.map(item => ({
-                order_id: orderData.id, product_id: item.id, quantity: item.quantity, price: item.price
-            }));
-            const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
-            if (itemsError) throw itemsError;
-
-            const mapLink = `http://googleusercontent.com/maps.google.com/5{finalAddressDetails.latitude},${finalAddressDetails.longitude}`;
-            let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
-            cartItems.forEach(item => {
-                message += `- ${item.quantity}x ${item.name}\n`;
-            });
-            message += `\n*Total: $${total.toFixed(2)}*\n\n`;
-            message += `*Entregar a:*\n`;
-            message += `*Nombre:* ${customerData.name}\n`;
-            message += `*Ubicación:* ${mapLink}\n`;
-            if (finalAddressDetails.address_reference) message += `*Referencia:* ${finalAddressDetails.address_reference}`;
-
-            const tuNumeroDeWhatsApp = '9633870587';
-            const whatsappUrl = `https://api.whatsapp.com/send?phone=${tuNumeroDeWhatsApp}&text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
-
-            showAlert("¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.");
-            clearCart();
-            toggleCart();
-            onClose();
+            // Paso 3: Si estamos en modo 'checkout', procesar el pedido.
+            if (mode === 'checkout') {
+                await placeOrder(customerData);
+            } else {
+                // Si solo estamos en modo 'profile', mostramos éxito y cerramos.
+                showAlert("¡Perfil guardado con éxito!");
+                refetchUserData(); // Actualiza los datos en toda la app.
+                onClose();
+            }
 
         } catch (error) {
-            console.error("Error al procesar el pedido:", error);
-            showAlert(`Hubo un error al procesar tu pedido: ${error.message}`);
+            console.error("Error al procesar:", error);
+            showAlert(`Hubo un error: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const renderStepContent = () => {
-        if (isLoading) {
-            return (
-                <div>
-                    <h3>Buscando tu información...</h3>
-                    <div className={styles.spinner}></div>
-                </div>
-            );
+    const placeOrder = async (customerData) => {
+        let finalAddressDetails = selectedAddress;
+        if (!selectedAddress) {
+            finalAddressDetails = {
+                latitude: newLocation.coords.lat,
+                longitude: newLocation.coords.lng,
+                address_reference: newLocation.reference
+            };
         }
 
+        const { data: orderData, error: orderError } = await supabase
+            .from('orders').insert({ customer_id: customerData.id, total_amount: total, status: 'pendiente' }).select().single();
+        if (orderError) throw orderError;
+
+        const orderItemsToInsert = cartItems.map(item => ({ order_id: orderData.id, product_id: item.id, quantity: item.quantity, price: item.price }));
+        const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
+        if (itemsError) throw itemsError;
+        
+        const mapLink = `https://www.google.com/maps?q=${finalAddressDetails.latitude},${finalAddressDetails.longitude}`;
+        let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
+        cartItems.forEach(item => { message += `- ${item.quantity}x ${item.name}\n`; });
+        message += `\n*Total: $${total.toFixed(2)}*\n\n*Entregar a:*\n*Nombre:* ${customerData.name}\n*Ubicación:* ${mapLink}\n`;
+        if (finalAddressDetails.address_reference) message += `*Referencia:* ${finalAddressDetails.address_reference}`;
+
+        const businessNumber = '9633870587';
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+
+        showAlert("¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.");
+        clearCart();
+        toggleCart();
+        onClose();
+    };
+    // --- 👆 FIN DE LA LÓGICA CONTEXTUAL ---
+
+    const renderStepContent = () => {
+        if (isLoading) return <div className={styles.spinner}></div>;
+
+        const isCheckout = mode === 'checkout';
+        
         return (
             <div>
-                <h3>Hola, {customerName || '¿dónde entregamos?'}</h3>
+                <h3>{isCheckout ? `Hola, ${customerName || '¿dónde entregamos?'}` : 'Completa tu Perfil'}</h3>
+                {!isCheckout && <p>Guarda tus datos para que tus futuros pedidos sean más rápidos.</p>}
 
                 {addresses.length > 0 && (
                     <div className={styles.addressList}>
@@ -211,8 +192,7 @@ export default function CheckoutModal({ phone, onClose }) {
 
                 {(addresses.length === 0 || !selectedAddress) && (
                     <div className={styles.formNewAddress}>
-
-                        <ClientOnly>
+                         <ClientOnly>
                             <DynamicMapPicker onLocationSelect={handleLocationSelect} />
                         </ClientOnly>
 
@@ -221,7 +201,7 @@ export default function CheckoutModal({ phone, onClose }) {
                         )}
                         <input type="text" name="reference" placeholder="Referencia (ej: casa azul, portón rojo)" value={newLocation.reference} onChange={handleFormChange} className={styles.input} />
                         <input type="text" name="label" placeholder="Etiqueta para esta ubicación (ej: Casa)" value={newLocation.label} onChange={handleFormChange} className={styles.input} />
-
+                        
                         <div className={styles.checkboxContainer}>
                             <input type="checkbox" id="saveAddress" name="saveAddress" checked={newLocation.saveAddress} onChange={handleFormChange} />
                             <label htmlFor="saveAddress">Guardar esta ubicación para futuros pedidos.</label>
@@ -231,8 +211,9 @@ export default function CheckoutModal({ phone, onClose }) {
 
                 <div className={styles.actions}>
                     <button onClick={onClose} className={styles.buttonSecondary}>Cancelar</button>
-                    <button onClick={handlePlaceOrder} className={styles.buttonPrimary} disabled={isSubmitting}>
-                        {isSubmitting ? 'Procesando...' : `Confirmar y Pagar $${total.toFixed(2)}`}
+                    <button onClick={handleSubmit} className={styles.buttonPrimary} disabled={isSubmitting}>
+                        {isSubmitting ? 'Procesando...' : 
+                         isCheckout ? `Confirmar y Pagar $${total.toFixed(2)}` : 'Guardar Información'}
                     </button>
                 </div>
             </div>

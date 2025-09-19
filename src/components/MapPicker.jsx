@@ -1,6 +1,6 @@
-// src/components/MapPicker.jsx (Con mayor zoom)
+// src/components/MapPicker.jsx (CORREGIDO Y ROBUSTO)
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
 import styles from './MapPicker.module.css';
 import { useAlert } from '../context/AlertContext';
@@ -9,7 +9,6 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const libraries = ['geometry'];
 
-// Zona de reparto con puntos reordenados
 const deliveryAreaCoordinates = [
   { lat: 15.888856, lng: -92.003376 },
   { lat: 15.859375, lng: -91.966981 },
@@ -21,7 +20,6 @@ const deliveryAreaCoordinates = [
   { lat: 15.884673, lng: -92.004707 },
 ];
 
-// Estilos para el polígono que representa la zona de entrega
 const deliveryAreaOptions = {
   fillColor: "#00FF00",
   fillOpacity: 0.1,
@@ -30,29 +28,28 @@ const deliveryAreaOptions = {
   strokeWeight: 2,
 };
 
-// Estilos para el contenedor del mapa
 const containerStyle = {
   width: '100%',
   height: '100%'
 };
 
-// Opciones para ocultar controles no deseados del mapa
 const mapOptions = {
   streetViewControl: false,
   mapTypeControl: false,
   fullscreenControl: false,
-  mapTypeId: 'satellite', // Mapa satelital
+  mapTypeId: 'satellite',
   tilt: 0
 };
 
 export default function MapPicker({ onLocationSelect }) {
   const { showAlert } = useAlert();
-  // Punto de inicio actualizado
   const initialCenter = {
     lat: 15.852182,
     lng: -91.977533
   };
   
+  // --- 👇 CAMBIO PRINCIPAL: AHORA EL CENTRO DEL MAPA ES UN ESTADO ---
+  const [mapCenter, setMapCenter] = useState(initialCenter);
   const [markerPosition, setMarkerPosition] = useState(initialCenter);
   const [lastValidPosition, setLastValidPosition] = useState(initialCenter);
   const polygonRef = useRef(null);
@@ -78,18 +75,22 @@ export default function MapPicker({ onLocationSelect }) {
       polygonRef.current &&
       google.maps.geometry.poly.containsLocation(event.latLng, polygonRef.current)
     ) {
+      // Si la posición es válida, actualizamos todo
       setMarkerPosition(newPosition);
       setLastValidPosition(newPosition);
+      setMapCenter(newPosition); // <-- Actualizamos el centro del mapa
       if (onLocationSelect) {
         onLocationSelect(newPosition);
       }
     } else {
+      // Si no es válida, regresamos todo a la última posición conocida
       showAlert("Lo sentimos, solo hacemos entregas dentro de la zona marcada en verde. Por favor, mueve el pin a una ubicación válida.");
       setMarkerPosition(lastValidPosition);
+      setMapCenter(lastValidPosition); // <-- Regresamos el centro del mapa
     }
-  }, [onLocationSelect, isLoaded, lastValidPosition]);
+  }, [onLocationSelect, isLoaded, lastValidPosition, showAlert]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (onLocationSelect) {
         onLocationSelect(initialCenter);
     }
@@ -113,8 +114,8 @@ export default function MapPicker({ onLocationSelect }) {
       {isLoaded ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
-          center={initialCenter}
-          zoom={17} // <-- Nivel de zoom aumentado
+          center={mapCenter} // <-- Usamos el estado para controlar el centro
+          zoom={17}
           options={mapOptions}
         >
           <Marker

@@ -1,9 +1,9 @@
-// src/pages/MyOrders.jsx (USANDO USERDATACONTEXT)
+// src/pages/MyOrders.jsx (CORREGIDO)
 
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
-import { useUserData } from '../context/UserDataContext'; // <-- 1. IMPORTAR
+import { useUserData } from '../context/UserDataContext';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import styles from './MyOrders.module.css';
@@ -13,11 +13,10 @@ import ConfirmModal from '../components/ConfirmModal';
 import CancellationRequestModal from '../components/CancellationRequestModal';
 
 export default function MyOrders() {
-    const { phone, setPhoneModalOpen } = useCustomer();
+    const { phone, setPhoneModalOpen, setCheckoutModalOpen } = useCustomer();
     const { cartItems, replaceCart, toggleCart, showToast } = useCart();
     const navigate = useNavigate();
 
-    // --- 👇 2. USAR DATOS DEL NUEVO CONTEXTO ---
     const { customer, orders, loading, error, refetch } = useUserData();
 
     const [editingOrder, setEditingOrder] = useState(null);
@@ -45,7 +44,7 @@ export default function MyOrders() {
             showToast('Error al cancelar el pedido.');
         } else {
             showToast('Pedido cancelado con éxito.');
-            refetch(); // Refresca los datos en el contexto
+            refetch();
         }
         setOrderToCancel(null);
     };
@@ -79,7 +78,6 @@ export default function MyOrders() {
     const handleOrderUpdated = useCallback(() => { refetch(); }, [refetch]);
     const handleCloseModal = useCallback(() => { setEditingOrder(null); }, []);
 
-    // --- 👇 3. EL RESTO DEL JSX NO CAMBIA ---
     const renderOrder = (order, isLatest = false) => (
         <div key={order.id} className={isLatest ? styles.latestOrderCard : styles.orderCard}>
             <div className={styles.orderHeader}>
@@ -111,13 +109,9 @@ export default function MyOrders() {
         </div>
     );
     
-    const latestOrder = orders.length > 0 ? orders[0] : null;
-    const pastOrders = orders.length > 1 ? orders.slice(1) : [];
-
-    return (
-        <div className={styles.container}>
-            <h1>Mis Pedidos</h1>
-            {!phone ? (
+    const renderContent = () => {
+        if (!phone) {
+            return (
                 <div className={styles.prompt}>
                     <h2>Ingresa tu número para ver tus pedidos</h2>
                     <p>Para buscar tu historial de pedidos, necesitamos tu número de WhatsApp.</p>
@@ -125,29 +119,69 @@ export default function MyOrders() {
                         Ingresar Número
                     </button>
                 </div>
-            ) : (
-                <>
-                    {loading && <LoadingSpinner />}
-                    {error && <p className={styles.error}>{error}</p>}
-                    {customer && latestOrder && (
-                        <div className={styles.ordersSection}>
-                            <h2>¡Hola, {customer.name}!</h2>
-                            <p>Mostrando pedidos para el número: <strong>{phone}</strong></p>
-                            <div className={styles.latestOrderContainer}>
-                                <h3>Último Pedido</h3>
-                                {renderOrder(latestOrder, true)}
-                            </div>
+            );
+        }
+
+        if (loading) return <LoadingSpinner />;
+
+        if (error) {
+            return (
+                <div className={styles.prompt}>
+                    <h2>Error Inesperado</h2>
+                    <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p>
+                </div>
+            );
+        }
+
+        if (!customer) {
+            return (
+                 <div className={styles.prompt}>
+                    <h2>¡Bienvenido!</h2>
+                    <p>Parece que eres nuevo por aquí. Completa tu perfil para que podamos registrar tus pedidos.</p>
+                    <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.searchButton}>
+                        Completar mi perfil
+                    </button>
+                </div>
+            );
+        }
+
+        if (customer) {
+            const latestOrder = orders.length > 0 ? orders[0] : null;
+            const pastOrders = orders.length > 1 ? orders.slice(1) : [];
+            return (
+                 <div className={styles.ordersSection}>
+                    <h2>¡Hola, {customer.name}!</h2>
+                    <p>Mostrando pedidos para el número: <strong>{phone}</strong></p>
+                    {orders.length > 0 ? (
+                        <>
+                            {latestOrder && (
+                                <div className={styles.latestOrderContainer}>
+                                    <h3>Último Pedido</h3>
+                                    {renderOrder(latestOrder, true)}
+                                </div>
+                            )}
                             {pastOrders.length > 0 && (
                                 <div className={styles.historyContainer}>
                                     <h3>Historial de Pedidos</h3>
                                     {pastOrders.map(order => renderOrder(order, false))}
                                 </div>
                             )}
-                        </div>
+                        </>
+                    ) : (
+                         <p>No tienes pedidos registrados con este número.</p>
                     )}
-                    {!loading && customer && orders.length === 0 && ( <p>No tienes pedidos registrados con este número.</p> )}
-                </>
-            )}
+                </div>
+            );
+        }
+        
+        return null;
+    };
+
+
+    return (
+        <div className={styles.container}>
+            <h1>Mis Pedidos</h1>
+            {renderContent()}
 
             {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}
             

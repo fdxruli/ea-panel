@@ -45,7 +45,7 @@ export default function Cart() {
         setDiscountMessage('');
     };
 
-    // --- LÓGICA QUE FALTABA ---
+    // --- LÓGICA MEJORADA ---
     const handleProceedToCheckout = () => {
         if (cartItems.length === 0) {
             showAlert("Tu carrito está vacío.");
@@ -57,7 +57,10 @@ export default function Cart() {
         }
 
         if (!phone) {
-            setPhoneModalOpen(true);
+            // Abre el modal del teléfono y, al tener éxito, abre el de checkout.
+            setPhoneModalOpen(() => {
+                setCheckoutModalOpen(true);
+            });
             return;
         }
 
