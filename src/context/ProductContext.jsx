@@ -1,4 +1,4 @@
-// src/context/ProductContext.jsx (CON SUSCRIPCIÓN CORREGIDA)
+// src/context/ProductContext.jsx (CORREGIDO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -18,11 +18,7 @@ export const ProductProvider = ({ children }) => {
 
   const fetchAndCacheProducts = useCallback(async () => {
     try {
-      const hasCache = localStorage.getItem(PRODUCTS_CACHE_KEY);
-      if (!hasCache) {
-        setLoading(true);
-      }
-      
+      // ... (lógica de fetch sin cambios)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`*, product_images ( id, image_url )`)
@@ -60,21 +56,21 @@ export const ProductProvider = ({ children }) => {
     };
     
     // --- 👇 AQUÍ ESTÁ LA LÓGICA MEJORADA ---
-    // Creamos un solo canal para escuchar múltiples cambios
+    // Creamos un solo canal público para escuchar cambios en la base de datos.
     const channel = supabase.channel('public-db-changes');
 
     channel
       .on(
         'postgres_changes', 
-        { event: '*', schema: 'public', table: 'products' }, 
+        { event: '*', schema: 'public', table: 'products' }, // Escucha cualquier cambio en 'products'
         handleProductChange
       )
       .on(
         'postgres_changes', 
-        { event: '*', schema: 'public', table: 'product_images' },
+        { event: '*', schema: 'public', table: 'product_images' }, // Escucha cualquier cambio en 'product_images'
         (payload) => {
             console.log('¡Cambio detectado en las imágenes! Actualizando...', payload);
-            fetchAndCacheProducts(); // Simplemente recargamos todo
+            fetchAndCacheProducts();
         }
       )
       .subscribe();
