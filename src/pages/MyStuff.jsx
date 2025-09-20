@@ -17,10 +17,10 @@ const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 export default function MyStuff() {
     const { phone, setPhoneModalOpen, setCheckoutModalOpen } = useCustomer();
     const { addToCart, showToast } = useCart();
-    const { products: liveProducts } = useProducts();
+    const { products: liveProducts, reviews: allReviews } = useProducts(); 
 
     const { customer, loading: userLoading, error } = useUserData();
-    const { favorites, reviews: allReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
+    const { favorites, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
     
     const [editingReview, setEditingReview] = useState(null);
     const [reviewToDelete, setReviewToDelete] = useState(null);
@@ -30,7 +30,8 @@ export default function MyStuff() {
 
     const myReviews = useMemo(() => {
         if (!customer) return [];
-        return allReviews.filter(review => review.customer_id === customer.id);
+        // --- 👇 CORRECCIÓN PREVENTIVA AQUÍ ---
+        return (allReviews || []).filter(review => review.customer_id === customer.id);
     }, [allReviews, customer]);
 
     const handleRemoveFavorite = async () => {
@@ -54,7 +55,7 @@ export default function MyStuff() {
         } else {
             showToast("Reseña actualizada con éxito.");
             setEditingReview(null);
-            refetchExtras();
+            // No es necesario refetchExtras(), la suscripción en tiempo real se encargará.
         }
     };
     
@@ -63,7 +64,7 @@ export default function MyStuff() {
         await supabase.from('product_reviews').delete().eq('id', reviewToDelete.id);
         showToast("Reseña eliminada.");
         setReviewToDelete(null);
-        refetchExtras();
+        // No es necesario refetchExtras(), la suscripción en tiempo real se encargará.
     };
 
     const handleAddToCartFromFav = (event, favoriteProduct) => {

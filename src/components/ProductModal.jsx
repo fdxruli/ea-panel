@@ -1,4 +1,4 @@
-// src/components/ProductModal.jsx (MODIFICADO PARA ANIMACIONES)
+// src/components/ProductModal.jsx (CORREGIDO)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ProductModal.module.css';
@@ -28,7 +28,7 @@ const StarRating = ({ rating, onRatingChange }) => {
     );
 };
 const HeartIcon = ({ isFavorite }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+    <svg xmlns="http://www.w.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
          fill={isFavorite ? 'var(--color-primary)' : 'none'}
          stroke={isFavorite ? 'var(--color-primary)' : 'currentColor'}
          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -66,7 +66,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const [wasAdded, setWasAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('details');
     
-    const { reviews: allReviews, favorites, customerId, refetch: refetchExtras } = useProductExtras();
+    const { reviews: allReviews } = useProducts();
+    const { favorites, customerId, refetch: refetchExtras } = useProductExtras();
     
     const [productReviews, setProductReviews] = useState([]);
     const [isFavorite, setIsFavorite] = useState(false);
@@ -79,7 +80,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const { phone, setPhoneModalOpen } = useCustomer();
     const [isReviewFormVisible, setIsReviewFormVisible] = useState(false);
 
-    // --- 👇 LÓGICA DE ANIMACIÓN AÑADIDA ---
     const [isAnimating, setIsAnimating] = useState(false);
 
     const intervalRef = useRef(null);
@@ -90,16 +90,15 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     useEffect(() => {
         if (product) {
-            const timer = setTimeout(() => setIsAnimating(true), 10); // Inicia animación de entrada
+            const timer = setTimeout(() => setIsAnimating(true), 10);
             return () => clearTimeout(timer);
         }
     }, [product]);
 
     const handleClose = useCallback(() => {
-        setIsAnimating(false); // Inicia animación de salida
-        setTimeout(onClose, 600); // Llama al onClose del padre después de la animación
+        setIsAnimating(false);
+        setTimeout(onClose, 600);
     }, [onClose]);
-    // --- 👆 FIN DE LÓGICA DE ANIMACIÓN ---
 
 
     const handleNextImage = useCallback(() => {
@@ -131,16 +130,18 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     useEffect(() => {
         if (product) {
-            const currentProductReviews = allReviews.filter(r => r.products.id === product.id);
+            // --- 👇 AQUÍ LA CORRECCIÓN ---
+            const currentProductReviews = (allReviews || []).filter(r => r.products && r.products.id === product.id);
             setProductReviews(currentProductReviews);
 
             if (customerId) {
-                setIsFavorite(favorites.some(f => f.products.id === product.id));
+                setIsFavorite((favorites || []).some(f => f.products && f.products.id === product.id));
                 setHasUserReviewed(currentProductReviews.some(r => r.customer_id === customerId));
             } else {
                 setIsFavorite(false);
                 setHasUserReviewed(false);
             }
+            // --- 👆 FIN DE LA CORRECCIÓN ---
 
             setQuantity(1);
             setCurrentImageIndex(0);
@@ -204,7 +205,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         } else {
             setUserRating(0);
             setUserComment('');
-            refetchExtras();
+            // No es necesario refetchExtras() aquí, la suscripción en tiempo real se encargará.
             setIsReviewFormVisible(false);
         }
         setIsSubmittingReview(false);

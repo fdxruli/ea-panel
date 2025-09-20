@@ -1,4 +1,4 @@
-// src/context/ProductContext.jsx (CORREGIDO)
+// src/context/ProductContext.jsx (MODIFICADO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -7,38 +7,41 @@ const ProductContext = createContext();
 
 export const useProducts = () => useContext(ProductContext);
 
-const PRODUCTS_CACHE_KEY = 'el-jefe-products-cache';
-
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [reviews, setReviews] = useState([]); // <-- AÑADIDO: Estado para reseñas
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState('');
 
-  const fetchAndCacheProducts = useCallback(async () => {
+  // Ahora esta función carga todos los datos públicos
+  const fetchPublicData = useCallback(async () => {
     try {
-      // ... (lógica de fetch sin cambios)
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`*, product_images ( id, image_url )`)
-        .eq('is_active', true);
-      if (productsError) throw productsError;
+      // Obtenemos productos, categorías y reseñas en paralelo
+      const [
+        { data: productsData, error: productsError },
+        { data: categoriesData, error: categoriesError },
+        { data: reviewsData, error: reviewsError }
+      ] = await Promise.all([
+        supabase.from('products').select('*, product_images(id, image_url)').eq('is_active', true),
+        supabase.from('categories').select('*'),
+        supabase.from('product_reviews').select('*, products(id), customers(name)').order('created_at', { ascending: false })
+      ]);
 
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*');
+      if (productsError) throw productsError;
       if (categoriesError) throw categoriesError;
-      
+      if (reviewsError) throw reviewsError;
+
       const uniqueCategories = [...new Set(productsData.map(p => p.category_id))];
       const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
 
-      setProducts(productsData);
-      setCategories(productCategories);
-      localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ products: productsData, categories: productCategories }));
+      setProducts(productsData || []);
+      setCategories(productCategories || []);
+      setReviews(reviewsData || []); // <-- AÑADIDO: Guardamos las reseñas
 
     } catch (err) {
-      console.error("Error al obtener productos:", err);
+      console.error("Error al obtener datos públicos:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -46,45 +49,37 @@ export const ProductProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    fetchAndCacheProducts();
+    fetchPublicData(); // Carga inicial
 
-    const handleProductChange = (payload) => {
-      console.log('¡Cambio detectado en productos! Actualizando...', payload);
-      fetchAndCacheProducts();
+    const handleDbChange = (payload) => {
+      console.log('¡Cambio detectado en la base de datos! Actualizando...', payload);
+      // Mostramos una notificación al usuario
       setNotification('¡El menú se ha actualizado!');
       setTimeout(() => setNotification(''), 4000);
+      // Volvemos a cargar todos los datos para reflejar el cambio
+      fetchPublicData();
     };
-    
-    // --- 👇 AQUÍ ESTÁ LA LÓGICA MEJORADA ---
-    // Creamos un solo canal público para escuchar cambios en la base de datos.
+
+    // Un único canal para todos los cambios públicos
     const channel = supabase.channel('public-db-changes');
 
     channel
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'products' }, // Escucha cualquier cambio en 'products'
-        handleProductChange
-      )
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'product_images' }, // Escucha cualquier cambio en 'product_images'
-        (payload) => {
-            console.log('¡Cambio detectado en las imágenes! Actualizando...', payload);
-            fetchAndCacheProducts();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleDbChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleDbChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleDbChange) // <-- AÑADIDO
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, handleDbChange) // <-- AÑADIDO
       .subscribe();
 
+    // Limpiamos el canal al desmontar el componente
     return () => {
       supabase.removeChannel(channel);
     };
-    // --- 👆 FIN DE LA LÓGICA MEJORADA ---
-
-  }, [fetchAndCacheProducts]);
+  }, [fetchPublicData]);
 
   const value = {
     products,
     categories,
+    reviews, // <-- AÑADIDO: Exponemos las reseñas
     loading,
     error,
     notification,

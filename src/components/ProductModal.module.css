@@ -18,7 +18,6 @@
   transition: opacity 0.5s ease;
 }
 
-/* --- 👇 LÓGICA PRINCIPAL DEL CAMBIO --- */
 .modalContent {
   background: var(--bg-secondary);
   width: 100%;
@@ -42,8 +41,47 @@
 .modalContent.open {
     transform: translateY(0);
 }
-/* --- 👆 FIN DE LA LÓGICA PRINCIPAL --- */
 
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* Espacio entre los inputs */
+}
+
+.phoneInput, .nameInput {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font-size: 1.1rem;
+  text-align: center;
+  transition: all var(--transition-speed) ease;
+}
+.phoneInput:focus, .nameInput:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.newNameInputContainer {
+    animation: fadeIn 0.5s ease;
+}
+
+.newUserMessage {
+    font-size: 1rem;
+    color: var(--color-accent);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.error {
+  color: var(--color-error);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  min-height: 1.2em;
+}
 
 /* --- Sección de la Galería --- */
 .galleryContainer {

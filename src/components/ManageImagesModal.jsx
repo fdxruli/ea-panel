@@ -1,63 +1,92 @@
-// src/components/ManageImagesModal.jsx
+// src/components/ManageImagesModal.jsx (MEJORADO CON useRef)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // 1. Importar useRef
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageImagesModal.module.css';
-import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
+import { useAlert } from '../context/AlertContext';
 
 export default function ManageImagesModal({ product, onClose, onImagesUpdate }) {
-  const { showAlert } = useAlert(); // <-- INICIALIZAR
+  const { showAlert } = useAlert();
   const [images, setImages] = useState([]);
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newImageFile, setNewImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const imageInputRef = useRef(null); // 2. Crear la referencia
 
   useEffect(() => {
-    // La imagen principal y las secundarias se combinan para la vista
     const allImages = [
       { id: 'main', image_url: product.image_url, is_main: true },
       ...product.product_images.map(img => ({ ...img, is_main: false }))
-    ].filter(img => img.image_url); // Filtra por si la principal es nula
+    ].filter(img => img.image_url);
     setImages(allImages);
   }, [product]);
 
-  const addImage = async () => {
-    if (!newImageUrl.trim()) {
-      showAlert("La URL de la imagen no puede estar vacía.");
-      return;
+  const handleFileChange = (event) => {
+    if (event.target.files && event.target.files[0]) {
+        setNewImageFile(event.target.files[0]);
     }
-    setLoading(true);
-    const { error } = await supabase
-      .from('product_images')
-      .insert({ product_id: product.id, image_url: newImageUrl });
-
-    if (error) {
-      showAlert(`Error al añadir la imagen: ${error.message}`);
-    } else {
-      setNewImageUrl('');
-      onImagesUpdate(); // Llama a la función para refrescar los datos en la página de Productos
-    }
-    setLoading(false);
   };
 
-  const deleteImage = async (imageId, isMain) => {
-    if (isMain) {
-      showAlert("No puedes eliminar la imagen principal desde aquí. Puedes cambiarla editando el producto.");
+  const addImage = async () => {
+    if (!newImageFile) {
+      showAlert("Por favor, selecciona un archivo de imagen.");
       return;
     }
-    if (!window.confirm("¿Estás seguro de que quieres eliminar esta imagen?")) return;
-
     setLoading(true);
-    const { error } = await supabase
-      .from('product_images')
-      .delete()
-      .eq('id', imageId);
 
-    if (error) {
-      showAlert(`Error al eliminar la imagen: ${error.message}`);
-    } else {
-      onImagesUpdate();
+    try {
+        const fileExt = newImageFile.name.split('.').pop();
+        const fileName = `${product.id}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('imagenes-productos')
+            .upload(filePath, newImageFile);
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+            .from('imagenes-productos')
+            .getPublicUrl(filePath);
+        
+        const { error: insertError } = await supabase
+            .from('product_images')
+            .insert({ product_id: product.id, image_url: data.publicUrl });
+        if (insertError) throw insertError;
+
+        setNewImageFile(null);
+        // 4. Usar la referencia para limpiar de forma segura
+        if (imageInputRef.current) {
+            imageInputRef.current.value = '';
+        }
+
+        await onImagesUpdate(); // Esperamos a que se actualicen los datos
+        showAlert("¡Imagen subida y añadida con éxito!");
+
+    } catch (error) {
+        showAlert(`Error al añadir la imagen: ${error.message}`);
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
+  };
+
+  // La función deleteImage no necesita cambios
+  const deleteImage = async (imageId, imageUrl) => {
+    if (imageId === 'main') {
+        showAlert("No puedes eliminar la imagen principal. Puedes cambiarla editando el producto.");
+        return;
+    }
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta imagen?")) return;
+    setLoading(true);
+    try {
+        const fileName = imageUrl.split('/').pop();
+        await supabase.storage.from('imagenes-productos').remove([fileName]);
+        await supabase.from('product_images').delete().eq('id', imageId);
+        await onImagesUpdate();
+        showAlert("Imagen eliminada correctamente.");
+    } catch (error) {
+        showAlert(`Error al eliminar la imagen: ${error.message}`);
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -68,23 +97,26 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
         
         <div className={styles.addImageForm}>
           <input
-            type="text"
-            placeholder="URL de la nueva imagen"
-            value={newImageUrl}
-            onChange={(e) => setNewImageUrl(e.target.value)}
+            id="image-upload-input"
+            type="file"
+            accept="image/png, image/jpeg, image/webp"
+            onChange={handleFileChange}
+            style={{flexGrow: 1}}
+            ref={imageInputRef} // 3. Asignar la referencia
           />
           <button onClick={addImage} disabled={loading}>
-            {loading ? 'Añadiendo...' : 'Añadir Imagen'}
+            {loading ? 'Subiendo...' : 'Añadir Imagen'}
           </button>
         </div>
 
+        {/* La lista de imágenes no cambia */}
         <div className={styles.imageList}>
           {images.map(img => (
             <div key={img.id} className={styles.imageItem}>
               <img src={img.image_url} alt="Vista previa del producto" />
               <span>{img.is_main ? 'Principal' : 'Secundaria'}</span>
               {!img.is_main && (
-                <button onClick={() => deleteImage(img.id, img.is_main)} disabled={loading} className={styles.deleteButton}>
+                <button onClick={() => deleteImage(img.id, img.image_url)} disabled={loading} className={styles.deleteButton}>
                   Eliminar
                 </button>
               )}

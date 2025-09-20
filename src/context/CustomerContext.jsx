@@ -1,7 +1,7 @@
-// src/context/CustomerContext.jsx
+// src/context/CustomerContext.jsx (CORREGIDO)
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient'; // Importa supabase
+import { supabase } from '../lib/supabaseClient'; 
 
 const CustomerContext = createContext();
 
@@ -12,9 +12,13 @@ export const useCustomer = () => useContext(CustomerContext);
 export const CustomerProvider = ({ children }) => {
   const [phone, setPhone] = useState('');
   const [isPhoneModalOpen, setPhoneModalOpen] = useState(false);
-  const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false); // Estado para el modal de checkout
-  const [checkoutMode, setCheckoutMode] = useState('checkout'); // Estado para el modo de checkout
+  const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState('checkout');
   const [onSuccessCallback, setOnSuccessCallback] = useState(null);
+  
+  // --- 👇 1. NUEVO ESTADO PARA GESTIONAR EL FLUJO ---
+  const [isNewUserPendingAddress, setNewUserPendingAddress] = useState(false);
+
 
   useEffect(() => {
     const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
@@ -28,40 +32,40 @@ export const CustomerProvider = ({ children }) => {
     }
   }, []);
 
-   const savePhone = async (newPhone) => {
-    if (/^\d{10,12}$/.test(newPhone)) {
-      localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
-      setPhone(newPhone);
-      setPhoneModalOpen(false);
-
-      // Si hay un callback de éxito (como el que viene del carrito), lo ejecutamos.
-      if (onSuccessCallback) {
+   // --- 👇 2. LÓGICA DE GUARDADO ACTUALIZADA ---
+   const savePhone = async (newPhone, customerName = null) => {
+    if (!/^\d{10,12}$/.test(newPhone)) {
+        return { success: false, message: 'Por favor, ingresa un número de WhatsApp válido (10-12 dígitos).' };
+    }
+    
+    // Si se proveyó un nombre, es un cliente nuevo.
+    if (customerName) {
+        const { error } = await supabase.from('customers').insert({ name: customerName, phone: newPhone });
+        if (error) {
+            return { success: false, message: `Error al crear el perfil: ${error.message}` };
+        }
+        // Activamos la bandera para que otro componente se encargue de abrir el modal.
+        setNewUserPendingAddress(true); 
+    }
+    
+    // Guardamos el teléfono al final para disparar la carga de datos del usuario.
+    localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
+    setPhone(newPhone);
+    setPhoneModalOpen(false);
+    
+    if (onSuccessCallback) {
         onSuccessCallback();
         setOnSuccessCallback(null);
-        return true; // Terminamos aquí
-      }
-
-      // Si no hay callback, verificamos si el cliente es nuevo.
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('phone', newPhone)
-        .maybeSingle();
-
-      if (!customer) {
-        // Si el cliente no existe, SIEMPRE abrimos el modal en modo perfil.
-        setCheckoutMode('profile');
-        setCheckoutModalOpen(true);
-      }
-
-      return true;
     }
-    return false;
+
+    return { success: true };
   };
+  // --- 👆 FIN DE LA ACTUALIZACIÓN ---
 
   const clearPhone = () => {
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
     setPhone('');
+    setNewUserPendingAddress(false); // Limpiamos la bandera al cerrar sesión
   };
 
   const togglePhoneModal = (value) => {
@@ -88,6 +92,9 @@ export const CustomerProvider = ({ children }) => {
     isCheckoutModalOpen,
     setCheckoutModalOpen: toggleCheckoutModal,
     checkoutMode,
+    // --- 👇 3. EXPONEMOS LA NUEVA BANDERA Y SU FUNCIÓN ---
+    isNewUserPendingAddress,
+    setNewUserPendingAddress
   };
 
   return (
