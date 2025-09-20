@@ -1,13 +1,13 @@
-// src/components/AddressModal.jsx
+// src/components/AddressModal.jsx (MODIFICADO)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './AddressModal.module.css';
 import ClientOnly from './ClientOnly';
 import DynamicMapPicker from './DynamicMapPicker';
-import { useAlert } from '../context/AlertContext'; // <-- 1. IMPORTAR
+import { useAlert } from '../context/AlertContext';
 
 export default function AddressModal({ isOpen, onClose, onSave, address = null, customerId }) {
-    const { showAlert } = useAlert(); // <-- 2. INICIALIZAR
+    const { showAlert } = useAlert();
     const [formData, setFormData] = useState({
         label: '',
         address_reference: '',
@@ -39,7 +39,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.coords) {
-            showAlert("Por favor, selecciona una ubicación en el mapa."); // <-- 3. REEMPLAZAR
+            showAlert("Por favor, selecciona una ubicación en el mapa.");
             return;
         }
         setIsSubmitting(true);
@@ -54,13 +54,20 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
             await onSave(addressData, address?.id);
             onClose();
         } catch (error) {
-            showAlert(`Error al guardar la dirección: ${error.message}`); // <-- 3. REEMPLAZAR
+            showAlert(`Error al guardar la dirección: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
     };
 
     if (!isOpen) return null;
+    
+    // --- 👇 AQUÍ ESTÁ LA LÓGICA CLAVE ---
+    // 1. Preparamos la posición inicial para el mapa.
+    //    Si estamos editando una dirección (`address` existe), usamos sus coordenadas.
+    //    Si no, será `null` y el mapa usará su centro por defecto.
+    const mapInitialPosition = address ? { lat: address.latitude, lng: address.longitude } : null;
+    // ------------------------------------
 
     return (
         <div className={styles.modalOverlay}>
@@ -71,7 +78,11 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <div className={styles.mapContainer}>
                        <ClientOnly>
-                           <DynamicMapPicker onLocationSelect={handleLocationSelect} />
+                           {/* 2. Pasamos la posición inicial al componente del mapa */}
+                           <DynamicMapPicker
+                                onLocationSelect={handleLocationSelect}
+                                initialPosition={mapInitialPosition}
+                           />
                        </ClientOnly>
                     </div>
 

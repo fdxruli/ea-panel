@@ -210,3 +210,115 @@
     top: 90px;
   }
 }
+
+/* --- ESTILOS PARA EL NUEVO BOTÓN FLOTANTE --- */
+.floating-cart-container {
+  position: fixed;
+  bottom: 100px; /* Se posiciona 20px por encima de la barra de navegación de 80px */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1010;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-cart-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #28a745; /* Verde éxito, como en la imagen */
+  color: white;
+  padding: 12px 20px;
+  border-radius: 50px; /* Para la forma de píldora */
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  border: none;
+}
+
+.floating-cart-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.floating-cart-badge {
+  background-color: white;
+  color: #28a745; /* Color del texto igual al fondo del botón */
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+/* Ajuste para que el icono del carrito sea blanco */
+.floating-cart-button svg {
+  stroke: white;
+}
+
+/* --- 👇 NUEVOS ESTILOS PARA EL CARRITO EN EL HEADER --- */
+.desktop-cart-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    position: relative;
+    padding: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: var(--font-family);
+}
+
+.desktop-cart-button:hover {
+    color: var(--color-primary);
+}
+
+.desktop-cart-badge {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    background-color: var(--color-accent);
+    color: var(--text-light);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border: 2px solid var(--bg-secondary);
+}
+
+@media (min-width: 768px) {
+  .client-layout {
+    padding-bottom: 0;
+  }
+  .client-header {
+    padding: 1rem 2rem;
+  }
+  .bottom-nav {
+    display: none;
+  }
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  
+  .client-main {
+    padding: 2rem;
+  }
+
+  /* --- 👇 OCULTAMOS EL BOTÓN FLOTANTE EN ESCRITORIO --- */
+  .floating-cart-container {
+    display: none;
+  }
+}

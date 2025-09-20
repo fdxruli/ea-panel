@@ -1,27 +1,27 @@
-// src/pages/Cart.jsx (COMPLETO Y CORREGIDO)
+// src/pages/Cart.jsx (MODIFICADO)
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import styles from './Cart.module.css';
 import CheckoutModal from '../components/CheckoutModal';
-import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
+import { useAlert } from '../context/AlertContext';
+
+const TrashIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        <line x1="10" y1="11" x2="10" y2="17"></line>
+        <line x1="14" y1="11" x2="14" y2="17"></line>
+    </svg>
+);
 
 export default function Cart() {
-    const { showAlert } = useAlert(); // <-- INICIALIZAR
+    const { showAlert } = useAlert();
     const {
-        cartItems,
-        updateQuantity,
-        removeFromCart,
-        subtotal,
-        total,
-        discount,
-        applyDiscount,
-        removeDiscount,
-        isCartOpen,
-        toggleCart,
-        cartNotification,
-        clearCartNotification
+        cartItems, updateQuantity, removeFromCart, subtotal, total, discount,
+        applyDiscount, removeDiscount, isCartOpen, toggleCart,
+        cartNotification, clearCartNotification
     } = useCart();
 
     const { phone, setPhoneModalOpen } = useCustomer();
@@ -29,55 +29,52 @@ export default function Cart() {
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
 
-    // --- LÓGICA QUE FALTABA ---
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    useEffect(() => {
+        if (isCartOpen) {
+            const timer = setTimeout(() => setIsAnimating(true), 10);
+            return () => clearTimeout(timer);
+        }
+    }, [isCartOpen]);
+
+    const handleClose = useCallback(() => {
+        setIsAnimating(false);
+        setTimeout(toggleCart, 600);
+    }, [toggleCart]);
+
+
     const handleApplyDiscount = async () => {
         if (!discountCode.trim()) return;
         const result = await applyDiscount(discountCode);
         setDiscountMessage(result.message);
-        // Limpia el mensaje después de 3 segundos
         setTimeout(() => setDiscountMessage(''), 3000);
     };
 
-    // --- LÓGICA QUE FALTABA ---
     const handleRemoveDiscount = () => {
-        removeDiscount();
-        setDiscountCode('');
-        setDiscountMessage('');
+        removeDiscount(); setDiscountCode(''); setDiscountMessage('');
     };
 
-    // --- LÓGICA MEJORADA ---
     const handleProceedToCheckout = () => {
-        if (cartItems.length === 0) {
-            showAlert("Tu carrito está vacío.");
-            return;
-        }
+        if (cartItems.length === 0) { showAlert("Tu carrito está vacío."); return; }
         if (cartItems.some(item => !item.quantity || item.quantity <= 0)) {
-            showAlert("Por favor, revisa que todos los productos tengan una cantidad válida.");
-            return;
+            showAlert("Por favor, revisa que todos los productos tengan una cantidad válida."); return;
         }
-
         if (!phone) {
-            // Abre el modal del teléfono y, al tener éxito, abre el de checkout.
-            setPhoneModalOpen(() => {
-                setCheckoutModalOpen(true);
-            });
-            return;
+            setPhoneModalOpen(() => { setCheckoutModalOpen(true); }); return;
         }
-
         setCheckoutModalOpen(true);
     };
 
-
-    if (!isCartOpen) return null;
+    if (!isCartOpen && !isAnimating) return null;
 
     return (
         <>
-            <div className={styles.overlay} onClick={toggleCart}></div>
-
-            <div className={`${styles.cartSidebar} ${isCartOpen ? styles.open : ''}`}>
+            <div className={styles.overlay} onClick={handleClose}></div>
+            <div className={`${styles.cartSidebar} ${isCartOpen && isAnimating ? styles.open : ''}`}>
                 <div className={styles.cartHeader}>
                     <h2>🛒 Tu Pedido</h2>
-                    <button onClick={toggleCart} className={styles.closeButton}>×</button>
+                    <button onClick={handleClose} className={styles.closeButton}>×</button>
                 </div>
 
                 {cartNotification && (
@@ -87,48 +84,50 @@ export default function Cart() {
                     </div>
                 )}
                 {cartItems.length === 0 ? (
-                    <p className={styles.emptyMessage}>Tu carrito está vacío. ¡Añade unas alitas!</p>
-                ) : (
                     <div className={styles.cartBody}>
-                        <div className={styles.cartItemsList}>
-                            {cartItems.map(item => (
-                                <div key={item.id} className={styles.cartItem}>
-                                    <img src={item.image_url || 'https://via.placeholder.com/80'} alt={item.name} />
-                                    <div className={styles.itemInfo}>
-                                        <span className={styles.itemName}>{item.name}</span>
-                                        <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
+                        <p className={styles.emptyMessage}>Tu carrito está vacío. ¡Añade unas alitas!</p>
+                    </div>
+                ) : (
+                    // --- 👇 AQUÍ COMIENZA EL CAMBIO ESTRUCTURAL ---
+                    <>
+                        <div className={styles.cartBody}>
+                            <div className={styles.cartItemsList}>
+                                {cartItems.map(item => (
+                                    <div key={item.id} className={styles.cartItem}>
+                                        <img src={item.image_url || 'https://via.placeholder.com/80'} alt={item.name} />
+                                        <div className={styles.itemInfo}>
+                                            <span className={styles.itemName}>{item.name}</span>
+                                            <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
+                                        </div>
+                                        <div className={styles.itemActions}>
+                                            {item.quantity === 1 ? (
+                                                <button onClick={() => removeFromCart(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`} aria-label="Eliminar producto">
+                                                    <TrashIcon />
+                                                </button>
+                                            ) : (
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton} aria-label="Disminuir cantidad">
+                                                    -
+                                                </button>
+                                            )}
+                                            <span className={styles.quantityDisplay}>{item.quantity}</span>
+                                            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton} aria-label="Aumentar cantidad">
+                                                +
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className={styles.itemActions}>
-                                        <input
-                                            type="number"
-                                            value={item.quantity}
-                                            onChange={(e) => updateQuantity(item.id, e.target.value)}
-                                            min="1"
-                                        />
-                                        <button onClick={() => removeFromCart(item.id)}>🗑️</button>
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
 
+                        {/* El footer ahora está FUERA del cartBody, como un elemento hermano */}
                         <div className={styles.cartFooter}>
                             {!discount && (
                                 <div className={styles.discountSection}>
-                                    <input
-                                        type="text"
-                                        placeholder="Código de descuento"
-                                        value={discountCode}
-                                        onChange={(e) => setDiscountCode(e.target.value)}
-                                        className={styles.discountInput}
-                                    />
-                                    <button onClick={handleApplyDiscount} className={styles.applyButton}>
-                                        Aplicar
-                                    </button>
+                                    <input type="text" placeholder="Código de descuento" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className={styles.discountInput} />
+                                    <button onClick={handleApplyDiscount} className={styles.applyButton}>Aplicar</button>
                                 </div>
                             )}
-                            
                             {discountMessage && <p className={styles.discountMessage}>{discountMessage}</p>}
-
                             <div className={styles.totals}>
                                 <p>Subtotal: <span>${subtotal.toFixed(2)}</span></p>
                                 {discount && (
@@ -139,12 +138,12 @@ export default function Cart() {
                                 )}
                                 <h3 className={styles.total}>Total: <span>${total.toFixed(2)}</span></h3>
                             </div>
-
                             <button onClick={handleProceedToCheckout} className={styles.whatsappButton}>
                                 {phone ? 'Continuar con mi Pedido' : 'Ingresa tu número para continuar'}
                             </button>
                         </div>
-                    </div>
+                    </>
+                     // --- 👆 FIN DEL CAMBIO ESTRUCTURAL ---
                 )}
             </div>
 

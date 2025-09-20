@@ -1,24 +1,51 @@
-/* src/components/ProductModal.module.css (CON TRANSICIÓN Y FLECHAS DISCRETAS) */
+/* src/components/ProductModal.module.css (MODIFICADO) */
 
-/* --- Estilos Base del Modal --- */
+/* --- Estilos Base del Overlay --- */
 .overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background-color: rgba(0, 0, 0, 0.6); display: flex;
-  justify-content: center; align-items: center; z-index: 2000;
-  padding: 1rem; animation: fadeIn 0.3s ease;
+  justify-content: center; align-items: flex-end; /* Alinea el modal abajo en móvil */
+  z-index: 2000;
+  padding: 0; /* Quitamos padding para que ocupe todo en móvil */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s 0.5s;
 }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.modalContent {
-  background: var(--bg-secondary); border-radius: var(--border-radius);
-  width: 100%; max-width: 900px; max-height: 90vh;
-  display: flex; flex-direction: column; overflow: hidden;
-  box-shadow: 0 5px 25px rgba(0,0,0,0.2);
-  transform: scale(0.95); opacity: 0;
-  animation: scaleIn 0.3s ease forwards;
-}
-@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-/* --- 👇 SECCIÓN DE LA GALERÍA MODIFICADA --- */
+.overlay.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s ease;
+}
+
+/* --- 👇 LÓGICA PRINCIPAL DEL CAMBIO --- */
+.modalContent {
+  background: var(--bg-secondary);
+  width: 100%;
+  max-width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
+  position: fixed; /* Posición fija en móvil */
+  bottom: 0;
+  left: 0;
+  border-radius: 1.5rem 1.5rem 0 0; /* Bordes redondeados superiores */
+
+  /* Animación de entrada/salida */
+  transform: translateY(100%);
+  opacity: 1;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modalContent.open {
+    transform: translateY(0);
+}
+/* --- 👆 FIN DE LA LÓGICA PRINCIPAL --- */
+
+
+/* --- Sección de la Galería --- */
 .galleryContainer {
   position: relative; width: 100%; padding-top: 56.25%;
   background-color: #f0f0f0; flex-shrink: 0;
@@ -26,11 +53,11 @@
 .productImage {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   object-fit: cover;
-  opacity: 0; /* Oculta por defecto */
-  transition: opacity 0.8s ease-in-out; /* La transición de desvanecimiento */
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
 }
 .productImage.active {
-  opacity: 1; /* Muestra la imagen activa */
+  opacity: 1;
 }
 .navButton {
   position: absolute;
@@ -49,18 +76,17 @@
   justify-content: center;
   font-size: 1.5rem;
   line-height: 1;
-  opacity: 0; /* Ocultas por defecto */
+  opacity: 0;
   transition: opacity 0.3s ease, background-color 0.2s;
 }
 .galleryContainer:hover .navButton {
-  opacity: 1; /* Aparecen al pasar el cursor */
+  opacity: 1;
 }
 .navButton:hover {
     background-color: rgba(0, 0, 0, 0.5);
 }
 .prev { left: 1rem; }
 .next { right: 1rem; }
-/* --- 👆 FIN DE LA MODIFICACIÓN --- */
 
 .closeButton {
   position: absolute; top: 10px; right: 15px; background: rgba(0, 0, 0, 0.4);
@@ -207,10 +233,31 @@
     border: 1px solid var(--border-color);
 }
 
-
+/* --- 👇 ESTILOS PARA ESCRITORIO --- */
 @media (min-width: 768px) {
-  .modalContent { flex-direction: row; }
+  .overlay {
+    align-items: center; /* Vuelve a centrar verticalmente */
+    padding: 1rem; /* Restaura el padding */
+  }
+
+  .modalContent {
+    flex-direction: row;
+    position: relative; /* Vuelve a la posición por defecto */
+    bottom: auto;
+    left: auto;
+    border-radius: var(--border-radius); /* Restaura bordes normales */
+    max-width: 900px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    
+    /* Animación de escritorio */
+    transform: scale(0.95);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .modalContent.open {
+    transform: scale(1);
+  }
+
   .galleryContainer { width: 50%; padding-top: 0; height: auto; }
   .productDetails { width: 50%; overflow: hidden; }
 }
-

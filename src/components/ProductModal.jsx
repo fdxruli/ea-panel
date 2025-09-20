@@ -1,4 +1,4 @@
-// src/components/ProductModal.jsx (CON CARRUSEL AUTOMÁTICO)
+// src/components/ProductModal.jsx (MODIFICADO PARA ANIMACIONES)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ProductModal.module.css';
@@ -79,12 +79,28 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const { phone, setPhoneModalOpen } = useCustomer();
     const [isReviewFormVisible, setIsReviewFormVisible] = useState(false);
 
-    // --- LÓGICA DEL CARRUSEL ---
+    // --- 👇 LÓGICA DE ANIMACIÓN AÑADIDA ---
+    const [isAnimating, setIsAnimating] = useState(false);
+
     const intervalRef = useRef(null);
     const galleryImages = product ? [
         product.image_url,
         ...(product.product_images?.map(img => img.image_url) || [])
     ].filter(Boolean) : [];
+
+    useEffect(() => {
+        if (product) {
+            const timer = setTimeout(() => setIsAnimating(true), 10); // Inicia animación de entrada
+            return () => clearTimeout(timer);
+        }
+    }, [product]);
+
+    const handleClose = useCallback(() => {
+        setIsAnimating(false); // Inicia animación de salida
+        setTimeout(onClose, 600); // Llama al onClose del padre después de la animación
+    }, [onClose]);
+    // --- 👆 FIN DE LÓGICA DE ANIMACIÓN ---
+
 
     const handleNextImage = useCallback(() => {
         setCurrentImageIndex(prev => (prev + 1) % galleryImages.length);
@@ -95,9 +111,9 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     };
 
     const startCarousel = useCallback(() => {
-        stopCarousel(); // Asegura que no haya intervalos duplicados
+        stopCarousel();
         if (galleryImages.length > 1) {
-            intervalRef.current = setInterval(handleNextImage, 4000); // Cambia cada 4 segundos
+            intervalRef.current = setInterval(handleNextImage, 4000);
         }
     }, [galleryImages.length, handleNextImage]);
 
@@ -109,9 +125,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     useEffect(() => {
         startCarousel();
-        return () => stopCarousel(); // Limpia el intervalo cuando el componente se desmonta
+        return () => stopCarousel();
     }, [startCarousel]);
-    // --- FIN DE LÓGICA DEL CARRUSEL ---
 
 
     useEffect(() => {
@@ -128,7 +143,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             }
 
             setQuantity(1);
-            setCurrentImageIndex(0); // Reinicia el carrusel al cambiar de producto
+            setCurrentImageIndex(0);
             setWasAdded(false);
             setActiveTab('details');
             setUserRating(0);
@@ -145,7 +160,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         const isStillAvailable = liveProducts.some(p => p.id === product.id);
         if (!isStillAvailable) {
             showAlert("Lo sentimos, este producto ya no se encuentra disponible.");
-            onClose();
+            handleClose();
             return;
         }
         onAddToCart(product, quantity, event);
@@ -199,8 +214,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
 
     return (
-        <div className={styles.overlay} onClick={onClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div className={`${styles.overlay} ${isAnimating ? styles.open : ''}`} onClick={handleClose}>
+            <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''}`} onClick={(e) => e.stopPropagation()}>
                 <div
                     className={styles.galleryContainer}
                     onMouseEnter={stopCarousel}
@@ -220,7 +235,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             className={`${styles.productImage} ${index === currentImageIndex ? styles.active : ''}`}
                         />
                     ))}
-                    <button onClick={onClose} className={styles.closeButton}>×</button>
+                    <button onClick={handleClose} className={styles.closeButton}>×</button>
                 </div>
 
                 <div className={styles.productDetails}>
@@ -305,4 +320,3 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         </div>
     );
 }
-

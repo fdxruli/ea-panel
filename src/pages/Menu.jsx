@@ -27,7 +27,7 @@ export default function Menu() {
     const handleAddToCart = (product, quantity, event) => {
         addToCart(product, quantity);
         const quantityAdded = quantity || 1;
-        
+
         showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`); // <-- Usamos la notificación global
 
         if (event && event.currentTarget) {
@@ -44,7 +44,7 @@ export default function Menu() {
             }, 1000);
         }
     };
-    
+
     const toggleLayout = () => {
         setLayout(prevLayout => (prevLayout === 'list' ? 'grid' : 'list'));
     };
@@ -65,7 +65,7 @@ export default function Menu() {
                     style={{ top: `${img.top}px`, left: `${img.left}px` }}
                 />
             ))}
-            
+
             {/* El elemento de la notificación ya no se renderiza aquí, sino en ClientLayout */}
 
             <div className={styles.filters}>
@@ -85,12 +85,16 @@ export default function Menu() {
                     </button>
                 </div>
             </div>
-            
+
             <div className={`${styles.productList} ${styles[layout]}`}>
                 {filteredProducts.length > 0 ? filteredProducts.map(product => (
                     <div key={product.id} className={styles.productCard}>
                         <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                            <img src={product.image_url || 'https://via.placeholder.com/150'} alt={product.name} />
+                            {/* 👇 AQUÍ ESTÁ EL CAMBIO 👇 */}
+                            <div className={styles.imageContainer}>
+                                <img src={product.image_url || 'https://via.placeholder.com/150'} alt={product.name} />
+                            </div>
+                            {/* 👆 FIN DEL CAMBIO 👆 */}
                             <div className={styles.cardContent}>
                                 <h3>{product.name}</h3>
                             </div>
@@ -103,8 +107,8 @@ export default function Menu() {
                 )) : <p>No se encontraron productos.</p>}
             </div>
 
-            <ProductModal 
-                product={selectedProduct} 
+            <ProductModal
+                product={selectedProduct}
                 onClose={() => setSelectedProduct(null)}
                 onAddToCart={handleAddToCart}
             />

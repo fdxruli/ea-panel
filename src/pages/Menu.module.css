@@ -119,10 +119,22 @@
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.productCard img {
+.imageContainer {
+  position: relative;
   width: 100%;
-  height: 180px;
-  object-fit: cover;
+  padding-top: 75%; /* Esto crea una proporción de 4:3. Puedes cambiarlo a 100% para 1:1 (cuadrado) */
+  background-color: #f0f0f0; /* Un color de fondo mientras carga la imagen */
+  overflow: hidden;
+}
+
+.productCard img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Mantiene la imagen cubriendo el espacio sin deformarse */
+  object-position: center; /* Se asegura de centrar la imagen */
 }
 
 .cardContent {
@@ -188,11 +200,13 @@
 }
 
 @media (min-width: 768px) {
-  .layoutToggle {
-    display: none;
+  .productList.list {
+    grid-template-columns: 1fr; /* Una sola columna para la vista de lista */
+    padding: 0;
+    gap: 1.5rem;
   }
-  .productList {
-    display: grid;
+  
+  .productList.grid {
     gap: 1.5rem;
     padding: 0;
     grid-template-columns: repeat(3, 1fr);
@@ -200,7 +214,7 @@
 }
 
 @media (min-width: 900px) {
-  .productList {
+  .productList.grid {
     grid-template-columns: repeat(4, 1fr);
   }
    .categoryButtons {
@@ -209,7 +223,7 @@
 }
 
 @media (min-width: 1200px) {
-  .productList {
+  .productList.grid {
     grid-template-columns: repeat(5, 1fr);
   }
 }

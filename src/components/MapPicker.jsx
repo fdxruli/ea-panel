@@ -1,4 +1,4 @@
-// src/components/MapPicker.jsx (CORREGIDO Y ROBUSTO)
+// src/components/MapPicker.jsx (CORREGIDO Y SIMPLIFICADO)
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
@@ -41,17 +41,14 @@ const mapOptions = {
   tilt: 0
 };
 
-export default function MapPicker({ onLocationSelect }) {
+export default function MapPicker({ onLocationSelect, initialPosition }) {
   const { showAlert } = useAlert();
-  const initialCenter = {
-    lat: 15.852182,
-    lng: -91.977533
-  };
+  const defaultCenter = { lat: 15.852182, lng: -91.977533 };
   
-  // --- 👇 CAMBIO PRINCIPAL: AHORA EL CENTRO DEL MAPA ES UN ESTADO ---
-  const [mapCenter, setMapCenter] = useState(initialCenter);
-  const [markerPosition, setMarkerPosition] = useState(initialCenter);
-  const [lastValidPosition, setLastValidPosition] = useState(initialCenter);
+  const [markerPosition, setMarkerPosition] = useState(initialPosition || defaultCenter);
+  const [mapCenter, setMapCenter] = useState(initialPosition || defaultCenter);
+  const [lastValidPosition, setLastValidPosition] = useState(initialPosition || defaultCenter);
+
   const polygonRef = useRef(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -59,6 +56,28 @@ export default function MapPicker({ onLocationSelect }) {
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: libraries,
   });
+
+  // Comunica la posición inicial al componente padre solo una vez.
+  useEffect(() => {
+    if (onLocationSelect) {
+      onLocationSelect(initialPosition || defaultCenter);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
+  // --- 👇 ESTA ES LA CORRECCIÓN PRINCIPAL ---
+  // Este efecto ahora solo se ejecuta si los valores de lat/lng de la
+  // dirección inicial realmente cambian, en lugar de en cada renderizado.
+  // Esto evita que la posición del marcador se reinicie después de arrastrarlo.
+  useEffect(() => {
+    if (initialPosition) {
+        setMarkerPosition(initialPosition);
+        setMapCenter(initialPosition);
+        setLastValidPosition(initialPosition);
+    }
+  }, [JSON.stringify(initialPosition)]); // La dependencia es un string, no un objeto
+  // --- 👆 FIN DE LA CORRECCIÓN ---
+
 
   const onPolygonLoad = useCallback(polygon => {
     polygonRef.current = polygon;
@@ -73,29 +92,22 @@ export default function MapPicker({ onLocationSelect }) {
     if (
       isLoaded &&
       polygonRef.current &&
-      google.maps.geometry.poly.containsLocation(event.latLng, polygonRef.current)
+      window.google.maps.geometry.poly.containsLocation(event.latLng, polygonRef.current)
     ) {
-      // Si la posición es válida, actualizamos todo
+      // Si la posición es válida, actualiza el estado interno y notifica al padre.
       setMarkerPosition(newPosition);
       setLastValidPosition(newPosition);
-      setMapCenter(newPosition); // <-- Actualizamos el centro del mapa
+      setMapCenter(newPosition);
       if (onLocationSelect) {
         onLocationSelect(newPosition);
       }
     } else {
-      // Si no es válida, regresamos todo a la última posición conocida
+      // Si no es válida, revierte el marcador a la última posición buena.
       showAlert("Lo sentimos, solo hacemos entregas dentro de la zona marcada en verde. Por favor, mueve el pin a una ubicación válida.");
       setMarkerPosition(lastValidPosition);
-      setMapCenter(lastValidPosition); // <-- Regresamos el centro del mapa
+      setMapCenter(lastValidPosition);
     }
   }, [onLocationSelect, isLoaded, lastValidPosition, showAlert]);
-
-  useEffect(() => {
-    if (onLocationSelect) {
-        onLocationSelect(initialCenter);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (loadError) {
     return (
@@ -114,7 +126,7 @@ export default function MapPicker({ onLocationSelect }) {
       {isLoaded ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
-          center={mapCenter} // <-- Usamos el estado para controlar el centro
+          center={mapCenter}
           zoom={17}
           options={mapOptions}
         >
