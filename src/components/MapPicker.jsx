@@ -65,10 +65,6 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // --- 👇 ESTA ES LA CORRECCIÓN PRINCIPAL ---
-  // Este efecto ahora solo se ejecuta si los valores de lat/lng de la
-  // dirección inicial realmente cambian, en lugar de en cada renderizado.
-  // Esto evita que la posición del marcador se reinicie después de arrastrarlo.
   useEffect(() => {
     if (initialPosition) {
         setMarkerPosition(initialPosition);

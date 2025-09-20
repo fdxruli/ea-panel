@@ -28,29 +28,32 @@ export const CustomerProvider = ({ children }) => {
     }
   }, []);
 
-  const savePhone = async (newPhone) => {
+   const savePhone = async (newPhone) => {
     if (/^\d{10,12}$/.test(newPhone)) {
       localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
       setPhone(newPhone);
       setPhoneModalOpen(false);
 
+      // Si hay un callback de éxito (como el que viene del carrito), lo ejecutamos.
       if (onSuccessCallback) {
         onSuccessCallback();
         setOnSuccessCallback(null);
-      } else {
-        // Verifica si el cliente es nuevo solo si no hay un callback (es decir, no viene del carrito)
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('phone', newPhone)
-          .maybeSingle();
-        
-        if (!customer) {
-          // Si el cliente no existe, abre el modal de checkout en modo perfil
-          setCheckoutMode('profile'); 
-          setCheckoutModalOpen(true);
-        }
+        return true; // Terminamos aquí
       }
+
+      // Si no hay callback, verificamos si el cliente es nuevo.
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', newPhone)
+        .maybeSingle();
+
+      if (!customer) {
+        // Si el cliente no existe, SIEMPRE abrimos el modal en modo perfil.
+        setCheckoutMode('profile');
+        setCheckoutModalOpen(true);
+      }
+
       return true;
     }
     return false;
