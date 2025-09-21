@@ -24,12 +24,3 @@
     font-weight: bold; cursor: pointer; margin-top: 1rem;
 }
 .saveButton:disabled { background-color: #9addaa; }
-
-/* --- 👇 NUEVO ESTILO AÑADIDO --- */
-.welcomeMessage {
-    text-align: center;
-    color: var(--text-secondary);
-    margin-top: -1rem;
-    margin-bottom: 1.5rem;
-    line-height: 1.5;
-}

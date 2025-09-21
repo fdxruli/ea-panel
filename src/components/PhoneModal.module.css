@@ -1,4 +1,4 @@
-/* src/components/PhoneModal.module.css */
+/* src/components/PhoneModal.module.css (BOTÓN GUARDAR VERDE) */
 
 .overlay {
   position: fixed;
@@ -70,7 +70,7 @@
     flex-direction: column;
 }
 
-.phoneInput, .nameInput { /* <-- Estilo compartido */
+.phoneInput {
   width: 100%;
   padding: 14px;
   margin-bottom: 0.5rem;
@@ -81,27 +81,11 @@
   text-align: center;
   transition: all var(--transition-speed) ease;
 }
-.phoneInput:focus, .nameInput:focus { /* <-- Estilo compartido */
+.phoneInput:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-light);
 }
-
-/* --- 👇 NUEVOS ESTILOS --- */
-.newUserSection {
-    animation: fadeIn 0.5s ease;
-    margin-top: 1rem;
-}
-.newUserMessage {
-    font-size: 1rem;
-    color: var(--text-primary);
-    margin-bottom: 0.8rem !important; /* Importante para sobreescribir el margen general */
-}
-.nameInput {
-    margin-top: 0.5rem;
-}
-/* --- 👆 FIN DE NUEVOS ESTILOS --- */
-
 
 .error {
   color: var(--color-error);
@@ -117,8 +101,9 @@
   margin-top: 0.5rem;
 }
 
+/* --- 👇 AQUÍ ESTÁ EL CAMBIO PARA EL BOTÓN VERDE --- */
 .saveButton {
-  background-color: var(--color-success);
+  background-color: var(--color-success); /* Usamos la variable de éxito */
   color: white;
   padding: 1rem;
   border-radius: 8px;
@@ -126,12 +111,10 @@
   font-weight: bold;
 }
 .saveButton:hover {
-    background-color: #388e3c;
+    background-color: #388e3c; /* Un verde un poco más oscuro para el hover */
 }
-.saveButton:disabled {
-    background-color: #9addaa;
-    cursor: not-allowed;
-}
+/* --- 👆 FIN DEL CAMBIO --- */
+
 
 .laterButton {
   background: none;

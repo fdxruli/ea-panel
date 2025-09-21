@@ -1,4 +1,4 @@
-// src/components/AddressModal.jsx
+// src/components/AddressModal.jsx (MODIFICADO)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './AddressModal.module.css';
@@ -52,7 +52,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 longitude: formData.coords.lng
             };
             await onSave(addressData, address?.id);
-            onClose(); 
+            onClose();
         } catch (error) {
             showAlert(`Error al guardar la dirección: ${error.message}`);
         } finally {
@@ -62,11 +62,12 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
 
     if (!isOpen) return null;
     
+    // --- 👇 AQUÍ ESTÁ LA LÓGICA CLAVE ---
+    // 1. Preparamos la posición inicial para el mapa.
+    //    Si estamos editando una dirección (`address` existe), usamos sus coordenadas.
+    //    Si no, será `null` y el mapa usará su centro por defecto.
     const mapInitialPosition = address ? { lat: address.latitude, lng: address.longitude } : null;
-    
-    // --- 👇 LÓGICA PARA EL MENSAJE DE BIENVENIDA ---
-    const isFirstTime = !address; 
-    // ---------------------------------------------
+    // ------------------------------------
 
     return (
         <div className={styles.modalOverlay}>
@@ -74,17 +75,10 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 <button onClick={onClose} className={styles.closeButton}>×</button>
                 <h2>{address ? 'Editar Dirección' : 'Nueva Dirección'}</h2>
                 
-                {/* --- 👇 MENSAJE CONDICIONAL AÑADIDO --- */}
-                {isFirstTime && (
-                    <p className={styles.welcomeMessage}>
-                        ¡Ya casi! Solo necesitamos tu dirección para completar tu perfil.
-                    </p>
-                )}
-                {/* ------------------------------------ */}
-
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <div className={styles.mapContainer}>
                        <ClientOnly>
+                           {/* 2. Pasamos la posición inicial al componente del mapa */}
                            <DynamicMapPicker
                                 onLocationSelect={handleLocationSelect}
                                 initialPosition={mapInitialPosition}

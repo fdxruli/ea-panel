@@ -10,7 +10,7 @@ import { useAlert } from '../context/AlertContext';
 import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
 
-// --- Iconos (sin cambios) ---
+// --- Iconos ---
 const MapPinIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -29,8 +29,7 @@ const EditIcon = () => (
     </svg>
 );
 
-// --- 👇 SE ELIMINÓ LA PROP 'mode' ---
-export default function CheckoutModal({ phone, onClose }) {
+export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     const { showAlert } = useAlert();
     const { cartItems, total, subtotal, discount, clearCart, toggleCart } = useCart();
     const { customer, addresses, refetch: refetchUserData } = useUserData();
@@ -41,8 +40,8 @@ export default function CheckoutModal({ phone, onClose }) {
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
     const [addressToEdit, setAddressToEdit] = useState(null);
     const [justSavedAddressId, setJustSavedAddressId] = useState(null);
-    
-    // --- Lógica de useEffect (sin cambios) ---
+    const [newCustomerName, setNewCustomerName] = useState('');
+
     useEffect(() => {
         if (customer && addresses) {
              if (addresses.length > 0) {
@@ -71,23 +70,51 @@ export default function CheckoutModal({ phone, onClose }) {
     const handleSaveAddress = async (addressData, addressId) => {
         let response;
         if (addressId) {
+            // Hacemos el update y pedimos que nos devuelva el registro actualizado
             response = await supabase.from('customer_addresses').update(addressData).eq('id', addressId).select().single();
         } else {
+            // Hacemos el insert y pedimos que nos devuelva el nuevo registro
             response = await supabase.from('customer_addresses').insert({ ...addressData, customer_id: customer.id }).select().single();
         }
         if (response.error) throw new Error(response.error.message);
-        
+
+        // Actualizamos la lista completa de direcciones en segundo plano
         refetchUserData(); 
+        
+        // ¡LO MÁS IMPORTANTE! Actualizamos directamente la dirección seleccionada con los nuevos datos.
+        // Esto fuerza un re-renderizado del CheckoutModal con la información correcta.
         setSelectedAddress(response.data); 
+
         showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         setAddressModalOpen(false);
         setAddressToEdit(null);
     };
     
-    // --- ❌ SE ELIMINÓ LA FUNCIÓN handleCreateProfile ---
+    const handleCreateProfile = async (e) => {
+        e.preventDefault();
+        if (!newCustomerName.trim()) {
+            showAlert("Por favor, ingresa tu nombre.");
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            const { error } = await supabase
+                .from('customers')
+                .insert({ name: newCustomerName, phone: phone });
+
+            if (error) throw error;
+
+            showAlert("¡Bienvenido! Tu perfil ha sido creado.");
+            refetchUserData();
+
+        } catch (error) {
+            showAlert(`Error al crear tu perfil: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const placeOrder = async () => {
-        // ... (lógica de placeOrder sin cambios)
         if (!selectedAddress) {
             showAlert("Por favor, selecciona o añade una dirección de entrega.");
             return;
@@ -135,7 +162,39 @@ export default function CheckoutModal({ phone, onClose }) {
         );
     }
     
-    // --- ❌ SE ELIMINÓ TODA LA RENDERIZACIÓN CONDICIONAL DEL MODO 'PROFILE' ---
+    if ((mode === 'profile' || !customer) && phone && !customer) {
+        return (
+            <div className={styles.modalOverlay} onClick={onClose}>
+                <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <div className={styles.header}>
+                        <h3>¡Bienvenido! Completa tu perfil</h3>
+                        <button onClick={onClose} className={styles.closeButton}>×</button>
+                    </div>
+                    <form onSubmit={handleCreateProfile} className={styles.scrollableContent}>
+                        <p>Parece que eres nuevo por aquí. Ingresa tu nombre para guardar tus datos.</p>
+                        <div className={styles.detailsGroup}>
+                           <div className={styles.detailItem}>
+                                <UserIcon />
+                                <input
+                                    type="text"
+                                    placeholder="Tu nombre completo"
+                                    value={newCustomerName}
+                                    onChange={(e) => setNewCustomerName(e.target.value)}
+                                    style={{width: '100%', padding: '12px', fontSize: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)'}}
+                                    required
+                                />
+                            </div>
+                        </div>
+                         <div className={styles.footer}>
+                            <button type="submit" className={styles.confirmButton} disabled={isSubmitting}>
+                                {isSubmitting ? 'Guardando...' : 'Guardar y Continuar'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        );
+    }
     
     if (customer && addresses.length === 0) {
         return (
@@ -152,7 +211,6 @@ export default function CheckoutModal({ phone, onClose }) {
     const mapInitialPosition = selectedAddress ? { lat: selectedAddress.latitude, lng: selectedAddress.longitude } : null;
 
     return (
-        // --- El resto del JSX se mantiene igual ---
         <>
             <div className={styles.modalOverlay} onClick={onClose}>
                 <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -163,6 +221,7 @@ export default function CheckoutModal({ phone, onClose }) {
 
                     {mapInitialPosition && (
                         <div className={styles.mapDisplay}>
+                            {/* 👇 LA LÍNEA CLAVE A CAMBIAR ES ESTA 👇 */}
                             <ClientOnly key={`${selectedAddress?.id}-${selectedAddress?.latitude}`}>
                                 <DynamicMapPicker initialPosition={mapInitialPosition} />
                             </ClientOnly>

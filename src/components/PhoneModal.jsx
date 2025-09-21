@@ -1,67 +1,34 @@
-// src/components/PhoneModal.jsx
+// src/components/PhoneModal.jsx (CÓDIGO MODIFICADO)
 
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import styles from './PhoneModal.module.css';
-import { supabase } from '../lib/supabaseClient'; // Importamos supabase
 
 export default function PhoneModal() {
   const { isPhoneModalOpen, setPhoneModalOpen, savePhone } = useCustomer();
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
-  const [agreed, setAgreed] = useState(false);
-  
-  // --- 👇 NUEVOS ESTADOS PARA EL FLUJO DE NUEVO CLIENTE ---
-  const [isNewUser, setIsNewUser] = useState(false);
-  const [customerName, setCustomerName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  // --------------------------------------------------------
+  const [agreed, setAgreed] = useState(false); // <-- 1. NUEVO ESTADO
 
   useEffect(() => {
     if (isPhoneModalOpen) {
       setInputValue('');
       setError('');
-      setAgreed(false);
-      setIsNewUser(false);
-      setCustomerName('');
+      setAgreed(false); // Limpia el checkbox
     }
   }, [isPhoneModalOpen]);
-  
-  // --- 👇 VERIFICACIÓN DEL NÚMERO EN TIEMPO REAL (con debounce) ---
-  useEffect(() => {
-    const handler = setTimeout(async () => {
-        if (/^\d{10,12}$/.test(inputValue)) {
-            setIsLoading(true);
-            const { data, error } = await supabase.from('customers').select('id').eq('phone', inputValue).maybeSingle();
-            if (!error && !data) {
-                setIsNewUser(true);
-            } else {
-                setIsNewUser(false);
-            }
-            setIsLoading(false);
-        } else {
-            setIsNewUser(false);
-        }
-    }, 500); // Espera 500ms después de que el usuario deja de teclear
 
-    return () => clearTimeout(handler);
-  }, [inputValue]);
-  // ----------------------------------------------------------------
-
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
+    // <-- 2. NUEVA VALIDACIÓN
     if (!agreed) {
         setError('Debes aceptar los términos y condiciones para continuar.');
         return;
     }
-    if (isNewUser && !customerName.trim()) {
-        setError('Por favor, ingresa tu nombre para continuar.');
-        return;
-    }
-    
-    setError('');
-    const result = await savePhone(inputValue, isNewUser ? customerName : null);
-    if (!result.success) {
-      setError(result.message);
+
+    if (savePhone(inputValue)) {
+      setError('');
+    } else {
+      setError('Por favor, ingresa un número de WhatsApp válido (10-12 dígitos).');
     }
   };
 
@@ -86,22 +53,7 @@ export default function PhoneModal() {
           className={styles.phoneInput}
         />
         
-        {/* --- 👇 CAMPO DE NOMBRE CONDICIONAL --- */}
-        {isNewUser && (
-            <div className={styles.newUserSection}>
-                <p className={styles.newUserMessage}>¡Qué bueno tenerte por aquí! Por favor, dinos tu nombre:</p>
-                <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Tu nombre completo"
-                    className={styles.nameInput}
-                    required
-                />
-            </div>
-        )}
-        {/* --- 👆 FIN DEL CAMPO CONDICIONAL --- */}
-
+        {/* --- 3. SECCIÓN DE TÉRMINOS Y CONDICIONES --- */}
         <div className={styles.terms}>
             <input 
                 type="checkbox" 
@@ -116,8 +68,8 @@ export default function PhoneModal() {
 
         {error && <p className={styles.error}>{error}</p>}
         <div className={styles.buttons}>
-          <button onClick={handleSubmit} className={styles.saveButton} disabled={isLoading}>
-            {isLoading ? 'Verificando...' : 'Guardar y Continuar'}
+          <button onClick={handleSubmit} className={styles.saveButton}>
+            Guardar Número
           </button>
           <button onClick={handleClose} className={styles.laterButton}>
             Quizás más tarde
