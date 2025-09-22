@@ -28,36 +28,55 @@ export const CustomerProvider = ({ children }) => {
     }
   }, []);
 
-   const savePhone = async (newPhone) => {
-    if (/^\d{10,12}$/.test(newPhone)) {
-      localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
-      setPhone(newPhone);
-      setPhoneModalOpen(false);
+  // 👇 NUEVA FUNCIÓN PARA VERIFICAR Y LOGUEAR AUTOMÁTICAMENTE
+const checkAndLogin = async (newPhone) => {
+    if (!/^\d{10}$/.test(newPhone)) return false; // Solo verifica con 10 dígitos
 
-      // Si hay un callback de éxito (como el que viene del carrito), lo ejecutamos.
-      if (onSuccessCallback) {
-        onSuccessCallback();
-        setOnSuccessCallback(null);
-        return true; // Terminamos aquí
-      }
-
-      // Si no hay callback, verificamos si el cliente es nuevo.
-      const { data: customer } = await supabase
+    const { data: customer, error } = await supabase
         .from('customers')
         .select('id')
         .eq('phone', newPhone)
         .maybeSingle();
+    
+    if (error) {
+        console.error("Error checking customer:", error);
+        return false; // Si hay error, procede de forma manual
+    }
 
-      if (!customer) {
-        // Si el cliente no existe, SIEMPRE abrimos el modal en modo perfil.
-        setCheckoutMode('profile');
-        setCheckoutModalOpen(true);
-      }
+    if (customer) {
+        // Si el cliente existe, lo logueamos y cerramos el modal
+        localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
+        setPhone(newPhone);
+        setPhoneModalOpen(false);
+        if (onSuccessCallback) {
+            onSuccessCallback();
+            setOnSuccessCallback(null);
+        }
+        return true;
+    }
+    
+    return false; // El cliente no existe
+};
 
-      return true;
+   // 👇 FUNCIÓN SIMPLIFICADA PARA GUARDAR UN NUEVO NÚMERO
+const savePhone = (newPhone) => {
+    if (/^\d{10,12}$/.test(newPhone)) {
+        localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
+        setPhone(newPhone);
+        setPhoneModalOpen(false);
+
+        if (onSuccessCallback) {
+            onSuccessCallback();
+            setOnSuccessCallback(null);
+        } else {
+            // Como es un cliente nuevo, siempre abrimos el modal de perfil
+            setCheckoutMode('profile');
+            setCheckoutModalOpen(true);
+        }
+        return true;
     }
     return false;
-  };
+};
 
   const clearPhone = () => {
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
@@ -81,6 +100,7 @@ export const CustomerProvider = ({ children }) => {
 
   const value = {
     phone,
+    checkAndLogin,
     savePhone,
     clearPhone,
     isPhoneModalOpen,
