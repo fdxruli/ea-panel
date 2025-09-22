@@ -101,9 +101,9 @@ function App() {
           <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
           <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
           <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
-          <Route path="special-prices" element={<SpecialPrices />} /> // <-- Añadir esta línea dentro de las rutas de AdminLayout
+          <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
         </Route>
-      </Route>
+      </Route
     </Routes>
   );
 }
