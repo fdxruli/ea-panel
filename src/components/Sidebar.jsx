@@ -17,6 +17,10 @@ export default function Sidebar({ isOpen }) {
       {hasPermission('descuentos.view') && <Link to="/admin/descuentos">Descuentos</Link>}
       {hasPermission('terminos.view') && <Link to="/admin/terminos">Términos y Cond.</Link>}
       {hasPermission('registrar-admin.view') && <Link to="/admin/registrar-admin">Registrar Admin</Link>}
+      <Link to="/admin/special-prices" className={({ isActive }) => isActive ? styles.active : ''}>
+        Precios Especiales
+      </Link>
     </div>
   );
+
 }
