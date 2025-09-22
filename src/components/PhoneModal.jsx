@@ -5,18 +5,19 @@ import { useCustomer } from '../context/CustomerContext';
 import styles from './PhoneModal.module.css';
 
 export default function PhoneModal() {
-  const { isPhoneModalOpen, setPhoneModalOpen, savePhone } = useCustomer();
+  const { isPhoneModalOpen, setPhoneModalOpen, savePhone, checkAndLogin } = useCustomer();
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false); // <-- 1. NUEVO ESTADO
 
   useEffect(() => {
-    if (isPhoneModalOpen) {
-      setInputValue('');
-      setError('');
-      setAgreed(false); // Limpia el checkbox
-    }
-  }, [isPhoneModalOpen]);
+    const attemptAutoLogin = async () => {
+        if (inputValue.length === 10) {
+            await checkAndLogin(inputValue);
+        }
+    };
+    attemptAutoLogin();
+  }, [inputValue, checkAndLogin]);
 
   const handleSubmit = () => {
     if (!agreed) {
