@@ -29,6 +29,7 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import TermsPage from "./pages/TermsPage";
 import RegisterAdmin from "./pages/RegisterAdmin";
 import LoadingSpinner from "./components/LoadingSpinner"; // <-- 3. IMPORTAR LoadingSpinner
+import SpecialPrices from './pages/SpecialPrices';
 
 // --- 👇 4. COMPONENTE GUARDIÁN PARA LAS RUTAS ---
 const PermissionWrapper = ({ permissionKey, element }) => {
@@ -100,6 +101,7 @@ function App() {
           <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
           <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
           <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
+          <Route path="special-prices" element={<SpecialPrices />} /> // <-- Añadir esta línea dentro de las rutas de AdminLayout
         </Route>
       </Route>
     </Routes>
