@@ -1,4 +1,4 @@
-// src/pages/Products.jsx (CON DESCRIPCIÓN EN LA TABLA)
+// src/pages/Products.jsx (CON PRECIOS ESPECIALES Y DESCRIPCIÓN EN LA TABLA)
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
@@ -11,6 +11,7 @@ export default function Products() {
   const { showAlert } = useAlert();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [specialPrices, setSpecialPrices] = useState([]); // <-- 1. Estado para precios especiales
   const [loading, setLoading] = useState(true);
   const { hasPermission } = useAdminAuth();
 
@@ -26,8 +27,23 @@ export default function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  // --- 👇 2. FUNCIÓN PARA OBTENER PRECIOS ESPECIALES ---
+  const fetchSpecialPrices = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('special_prices')
+      .select('*')
+      .lte('start_date', today)
+      .gte('end_date', today);
+    
+    if (error) {
+      console.error('Error fetching special prices:', error);
+    } else {
+      setSpecialPrices(data);
+    }
+  };
+
   const fetchProducts = async () => {
-    setLoading(true);
     const { data, error } = await supabase
       .from("products")
       .select(`*, product_images(*)`)
@@ -35,7 +51,6 @@ export default function Products() {
 
     if (error) console.error(error);
     else setProducts(data);
-    setLoading(false);
   };
 
   const fetchCategories = async () => {
@@ -48,8 +63,16 @@ export default function Products() {
   };
 
   useEffect(() => {
-    fetchCategories();
-    fetchProducts();
+    constfetchAllData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchCategories(),
+        fetchProducts(),
+        fetchSpecialPrices() // <-- 3. Llamar a la función
+      ]);
+      setLoading(false);
+    }
+    fetchAllData();
   }, []);
 
   const validateProduct = () => {
@@ -88,13 +111,47 @@ export default function Products() {
     setIsModalOpen(true);
   };
 
+  // --- 👇 4. FUNCIÓN PARA CALCULAR EL PRECIO VIGENTE ---
+  const getVigentePrice = (product) => {
+    // Primero, busca un precio especial para el producto específico
+    const productPrice = specialPrices.find(p => p.product_id === product.id);
+
+    if (productPrice) {
+      return (
+        <>
+          <span style={{ textDecoration: 'line-through', marginRight: '10px', color: '#888' }}>
+            ${parseFloat(product.price).toFixed(2)}
+          </span>
+          <strong style={{ color: 'green' }}>${parseFloat(productPrice.override_price).toFixed(2)}</strong>
+        </>
+      );
+    }
+    
+    // Si no hay precio para el producto, busca para su categoría
+    const categoryPrice = specialPrices.find(p => p.category_id === product.category_id);
+
+    if (categoryPrice) {
+      return (
+        <>
+          <span style={{ textDecoration: 'line-through', marginRight: '10px', color: '#888' }}>
+            ${parseFloat(product.price).toFixed(2)}
+          </span>
+          <strong style={{ color: 'green' }}>${parseFloat(categoryPrice.override_price).toFixed(2)}</strong>
+        </>
+      );
+    }
+    
+    // Si no hay ningún precio especial, muestra el precio base
+    return `$${parseFloat(product.price).toFixed(2)}`;
+  };
+
+
   if (loading) return <LoadingSpinner />;
 
   return (
     <div>
       <h1>Productos</h1>
 
-      {/* --- 👇 3. ENVOLVEMOS EL FORMULARIO CON LA VERIFICACIÓN DE PERMISO --- */}
       {hasPermission('productos.edit') && (
         <div className="form-container">
           <h3>Agregar nuevo producto</h3>
@@ -119,7 +176,6 @@ export default function Products() {
             <th>Categoría</th>
             <th>Precio</th>
             <th>Costo</th>
-            {/* Solo mostramos estas columnas si hay algún permiso de edición */}
             {(hasPermission('productos.edit') || hasPermission('productos.delete')) && (
               <>
                 <th>Imágenes</th>
@@ -134,9 +190,9 @@ export default function Products() {
               <td>{p.name}</td>
               <td>{p.description || 'N/A'}</td>
               <td>{categories.find(c => c.id === p.category_id)?.name || 'N/A'}</td>
-              <td>${p.price}</td>
-              <td>${p.cost}</td>
-              {/* --- 👇 4. PROTEGEMOS LAS CELDAS DE ACCIONES --- */}
+              {/* --- 👇 5. USAMOS LA FUNCIÓN PARA MOSTRAR EL PRECIO --- */}
+              <td>{getVigentePrice(p)}</td>
+              <td>${parseFloat(p.cost).toFixed(2)}</td>
               {(hasPermission('productos.edit') || hasPermission('productos.delete')) && (
                 <>
                   <td>
