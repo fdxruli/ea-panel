@@ -34,7 +34,7 @@ export default function Menu() {
             const rect = event.currentTarget.getBoundingClientRect();
             const newImage = {
                 id: Date.now(),
-                src: product.image_url || 'https://via.placeholder.com/150',
+                src: product.image_url || 'https://placehold.co/150',
                 top: rect.top + rect.height / 2,
                 left: rect.left + rect.width / 2,
             };
@@ -92,7 +92,7 @@ export default function Menu() {
                         <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                             {/* 👇 AQUÍ ESTÁ EL CAMBIO 👇 */}
                             <div className={styles.imageContainer}>
-                                <img src={product.image_url || 'https://via.placeholder.com/150'} alt={product.name} />
+                                <img src={product.image_url || 'https://placehold.co/150'} alt={product.name} />
                             </div>
                             {/* 👆 FIN DEL CAMBIO 👆 */}
                             <div className={styles.cardContent}>

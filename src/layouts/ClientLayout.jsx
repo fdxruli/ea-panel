@@ -35,17 +35,13 @@ export default function ClientLayout() {
       {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}
 
       <header className="client-header">
-        <Link to="/" className="logo"><h1>Alitas "El Jefe" 翼</h1></Link>
+        <Link to="/" className="logo"><h1>ENTRE&nbsp;ALAS</h1></Link>
         <nav className="desktop-nav">
-            {/* --- 👇 2. ENLACES ANTIGUOS ELIMINADOS --- */}
-            
             <button onClick={toggleCart} className="desktop-cart-button">
               <ShoppingCartIcon />
               <span>Carrito</span>
               {totalItems > 0 && <span className="desktop-cart-badge">{totalItems}</span>}
             </button>
-            
-            {/* --- 👇 3. NUEVO COMPONENTE AÑADIDO --- */}
             <UserMenu />
         </nav>
       </header>

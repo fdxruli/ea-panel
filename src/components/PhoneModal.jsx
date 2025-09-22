@@ -19,7 +19,6 @@ export default function PhoneModal() {
   }, [isPhoneModalOpen]);
 
   const handleSubmit = () => {
-    // <-- 2. NUEVA VALIDACIÓN
     if (!agreed) {
         setError('Debes aceptar los términos y condiciones para continuar.');
         return;
@@ -41,7 +40,7 @@ export default function PhoneModal() {
   return (
     <div className={styles.overlay}>
       <div className={styles.modalContent}>
-        <h2>¡Bienvenido a Alitas "El Jefe"!</h2>
+        <h2>¡Bienvenido a ENTRE&nbsp;ALAS!</h2>
         <p>
           Ingresa tu número de WhatsApp para ver tus pedidos y facilitar tus compras.
         </p>

@@ -17,23 +17,30 @@ export const ProductExtrasProvider = ({ children }) => {
     const [customerId, setCustomerId] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // useCallback envuelve la lógica principal para evitar re-creaciones innecesarias.
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
         setLoading(true);
         try {
+            // Obtiene todas las reseñas (son públicas)
             const { data: revData } = await supabase
                 .from('product_reviews')
                 .select('*, products(id), customers(name)')
                 .order('created_at', { ascending: false });
             setReviews(revData || []);
 
+            // Si hay un ID de cliente, busca sus favoritos.
             if (currentCustomerId) {
                 const { data: favData } = await supabase
                     .from('customer_favorites')
                     .select('*, products(id, name, image_url, is_active)')
                     .eq('customer_id', currentCustomerId);
-                setFavorites(favData || []);
-                localStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify(favData || []));
+                
+                const validFavorites = favData || [];
+                setFavorites(validFavorites);
+                // Almacena en caché los favoritos para una carga más rápida la próxima vez.
+                localStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify(validFavorites));
             } else {
+                // Si no hay cliente, limpia los favoritos.
                 setFavorites([]);
                 localStorage.removeItem(FAVORITES_CACHE_KEY);
             }
@@ -44,44 +51,50 @@ export const ProductExtrasProvider = ({ children }) => {
         }
     }, []);
 
+    // Este useEffect ahora se encarga de obtener el ID del cliente CADA VEZ que el teléfono cambie.
     useEffect(() => {
         const getCustomerIdAndFetch = async () => {
             if (!phone) {
                 setCustomerId(null);
-                setFavorites([]);
+                // Si no hay teléfono, llamamos a fetchAndCacheExtras con null para limpiar los favoritos.
                 fetchAndCacheExtras(null);
                 return;
             }
+
+            // Busca el cliente en Supabase por su número de teléfono.
             const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
             const currentId = data ? data.id : null;
+            
             setCustomerId(currentId);
+
+            // Intenta cargar los favoritos desde la caché para una experiencia más fluida.
             const cachedFavs = localStorage.getItem(FAVORITES_CACHE_KEY);
             if (cachedFavs) {
                 setFavorites(JSON.parse(cachedFavs));
             }
+
+            // Llama a la función principal para obtener todos los datos actualizados (reseñas y favoritos).
             fetchAndCacheExtras(currentId);
         };
-        getCustomerIdAndFetch();
-    }, [phone, fetchAndCacheExtras]);
 
-    // --- 👇 AQUÍ ESTÁ EL CAMBIO PRINCIPAL ---
+        getCustomerIdAndFetch();
+    }, [phone, fetchAndCacheExtras]); // Se ejecuta cada vez que 'phone' o 'fetchAndCacheExtras' cambian.
+
+    // Este useEffect gestiona las actualizaciones en tiempo real de Supabase.
     useEffect(() => {
-        const handleReviewChange = (payload) => {
+        const handleReviewChange = () => {
             console.log(`Real-time change detected in reviews, refetching...`);
-            // Volvemos a cargar todo para obtener la nueva reseña
             fetchAndCacheExtras(customerId);
         };
 
-        // 1. Creamos un canal PÚBLICO solo para las reseñas.
         const reviewsChannel = supabase.channel('public-reviews');
         reviewsChannel
             .on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, handleReviewChange)
             .subscribe();
 
-        // 2. Mantenemos el canal PRIVADO para los favoritos del usuario.
         let favoritesChannel;
         if (customerId) {
-            const handleFavoriteChange = (payload) => {
+            const handleFavoriteChange = () => {
                 console.log(`Real-time change detected in favorites for user ${customerId}, refetching...`);
                 fetchAndCacheExtras(customerId);
             };
@@ -91,7 +104,6 @@ export const ProductExtrasProvider = ({ children }) => {
                 .subscribe();
         }
 
-        // 3. Nos desuscribimos de ambos canales al desmontar.
         return () => {
             supabase.removeChannel(reviewsChannel);
             if (favoritesChannel) {
@@ -99,14 +111,13 @@ export const ProductExtrasProvider = ({ children }) => {
             }
         };
     }, [customerId, fetchAndCacheExtras]);
-    // --- 👆 FIN DEL CAMBIO ---
 
     const value = {
         reviews,
         favorites,
-        customerId,
+        customerId, // La clave del problema: ahora este valor estará actualizado.
         loading,
-        refetch: () => fetchAndCacheExtras(customerId)
+        refetch: () => customerId && fetchAndCacheExtras(customerId)
     };
 
     return (

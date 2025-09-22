@@ -94,7 +94,7 @@ export default function Cart() {
                             <div className={styles.cartItemsList}>
                                 {cartItems.map(item => (
                                     <div key={item.id} className={styles.cartItem}>
-                                        <img src={item.image_url || 'https://via.placeholder.com/80'} alt={item.name} />
+                                        <img src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
                                         <div className={styles.itemInfo}>
                                             <span className={styles.itemName}>{item.name}</span>
                                             <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>

@@ -9,7 +9,7 @@
 
 .client-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 0.8rem 1rem;
   background-color: var(--bg-secondary);
@@ -110,6 +110,7 @@
   }
   .client-header {
     padding: 1rem 2rem;
+    justify-content: space-between;
   }
   .bottom-nav {
     display: none;

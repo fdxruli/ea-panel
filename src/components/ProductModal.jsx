@@ -230,7 +230,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     {galleryImages.map((src, index) => (
                          <img
                             key={index}
-                            src={src || 'https://via.placeholder.com/400'}
+                            src={src || 'https://placehold.co/400'}
                             alt={`${product.name} ${index + 1}`}
                             className={`${styles.productImage} ${index === currentImageIndex ? styles.active : ''}`}
                         />

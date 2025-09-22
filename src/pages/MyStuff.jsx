@@ -129,7 +129,7 @@ export default function MyStuff() {
                                         fav.products && (
                                             <div key={fav.products.id} className={`${styles.gridItem} ${!isAvailable ? styles.unavailable : ''}`}>
                                                 {!isAvailable && <div className={styles.unavailableBadge}>No disponible</div>}
-                                                <img src={fav.products.image_url || 'https://via.placeholder.com/150'} alt={fav.products.name} />
+                                                <img src={fav.products.image_url || 'https://placehold.co/150'} alt={fav.products.name} />
                                                 <h3>{fav.products.name}</h3>
                                                 <div className={styles.gridItemActions}>
                                                     <button onClick={(e) => handleAddToCartFromFav(e, fav.products)} className={styles.addButton} disabled={!isAvailable}>
@@ -159,7 +159,7 @@ export default function MyStuff() {
                                                 {editingReview?.id === rev.id ? (
                                                     <div className={styles.reviewEditor}>
                                                         <div className={styles.reviewProductInfo}>
-                                                            <img src={rev.products.image_url || 'https://via.placeholder.com/80'} alt={rev.products.name} />
+                                                            <img src={rev.products.image_url || 'https://placehold.co/80'} alt={rev.products.name} />
                                                             <h4>Editando reseña de: <strong>{rev.products.name}</strong></h4>
                                                         </div>
                                                         <textarea rows="3" value={editingReview.comment} onChange={e => setEditingReview({...editingReview, comment: e.target.value})} />
