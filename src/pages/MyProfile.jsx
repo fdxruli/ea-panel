@@ -9,12 +9,13 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AddressModal from '../components/AddressModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useAlert } from '../context/AlertContext';
+import { useTheme } from '../context/ThemeContext'; // <-- ¡AQUÍ ESTÁ LA CORRECCIÓN!
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone, savePhone, setCheckoutModalOpen } = useCustomer();
-    
     const { customer, addresses, loading, error, refetch } = useUserData();
+    const { theme, changeTheme } = useTheme(); // Ahora esta línea funcionará
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -55,18 +56,24 @@ export default function MyProfile() {
         refetch();
     };
 
-    const handleSaveAddress = async (addressData, addressId) => {
+    const handleSaveAddress = async (addressData, savePermanently, addressId) => {
+        // La lógica de guardado ya contempla si debe ser permanente o no
+        // pero para el perfil, siempre es permanente.
         let response;
+        const dataToSave = { ...addressData, customer_id: customer.id };
+        delete dataToSave.isTemporary; // Asegurarse de no guardar propiedades temporales
+
         if (addressId) {
-            response = await supabase.from('customer_addresses').update(addressData).eq('id', addressId);
+            response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId);
         } else {
-            response = await supabase.from('customer_addresses').insert(addressData);
+            response = await supabase.from('customer_addresses').insert(dataToSave);
         }
         if (response.error) throw new Error(response.error.message);
 
         showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         refetch();
     };
+
 
     const openAddressModal = (address = null) => {
         setEditingAddress(address);
@@ -128,6 +135,23 @@ export default function MyProfile() {
                         </form>
                     </div>
 
+                     <div className={styles.card}>
+                        <h2>Apariencia</h2>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="theme-select">Tema de la aplicación</label>
+                            <select 
+                                id="theme-select"
+                                value={theme} 
+                                onChange={(e) => changeTheme(e.target.value)}
+                                className={styles.themeSelector}
+                            >
+                                <option value="light">Claro</option>
+                                <option value="dark">Oscuro</option>
+                                <option value="system">Automático (definido por el sistema)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div className={styles.card}>
                         <div className={styles.addressHeader}>
                             <h2>Mis Direcciones</h2>
@@ -171,7 +195,7 @@ export default function MyProfile() {
             <AddressModal
                 isOpen={isAddressModalOpen}
                 onClose={() => setAddressModalOpen(false)}
-                onSave={handleSaveAddress}
+                onSave={(addressData, savePermanently, addressId) => handleSaveAddress(addressData, addressId)}
                 address={editingAddress}
                 customerId={customer?.id}
             />

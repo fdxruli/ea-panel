@@ -1,34 +1,70 @@
-// src/components/PhoneModal.jsx (CÓDIGO MODIFICADO)
+// src/components/PhoneModal.jsx (ACTUALIZADO)
 
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import styles from './PhoneModal.module.css';
 
 export default function PhoneModal() {
-  const { isPhoneModalOpen, setPhoneModalOpen, savePhone, checkAndLogin } = useCustomer();
+  const { 
+    isPhoneModalOpen, 
+    setPhoneModalOpen, 
+    savePhone, // Se mantiene para usuarios existentes que no se loguean auto
+    checkAndLogin, 
+    registerNewCustomer 
+  } = useCustomer();
+  
   const [inputValue, setInputValue] = useState('');
+  const [name, setName] = useState('');
+  const [isNewUser, setIsNewUser] = useState(false);
   const [error, setError] = useState('');
-  const [agreed, setAgreed] = useState(false); // <-- 1. NUEVO ESTADO
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
-    const attemptAutoLogin = async () => {
+    if (isPhoneModalOpen) {
+        setInputValue('');
+        setName('');
+        setIsNewUser(false);
+        setError('');
+        setAgreed(false);
+    }
+  }, [isPhoneModalOpen]);
+
+  useEffect(() => {
+    const attemptAutoLoginOrDetectNewUser = async () => {
         if (inputValue.length === 10) {
-            await checkAndLogin(inputValue);
+            setIsNewUser(false);
+            const userExists = await checkAndLogin(inputValue);
+            if (!userExists) {
+                setIsNewUser(true);
+            }
+        } else {
+            setIsNewUser(false);
         }
     };
-    attemptAutoLogin();
+    attemptAutoLoginOrDetectNewUser();
   }, [inputValue, checkAndLogin]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!agreed) {
         setError('Debes aceptar los términos y condiciones para continuar.');
         return;
     }
 
-    if (savePhone(inputValue)) {
-      setError('');
+    if (isNewUser) {
+        if (!name.trim()) {
+            setError('Parece que eres nuevo, por favor ingresa tu nombre.');
+            return;
+        }
+        const registered = await registerNewCustomer(inputValue, name.trim());
+        if (!registered) {
+            setError('Hubo un error al registrar tu cuenta. Inténtalo de nuevo.');
+        }
     } else {
-      setError('Por favor, ingresa un número de WhatsApp válido (10-12 dígitos).');
+        if (savePhone(inputValue)) {
+          setError('');
+        } else {
+          setError('Por favor, ingresa un número de WhatsApp válido de 10 dígitos.');
+        }
     }
   };
 
@@ -48,12 +84,26 @@ export default function PhoneModal() {
         <input
           type="tel"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Tu número de WhatsApp"
+          onChange={(e) => setInputValue(e.target.value.replace(/\D/g, ''))}
+          placeholder="Tu número de WhatsApp (10 dígitos)"
           className={styles.phoneInput}
+          maxLength="10"
         />
         
-        {/* --- 3. SECCIÓN DE TÉRMINOS Y CONDICIONES --- */}
+        {/* --- SECCIÓN DINÁMICA PARA NUEVOS USUARIOS --- */}
+        {isNewUser && (
+            <div className={styles.newUserSection}>
+                <p className={styles.newUserMessage}>¡Qué bueno tenerte por aquí! Parece que eres nuevo. ¿Cómo te llamas?</p>
+                <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Tu nombre completo"
+                    className={styles.nameInput}
+                />
+            </div>
+        )}
+
         <div className={styles.terms}>
             <input 
                 type="checkbox" 
@@ -69,7 +119,7 @@ export default function PhoneModal() {
         {error && <p className={styles.error}>{error}</p>}
         <div className={styles.buttons}>
           <button onClick={handleSubmit} className={styles.saveButton}>
-            Guardar Número
+            {isNewUser ? 'Crear mi cuenta y continuar' : 'Guardar Número'}
           </button>
           <button onClick={handleClose} className={styles.laterButton}>
             Quizás más tarde

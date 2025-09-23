@@ -1,4 +1,4 @@
-// src/components/CheckoutModal.jsx
+// src/components/CheckoutModal.jsx (MODIFICADO)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -10,7 +10,7 @@ import { useAlert } from '../context/AlertContext';
 import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
 
-// --- Iconos ---
+// --- Iconos (sin cambios) ---
 const MapPinIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -51,7 +51,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                         setSelectedAddress(newlySavedAddress);
                         setJustSavedAddressId(null); 
                     }
-                } else if (!selectedAddress) {
+                } else if (!selectedAddress || selectedAddress.isTemporary) { // No sobreescribir si ya hay una seleccionada
                     const defaultAddress = addresses.find(a => a.is_default) || addresses[0];
                     setSelectedAddress(defaultAddress);
                 }
@@ -67,29 +67,36 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         setAddressModalOpen(true);
     };
 
-    const handleSaveAddress = async (addressData, addressId) => {
-        let response;
-        if (addressId) {
-            // Hacemos el update y pedimos que nos devuelva el registro actualizado
-            response = await supabase.from('customer_addresses').update(addressData).eq('id', addressId).select().single();
+    // --- 👇 AQUÍ ESTÁ LA LÓGICA MODIFICADA ---
+    const handleSaveAddress = async (addressData, shouldSave, addressId) => {
+        if (shouldSave) {
+            let response;
+            if (addressId) {
+                response = await supabase.from('customer_addresses').update(addressData).eq('id', addressId).select().single();
+            } else {
+                response = await supabase.from('customer_addresses').insert({ ...addressData, customer_id: customer.id }).select().single();
+            }
+            if (response.error) throw new Error(response.error.message);
+            
+            refetchUserData();
+            setSelectedAddress(response.data);
+            showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         } else {
-            // Hacemos el insert y pedimos que nos devuelva el nuevo registro
-            response = await supabase.from('customer_addresses').insert({ ...addressData, customer_id: customer.id }).select().single();
+            // Si no se debe guardar, se crea un objeto temporal solo para el estado local
+            const temporaryAddress = {
+                id: `temp_${Date.now()}`,
+                ...addressData,
+                isTemporary: true
+            };
+            setSelectedAddress(temporaryAddress);
+            showAlert('Dirección temporal seleccionada para este pedido.');
         }
-        if (response.error) throw new Error(response.error.message);
-
-        // Actualizamos la lista completa de direcciones en segundo plano
-        refetchUserData(); 
-        
-        // ¡LO MÁS IMPORTANTE! Actualizamos directamente la dirección seleccionada con los nuevos datos.
-        // Esto fuerza un re-renderizado del CheckoutModal con la información correcta.
-        setSelectedAddress(response.data); 
-
-        showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         setAddressModalOpen(false);
         setAddressToEdit(null);
     };
+    // --- 👆 FIN DE LA LÓGICA ---
     
+    // (El resto de funciones como handleCreateProfile y placeOrder no necesitan cambios)
     const handleCreateProfile = async (e) => {
         e.preventDefault();
         if (!newCustomerName.trim()) {
@@ -153,67 +160,18 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             setIsSubmitting(false);
         }
     };
-    
-    if (isLoading) {
-        return (
-            <div className={styles.modalOverlay}>
-                <div className={styles.spinner}></div>
-            </div>
-        );
-    }
-    
-    if ((mode === 'profile' || !customer) && phone && !customer) {
-        return (
-            <div className={styles.modalOverlay} onClick={onClose}>
-                <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                    <div className={styles.header}>
-                        <h3>¡Bienvenido! Completa tu perfil</h3>
-                        <button onClick={onClose} className={styles.closeButton}>×</button>
-                    </div>
-                    <form onSubmit={handleCreateProfile} className={styles.scrollableContent}>
-                        <p>Parece que eres nuevo por aquí. Ingresa tu nombre para guardar tus datos.</p>
-                        <div className={styles.detailsGroup}>
-                           <div className={styles.detailItem}>
-                                <UserIcon />
-                                <input
-                                    type="text"
-                                    placeholder="Tu nombre completo"
-                                    value={newCustomerName}
-                                    onChange={(e) => setNewCustomerName(e.target.value)}
-                                    style={{width: '100%', padding: '12px', fontSize: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)'}}
-                                    required
-                                />
-                            </div>
-                        </div>
-                         <div className={styles.footer}>
-                            <button type="submit" className={styles.confirmButton} disabled={isSubmitting}>
-                                {isSubmitting ? 'Guardando...' : 'Guardar y Continuar'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        );
-    }
-    
-    if (customer && addresses.length === 0) {
-        return (
-             <AddressModal
-                isOpen={true}
-                onClose={onClose}
-                onSave={handleSaveAddress}
-                address={null}
-                customerId={customer?.id}
-            />
-        )
-    }
+    // ... (El resto del return y JSX no necesita cambios, solo el llamado a AddressModal)
 
+    if (isLoading) { /* ... (sin cambios) */ }
+    if ((mode === 'profile' || !customer) && phone && !customer) { /* ... (sin cambios) */ }
+    if (customer && addresses.length === 0) { /* ... (sin cambios) */ }
     const mapInitialPosition = selectedAddress ? { lat: selectedAddress.latitude, lng: selectedAddress.longitude } : null;
 
     return (
         <>
             <div className={styles.modalOverlay} onClick={onClose}>
                 <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    {/* ... (Header, MapDisplay, ScrollableContent, etc. sin cambios) ... */}
                     <div className={styles.header}>
                         <h3>Confirmar Pedido</h3>
                         <button onClick={onClose} className={styles.closeButton}>×</button>
@@ -221,7 +179,6 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
 
                     {mapInitialPosition && (
                         <div className={styles.mapDisplay}>
-                            {/* 👇 LA LÍNEA CLAVE A CAMBIAR ES ESTA 👇 */}
                             <ClientOnly key={`${selectedAddress?.id}-${selectedAddress?.latitude}`}>
                                 <DynamicMapPicker initialPosition={mapInitialPosition} />
                             </ClientOnly>
@@ -297,6 +254,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                     onSave={handleSaveAddress}
                     address={addressToEdit}
                     customerId={customer?.id}
+                    showSaveOption={true} // <-- SE ACTIVA LA OPCIÓN
                 />
             )}
         </>

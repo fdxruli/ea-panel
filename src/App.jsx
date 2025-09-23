@@ -9,9 +9,7 @@ import { UserDataProvider } from "./context/UserDataContext";
 import { ProductExtrasProvider } from "./context/ProductExtrasContext";
 import { AlertProvider } from "./context/AlertContext";
 import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext"; // <-- 2. IMPORTAR useAdminAuth
-import Login from "./pages/Login";
-import ProtectedRoute from "./components/ProtectedRoute";
-import 'leaflet/dist/leaflet.css';
+import { ThemeProvider } from "./context/ThemeContext";
 
 // Componentes y páginas
 import AdminLayout from "./layouts/AdminLayout";
@@ -29,7 +27,10 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import TermsPage from "./pages/TermsPage";
 import RegisterAdmin from "./pages/RegisterAdmin";
 import LoadingSpinner from "./components/LoadingSpinner"; // <-- 3. IMPORTAR LoadingSpinner
-import SpecialPrices from './pages/SpecialPrices';
+import SpecialPrices from "./pages/SpecialPrices";
+import Login from "./pages/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+import 'leaflet/dist/leaflet.css';
 
 // --- 👇 4. COMPONENTE GUARDIÁN PARA LAS RUTAS ---
 const PermissionWrapper = ({ permissionKey, element }) => {
@@ -57,19 +58,21 @@ function App() {
       <Route
         path="/"
         element={
-          <CustomerProvider>
-            <ProductProvider>
-              <CartProvider>
-                <UserDataProvider>
-                  <ProductExtrasProvider>
-                    <AlertProvider>
-                      <ClientLayout />
-                    </AlertProvider>
-                  </ProductExtrasProvider>
-                </UserDataProvider>
-              </CartProvider>
-            </ProductProvider>
-          </CustomerProvider>
+          <ThemeProvider>
+            <CustomerProvider>
+              <ProductProvider>
+                <CartProvider>
+                  <UserDataProvider>
+                    <ProductExtrasProvider>
+                      <AlertProvider>
+                        <ClientLayout />
+                      </AlertProvider>
+                    </ProductExtrasProvider>
+                  </UserDataProvider>
+                </CartProvider>
+              </ProductProvider>
+            </CustomerProvider>
+          </ThemeProvider>
         }
       >
         <Route path="/terminos" element={<TermsPage />} />
@@ -103,7 +106,7 @@ function App() {
           <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
           <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
         </Route>
-      </Route
+      </Route>
     </Routes>
   );
 }

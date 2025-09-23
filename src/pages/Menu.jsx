@@ -1,4 +1,4 @@
-// src/pages/Menu.jsx (LIMPIADO Y ACTUALIZADO)
+// src/pages/Menu.jsx (ACTUALIZADO)
 
 import React, { useState, useEffect } from 'react';
 import { useProducts } from '../context/ProductContext';
@@ -14,10 +14,11 @@ const LAYOUT_STORAGE_KEY = 'product-layout-preference';
 
 export default function Menu() {
     const { products, categories, loading, error } = useProducts();
-    const { addToCart, showToast } = useCart(); // <-- Usamos showToast del contexto
+    const { addToCart, showToast } = useCart();
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'list');
+    // --- 👇 AQUÍ ESTÁ EL CAMBIO: El valor por defecto ahora es 'grid' ---
+    const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'grid');
     const [flyingImages, setFlyingImages] = useState([]);
 
     useEffect(() => {
@@ -28,7 +29,7 @@ export default function Menu() {
         addToCart(product, quantity);
         const quantityAdded = quantity || 1;
 
-        showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`); // <-- Usamos la notificación global
+        showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
 
         if (event && event.currentTarget) {
             const rect = event.currentTarget.getBoundingClientRect();
@@ -66,8 +67,6 @@ export default function Menu() {
                 />
             ))}
 
-            {/* El elemento de la notificación ya no se renderiza aquí, sino en ClientLayout */}
-
             <div className={styles.filters}>
                 <div className={styles.categoryButtons}>
                     <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>
@@ -90,17 +89,24 @@ export default function Menu() {
                 {filteredProducts.length > 0 ? filteredProducts.map(product => (
                     <div key={product.id} className={styles.productCard}>
                         <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                            {/* 👇 AQUÍ ESTÁ EL CAMBIO 👇 */}
                             <div className={styles.imageContainer}>
                                 <img src={product.image_url || 'https://placehold.co/150'} alt={product.name} />
                             </div>
-                            {/* 👆 FIN DEL CAMBIO 👆 */}
                             <div className={styles.cardContent}>
                                 <h3>{product.name}</h3>
                             </div>
                         </div>
                         <div className={styles.cardFooter}>
-                            <span className={styles.price}>${product.price.toFixed(2)}</span>
+                            <div className={styles.priceContainer}>
+                                {product.original_price ? (
+                                    <>
+                                        <span className={styles.originalPrice}>${product.original_price.toFixed(2)}</span>
+                                        <span className={styles.specialPrice}>${product.price.toFixed(2)}</span>
+                                    </>
+                                ) : (
+                                    <span className={styles.price}>${product.price.toFixed(2)}</span>
+                                )}
+                            </div>
                             <button onClick={(e) => handleAddToCart(product, 1, e)}>Añadir</button>
                         </div>
                     </div>

@@ -1,40 +1,23 @@
-/* src/pages/MyOrders.module.css */
+/* src/pages/MyOrders.module.css (CORREGIDO) */
 .container {
     max-width: 800px;
     margin: 2rem auto;
-    padding: 2rem;
+    padding: 1rem;
     font-family: 'Poppins', sans-serif;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    color: #333;
+    color: var(--text-primary); /* VARIABLE */
 }
 
 .container h1, .container h2, .container h3 {
     text-align: center;
-    color: #333;
-}
-
-.searchForm {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    justify-content: center;
-}
-
-.phoneInput {
-    padding: 0.8rem;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    width: 300px;
-    font-size: 1rem;
+    color: var(--text-primary); /* VARIABLE */
 }
 
 .searchButton {
     padding: 0.8rem 1.5rem;
-    background-color: #e03131;
-    color: white;
+    background-color: var(--color-primary); /* VARIABLE */
+    color: var(--text-light); /* VARIABLE */
     border: none;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-weight: bold;
 }
@@ -44,7 +27,7 @@
 }
 
 .error {
-    color: red;
+    color: var(--color-error); /* VARIABLE */
     text-align: center;
     margin-bottom: 1rem;
 }
@@ -58,22 +41,23 @@
 }
 
 .orderCard, .latestOrderCard {
-    background-color: white;
+    background-color: var(--bg-secondary); /* VARIABLE */
     padding: 1.5rem;
-    border-radius: 8px;
+    border-radius: var(--border-radius); /* VARIABLE */
     margin-bottom: 1rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px var(--shadow-color); /* VARIABLE */
+    border: 1px solid var(--border-color); /* VARIABLE */
 }
 
 .latestOrderCard {
-    border: 2px solid #e03131;
+    border: 2px solid var(--color-primary); /* VARIABLE */
 }
 
 .orderHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color); /* VARIABLE */
     padding-bottom: 1rem;
     margin-bottom: 1rem;
 }
@@ -85,16 +69,17 @@
 .status {
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
-    color: white;
+    color: var(--text-light); /* VARIABLE */
     font-size: 0.9rem;
     font-weight: 500;
     text-transform: capitalize;
 }
 
+/* Estos colores pueden ser fijos para consistencia, pero usamos las variables donde se puede */
 .pendiente { background-color: #f0ad4e; }
 .en_proceso { background-color: #3498db; }
-.completado { background-color: #28a745; }
-.cancelado { background-color: #d9534f; }
+.completado { background-color: var(--color-success); }
+.cancelado { background-color: var(--color-error); }
 
 .orderCard ul {
     list-style: none;
@@ -103,7 +88,10 @@
 
 .orderCard li {
     padding: 0.5rem 0;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--border-color); /* VARIABLE */
+}
+.orderCard li:last-child {
+    border-bottom: none;
 }
 
 .orderFooter {
@@ -114,42 +102,39 @@
     font-size: 1.2rem;
 }
 
-/* --- ESTILOS CORREGIDOS Y AÑADIDOS --- */
 .actionsContainer {
     display: flex;
     gap: 1rem;
-    flex-wrap: wrap; /* Para que los botones se ajusten en pantallas pequeñas */
+    flex-wrap: wrap;
 }
 
-.editButton, .cancelButton, .reorderButton { /* <-- AÑADIDO .reorderButton */
-    color: white;
+.editButton, .cancelButton, .reorderButton {
+    color: var(--text-light); /* VARIABLE */
     border: none;
     padding: 0.6rem 1rem;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-size: 0.9rem;
 }
 
 .editButton {
-    background-color: #3498db; /* Azul */
+    background-color: #3498db; /* Azul se mantiene para la acción de editar */
 }
 
 .cancelButton {
-    background-color: #d9534f; /* Rojo */
+    background-color: var(--color-error); /* VARIABLE */
 }
 
-/* --- NUEVO ESTILO PARA EL BOTÓN DE REORDENAR --- */
 .reorderButton {
-    background-color: #28a745; /* Verde */
+    background-color: var(--color-success); /* VARIABLE */
 }
-/* --- FIN DE LA CORRECCIÓN --- */
 
 .prompt {
     text-align: center;
     padding: 2rem;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background-color: var(--bg-secondary); /* VARIABLE */
+    border-radius: var(--border-radius); /* VARIABLE */
+    box-shadow: 0 2px 8px var(--shadow-color); /* VARIABLE */
 }
 
 .prompt h2 {

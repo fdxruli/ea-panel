@@ -6,13 +6,14 @@ import ClientOnly from './ClientOnly';
 import DynamicMapPicker from './DynamicMapPicker';
 import { useAlert } from '../context/AlertContext';
 
-export default function AddressModal({ isOpen, onClose, onSave, address = null, customerId }) {
+export default function AddressModal({ isOpen, onClose, onSave, address = null, customerId, showSaveOption = false }) {
     const { showAlert } = useAlert();
     const [formData, setFormData] = useState({
         label: '',
         address_reference: '',
         coords: null
     });
+    const [shouldSave, setShouldSave] = useState(true); // Estado para el checkbox
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -22,8 +23,12 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 address_reference: address.address_reference || '',
                 coords: { lat: address.latitude, lng: address.longitude }
             });
+            // Si editamos una dirección existente, siempre la guardamos
+            setShouldSave(true);
         } else {
              setFormData({ label: 'Casa', address_reference: '', coords: null });
+             // Por defecto, la opción de guardar está marcada
+             setShouldSave(true);
         }
     }, [address, isOpen]);
 
@@ -51,10 +56,13 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 latitude: formData.coords.lat,
                 longitude: formData.coords.lng
             };
-            await onSave(addressData, address?.id);
+            // Si el checkbox no es visible (ej. desde "Mi Perfil"), siempre se guarda.
+            // Si es visible, se respeta la decisión del usuario.
+            const savePermanently = showSaveOption ? shouldSave : true;
+            await onSave(addressData, savePermanently, address?.id);
             onClose();
         } catch (error) {
-            showAlert(`Error al guardar la dirección: ${error.message}`);
+            showAlert(`Error al procesar la dirección: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -62,12 +70,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
 
     if (!isOpen) return null;
     
-    // --- 👇 AQUÍ ESTÁ LA LÓGICA CLAVE ---
-    // 1. Preparamos la posición inicial para el mapa.
-    //    Si estamos editando una dirección (`address` existe), usamos sus coordenadas.
-    //    Si no, será `null` y el mapa usará su centro por defecto.
     const mapInitialPosition = address ? { lat: address.latitude, lng: address.longitude } : null;
-    // ------------------------------------
 
     return (
         <div className={styles.modalOverlay}>
@@ -78,7 +81,6 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <div className={styles.mapContainer}>
                        <ClientOnly>
-                           {/* 2. Pasamos la posición inicial al componente del mapa */}
                            <DynamicMapPicker
                                 onLocationSelect={handleLocationSelect}
                                 initialPosition={mapInitialPosition}
@@ -87,26 +89,30 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                     </div>
 
                     <label htmlFor="label">Etiqueta (ej: Casa, Oficina):</label>
-                    <input
-                        id="label"
-                        name="label"
-                        type="text"
-                        value={formData.label}
-                        onChange={handleChange}
-                        required
-                    />
+                    <input id="label" name="label" type="text" value={formData.label} onChange={handleChange} required />
 
                     <label htmlFor="address_reference">Referencia (ej: portón rojo):</label>
-                    <input
-                        id="address_reference"
-                        name="address_reference"
-                        type="text"
-                        value={formData.address_reference}
-                        onChange={handleChange}
-                    />
+                    <input id="address_reference" name="address_reference" type="text" value={formData.address_reference} onChange={handleChange} />
+
+                    {/* --- 👇 AQUÍ APARECE EL CHECKBOX CONDICIONALMENTE --- */}
+                    {showSaveOption && !address && (
+                        <div className={styles.saveOption}>
+                            <input
+                                type="checkbox"
+                                id="shouldSave"
+                                checked={shouldSave}
+                                onChange={(e) => setShouldSave(e.target.checked)}
+                            />
+                            <label htmlFor="shouldSave">
+                                Guardar esta dirección para futuros pedidos.
+                            </label>
+                        </div>
+                    )}
+                    {/* --- 👆 FIN DEL CHECKBOX --- */}
+
 
                     <button type="submit" disabled={isSubmitting} className={styles.saveButton}>
-                        {isSubmitting ? 'Guardando...' : 'Guardar Dirección'}
+                        {isSubmitting ? 'Procesando...' : (address ? 'Guardar Cambios' : 'Usar esta Dirección')}
                     </button>
                 </form>
             </div>

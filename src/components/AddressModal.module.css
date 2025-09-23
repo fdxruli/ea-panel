@@ -24,3 +24,50 @@
     font-weight: bold; cursor: pointer; margin-top: 1rem;
 }
 .saveButton:disabled { background-color: #9addaa; }
+
+/* src/components/AddressModal.module.css (AÑADIR AL FINAL) */
+.modalOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); display: flex;
+    justify-content: center; align-items: center; z-index: 3000;
+}
+.modalContent {
+    background: white; padding: 2rem; border-radius: 12px;
+    width: 90%; max-width: 500px; color: #333;
+    position: relative;
+}
+.closeButton {
+    position: absolute; top: 10px; right: 15px; background: none;
+    border: none; font-size: 2rem; cursor: pointer; color: #aaa;
+}
+.modalContent h2 { text-align: center; margin-top: 0; }
+.form { display: flex; flex-direction: column; gap: 1rem; }
+.form label { font-weight: 500; margin-bottom: -0.5rem; }
+.form input { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
+.mapContainer { height: 300px; width: 100%; border-radius: 8px; overflow: hidden; }
+.saveButton {
+    padding: 1rem; background-color: #28a745; color: white;
+    border: none; border-radius: 8px; font-size: 1.1rem;
+    font-weight: bold; cursor: pointer; margin-top: 1rem;
+}
+.saveButton:disabled { background-color: #9addaa; }
+
+/* --- 👇 NUEVO ESTILO AÑADIDO --- */
+.saveOption {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    background-color: #f8f9fa;
+    padding: 0.8rem;
+    border-radius: 8px;
+}
+.saveOption input {
+    width: 20px;
+    height: 20px;
+}
+.saveOption label {
+    margin: 0;
+    font-weight: 400;
+    color: var(--text-secondary);
+}

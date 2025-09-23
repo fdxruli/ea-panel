@@ -1,28 +1,30 @@
 /* src/index.css */
-:root {
-  /* --- PALETA DE COLORES PERSONALIZABLE --- */
-  /* Primarios */
-  --color-primary: #d94f45; /* Un rojo anaranjado, cálido y apetitoso */
-  --color-primary-dark: #b93e36;
-  --color-primary-light: #fce8e6;
 
-  /* Acentos y Acciones */
-  --color-accent: #2a9d8f; /* Un verde azulado para contrastar */
-  --color-success: #4caf50;
-  --color-error: #f44336;
+/* --- TEMA CLARO (POR DEFECTO) --- */
+:root {
+  /* --- PALETA DE COLORES MODERNA Y ATRACTIVA --- */
+  /* Primarios y Acentos */
+  --color-primary: #E57373; /* Terracota/Óxido Suave */
+  --color-primary-dark: #D32F2F;
+  --color-primary-light: #FFCDD2;
+  --color-accent: #4DB6AC;      /* Verde Azulado (Teal) Profundo */
+
+  /* Acciones y Notificaciones */
+  --color-success: #81C784;
+  --color-error: #F44336;
 
   /* Fondos */
-  --bg-primary: #f8f7f5; /* Un blanco roto muy sutil */
-  --bg-secondary: #ffffff;
+  --bg-primary: #FDFDFD;     /* Blanco Roto / Marfil */
+  --bg-secondary: #FFFFFF;     /* Blanco Puro para Tarjetas */
 
   /* Texto */
-  --text-primary: #2d3436;
-  --text-secondary: #636e72;
-  --text-light: #ffffff;
+  --text-primary: #263238;      /* Gris Carbón (Casi Negro) */
+  --text-secondary: #546E7A;    /* Gris Pizarra Medio */
+  --text-light: #FFFFFF;
 
   /* Bordes y Sombras */
-  --border-color: #dfe6e9;
-  --shadow-color: rgba(0, 0, 0, 0.08);
+  --border-color: #ECEFF1;
+  --shadow-color: rgba(38, 50, 56, 0.08);
 
   /* --- TIPOGRAFÍA --- */
   --font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
@@ -34,7 +36,30 @@
   --transition-speed: 0.3s;
 }
 
-/* --- RESET BÁSICO Y ESTILOS GLOBALES --- */
+/* --- TEMA OSCURO CÁLIDO --- */
+/* Se activará cuando el elemento <html> o <body> tenga el atributo data-theme="dark" */
+[data-theme="dark"] {
+  /* Primarios y Acentos */
+  --color-primary: #E57373; /* El terracota resalta maravillosamente */
+  --color-primary-dark: #FF8A80;
+  --color-primary-light: #45272A;
+  --color-accent: #4DB6AC;      /* El teal se mantiene vibrante */
+
+  /* Fondos */
+  --bg-primary: #1A1A1A;      /* Azul Pizarra Muy Oscuro */
+  --bg-secondary: #2C2C2C;   /* Un gris ligeramente más claro para tarjetas */
+
+  /* Texto */
+  --text-primary: #F5F5F5;      /* Blanco Roto / Crema Claro */
+  --text-secondary: #B0BEC5;    /* Gris Cálido y Legible */
+
+  /* Bordes y Sombras */
+  --border-color: #37474F;
+  --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+
+/* --- RESET BÁSICO Y ESTILOS GLOBALES (Sin cambios) --- */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -49,6 +74,7 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
 }
 
 #root {
@@ -56,7 +82,6 @@ body {
   min-height: 100vh;
 }
 
-/* Estilos base para enlaces y botones para consistencia */
 a {
   color: var(--color-primary);
   text-decoration: none;

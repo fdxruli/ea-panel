@@ -1,7 +1,7 @@
-/* src/pages/Menu.module.css (CON ESTILOS DE NOTIFICACIÓN ELIMINADOS) */
+/* src/pages/Menu.module.css (MODIFICADO) */
 
 .menuContainer {
-  padding: 1rem 0;
+  padding: 1rem 0; /* Solo padding vertical */
 }
 
 .menuContainer h1 {
@@ -16,7 +16,7 @@
   position: sticky;
   top: 70px;
   background: var(--bg-primary);
-  padding: 1rem;
+  padding: 1rem 0; /* Sin padding horizontal */
   z-index: 900;
   display: flex;
   align-items: center;
@@ -81,14 +81,14 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
-  padding: 0 1rem;
+  padding: 0; /* Sin padding */
 }
 
 .productList.grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
-  padding: 0 1rem;
+  padding: 0; /* Sin padding */
 }
 
 .productCard {
@@ -104,14 +104,8 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .productCard:hover {
@@ -122,8 +116,8 @@
 .imageContainer {
   position: relative;
   width: 100%;
-  padding-top: 75%; /* Esto crea una proporción de 4:3. Puedes cambiarlo a 100% para 1:1 (cuadrado) */
-  background-color: #f0f0f0; /* Un color de fondo mientras carga la imagen */
+  padding-top: 75%;
+  background-color: #f0f0f0;
   overflow: hidden;
 }
 
@@ -133,8 +127,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Mantiene la imagen cubriendo el espacio sin deformarse */
-  object-position: center; /* Se asegura de centrar la imagen */
+  object-fit: cover;
+  object-position: center;
 }
 
 .cardContent {
@@ -150,15 +144,11 @@
 
 .cardFooter {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
   padding: 0 1rem 1rem;
-}
-
-.price {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
+  margin-top: auto; /* Empuja el footer hacia abajo */
 }
 
 .productCard button {
@@ -167,9 +157,32 @@
   font-weight: 600;
   padding: 0.7rem 1.2rem;
   border-radius: 50px;
+  width: 100%;
 }
 
-/* --- ESTILOS DEL TOAST ELIMINADOS DE AQUÍ --- */
+.priceContainer {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.originalPrice {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    text-decoration: line-through;
+}
+
+.specialPrice {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-error);
+}
+
+.price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
 
 .flyImage {
   position: fixed;
@@ -184,13 +197,8 @@
 }
 
 @keyframes flyToCartAnimation {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  20% {
-    transform: scale(1.2);
-  }
+  0% { transform: scale(1); opacity: 1; }
+  20% { transform: scale(1.2); }
   100% {
     left: 50% !important; 
     top: calc(100vh - 45px) !important; 
@@ -199,63 +207,48 @@
   }
 }
 
+/* --- AJUSTES PARA PANTALLAS GRANDES --- */
 @media (min-width: 768px) {
   .productList.list {
-    grid-template-columns: 1fr; /* Una sola columna para la vista de lista */
-    padding: 0;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
   }
   
   .productList.grid {
     gap: 1.5rem;
-    padding: 0;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
+
+  .productList.list .cardFooter {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  /* --- 👇 AQUÍ ESTÁN LOS CAMBIOS DE TAMAÑO --- */
+  .productList.list .price,
+  .productList.list .specialPrice {
+    font-size: 1.4rem; /* Hacemos el precio principal más grande */
+  }
+  
+  .productList.list .originalPrice {
+    font-size: 1.1rem; /* El precio tachado un poco más grande también */
+  }
+
+  .productList.list .productCard button {
+    width: auto;
+    padding: 0.8rem 2rem; /* Aumentamos el padding para hacerlo más grande */
+    font-size: 1rem;      /* Aumentamos el tamaño del texto del botón */
+    flex-shrink: 0;
+  }
+  /* --- 👆 FIN DE LOS CAMBIOS DE TAMAÑO --- */
 }
 
 @media (min-width: 900px) {
-  .productList.grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
    .categoryButtons {
     justify-content: center;
   }
-}
-
-@media (min-width: 1200px) {
-  .productList.grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-}
-
-.orderFooter {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    font-size: 1.2rem;
-}
-
-.actionsContainer {
-    display: flex;
-    gap: 1rem;
-}
-
-.editButton, .cancelButton {
-    color: white;
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-
-.editButton {
-    background-color: #3498db;
-}
-
-.cancelButton {
-    background-color: #d9534f;
 }
 
 .prompt {

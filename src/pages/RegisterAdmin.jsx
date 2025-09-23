@@ -13,9 +13,9 @@ const PermissionsMatrix = ({ permissions, setPermissions }) => {
         { key: 'productos', label: 'Productos' },
         { key: 'clientes', label: 'Clientes' },
         { key: 'descuentos', label: 'Descuentos' },
-        { key: 'special-prices', label: 'Precios Especiales' },
         { key: 'terminos', label: 'Términos y Cond.' },
         { key: 'registrar-admin', label: 'Gestionar Admins' },
+        { key: 'special-price', label: 'Precios '}
     ];
 
     const actions = ['view', 'edit', 'delete'];
@@ -222,5 +222,4 @@ export default function RegisterAdmin() {
             )}
         </div>
     );
-
 }

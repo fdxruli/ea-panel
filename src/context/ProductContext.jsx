@@ -1,4 +1,4 @@
-// src/context/ProductContext.jsx (CORREGIDO)
+// src/context/ProductContext.jsx (MODIFICADO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -18,7 +18,6 @@ export const ProductProvider = ({ children }) => {
 
   const fetchAndCacheProducts = useCallback(async () => {
     try {
-      // ... (lógica de fetch sin cambios)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`*, product_images ( id, image_url )`)
@@ -29,13 +28,46 @@ export const ProductProvider = ({ children }) => {
         .from('categories')
         .select('*');
       if (categoriesError) throw categoriesError;
-      
-      const uniqueCategories = [...new Set(productsData.map(p => p.category_id))];
+
+      const today = new Date().toISOString().split('T')[0];
+      const { data: specialPrices, error: specialPricesError } = await supabase
+        .from('special_prices')
+        .select('*')
+        .lte('start_date', today)
+        .gte('end_date', today);
+
+      if (specialPricesError) throw specialPricesError;
+
+      // --- 👇 AQUÍ COMIENZA LA LÓGICA MODIFICADA ---
+      const finalProducts = productsData.map(product => {
+        const productPrice = specialPrices.find(p => p.product_id === product.id);
+        const categoryPrice = specialPrices.find(p => p.category_id === product.category_id);
+
+        let specialPriceInfo = null;
+        if (productPrice) {
+          specialPriceInfo = productPrice;
+        } else if (categoryPrice) {
+          specialPriceInfo = categoryPrice;
+        }
+
+        if (specialPriceInfo) {
+          return {
+            ...product,
+            original_price: product.price, // Guardamos el precio original
+            price: parseFloat(specialPriceInfo.override_price) // Aplicamos el precio de oferta
+          };
+        }
+        
+        return product; // Devolvemos el producto sin cambios si no hay oferta
+      });
+      // --- 👆 FIN DE LA LÓGICA ---
+
+      const uniqueCategories = [...new Set(finalProducts.map(p => p.category_id))];
       const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
 
-      setProducts(productsData);
+      setProducts(finalProducts);
       setCategories(productCategories);
-      localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ products: productsData, categories: productCategories }));
+      localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ products: finalProducts, categories: productCategories }));
 
     } catch (err) {
       console.error("Error al obtener productos:", err);
@@ -54,23 +86,31 @@ export const ProductProvider = ({ children }) => {
       setNotification('¡El menú se ha actualizado!');
       setTimeout(() => setNotification(''), 4000);
     };
-    
-    // --- 👇 AQUÍ ESTÁ LA LÓGICA MEJORADA ---
-    // Creamos un solo canal público para escuchar cambios en la base de datos.
+
     const channel = supabase.channel('public-db-changes');
 
     channel
       .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'products' }, // Escucha cualquier cambio en 'products'
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
         handleProductChange
       )
       .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public', table: 'product_images' }, // Escucha cualquier cambio en 'product_images'
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'product_images' },
         (payload) => {
             console.log('¡Cambio detectado en las imágenes! Actualizando...', payload);
             fetchAndCacheProducts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'special_prices' },
+        (payload) => {
+            console.log('¡Cambio detectado en los precios especiales! Actualizando...', payload);
+            fetchAndCacheProducts();
+            setNotification('¡Las promociones se han actualizado!');
+            setTimeout(() => setNotification(''), 4000);
         }
       )
       .subscribe();
@@ -78,7 +118,6 @@ export const ProductProvider = ({ children }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-    // --- 👆 FIN DE LA LÓGICA MEJORADA ---
 
   }, [fetchAndCacheProducts]);
 

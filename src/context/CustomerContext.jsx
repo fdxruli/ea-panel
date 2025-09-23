@@ -1,7 +1,7 @@
-// src/context/CustomerContext.jsx
+// src/context/CustomerContext.jsx (ACTUALIZADO)
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient'; // Importa supabase
+import { supabase } from '../lib/supabaseClient';
 
 const CustomerContext = createContext();
 
@@ -12,9 +12,10 @@ export const useCustomer = () => useContext(CustomerContext);
 export const CustomerProvider = ({ children }) => {
   const [phone, setPhone] = useState('');
   const [isPhoneModalOpen, setPhoneModalOpen] = useState(false);
-  const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false); // Estado para el modal de checkout
-  const [checkoutMode, setCheckoutMode] = useState('checkout'); // Estado para el modo de checkout
+  const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState('checkout');
   const [onSuccessCallback, setOnSuccessCallback] = useState(null);
+  const [isFirstAddressRequired, setIsFirstAddressRequired] = useState(false); // <-- NUEVO ESTADO
 
   useEffect(() => {
     const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
@@ -28,23 +29,18 @@ export const CustomerProvider = ({ children }) => {
     }
   }, []);
 
-  // 👇 NUEVA FUNCIÓN PARA VERIFICAR Y LOGUEAR AUTOMÁTICAMENTE
-const checkAndLogin = async (newPhone) => {
-    if (!/^\d{10}$/.test(newPhone)) return false; // Solo verifica con 10 dígitos
+  const checkAndLogin = async (newPhone) => {
+    if (!/^\d{10}$/.test(newPhone)) return false;
 
     const { data: customer, error } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('phone', newPhone)
-        .maybeSingle();
+        .from('customers').select('id').eq('phone', newPhone).maybeSingle();
     
     if (error) {
         console.error("Error checking customer:", error);
-        return false; // Si hay error, procede de forma manual
+        return false;
     }
 
     if (customer) {
-        // Si el cliente existe, lo logueamos y cerramos el modal
         localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
         setPhone(newPhone);
         setPhoneModalOpen(false);
@@ -55,11 +51,33 @@ const checkAndLogin = async (newPhone) => {
         return true;
     }
     
-    return false; // El cliente no existe
+    return false;
 };
 
-   // 👇 FUNCIÓN SIMPLIFICADA PARA GUARDAR UN NUEVO NÚMERO
-const savePhone = (newPhone) => {
+  const registerNewCustomer = async (newPhone, newName) => {
+    const { data, error } = await supabase
+      .from('customers').insert({ name: newName, phone: newPhone }).select().single();
+
+    if (error) {
+      console.error("Error creating customer:", error);
+      return false;
+    }
+
+    if (data) {
+      localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
+      setPhone(newPhone);
+      setPhoneModalOpen(false);
+      setIsFirstAddressRequired(true); // <-- Dispara el modal de dirección
+      if (onSuccessCallback) {
+        onSuccessCallback();
+        setOnSuccessCallback(null);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const savePhone = (newPhone) => {
     if (/^\d{10,12}$/.test(newPhone)) {
         localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
         setPhone(newPhone);
@@ -68,15 +86,11 @@ const savePhone = (newPhone) => {
         if (onSuccessCallback) {
             onSuccessCallback();
             setOnSuccessCallback(null);
-        } else {
-            // Como es un cliente nuevo, siempre abrimos el modal de perfil
-            setCheckoutMode('profile');
-            setCheckoutModalOpen(true);
         }
         return true;
     }
     return false;
-};
+  };
 
   const clearPhone = () => {
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
@@ -101,6 +115,7 @@ const savePhone = (newPhone) => {
   const value = {
     phone,
     checkAndLogin,
+    registerNewCustomer, // <-- NUEVO
     savePhone,
     clearPhone,
     isPhoneModalOpen,
@@ -108,6 +123,8 @@ const savePhone = (newPhone) => {
     isCheckoutModalOpen,
     setCheckoutModalOpen: toggleCheckoutModal,
     checkoutMode,
+    isFirstAddressRequired, // <-- NUEVO
+    setIsFirstAddressRequired, // <-- NUEVO
   };
 
   return (

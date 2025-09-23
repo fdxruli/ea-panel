@@ -1,0 +1,14 @@
+.form {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form div {
+  display: flex;
+  flex-direction: column;
+}
