@@ -1,4 +1,4 @@
-/* src/pages/Cart.module.css (MODIFICADO) */
+/* src/pages/Cart.module.css (CORREGIDO) */
 
 .overlay {
   position: fixed;
@@ -20,21 +20,19 @@
   transition: opacity 0.5s ease;
 }
 
-
-/* --- 👇 AQUÍ ESTÁN LOS CAMBIOS PRINCIPALES --- */
 .cartSidebar {
   position: fixed;
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 100%; /* Ocupa toda la altura */
+  height: 100%;
   background-color: var(--bg-secondary);
-  box-shadow: none; /* Sin sombra para un look de pantalla completa */
+  box-shadow: none;
   z-index: 1020;
   display: flex;
   flex-direction: column;
   color: var(--text-primary);
-  border-radius: 0; /* Sin bordes redondeados */
+  border-radius: 0;
   
   transform-origin: center bottom;
   transform: translateY(100%);
@@ -42,8 +40,6 @@
   
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
-/* --- 👆 FIN DE LOS CAMBIOS --- */
-
 
 .cartSidebar.open {
     transform: translateY(0);
@@ -64,7 +60,7 @@
 }
 
 .cartHeader h2 { margin: 0; font-size: 1.5rem; }
-.closeButton { background: none; font-size: 2.5rem; cursor: pointer; color: var(--text-secondary); }
+.closeButton { background: none; border: none; font-size: 2.5rem; cursor: pointer; color: var(--text-secondary); }
 .emptyMessage { text-align: center; padding: 4rem 1rem; font-size: 1.1rem; color: var(--text-secondary); }
 
 .cartItemsList {
@@ -90,10 +86,10 @@
     display: flex; 
     align-items: center; 
     gap: 0.8rem;
-    background-color: #f8f9fa;
+    background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 50px;
-    padding: 2px;
+    padding: 4px; /* Un poco más de padding interior */
 }
 
 .quantityDisplay {
@@ -103,15 +99,16 @@
     text-align: center;
 }
 
+/* --- 👇 AQUÍ ESTÁN LOS CAMBIOS PRINCIPALES --- */
 .quantityButton {
-    background-color: white;
-    border: 1px solid #dee2e6;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
     color: var(--color-primary);
-    width: 32px;
-    height: 32px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    font-size: 1.4rem;
-    font-weight: 600;
+    font-size: 2rem; /* Hacemos el '+' y '-' más grandes */
+    font-weight: 500; /* Ligeramente menos grueso para mejor legibilidad */
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -119,6 +116,8 @@
     line-height: 1;
     transition: background-color 0.2s, color 0.2s;
 }
+/* --- 👆 FIN DE LOS CAMBIOS --- */
+
 
 .quantityButton:hover {
     background-color: var(--color-primary-light);
@@ -130,7 +129,7 @@
 }
 
 .quantityButton.deleteButton:hover {
-    background-color: #ffe3e3;
+    background-color: var(--color-primary-light);
     border-color: var(--color-error);
 }
 
@@ -142,16 +141,25 @@
 }
 
 .discountSection { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
-.discountInput { flex-grow: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; }
-.applyButton { padding: 10px 15px; background-color: var(--color-accent); color: white; border-radius: 8px; }
+.discountInput { 
+  flex-grow: 1; 
+  padding: 10px; 
+  border: 1px solid var(--border-color); 
+  border-radius: 8px; 
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 1rem;
+}
+.applyButton { padding: 10px 15px; background-color: var(--color-accent); color: white; border: none; border-radius: 8px; cursor: pointer; }
 .discountMessage { font-size: 0.9rem; text-align: center; margin-bottom: 1rem; }
 .totals p { display: flex; justify-content: space-between; margin: 0.5rem 0; }
-.discountApplied button { background: none; color: var(--color-error); cursor: pointer; font-size: 0.8rem; margin-left: 10px; text-decoration: underline; }
+.discountApplied button { background: none; border: none; color: var(--color-error); cursor: pointer; font-size: 0.8rem; margin-left: 10px; text-decoration: underline; }
 .total { font-size: 1.75rem; display: flex; justify-content: space-between; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
 
 .whatsappButton {
   width: 100%; padding: 1rem; background: var(--color-success); color: white;
-  border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; margin-top: 1rem;
+  border: none; border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; margin-top: 1rem; cursor: pointer;
 }
 .whatsappButton:hover { background: #388e3c; }
 
@@ -159,7 +167,7 @@
   .cartSidebar {
     left: auto; right: 0; bottom: 0; top: 0; width: 100%;
     max-width: 400px; height: 100%; border-radius: 0;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.15); /* Se restaura la sombra para escritorio */
+    box-shadow: 0 -4px 15px var(--shadow-color);
     transform-origin: unset;
     transform: translateX(100%);
   }
