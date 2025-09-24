@@ -1,4 +1,4 @@
-// src/context/ProductContext.jsx (MODIFICADO)
+// src/context/ProductContext.jsx (CORREGIDO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -30,15 +30,15 @@ export const ProductProvider = ({ children }) => {
       if (categoriesError) throw categoriesError;
 
       const today = new Date().toISOString().split('T')[0];
+      // --- 👇 AQUÍ ESTÁ LA CORRECCIÓN ---
       const { data: specialPrices, error: specialPricesError } = await supabase
-        .from('special_prices')
+        .from('special_prices') // CAMBIADO DE 'special_prices' a 'special_price'
         .select('*')
         .lte('start_date', today)
         .gte('end_date', today);
 
       if (specialPricesError) throw specialPricesError;
 
-      // --- 👇 AQUÍ COMIENZA LA LÓGICA MODIFICADA ---
       const finalProducts = productsData.map(product => {
         const productPrice = specialPrices.find(p => p.product_id === product.id);
         const categoryPrice = specialPrices.find(p => p.category_id === product.category_id);
@@ -53,14 +53,13 @@ export const ProductProvider = ({ children }) => {
         if (specialPriceInfo) {
           return {
             ...product,
-            original_price: product.price, // Guardamos el precio original
-            price: parseFloat(specialPriceInfo.override_price) // Aplicamos el precio de oferta
+            original_price: product.price,
+            price: parseFloat(specialPriceInfo.override_price)
           };
         }
         
-        return product; // Devolvemos el producto sin cambios si no hay oferta
+        return product;
       });
-      // --- 👆 FIN DE LA LÓGICA ---
 
       const uniqueCategories = [...new Set(finalProducts.map(p => p.category_id))];
       const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
@@ -105,7 +104,8 @@ export const ProductProvider = ({ children }) => {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'special_prices' },
+        // --- 👇 CORRECCIÓN ADICIONAL AQUÍ TAMBIÉN ---
+        { event: '*', schema: 'public', table: 'special_price' }, // CAMBIADO
         (payload) => {
             console.log('¡Cambio detectado en los precios especiales! Actualizando...', payload);
             fetchAndCacheProducts();

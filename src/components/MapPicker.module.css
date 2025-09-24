@@ -1,30 +1,28 @@
-/* src/components/MapPicker.module.css */
+/* src/components/MapPicker.module.css (ACTUALIZADO) */
 
-.mapContainer {
-    width: 100%;
-    height: 100%; /* Altura del mapa */
-    position: relative;
-    overflow: hidden; /* Asegura que el mapa respete el borde redondeado */
-}
-
-.map {
-    height: 100%;
-    width: 100%;
+.wrapper {
+  display: flex;
+  flex-direction: column; /* Apila la instrucción y el mapa verticalmente */
+  height: 100%;
+  width: 100%;
 }
 
 .instruction {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.6);
-    color: red;
-    padding: 8px 15px;
-    border-radius: 20px;
-    z-index: 1000; /* Asegura que esté sobre el mapa */
-    font-size: 0.9rem;
-    text-align: center;
-    max-width: 90%;
+  text-align: center;
+  padding-bottom: 0.8rem; /* Espacio entre la instrucción y el mapa */
+  color: var(--text-secondary); /* Color más sutil del tema */
+  font-weight: 500;
+  font-size: 0.9rem;
+  flex-shrink: 0; /* Evita que el texto se encoja */
+  /* Se eliminó la posición absoluta y el fondo oscuro */
+}
+
+.mapContainer {
+  width: 100%;
+  flex-grow: 1; /* Hace que el mapa ocupe todo el espacio vertical restante */
+  position: relative;
+  border-radius: var(--border-radius); /* Bordes redondeados para un mejor look */
+  overflow: hidden; /* Asegura que el mapa respete los bordes */
 }
 
 .locationButton {
@@ -48,7 +46,6 @@
     background-color: #2980b9;
 }
 
-/* Oculta el popup por defecto si no lo usamos */
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     display: none;
 }

@@ -1,4 +1,4 @@
-// src/context/ProductExtrasContext.jsx (CORREGIDO)
+// src/context/ProductExtrasContext.jsx (OPTIMIZADO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -17,18 +17,15 @@ export const ProductExtrasProvider = ({ children }) => {
     const [customerId, setCustomerId] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // useCallback envuelve la lógica principal para evitar re-creaciones innecesarias.
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
         setLoading(true);
         try {
-            // Obtiene todas las reseñas (son públicas)
             const { data: revData } = await supabase
                 .from('product_reviews')
                 .select('*, products(id), customers(name)')
                 .order('created_at', { ascending: false });
             setReviews(revData || []);
 
-            // Si hay un ID de cliente, busca sus favoritos.
             if (currentCustomerId) {
                 const { data: favData } = await supabase
                     .from('customer_favorites')
@@ -37,10 +34,8 @@ export const ProductExtrasProvider = ({ children }) => {
                 
                 const validFavorites = favData || [];
                 setFavorites(validFavorites);
-                // Almacena en caché los favoritos para una carga más rápida la próxima vez.
                 localStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify(validFavorites));
             } else {
-                // Si no hay cliente, limpia los favoritos.
                 setFavorites([]);
                 localStorage.removeItem(FAVORITES_CACHE_KEY);
             }
@@ -51,71 +46,78 @@ export const ProductExtrasProvider = ({ children }) => {
         }
     }, []);
 
-    // Este useEffect ahora se encarga de obtener el ID del cliente CADA VEZ que el teléfono cambie.
     useEffect(() => {
         const getCustomerIdAndFetch = async () => {
             if (!phone) {
                 setCustomerId(null);
-                // Si no hay teléfono, llamamos a fetchAndCacheExtras con null para limpiar los favoritos.
                 fetchAndCacheExtras(null);
                 return;
             }
-
-            // Busca el cliente en Supabase por su número de teléfono.
             const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
             const currentId = data ? data.id : null;
-            
             setCustomerId(currentId);
-
-            // Intenta cargar los favoritos desde la caché para una experiencia más fluida.
             const cachedFavs = localStorage.getItem(FAVORITES_CACHE_KEY);
             if (cachedFavs) {
                 setFavorites(JSON.parse(cachedFavs));
             }
-
-            // Llama a la función principal para obtener todos los datos actualizados (reseñas y favoritos).
             fetchAndCacheExtras(currentId);
         };
-
         getCustomerIdAndFetch();
-    }, [phone, fetchAndCacheExtras]); // Se ejecuta cada vez que 'phone' o 'fetchAndCacheExtras' cambian.
+    }, [phone, fetchAndCacheExtras]);
 
-    // Este useEffect gestiona las actualizaciones en tiempo real de Supabase.
+    // --- 👇 OPTIMIZACIÓN DE SUSCRIPCIONES EN TIEMPO REAL ---
     useEffect(() => {
-        const handleReviewChange = () => {
-            console.log(`Real-time change detected in reviews, refetching...`);
-            fetchAndCacheExtras(customerId);
-        };
-
-        const reviewsChannel = supabase.channel('public-reviews');
-        reviewsChannel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, handleReviewChange)
-            .subscribe();
-
-        let favoritesChannel;
-        if (customerId) {
-            const handleFavoriteChange = () => {
-                console.log(`Real-time change detected in favorites for user ${customerId}, refetching...`);
+        // 1. Definimos una función para manejar los cambios
+        const handleChanges = (payload, table) => {
+            console.log(`Real-time change in ${table}:`, payload);
+            if (customerId) {
                 fetchAndCacheExtras(customerId);
-            };
-            favoritesChannel = supabase.channel(`customer-favorites-${customerId}`);
-            favoritesChannel
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites', filter: `customer_id=eq.${customerId}` }, handleFavoriteChange)
-                .subscribe();
-        }
-
-        return () => {
-            supabase.removeChannel(reviewsChannel);
-            if (favoritesChannel) {
-                supabase.removeChannel(favoritesChannel);
             }
         };
+
+        // 2. Creamos un único canal para todas las suscripciones de este contexto.
+        const channel = supabase.channel('product-extras');
+
+        // 3. Nos suscribimos a los cambios en ambas tablas desde el mismo canal.
+        channel
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'product_reviews' },
+                (payload) => handleChanges(payload, 'product_reviews')
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'customer_favorites' },
+                (payload) => handleChanges(payload, 'customer_favorites')
+            )
+            .subscribe((status, err) => {
+                // 4. (OPCIONAL PERO RECOMENDADO) Manejamos los errores de conexión aquí.
+                // Esto evita que los errores no controlados inunden la consola.
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Conectado al canal de extras en tiempo real.');
+                }
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Error en el canal de tiempo real:', err);
+                }
+                 if (status === 'TIMED_OUT') {
+                    console.warn('⌛ La conexión de tiempo real expiró. Intentando reconectar...');
+                }
+            });
+
+        // 5. La función de limpieza se asegura de desuscribirnos del canal
+        // cuando el componente se desmonte para evitar fugas de memoria.
+        return () => {
+            console.log('Desuscribiendo del canal de extras.');
+            supabase.removeChannel(channel);
+        };
+    // Re-ejecutamos este efecto solo si el customerId o la función de fetch cambian.
     }, [customerId, fetchAndCacheExtras]);
+    // --- 👆 FIN DE LA OPTIMIZACIÓN ---
 
     const value = {
         reviews,
         favorites,
-        customerId, // La clave del problema: ahora este valor estará actualizado.
+        customerId,
         loading,
         refetch: () => customerId && fetchAndCacheExtras(customerId)
     };

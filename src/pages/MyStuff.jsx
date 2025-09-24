@@ -171,7 +171,7 @@ export default function MyStuff() {
                                                 ) : (
                                                     <>
                                                         <div className={styles.reviewProductInfo}>
-                                                            <img src={rev.products.image_url || 'https://via.placeholder.com/80'} alt={rev.products.name} />
+                                                            <img src={rev.products.image_url || 'https://placehold.co/80'} alt={rev.products.name} />
                                                             <h4>
                                                                 {rev.products.name} {!isAvailable && <span className={styles.unavailableText}>(No disponible)</span>}
                                                             </h4>

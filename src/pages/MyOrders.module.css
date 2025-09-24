@@ -1,21 +1,23 @@
 /* src/pages/MyOrders.module.css (CORREGIDO) */
 .container {
-    max-width: 800px;
+    max-width: 700px;
     margin: 2rem auto;
     padding: 1rem;
     font-family: 'Poppins', sans-serif;
-    color: var(--text-primary); /* VARIABLE */
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }
 
 .container h1, .container h2, .container h3 {
     text-align: center;
-    color: var(--text-primary); /* VARIABLE */
+    color: var(--text-primary);
 }
 
 .searchButton {
     padding: 0.8rem 1.5rem;
-    background-color: var(--color-primary); /* VARIABLE */
-    color: var(--text-light); /* VARIABLE */
+    background-color: var(--color-primary);
+    color: var(--text-light);
     border: none;
     border-radius: 50px;
     cursor: pointer;
@@ -23,11 +25,12 @@
 }
 
 .searchButton:disabled {
-    background-color: #aaa;
+    background-color: var(--text-secondary); /* VARIABLE */
+    opacity: 0.7;
 }
 
 .error {
-    color: var(--color-error); /* VARIABLE */
+    color: var(--color-error);
     text-align: center;
     margin-bottom: 1rem;
 }
@@ -41,23 +44,23 @@
 }
 
 .orderCard, .latestOrderCard {
-    background-color: var(--bg-secondary); /* VARIABLE */
+    background-color: var(--bg-secondary);
     padding: 1.5rem;
-    border-radius: var(--border-radius); /* VARIABLE */
+    border-radius: var(--border-radius);
     margin-bottom: 1rem;
-    box-shadow: 0 2px 8px var(--shadow-color); /* VARIABLE */
-    border: 1px solid var(--border-color); /* VARIABLE */
+    box-shadow: 0 2px 8px var(--shadow-color);
+    border: 1px solid var(--border-color);
 }
 
 .latestOrderCard {
-    border: 2px solid var(--color-primary); /* VARIABLE */
+    border: 2px solid var(--color-primary);
 }
 
 .orderHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color); /* VARIABLE */
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 1rem;
     margin-bottom: 1rem;
 }
@@ -69,15 +72,14 @@
 .status {
     padding: 0.3rem 0.8rem;
     border-radius: 15px;
-    color: var(--text-light); /* VARIABLE */
+    color: var(--text-light);
     font-size: 0.9rem;
     font-weight: 500;
     text-transform: capitalize;
 }
 
-/* Estos colores pueden ser fijos para consistencia, pero usamos las variables donde se puede */
-.pendiente { background-color: #f0ad4e; }
-.en_proceso { background-color: #3498db; }
+.pendiente { background-color: #f0ad4e; } /* Se mantiene por ser color específico de estado */
+.en_proceso { background-color: #3498db; } /* Se mantiene por ser color específico de estado */
 .completado { background-color: var(--color-success); }
 .cancelado { background-color: var(--color-error); }
 
@@ -88,7 +90,7 @@
 
 .orderCard li {
     padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color); /* VARIABLE */
+    border-bottom: 1px solid var(--border-color);
 }
 .orderCard li:last-child {
     border-bottom: none;
@@ -109,7 +111,7 @@
 }
 
 .editButton, .cancelButton, .reorderButton {
-    color: var(--text-light); /* VARIABLE */
+    color: var(--text-light);
     border: none;
     padding: 0.6rem 1rem;
     border-radius: 50px;
@@ -118,23 +120,23 @@
 }
 
 .editButton {
-    background-color: #3498db; /* Azul se mantiene para la acción de editar */
+    background-color: #3498db; /* Se mantiene por ser color específico de acción */
 }
 
 .cancelButton {
-    background-color: var(--color-error); /* VARIABLE */
+    background-color: var(--color-error);
 }
 
 .reorderButton {
-    background-color: var(--color-success); /* VARIABLE */
+    background-color: var(--color-success);
 }
 
 .prompt {
     text-align: center;
     padding: 2rem;
-    background-color: var(--bg-secondary); /* VARIABLE */
-    border-radius: var(--border-radius); /* VARIABLE */
-    box-shadow: 0 2px 8px var(--shadow-color); /* VARIABLE */
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .prompt h2 {

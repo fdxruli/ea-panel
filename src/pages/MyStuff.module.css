@@ -1,11 +1,13 @@
-/* src/pages/MyStuff.module.css (CON NUEVOS ESTILOS) */
+/* src/pages/MyStuff.module.css (CORREGIDO) */
 
-/* --- (Estilos anteriores sin cambios) --- */
 .container {
-    max-width: 900px;
+    max-width: 700px;
     margin: 2rem auto;
     padding: 1rem;
     font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
 }
 .container h1 {
     text-align: center;
@@ -24,7 +26,6 @@
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
     padding: 2rem;
-    margin-bottom: 2.5rem;
     box-shadow: 0 4px 15px var(--shadow-color);
 }
 .cardHeader {
@@ -55,12 +56,12 @@
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative; /* Necesario para el badge */
-    overflow: hidden; /* Para que el badge no se salga */
+    position: relative;
+    overflow: hidden;
 }
 .gridItem:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 6px 20px var(--shadow-color); /* VARIABLE */
 }
 .gridItem img {
     width: 100%;
@@ -145,14 +146,14 @@
     color: white;
 }
 .removeButton {
-    background-color: #f1f3f5;
+    background-color: var(--bg-primary); /* VARIABLE */
     color: var(--color-error);
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--border-color); /* VARIABLE */
 }
 .cancelButton {
-     background-color: #f1f3f5;
+     background-color: var(--bg-primary); /* VARIABLE */
     color: var(--text-secondary);
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--border-color); /* VARIABLE */
 }
 .reviewEditor textarea {
     width: 100%;
@@ -165,31 +166,28 @@
 .prompt {
     text-align: center;
     padding: 4rem 2rem;
-    background-color: #fff;
+    background-color: var(--bg-secondary); /* VARIABLE */
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 8px var(--shadow-color); /* VARIABLE */
 }
 
-
-/* --- 👇 ESTILOS NUEVOS AÑADIDOS --- */
-
-/* Estilo para el contenedor del producto no disponible */
 .unavailable {
-    background-color: #f8f9fa; /* Un gris muy claro */
+    background-color: var(--bg-primary); /* VARIABLE */
 }
 .unavailable img {
-    filter: grayscale(80%); /* Pone la imagen en blanco y negro */
+    filter: grayscale(80%);
     opacity: 0.7;
 }
 .unavailable h3 {
-    color: #adb5bd; /* Un color de texto más opaco */
+    color: var(--text-secondary); /* VARIABLE */
+    opacity: 0.7;
 }
 .unavailable .addButton {
-    background-color: #ced4da;
+    background-color: var(--border-color); /* VARIABLE */
     cursor: not-allowed;
+    color: var(--text-secondary);
 }
 
-/* Badge para los favoritos */
 .unavailableBadge {
     position: absolute;
     top: 10px;
@@ -203,7 +201,6 @@
     z-index: 2;
 }
 
-/* Texto para las reseñas */
 .unavailableText {
     font-size: 0.9rem;
     color: var(--text-secondary);

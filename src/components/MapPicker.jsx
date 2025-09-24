@@ -1,4 +1,4 @@
-// src/components/MapPicker.jsx (CORREGIDO Y SIMPLIFICADO)
+// src/components/MapPicker.jsx (ACTUALIZADO)
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
@@ -57,12 +57,10 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
     libraries: libraries,
   });
 
-  // Comunica la posición inicial al componente padre solo una vez.
   useEffect(() => {
     if (onLocationSelect) {
       onLocationSelect(initialPosition || defaultCenter);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   useEffect(() => {
@@ -71,8 +69,7 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
         setMapCenter(initialPosition);
         setLastValidPosition(initialPosition);
     }
-  }, [JSON.stringify(initialPosition)]); // La dependencia es un string, no un objeto
-  // --- 👆 FIN DE LA CORRECCIÓN ---
+  }, [JSON.stringify(initialPosition)]);
 
 
   const onPolygonLoad = useCallback(polygon => {
@@ -90,7 +87,6 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
       polygonRef.current &&
       window.google.maps.geometry.poly.containsLocation(event.latLng, polygonRef.current)
     ) {
-      // Si la posición es válida, actualiza el estado interno y notifica al padre.
       setMarkerPosition(newPosition);
       setLastValidPosition(newPosition);
       setMapCenter(newPosition);
@@ -98,7 +94,6 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
         onLocationSelect(newPosition);
       }
     } else {
-      // Si no es válida, revierte el marcador a la última posición buena.
       showAlert("Lo sentimos, solo hacemos entregas dentro de la zona marcada en verde. Por favor, mueve el pin a una ubicación válida.");
       setMarkerPosition(lastValidPosition);
       setMapCenter(lastValidPosition);
@@ -114,34 +109,35 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
   }
 
   return (
-    <div className={styles.mapContainer}>
-       <p className={styles.instruction}>
+    <div className={styles.wrapper}>
+      <p className={styles.instruction}>
         Mueve el pin rojo hasta tu ubicación exacta.
       </p>
 
-      {isLoaded ? (
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={mapCenter}
-          zoom={17}
-          options={mapOptions}
-        >
-          <Marker
-            position={markerPosition}
-            draggable={true}
-            onDragEnd={onMarkerDragEnd}
-          />
-          
-          <Polygon
-            paths={deliveryAreaCoordinates}
-            options={deliveryAreaOptions}
-            onLoad={onPolygonLoad}
-          />
-
-        </GoogleMap>
-      ) : (
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>Cargando mapa...</div>
-      )}
+      <div className={styles.mapContainer}>
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={mapCenter}
+            zoom={18} /* <-- ZOOM AUMENTADO */
+            options={mapOptions}
+          >
+            <Marker
+              position={markerPosition}
+              draggable={true}
+              onDragEnd={onMarkerDragEnd}
+            />
+            
+            <Polygon
+              paths={deliveryAreaCoordinates}
+              options={deliveryAreaOptions}
+              onLoad={onPolygonLoad}
+            />
+          </GoogleMap>
+        ) : (
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>Cargando mapa...</div>
+        )}
+      </div>
     </div>
   );
 }

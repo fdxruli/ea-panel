@@ -1,4 +1,4 @@
-// src/components/ProductModal.jsx (MODIFICADO PARA ANIMACIONES)
+// src/components/ProductModal.jsx (ACTUALIZADO)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ProductModal.module.css';
@@ -79,7 +79,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const { phone, setPhoneModalOpen } = useCustomer();
     const [isReviewFormVisible, setIsReviewFormVisible] = useState(false);
 
-    // --- 👇 LÓGICA DE ANIMACIÓN AÑADIDA ---
     const [isAnimating, setIsAnimating] = useState(false);
 
     const intervalRef = useRef(null);
@@ -90,16 +89,15 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     useEffect(() => {
         if (product) {
-            const timer = setTimeout(() => setIsAnimating(true), 10); // Inicia animación de entrada
+            const timer = setTimeout(() => setIsAnimating(true), 10);
             return () => clearTimeout(timer);
         }
     }, [product]);
 
     const handleClose = useCallback(() => {
-        setIsAnimating(false); // Inicia animación de salida
-        setTimeout(onClose, 600); // Llama al onClose del padre después de la animación
+        setIsAnimating(false);
+        setTimeout(onClose, 600);
     }, [onClose]);
-    // --- 👆 FIN DE LÓGICA DE ANIMACIÓN ---
 
 
     const handleNextImage = useCallback(() => {
@@ -216,6 +214,10 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     return (
         <div className={`${styles.overlay} ${isAnimating ? styles.open : ''}`} onClick={handleClose}>
             <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''}`} onClick={(e) => e.stopPropagation()}>
+                
+                {/* Botón de cerrar para ESCRITORIO */}
+                <button onClick={handleClose} className={`${styles.closeButton} ${styles.desktopOnly}`}>×</button>
+                
                 <div
                     className={styles.galleryContainer}
                     onMouseEnter={stopCarousel}
@@ -235,7 +237,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             className={`${styles.productImage} ${index === currentImageIndex ? styles.active : ''}`}
                         />
                     ))}
-                    <button onClick={handleClose} className={styles.closeButton}>×</button>
+                    {/* Botón de cerrar para MÓVIL */}
+                    <button onClick={handleClose} className={`${styles.closeButton} ${styles.mobileOnly}`}>×</button>
                 </div>
 
                 <div className={styles.productDetails}>
@@ -244,7 +247,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             <h2 className={styles.productName}>{product.name}</h2>
                             <AverageRating reviews={productReviews} /> 
                         </div>
-                        <button type="button" onClick={handleToggleFavorite} className={styles.favoriteButton}>
+                        {/* Botón de favorito para MÓVIL */}
+                        <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.mobileOnly}`}>
                             <HeartIcon isFavorite={isFavorite} />
                         </button>
                     </div>
@@ -283,9 +287,16 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                                 <span>{quantity}</span>
                                 <button type="button" onClick={incrementQuantity}>+</button>
                             </div>
-                            <button type="button" onClick={handleAddToCartClick} className={`${styles.addButton} ${wasAdded ? styles.added : ''}`} disabled={wasAdded}>
-                                {wasAdded ? '¡Añadido!' : `Añadir por $${(product.price * quantity).toFixed(2)}`}
-                            </button>
+                             {/* Contenedor para los botones de acción principales */}
+                            <div className={styles.actionButtons}>
+                                {/* Botón de favorito para ESCRITORIO */}
+                                <button type="button" onClick={handleAddToCartClick} className={`${styles.addButton} ${wasAdded ? styles.added : ''}`} disabled={wasAdded}>
+                                    {wasAdded ? '¡Añadido!' : `Añadir por $${(product.price * quantity).toFixed(2)}`}
+                                </button>
+                                <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.desktopOnly}`}>
+                                    <HeartIcon isFavorite={isFavorite} />
+                                </button>
+                            </div>
                         </div>
                     )}
                     {activeTab === 'reviews' && (

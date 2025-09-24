@@ -1,4 +1,4 @@
-/* src/components/ProductModal.module.css (MODIFICADO) */
+/* src/components/ProductModal.module.css (ACTUALIZADO) */
 
 /* --- Estilos Base del Overlay --- */
 .overlay {
@@ -18,7 +18,6 @@
   transition: opacity 0.5s ease;
 }
 
-/* --- 👇 LÓGICA PRINCIPAL DEL CAMBIO --- */
 .modalContent {
   background: var(--bg-secondary);
   width: 100%;
@@ -32,8 +31,6 @@
   bottom: 0;
   left: 0;
   border-radius: 1.5rem 1.5rem 0 0; /* Bordes redondeados superiores */
-
-  /* Animación de entrada/salida */
   transform: translateY(100%);
   opacity: 1;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -42,10 +39,7 @@
 .modalContent.open {
     transform: translateY(0);
 }
-/* --- 👆 FIN DE LA LÓGICA PRINCIPAL --- */
 
-
-/* --- Sección de la Galería --- */
 .galleryContainer {
   position: relative; width: 100%; padding-top: 56.25%;
   background-color: #f0f0f0; flex-shrink: 0;
@@ -93,9 +87,9 @@
   color: white; border: none; font-size: 2rem; cursor: pointer;
   width: 40px; height: 40px; border-radius: 50%; display: flex;
   align-items: center; justify-content: center; line-height: 1;
+  z-index: 15;
 }
 
-/* --- (El resto del archivo no cambia) --- */
 .productDetails {
   padding: 1.5rem; display: flex; flex-direction: column;
   flex-grow: 1; overflow: hidden;
@@ -191,6 +185,9 @@
   font-weight: 600; background-color: var(--color-primary);
   color: white; border-radius: 50px;
 }
+.actionButtons {
+    flex-grow: 1;
+}
 .addButton.added { background-color: var(--color-success); }
 .showReviewFormButton:disabled {
     background-color: var(--border-color);
@@ -233,31 +230,79 @@
     border: 1px solid var(--border-color);
 }
 
-/* --- 👇 ESTILOS PARA ESCRITORIO --- */
+/* --- Lógica de visibilidad para móvil vs. escritorio --- */
+.desktopOnly {
+    display: none;
+}
+
+/* --- ESTILOS PARA ESCRITORIO --- */
 @media (min-width: 768px) {
   .overlay {
-    align-items: center; /* Vuelve a centrar verticalmente */
-    padding: 1rem; /* Restaura el padding */
+    align-items: center;
+    padding: 1rem;
   }
-
   .modalContent {
     flex-direction: row;
-    position: relative; /* Vuelve a la posición por defecto */
+    position: relative;
     bottom: auto;
     left: auto;
-    border-radius: var(--border-radius); /* Restaura bordes normales */
+    border-radius: var(--border-radius);
     max-width: 900px;
     box-shadow: 0 5px 25px rgba(0,0,0,0.2);
-    
-    /* Animación de escritorio */
     transform: scale(0.95);
     transition: transform 0.3s ease, opacity 0.3s ease;
   }
-
   .modalContent.open {
     transform: scale(1);
   }
-
   .galleryContainer { width: 50%; padding-top: 0; height: auto; }
   .productDetails { width: 50%; overflow: hidden; }
+
+  /* --- MEJORAS SOLICITADAS --- */
+  .mobileOnly {
+    display: none !important;
+  }
+  .desktopOnly {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .closeButton.desktopOnly {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    z-index: 20;
+    background: none;
+    color: var(--text-secondary);
+  }
+  .closeButton.desktopOnly:hover {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .actionButtons {
+    display: flex;
+    gap: 0.8rem;
+    flex-grow: 1;
+    align-items: stretch;
+  }
+
+  .favoriteButton.desktopOnly {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    color: var(--text-secondary);
+    padding: 0 1rem;
+    flex-shrink: 0;
+  }
+  .favoriteButton.desktopOnly:hover {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+  }
+  
+  .addButton {
+    width: 100%;
+    flex-grow: 1;
+  }
 }

@@ -1,11 +1,14 @@
 /* src/pages/TermsPage.module.css */
-.container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+.modalContent label {
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
+.modalActions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
 }
 
 .meta {
