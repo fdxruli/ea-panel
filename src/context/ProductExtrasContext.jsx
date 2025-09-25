@@ -1,4 +1,4 @@
-// src/context/ProductExtrasContext.jsx (OPTIMIZADO)
+// src/context/ProductExtrasContext.jsx (MODIFICADO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -20,10 +20,13 @@ export const ProductExtrasProvider = ({ children }) => {
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
         setLoading(true);
         try {
+            // --- 👇 AQUÍ ESTÁ EL CAMBIO ---
+            // Ahora pedimos más datos del producto asociado a la reseña.
             const { data: revData } = await supabase
                 .from('product_reviews')
-                .select('*, products(id), customers(name)')
+                .select('*, products(id, name, image_url, is_active), customers(name)')
                 .order('created_at', { ascending: false });
+            // --- 👆 FIN DEL CAMBIO ---
             setReviews(revData || []);
 
             if (currentCustomerId) {
@@ -65,9 +68,7 @@ export const ProductExtrasProvider = ({ children }) => {
         getCustomerIdAndFetch();
     }, [phone, fetchAndCacheExtras]);
 
-    // --- 👇 OPTIMIZACIÓN DE SUSCRIPCIONES EN TIEMPO REAL ---
     useEffect(() => {
-        // 1. Definimos una función para manejar los cambios
         const handleChanges = (payload, table) => {
             console.log(`Real-time change in ${table}:`, payload);
             if (customerId) {
@@ -75,10 +76,8 @@ export const ProductExtrasProvider = ({ children }) => {
             }
         };
 
-        // 2. Creamos un único canal para todas las suscripciones de este contexto.
         const channel = supabase.channel('product-extras');
 
-        // 3. Nos suscribimos a los cambios en ambas tablas desde el mismo canal.
         channel
             .on(
                 'postgres_changes',
@@ -91,8 +90,6 @@ export const ProductExtrasProvider = ({ children }) => {
                 (payload) => handleChanges(payload, 'customer_favorites')
             )
             .subscribe((status, err) => {
-                // 4. (OPCIONAL PERO RECOMENDADO) Manejamos los errores de conexión aquí.
-                // Esto evita que los errores no controlados inunden la consola.
                 if (status === 'SUBSCRIBED') {
                     console.log('✅ Conectado al canal de extras en tiempo real.');
                 }
@@ -104,15 +101,11 @@ export const ProductExtrasProvider = ({ children }) => {
                 }
             });
 
-        // 5. La función de limpieza se asegura de desuscribirnos del canal
-        // cuando el componente se desmonte para evitar fugas de memoria.
         return () => {
             console.log('Desuscribiendo del canal de extras.');
             supabase.removeChannel(channel);
         };
-    // Re-ejecutamos este efecto solo si el customerId o la función de fetch cambian.
     }, [customerId, fetchAndCacheExtras]);
-    // --- 👆 FIN DE LA OPTIMIZACIÓN ---
 
     const value = {
         reviews,

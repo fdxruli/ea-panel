@@ -1,7 +1,7 @@
 // src/components/UserMenu.jsx (MODIFICADO)
 
 import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useLocation } from 'react-router-dom'; // <-- 1. IMPORTAR useLocation
+import { NavLink, useLocation } from 'react-router-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
 import styles from './UserMenu.module.css';
@@ -17,7 +17,7 @@ export default function UserMenu() {
     const { phone, setPhoneModalOpen, setCheckoutModalOpen } = useCustomer();
     const { customer } = useUserData();
     const menuRef = useRef(null);
-    const location = useLocation(); // <-- 2. OBTENER LA UBICACIÓN ACTUAL
+    const location = useLocation();
 
     const userInitial = customer?.name ? customer.name.charAt(0).toUpperCase() : '';
 
@@ -57,11 +57,10 @@ export default function UserMenu() {
             );
         }
 
-        // --- 👇 3. LÓGICA DINÁMICA DE ENLACES ---
         const navLinks = [
-            { to: "/mi-perfil", icon: <UserIcon />, label: "Mi Perfil" },
-            { to: "/mi-actividad", icon: <HeartIcon />, label: "Mi Actividad" },
-            { to: "/mis-pedidos", icon: <ClipboardIcon />, label: "Mis Pedidos" },
+            { to: "/mi-perfil", icon: <UserIcon />, label: "Mi Perfil", replace: true },
+            { to: "/mi-actividad", icon: <HeartIcon />, label: "Mi Actividad", replace: true },
+            { to: "/mis-pedidos", icon: <ClipboardIcon />, label: "Mis Pedidos", replace: true },
         ];
 
         const isUserOnMenuPage = navLinks.some(link => link.to === location.pathname);
@@ -69,14 +68,13 @@ export default function UserMenu() {
         let finalLinks = navLinks.filter(link => link.to !== location.pathname);
 
         if (isUserOnMenuPage) {
-            finalLinks.unshift({ to: "/", icon: <HomeIcon />, label: "Inicio" });
+            finalLinks.unshift({ to: "/", icon: <HomeIcon />, label: "Inicio", replace: false });
         }
-        // --- 👆 FIN DE LA LÓGICA ---
 
         return (
             <nav className={styles.links}>
                 {finalLinks.map(link => (
-                    <NavLink key={link.to} to={link.to} className={styles.dropdownLink} onClick={() => setIsOpen(false)}>
+                    <NavLink key={link.to} to={link.to} replace={link.replace} className={styles.dropdownLink} onClick={() => setIsOpen(false)}>
                         {link.icon}<span>{link.label}</span>
                     </NavLink>
                 ))}

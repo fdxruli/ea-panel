@@ -1,4 +1,4 @@
-// src/pages/MyStuff.jsx (CORREGIDO)
+// src/pages/MyStuff.jsx (MODIFICADO)
 
 import React, { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -116,8 +116,10 @@ export default function MyStuff() {
         if (customer) {
             return (
                 <>
-                    <h1>Hola, {customer.name}</h1>
-                    <p className={styles.subtitle}>Aquí puedes gestionar tus productos favoritos y las reseñas que has escrito.</p>
+                    {/* --- 👇 AQUÍ ESTÁ EL CAMBIO --- */}
+                    <h1>Mi Actividad</h1>
+                    <p className={styles.subtitle}>Gestiona tus productos favoritos y tus reseñas.</p>
+                    {/* --- 👆 FIN DEL CAMBIO --- */}
 
                     <div className={styles.card}>
                         <div className={styles.cardHeader}> <HeartIcon /> <h2>Mis Favoritos ({favorites.length})</h2> </div>

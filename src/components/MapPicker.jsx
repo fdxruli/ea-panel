@@ -41,7 +41,7 @@ const mapOptions = {
   tilt: 0
 };
 
-export default function MapPicker({ onLocationSelect, initialPosition }) {
+export default function MapPicker({ onLocationSelect, initialPosition, isDraggable = true }) {
   const { showAlert } = useAlert();
   const defaultCenter = { lat: 15.852182, lng: -91.977533 };
   
@@ -110,9 +110,11 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
 
   return (
     <div className={styles.wrapper}>
-      <p className={styles.instruction}>
-        Mueve el pin rojo hasta tu ubicación exacta.
-      </p>
+      {isDraggable && (
+        <p className={styles.instruction}>
+          Mueve el pin rojo hasta tu ubicación exacta.
+        </p>
+      )}
 
       <div className={styles.mapContainer}>
         {isLoaded ? (
@@ -124,7 +126,7 @@ export default function MapPicker({ onLocationSelect, initialPosition }) {
           >
             <Marker
               position={markerPosition}
-              draggable={true}
+              draggable={isDraggable}
               onDragEnd={onMarkerDragEnd}
             />
             

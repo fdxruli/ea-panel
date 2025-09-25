@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import styles from './SpecialPricesForm.module.css';
+import styles from './SpecialPriceForm.module.css';
 
 const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
   const [targetType, setTargetType] = useState(initialData?.product_id ? 'product' : 'category');

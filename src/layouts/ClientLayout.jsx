@@ -1,4 +1,4 @@
-// src/layouts/ClientLayout.jsx (ACTUALIZADO)
+// src/layouts/ClientLayout.jsx (MODIFICADO)
 
 import React, { useState, useEffect } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
@@ -14,7 +14,7 @@ import './ClientLayout.css';
 import AlertModal from "../components/AlertModal";
 import FloatingCartButton from "../components/FloatingCartButton";
 import UserMenu from "../components/UserMenu";
-import AddressModal from "../components/AddressModal"; // <-- 1. IMPORTAR MODAL DE DIRECCIÓN
+import AddressModal from "../components/AddressModal";
 
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
@@ -26,12 +26,11 @@ export default function ClientLayout() {
   const { toast, cartItems, toggleCart } = useCart();
   const { notification } = useProducts();
   const { isCheckoutModalOpen, setCheckoutModalOpen, phone, checkoutMode, isFirstAddressRequired, setIsFirstAddressRequired } = useCustomer();
-  const { customer, refetch: refetchUserData } = useUserData(); // <-- 2. OBTENER DATOS DE USUARIO
-  const [isAddressModalOpen, setAddressModalOpen] = useState(false); // <-- 3. ESTADO LOCAL
+  const { customer, refetch: refetchUserData } = useUserData();
+  const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
-  // --- 👇 4. LÓGICA PARA MOSTRAR EL MODAL DE DIRECCIÓN ---
   useEffect(() => {
     if (isFirstAddressRequired && customer) {
       setAddressModalOpen(true);
@@ -43,13 +42,11 @@ export default function ClientLayout() {
     const { error } = await supabase.from('customer_addresses').insert({ ...addressData, customer_id: customer.id });
     if (error) {
       console.error(error);
-      // Opcional: mostrar alerta de error
     } else {
       refetchUserData();
       setAddressModalOpen(false);
     }
   };
-  // --- 👆 FIN DE LA LÓGICA ---
 
   return (
     <div className="client-layout">
@@ -58,7 +55,6 @@ export default function ClientLayout() {
       {notification && <div className="update-toast">{notification}</div>}
       {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}
       
-      {/* --- 5. RENDERIZAR EL MODAL DE DIRECCIÓN --- */}
       {isAddressModalOpen && customer && (
         <AddressModal
           isOpen={isAddressModalOpen}
@@ -105,13 +101,13 @@ export default function ClientLayout() {
         <NavLink to="/" end className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
             <HomeIcon /> <span>Inicio</span>
         </NavLink>
-        <NavLink to="/mi-perfil" className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
+        <NavLink to="/mi-perfil" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
             <UserIcon /> <span>Mi Perfil</span>
         </NavLink>
-        <NavLink to="/mi-actividad" className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
+        <NavLink to="/mi-actividad" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
             <HeartIcon /> <span>Mi Actividad</span>
         </NavLink>
-        <NavLink to="/mis-pedidos" className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
+        <NavLink to="/mis-pedidos" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
             <ClipboardIcon /> <span>Mis Pedidos</span>
         </NavLink>
       </footer>

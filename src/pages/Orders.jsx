@@ -1,6 +1,6 @@
-// src/pages/Orders.jsx (MODIFICADO)
+// src/pages/Orders.jsx (MODIFICADO Y CON REAL-TIME)
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -10,30 +10,45 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
 
-  const fetchOrders = async () => {
+  // --- 👇 SE ENVOLVIÓ EN useCallback PARA OPTIMIZACIÓN ---
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
       .select(`
-        id,
-        order_code,
-        customer_id,
-        status,
-        total_amount,
-        created_at,
-        cancellation_reason,
-        customers(name, phone)
+        id, order_code, customer_id, status, total_amount, created_at,
+        cancellation_reason, customers(name, phone)
       `)
       .order("created_at", { ascending: false });
 
     if (error) console.error(error);
     else setOrders(data);
     setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchOrders();
   }, []);
+
+  // --- 👇 useEffect AHORA INCLUYE LA SUSCRIPCIÓN EN TIEMPO REAL ---
+  useEffect(() => {
+    fetchOrders(); // Carga inicial de datos
+
+    // Escucha cambios en la tabla 'orders' en tiempo real
+    const channel = supabase
+      .channel('public:orders:admin')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log('Cambio detectado en pedidos (admin), actualizando...', payload);
+          fetchOrders(); // Vuelve a cargar los datos cuando hay un cambio
+        }
+      )
+      .subscribe();
+
+    // Se desuscribe del canal al desmontar el componente para evitar fugas de memoria
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchOrders]);
+
 
   const fetchOrderItems = async (orderId) => {
     const { data, error } = await supabase
@@ -44,14 +59,12 @@ export default function Orders() {
     if (error) console.error(error);
     else setOrderItems(data);
   };
-
-  // --- 👇 FUNCIÓN DE ACTUALIZAR ESTADO MODIFICADA ---
+  
   const updateStatus = async (orderId, newStatus) => {
     let updateData = { status: newStatus };
     
     if (newStatus === 'cancelado') {
       const reason = prompt("Por favor, introduce el motivo de la cancelación:");
-      // Si el admin presiona "Cancelar" en el prompt, no hacemos nada.
       if (reason === null) return;
       updateData.cancellation_reason = reason || 'Cancelado por el administrador.';
     }
@@ -62,7 +75,7 @@ export default function Orders() {
       .eq("id", orderId);
 
     if (error) console.error(error);
-    else fetchOrders();
+    // Ya no es necesario llamar a fetchOrders() aquí, el listener de websocket lo hará automáticamente
   };
 
   if (loading) return <LoadingSpinner />;

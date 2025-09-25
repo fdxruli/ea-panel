@@ -124,10 +124,37 @@
     align-items: center;
     gap: 0.5rem;
 }
+
+/* --- 👇 NUEVOS ESTILOS PARA LAS ESTRELLAS --- */
 .stars {
     color: #ffc107;
     font-size: 1.2rem;
+    display: flex;
+    align-items: center;
 }
+
+.starIcon {
+    line-height: 1;
+}
+
+.partialStarContainer {
+    position: relative;
+    display: inline-block;
+    line-height: 1;
+}
+
+.partialStarFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    height: 100%;
+    color: #ffc107;
+}
+/* --- 👆 FIN DE LOS NUEVOS ESTILOS --- */
+
+
 .ratingText {
     color: var(--text-secondary);
     font-size: 0.9rem;

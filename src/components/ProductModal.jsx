@@ -35,6 +35,7 @@ const HeartIcon = ({ isFavorite }) => (
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
     </svg>
 );
+// --- 👇 AQUÍ COMIENZA LA MAGIA ---
 const AverageRating = ({ reviews }) => {
     if (!reviews || reviews.length === 0) {
         return <p className={styles.noRating}>Aún no hay calificaciones. ¡Sé el primero en calificar!</p>;
@@ -43,20 +44,34 @@ const AverageRating = ({ reviews }) => {
     const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
     const average = totalRating / reviews.length;
     const fullStars = Math.floor(average);
-    const halfStar = average % 1 >= 0.5 ? 1 : 0;
-    const emptyStars = 5 - fullStars - halfStar;
+    const decimalPart = average % 1;
+    // Se calcula cuántas estrellas vacías mostrar
+    const emptyStars = 5 - fullStars - (decimalPart > 0.05 ? 1 : 0);
 
     return (
         <div className={styles.averageRatingContainer}>
             <div className={styles.stars}>
-                {'★'.repeat(fullStars)}
-                {halfStar ? '½' : ''}
-                {'☆'.repeat(emptyStars)}
+                {/* Renderiza las estrellas completas */}
+                {[...Array(fullStars)].map((_, i) => <span key={`full-${i}`} className={styles.starIcon}>★</span>)}
+                
+                {/* Renderiza la estrella parcial si el decimal es significativo */}
+                {decimalPart > 0.05 && (
+                    <span className={styles.partialStarContainer}>
+                        <span className={styles.starIcon}>☆</span>
+                        <span className={styles.partialStarFill} style={{ width: `${decimalPart * 100}%` }}>
+                           <span className={styles.starIcon}>★</span>
+                        </span>
+                    </span>
+                )}
+
+                {/* Renderiza las estrellas vacías restantes */}
+                {[...Array(emptyStars)].map((_, i) => <span key={`empty-${i}`} className={styles.starIcon}>☆</span>)}
             </div>
             <span className={styles.ratingText}>{average.toFixed(1)} de 5 estrellas</span>
         </div>
     );
 };
+// --- 👆 AQUÍ TERMINA LA MEJORA ---
 
 
 export default function ProductModal({ product, onClose, onAddToCart }) {

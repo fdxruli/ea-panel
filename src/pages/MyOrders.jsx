@@ -1,4 +1,4 @@
-// src/pages/MyOrders.jsx (CORREGIDO)
+// src/pages/MyOrders.jsx (MODIFICADO)
 
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -88,6 +88,13 @@ export default function MyOrders() {
             <ul>
                 {order.order_items.map(item => ( <li key={item.id}>{item.quantity}x {item.products?.name || 'Producto no disponible'}</li> ))}
             </ul>
+            {/* --- 👇 AQUÍ ESTÁ LA LÓGICA PARA MOSTRAR EL MOTIVO --- */}
+            {order.status === 'cancelado' && order.cancellation_reason && (
+                <p className={styles.cancellationReason}>
+                    <strong>Motivo:</strong> {order.cancellation_reason}
+                </p>
+            )}
+            {/* --- 👆 FIN DE LA LÓGICA --- */}
             <div className={styles.orderFooter}>
                 <strong>Total: ${order.total_amount.toFixed(2)}</strong>
                 <div className={styles.actionsContainer}>
@@ -150,8 +157,6 @@ export default function MyOrders() {
             const pastOrders = orders.length > 1 ? orders.slice(1) : [];
             return (
                  <div className={styles.ordersSection}>
-                    <h2>¡Hola, {customer.name}!</h2>
-                    <p>Mostrando pedidos para el número: <strong>{phone}</strong></p>
                     {orders.length > 0 ? (
                         <>
                             {latestOrder && (
@@ -168,7 +173,10 @@ export default function MyOrders() {
                             )}
                         </>
                     ) : (
-                         <p>No tienes pedidos registrados con este número.</p>
+                         <div className={styles.prompt}>
+                            <h2>No tienes pedidos</h2>
+                            <p>Parece que aún no has realizado ningún pedido con este número.</p>
+                         </div>
                     )}
                 </div>
             );
