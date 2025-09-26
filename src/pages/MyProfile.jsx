@@ -1,4 +1,4 @@
-// src/pages/MyProfile.jsx (CORREGIDO CON CARRUSEL)
+// src/pages/MyProfile.jsx (MODIFICADO)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -12,6 +12,8 @@ import { useAlert } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthPrompt from '../components/AuthPrompt';
 
+// --- (El resto de los imports y el componente principal se mantienen igual) ---
+
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone, savePhone, setCheckoutModalOpen } = useCustomer();
@@ -23,13 +25,42 @@ export default function MyProfile() {
     const [editingAddress, setEditingAddress] = useState(null);
     const [addressToDelete, setAddressToDelete] = useState(null);
     const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
-    
+
     useEffect(() => {
         if (customer) {
             setEditForm({ name: customer.name, phone: customer.phone });
         }
     }, [customer]);
 
+    // --- 👇 NUEVA FUNCIÓN PARA ESTABLECER LA DIRECCIÓN PREDETERMINADA ---
+    const handleSetDefaultAddress = async (addressId) => {
+        // Primero, quitamos la marca de 'default' de todas las demás direcciones del usuario
+        const { error: unsetError } = await supabase
+            .from('customer_addresses')
+            .update({ is_default: false })
+            .eq('customer_id', customer.id);
+
+        if (unsetError) {
+            showAlert("Error al actualizar las direcciones.");
+            return;
+        }
+
+        // Luego, establecemos la nueva dirección como predeterminada
+        const { error: setError } = await supabase
+            .from('customer_addresses')
+            .update({ is_default: true })
+            .eq('id', addressId);
+
+        if (setError) {
+            showAlert("Error al establecer la dirección predeterminada.");
+        } else {
+            showAlert("Dirección predeterminada actualizada.");
+            refetch(); // Recargamos los datos para que la UI se actualice
+        }
+    };
+    // --- 👆 FIN DE LA NUEVA FUNCIÓN ---
+
+    // --- (El resto de las funciones como handleInfoSubmit, etc., se mantienen igual) ---
 
     const handleInfoSubmit = async (e) => {
         e.preventDefault();
@@ -61,7 +92,7 @@ export default function MyProfile() {
     const handleSaveAddress = async (addressData, addressId) => {
         let response;
         const dataToSave = { ...addressData, customer_id: customer.id };
-        
+
         if (addressId) {
             response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId);
         } else {
@@ -84,17 +115,18 @@ export default function MyProfile() {
         setLogoutModalOpen(false);
     };
 
+
     const renderContent = () => {
         if (!phone) {
-             return ( <AuthPrompt title="Ingresa tu número" message="Para ver y editar tu información, necesitamos tu número de WhatsApp." /> );
+            return (<AuthPrompt />);
         }
 
         if (loading) return <LoadingSpinner />;
-        if (error) { return ( <div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos.</p> </div> ); }
+        if (error) { return (<div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos.</p> </div>); }
 
         if (!customer) {
             return (
-                 <div className={styles.prompt}>
+                <div className={styles.prompt}>
                     <h2>¡Bienvenido!</h2>
                     <p>Parece que eres nuevo por aquí. Completa tu perfil para guardar tus datos y direcciones.</p>
                     <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>
@@ -106,7 +138,7 @@ export default function MyProfile() {
 
         if (customer) {
             return (
-                 <>
+                <>
                     <div className={styles.card}>
                         <h2>Mis Datos</h2>
                         <form onSubmit={handleInfoSubmit} className={styles.form}>
@@ -118,7 +150,7 @@ export default function MyProfile() {
                         </form>
                     </div>
 
-                     <div className={styles.card}>
+                    <div className={styles.card}>
                         <h2>Apariencia</h2>
                         <div className={styles.formGroup}>
                             <label htmlFor="theme-select">Tema de la aplicación</label>
@@ -138,16 +170,26 @@ export default function MyProfile() {
                         {addresses.length > 0 ? (
                             <div className={styles.addressCarousel}>
                                 {addresses.map(addr => (
-                                    <div key={addr.id} className={styles.addressItem}>
+                                    // --- 👇 MODIFICACIÓN EN LA TARJETA DE DIRECCIÓN ---
+                                    <div key={addr.id} className={`${styles.addressItem} ${addr.is_default ? styles.defaultAddress : ''}`}>
                                         <div>
-                                            <strong>{addr.label}</strong>
+                                            <div className={styles.addressLabelContainer}>
+                                                <strong>{addr.label}</strong>
+                                                {addr.is_default && <span className={styles.defaultBadge}>Predeterminada</span>}
+                                            </div>
                                             <p>{addr.address_reference || 'Sin referencia'}</p>
                                         </div>
                                         <div className={styles.addressActions}>
                                             <button onClick={() => openAddressModal(addr)} className={styles.editButton}>Editar</button>
                                             <button onClick={() => setAddressToDelete(addr)} className={styles.deleteButton}>Eliminar</button>
+                                            {!addr.is_default && (
+                                                <button onClick={() => handleSetDefaultAddress(addr.id)} className={styles.setDefaultButton}>
+                                                    Hacer Predeterminada
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
+                                    // --- 👆 FIN DE LA MODIFICACIÓN ---
                                 ))}
                             </div>
                         ) : <p>No tienes direcciones guardadas.</p>}
@@ -164,7 +206,7 @@ export default function MyProfile() {
 
         return null;
     };
-
+    // --- (El return principal con los modales se mantiene igual) ---
     return (
         <div className={styles.container}>
             {renderContent()}
@@ -176,7 +218,7 @@ export default function MyProfile() {
                 address={editingAddress}
                 customerId={customer?.id}
             />
-            
+
             <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
                 Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.
             </ConfirmModal>

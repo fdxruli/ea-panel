@@ -22,7 +22,7 @@ export default function MyStuff() {
 
     const { customer, loading: userLoading, error } = useUserData();
     const { favorites, reviews: allReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
-    
+
     const [editingReview, setEditingReview] = useState(null);
     const [reviewToDelete, setReviewToDelete] = useState(null);
     const [favoriteToRemove, setFavoriteToRemove] = useState(null);
@@ -42,7 +42,7 @@ export default function MyStuff() {
         setFavoriteToRemove(null);
         refetchExtras();
     };
-    
+
     const handleUpdateReview = async () => {
         if (!editingReview) return;
         const { error } = await supabase
@@ -58,7 +58,7 @@ export default function MyStuff() {
             refetchExtras();
         }
     };
-    
+
     const handleDeleteReview = async () => {
         if (!reviewToDelete) return;
         await supabase.from('product_reviews').delete().eq('id', reviewToDelete.id);
@@ -80,18 +80,15 @@ export default function MyStuff() {
 
     const renderContent = () => {
         if (!phone) {
-             return (
-                <AuthPrompt
-                    title="Ingresa tu número para ver tu actividad"
-                    message="Para ver tus favoritos y reseñas, necesitamos tu número de WhatsApp."
-                />
+            return (
+                <AuthPrompt/>
             );
         }
-    
+
         if (loading) return <LoadingSpinner />;
-    
+
         if (error) {
-             return (
+            return (
                 <div className={styles.prompt}>
                     <h2>Error Inesperado</h2>
                     <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p>
@@ -101,7 +98,7 @@ export default function MyStuff() {
 
         if (!customer) {
             return (
-                 <div className={styles.prompt}>
+                <div className={styles.prompt}>
                     <h2>¡Bienvenido!</h2>
                     <p>Parece que eres nuevo por aquí. Completa tu perfil para guardar tus favoritos y reseñas.</p>
                     <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>
@@ -110,7 +107,7 @@ export default function MyStuff() {
                 </div>
             );
         }
-    
+
         if (customer) {
             return (
                 <>
@@ -160,7 +157,7 @@ export default function MyStuff() {
                                                             <img src={rev.products.image_url || 'https://placehold.co/80'} alt={rev.products.name} />
                                                             <h4>Editando reseña de: <strong>{rev.products.name}</strong></h4>
                                                         </div>
-                                                        <textarea rows="3" value={editingReview.comment} onChange={e => setEditingReview({...editingReview, comment: e.target.value})} />
+                                                        <textarea rows="3" value={editingReview.comment} onChange={e => setEditingReview({ ...editingReview, comment: e.target.value })} />
                                                         <div className={styles.reviewActions}>
                                                             <button onClick={() => setEditingReview(null)} className={styles.cancelButton}>Cancelar</button>
                                                             <button onClick={handleUpdateReview} className={styles.actionButton}>Guardar</button>
@@ -197,7 +194,7 @@ export default function MyStuff() {
     return (
         <div className={styles.container}>
             {renderContent()}
-            
+
             <ConfirmModal
                 isOpen={!!favoriteToRemove}
                 onClose={() => setFavoriteToRemove(null)}

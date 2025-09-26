@@ -1,13 +1,13 @@
 /* src/pages/MyOrders.module.css (CORREGIDO Y UNIFICADO) */
 
 .container {
-    max-width: 100%; /* Permitimos que ocupe todo el ancho para el carrusel */
+    max-width: 700px;
     margin: 2rem auto;
-    padding: 0 1rem; /* Padding horizontal para que el carrusel no toque los bordes */
+    padding: 1rem;
     font-family: 'Poppins', sans-serif;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 2rem;
 }
 
 .container h1, .container h2, .container h3 {
@@ -25,6 +25,7 @@
     padding: 0.5rem; /* Espacio para la sombra de las tarjetas */
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
+    align-items: flex-start; /* <-- ESTA ES LA LÍNEA AÑADIDA */
 }
 /* Ocultar la barra de scroll */
 .ordersContainer::-webkit-scrollbar { display: none; }
@@ -175,4 +176,85 @@
     color: var(--text-secondary);
     font-size: 0.9rem;
     border-radius: 4px;
+}
+
+/* --- 👇 NUEVOS ESTILOS PARA LA NAVEGACIÓN DEL CARRUSEL EN ESCRITORIO --- */
+.carouselWrapper {
+    position: relative;
+}
+
+.scrollButton {
+    display: none; /* Ocultos por defecto en móvil */
+}
+
+@media (min-width: 768px) {
+    .scrollButton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        background-color: var(--bg-secondary);
+        color: var(--color-primary);
+        border: 2px solid var(--border-color);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        font-size: 2rem;
+        cursor: pointer;
+        box-shadow: 0 2px 8px var(--shadow-color);
+        transition: all 0.2s ease;
+    }
+
+    .scrollButton:hover {
+        background-color: var(--color-primary);
+        color: var(--text-light);
+        border-color: var(--color-primary);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .scrollButton.prev {
+        left: -22px; /* La mitad del ancho del botón para que sobresalga */
+    }
+
+    .scrollButton.next {
+        right: -22px; /* La mitad del ancho del botón para que sobresalga */
+    }
+
+    /* Añadimos un poco de espacio al contenedor para que los botones no se corten */
+    .ordersContainer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* --- 👇 Icono de cierre (-) --- */
+.orderCard.open .toggleIcon {
+    transform: none; /* Quitamos la rotación de 45 grados */
+    color: var(--color-error); /* Cambiamos el color para indicar "cerrar" */
+}
+
+
+/* --- 👇 NUEVOS ESTILOS PARA LAYOUT DE ESCRITORIO --- */
+@media (min-width: 1024px) {
+    .ordersContainer {
+        /* Convertimos el carrusel en una rejilla */
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        overflow-x: visible; /* Desactivamos el scroll horizontal */
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .orderCard {
+        /* Hacemos que la tarjeta no tenga un ancho fijo para que se adapte a la rejilla */
+        flex: 1 1 350px;
+    }
+
+    /* Ya no necesitamos los botones de scroll, los ocultamos por si acaso */
+    .scrollButton {
+        display: none;
+    }
 }

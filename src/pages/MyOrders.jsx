@@ -1,6 +1,6 @@
 // src/pages/MyOrders.jsx (CORREGIDO)
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react'; // <-- AÑADIR useEffect
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
@@ -24,10 +24,26 @@ export default function MyOrders() {
     const [orderToCancel, setOrderToCancel] = useState(null);
     const [isRequestingCancel, setIsRequestingCancel] = useState(false);
     const [orderToReorder, setOrderToReorder] = useState(null);
-    const [openOrderId, setOpenOrderId] = useState(null);
 
+    // --- 👇 CAMBIO 1: El estado ahora es un array para guardar múltiples IDs abiertos ---
+    const [openOrderIds, setOpenOrderIds] = useState([]);
+
+    // --- 👇 CAMBIO 2: useEffect para abrir todos los pedidos en escritorio al cargar ---
+    useEffect(() => {
+        const isDesktop = window.innerWidth >= 768;
+        // Si es escritorio y ya tenemos los pedidos, los abrimos todos.
+        if (isDesktop && orders.length > 0) {
+            setOpenOrderIds(orders.map(o => o.id));
+        }
+    }, [orders]); // Se ejecuta cada vez que la lista de pedidos se carga/cambia.
+
+    // --- 👇 CAMBIO 3: La función de toggle ahora añade o quita del array ---
     const handleToggleOrder = (orderId) => {
-        setOpenOrderId(prevId => (prevId === orderId ? null : orderId));
+        setOpenOrderIds(prevIds =>
+            prevIds.includes(orderId)
+                ? prevIds.filter(id => id !== orderId) // Si ya está, lo quitamos (cerrar)
+                : [...prevIds, orderId]                 // Si no está, lo añadimos (abrir)
+        );
     };
 
     const handleCancelClick = (order) => {
@@ -38,7 +54,7 @@ export default function MyOrders() {
             setOrderToCancel(order);
         }
     };
-    
+
     const confirmDirectCancel = async () => {
         if (!orderToCancel) return;
         const { error } = await supabase
@@ -67,7 +83,7 @@ export default function MyOrders() {
         const newCartItems = order.order_items
             .filter(item => item.products)
             .map(item => ({ ...item.products, quantity: item.quantity }));
-        
+
         replaceCart(newCartItems);
         showToast('¡Pedido añadido al carrito!');
         navigate('/');
@@ -87,7 +103,7 @@ export default function MyOrders() {
         <>
             <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleString()}</p>
             <ul>
-                {order.order_items.map(item => ( <li key={item.id}>{item.quantity}x {item.products?.name || 'Producto no disponible'}</li> ))}
+                {order.order_items.map(item => (<li key={item.id}>{item.quantity}x {item.products?.name || 'Producto no disponible'}</li>))}
             </ul>
             {order.status === 'cancelado' && order.cancellation_reason && (
                 <p className={styles.cancellationReason}>
@@ -101,7 +117,7 @@ export default function MyOrders() {
                         <button className={styles.editButton} onClick={() => setEditingOrder(order)}>✏️ Editar</button>
                     }
                     {isActionable && (order.status === 'pendiente' || order.status === 'en_proceso') && (
-                         <button className={styles.cancelButton} onClick={() => handleCancelClick(order)}>
+                        <button className={styles.cancelButton} onClick={() => handleCancelClick(order)}>
                             Cancelar Pedido
                         </button>
                     )}
@@ -114,26 +130,23 @@ export default function MyOrders() {
             </div>
         </>
     );
-    
+
     const renderContent = () => {
         if (!phone) {
-             return (
-                <AuthPrompt
-                    title="Ingresa tu número para ver tus pedidos"
-                    message="Para buscar tu historial de pedidos, necesitamos tu número de WhatsApp."
-                />
+            return (
+                <AuthPrompt/>
             );
         }
 
         if (loading) return <LoadingSpinner />;
 
         if (error) {
-            return ( <div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p> </div> );
+            return (<div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p> </div>);
         }
 
         if (!customer) {
             return (
-                 <div className={styles.prompt}>
+                <div className={styles.prompt}>
                     <h2>¡Bienvenido!</h2>
                     <p>Parece que eres nuevo por aquí. Completa tu perfil para que podamos registrar tus pedidos.</p>
                     <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>
@@ -146,9 +159,9 @@ export default function MyOrders() {
         if (customer) {
             const activeOrders = orders.filter(o => o.status === 'pendiente' || o.status === 'en_proceso');
             const pastOrders = orders.filter(o => o.status !== 'pendiente' && o.status !== 'en_proceso');
-            
+
             return (
-                 <>
+                <>
                     {orders.length > 0 ? (
                         <>
                             {activeOrders.length > 0 && (
@@ -156,12 +169,14 @@ export default function MyOrders() {
                                     <h3>Pedidos Activos</h3>
                                     <div className={styles.ordersContainer}>
                                         {activeOrders.map(order => (
-                                            <div key={order.id} className={`${styles.orderCard} ${openOrderId === order.id ? styles.open : ''}`}>
+                                            // --- 👇 CAMBIO 4: La clase 'open' depende de si el ID está en el array ---
+                                            <div key={order.id} className={`${styles.orderCard} ${openOrderIds.includes(order.id) ? styles.open : ''}`}>
                                                 <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
                                                     <span>Pedido #{order.order_code}</span>
                                                     <div className={styles.headerInfo}>
                                                         <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
-                                                        <span className={styles.toggleIcon}>+</span>
+                                                        {/* --- El ícono ahora cambia según si está abierto o cerrado --- */}
+                                                        <span className={styles.toggleIcon}>{openOrderIds.includes(order.id) ? '−' : '+'}</span>
                                                     </div>
                                                 </button>
                                                 <div className={styles.orderDetails}>
@@ -178,12 +193,12 @@ export default function MyOrders() {
                                     <h3>Historial de Pedidos</h3>
                                     <div className={styles.ordersContainer}>
                                         {pastOrders.map(order => (
-                                             <div key={order.id} className={`${styles.orderCard} ${openOrderId === order.id ? styles.open : ''}`}>
+                                            <div key={order.id} className={`${styles.orderCard} ${openOrderIds.includes(order.id) ? styles.open : ''}`}>
                                                 <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
                                                     <span>Pedido #{order.order_code}</span>
                                                     <div className={styles.headerInfo}>
                                                         <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
-                                                        <span className={styles.toggleIcon}>+</span>
+                                                        <span className={styles.toggleIcon}>{openOrderIds.includes(order.id) ? '−' : '+'}</span>
                                                     </div>
                                                 </button>
                                                 <div className={styles.orderDetails}>
@@ -196,15 +211,15 @@ export default function MyOrders() {
                             )}
                         </>
                     ) : (
-                         <div className={styles.prompt}>
+                        <div className={styles.prompt}>
                             <h2>No tienes pedidos</h2>
                             <p>Parece que aún no has realizado ningún pedido con este número.</p>
-                         </div>
+                        </div>
                     )}
                 </>
             );
         }
-        
+
         return null;
     };
 
@@ -214,7 +229,7 @@ export default function MyOrders() {
             {renderContent()}
 
             {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}
-            
+
             <ConfirmModal isOpen={!!orderToCancel && !isRequestingCancel} onClose={() => setOrderToCancel(null)} onConfirm={confirmDirectCancel} title="¿Confirmar Cancelación?">
                 Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
             </ConfirmModal>

@@ -1,4 +1,4 @@
-// src/components/EditOrderModal.jsx (CORREGIDO)
+// src/components/EditOrderModal.jsx (OPTIMIZADO PARA ESCRITORIO)
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -7,7 +7,7 @@ import LoadingSpinner from './LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
 
 const TrashIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+    <svg xmlns="http://www.ww3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
 );
 
 export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
@@ -89,6 +89,8 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             setOrderItems(prevItems => [...prevItems, { ...product, quantity: 1, product_id: product.id }]);
             showAlert(`${product.name} añadido al pedido.`);
         }
+        // --- 👇 MEJORA: Cambiar a la pestaña de pedido actual en móvil ---
+        setActiveTab('current');
     };
 
     const handleUpdateOrder = async () => {
@@ -123,13 +125,11 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [allProducts, orderItems, selectedCategory, searchTerm]);
 
-    // --- 👇 AQUÍ ESTÁ LA NUEVA LÓGICA ---
     const visibleCategories = useMemo(() => {
         const productsAvailableToAdd = allProducts.filter(p => !orderItems.some(item => item.id === p.id));
         const availableCategoryIds = new Set(productsAvailableToAdd.map(p => p.category_id));
         return categories.filter(cat => availableCategoryIds.has(cat.id));
     }, [allProducts, orderItems, categories]);
-    // --- 👆 FIN DE LA NUEVA LÓGICA ---
 
     return (
         <div className={styles.modalOverlay}>
@@ -150,58 +150,56 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                             </button>
                         </div>
 
-                        <div className={styles.contentBody}>
-                            {activeTab === 'current' && (
-                                <div className={styles.itemsList}>
-                                    {orderItems.length > 0 ? orderItems.map(item => (
-                                        <div key={item.id} className={styles.cartItem}>
-                                            <img src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
-                                            <div className={styles.itemInfo}>
-                                                <span className={styles.itemName}>{item.name}</span>
-                                                <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
-                                            </div>
-                                            <div className={styles.itemActions}>
-                                                {item.quantity === 1 ? (
-                                                    <button onClick={() => removeItem(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
-                                                        <TrashIcon />
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton}>-</button>
-                                                )}
-                                                <span className={styles.quantityDisplay}>{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton}>+</button>
+                        {/* --- 👇 AQUÍ ESTÁ EL CAMBIO PRINCIPAL --- */}
+                        {/* Se renderizan ambas secciones y se controla la visibilidad con CSS */}
+                        <div className={`${styles.contentBody} ${activeTab === 'add' ? styles.addMode : ''}`}>
+                            <div className={styles.itemsList}>
+                                {orderItems.length > 0 ? orderItems.map(item => (
+                                    <div key={item.id} className={styles.cartItem}>
+                                        <img src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
+                                        <div className={styles.itemInfo}>
+                                            <span className={styles.itemName}>{item.name}</span>
+                                            <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
+                                        </div>
+                                        <div className={styles.itemActions}>
+                                            {item.quantity === 1 ? (
+                                                <button onClick={() => removeItem(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
+                                                    <TrashIcon />
+                                                </button>
+                                            ) : (
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton}>-</button>
+                                            )}
+                                            <span className={styles.quantityDisplay}>{item.quantity}</span>
+                                            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton}>+</button>
+                                        </div>
+                                    </div>
+                                )) : <p className={styles.emptyMessage}>Añade productos a tu pedido.</p>}
+                            </div>
+
+                            <div className={styles.addProductSection}>
+                                <input type="text" placeholder="Buscar producto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
+                                <div className={styles.categoryFilters}>
+                                    <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>Todos</button>
+                                    {visibleCategories.map(cat => (
+                                        <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={selectedCategory === cat.id ? styles.active : ''}>
+                                            {cat.name}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className={styles.productList}>
+                                    {availableProducts.map(product => (
+                                        <div key={product.id} className={styles.productCard} onClick={() => addProduct(product)}>
+                                            <img src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
+                                            <div className={styles.productInfo}>
+                                                <span>{product.name}</span>
+                                                <strong>${product.price.toFixed(2)}</strong>
                                             </div>
                                         </div>
-                                    )) : <p className={styles.emptyMessage}>Añade productos a tu pedido.</p>}
+                                    ))}
                                 </div>
-                            )}
-
-                            {activeTab === 'add' && (
-                                <div className={styles.addProductSection}>
-                                    <input type="text" placeholder="Buscar producto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
-                                    <div className={styles.categoryFilters}>
-                                        <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>Todos</button>
-                                        {/* --- 👇 RENDERIZADO CON LAS CATEGORÍAS FILTRADAS --- */}
-                                        {visibleCategories.map(cat => (
-                                            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={selectedCategory === cat.id ? styles.active : ''}>
-                                                {cat.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className={styles.productList}>
-                                        {availableProducts.map(product => (
-                                            <div key={product.id} className={styles.productCard} onClick={() => addProduct(product)}>
-                                                <img src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
-                                                <div className={styles.productInfo}>
-                                                    <span>{product.name}</span>
-                                                    <strong>${product.price.toFixed(2)}</strong>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
+                        {/* --- 👆 FIN DEL CAMBIO --- */}
 
                         <div className={styles.footer}>
                             <div className={styles.totalContainer}>

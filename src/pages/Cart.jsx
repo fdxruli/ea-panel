@@ -1,4 +1,4 @@
-// src/pages/Cart.jsx (CORREGIDO)
+// src/pages/Cart.jsx (MODIFICADO)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
@@ -7,7 +7,6 @@ import styles from './Cart.module.css';
 import CheckoutModal from '../components/CheckoutModal';
 import { useAlert } from '../context/AlertContext';
 
-// --- 👇 AQUÍ ESTÁ EL CAMBIO: ÍCONO MÁS GRANDE ---
 const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6"></polyline>
@@ -16,7 +15,6 @@ const TrashIcon = () => (
         <line x1="14" y1="11" x2="14" y2="17"></line>
     </svg>
 );
-// --- 👆 FIN DEL CAMBIO ---
 
 export default function Cart() {
     const { showAlert } = useAlert();
@@ -30,13 +28,18 @@ export default function Cart() {
     const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
-
     const [isAnimating, setIsAnimating] = useState(false);
+    
+    // --- 👇 NUEVO ESTADO PARA EL ACORDEÓN DE DESCUENTO ---
+    const [isDiscountVisible, setDiscountVisible] = useState(false);
 
     useEffect(() => {
         if (isCartOpen) {
             const timer = setTimeout(() => setIsAnimating(true), 10);
             return () => clearTimeout(timer);
+        } else {
+            // Reseteamos la visibilidad del acordeón cuando se cierra el carrito
+            setDiscountVisible(false);
         }
     }, [isCartOpen]);
 
@@ -44,7 +47,6 @@ export default function Cart() {
         setIsAnimating(false);
         setTimeout(toggleCart, 600);
     }, [toggleCart]);
-
 
     const handleApplyDiscount = async () => {
         if (!discountCode.trim()) return;
@@ -121,12 +123,28 @@ export default function Cart() {
                         </div>
 
                         <div className={styles.cartFooter}>
-                            {!discount && (
-                                <div className={styles.discountSection}>
-                                    <input type="text" placeholder="Código de descuento" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className={styles.discountInput} />
-                                    <button onClick={handleApplyDiscount} className={styles.applyButton}>Aplicar</button>
+                            {/* --- 👇 LÓGICA MODIFICADA PARA EL ACORDEÓN --- */}
+                            <div className={styles.discountAccordion}>
+                                {!discount && (
+                                    <button 
+                                        onClick={() => setDiscountVisible(!isDiscountVisible)}
+                                        className={styles.discountToggleButton}
+                                    >
+                                        ¿Tienes un codigo? click aquí
+                                    </button>
+                                )}
+                                
+                                <div className={`${styles.discountAccordionContent} ${isDiscountVisible || discount ? styles.open : ''}`}>
+                                    {!discount && (
+                                        <div className={styles.discountSection}>
+                                            <input type="text" placeholder="Código de descuento" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className={styles.discountInput} />
+                                            <button onClick={handleApplyDiscount} className={styles.applyButton}>Aplicar</button>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
+                            {/* --- 👆 FIN DE LA LÓGICA --- */}
+
                             {discountMessage && <p className={styles.discountMessage}>{discountMessage}</p>}
                             <div className={styles.totals}>
                                 <p>Subtotal: <span>${subtotal.toFixed(2)}</span></p>

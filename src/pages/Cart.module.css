@@ -1,4 +1,4 @@
-/* src/pages/Cart.module.css (CORREGIDO) */
+/* src/pages/Cart.module.css (MODIFICADO) */
 
 .overlay {
   position: fixed;
@@ -89,7 +89,7 @@
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 50px;
-    padding: 4px; /* Un poco más de padding interior */
+    padding: 4px;
 }
 
 .quantityDisplay {
@@ -99,16 +99,15 @@
     text-align: center;
 }
 
-/* --- 👇 AQUÍ ESTÁN LOS CAMBIOS PRINCIPALES --- */
 .quantityButton {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     color: var(--color-primary);
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    font-size: 2rem; /* Hacemos el '+' y '-' más grandes */
-    font-weight: 500; /* Ligeramente menos grueso para mejor legibilidad */
+    font-size: 1.8rem;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -116,8 +115,6 @@
     line-height: 1;
     transition: background-color 0.2s, color 0.2s;
 }
-/* --- 👆 FIN DE LOS CAMBIOS --- */
-
 
 .quantityButton:hover {
     background-color: var(--color-primary-light);
@@ -139,6 +136,16 @@
   background-color: var(--bg-secondary);
   flex-shrink: 0;
 }
+
+/* --- ESTILOS PARA LA SECCIÓN DE DESCUENTO --- */
+/* Por defecto, el botón para mostrar el acordeón está oculto */
+.discountToggleButton { display: none; }
+.discountAccordionContent {
+  /* El contenido del acordeón es visible por defecto */
+  max-height: 200px;
+  overflow: visible;
+}
+/* --- FIN ESTILOS DESCUENTO --- */
 
 .discountSection { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .discountInput { 
@@ -200,4 +207,51 @@
   cursor: pointer;
   color: var(--text-secondary);
   padding: 0 0.5rem;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .cartHeader { padding: 0.5rem 1rem; }
+  .cartHeader h2 { font-size: 1.2rem; }
+  .cartItemsList { padding: 0.5rem 1rem; }
+  .cartItem { grid-template-columns: 60px 1fr auto; gap: 0.75rem; }
+  .cartItem img { width: 60px; height: 60px; }
+  .cartFooter { padding: 0.75rem 1rem; }
+  .total { font-size: 1.25rem; padding-top: 0.75rem; margin-top: 0.75rem; }
+  .whatsappButton { padding: 0.75rem; font-size: 1rem; }
+  .discountSection { margin-bottom: 0.75rem; }
+
+  /* --- 👇 NUEVOS ESTILOS PARA EL ACORDEÓN EN HORIZONTAL --- */
+  .discountAccordion {
+    margin-bottom: 0.75rem;
+  }
+  .discountToggleButton {
+    display: block; /* Hacemos visible el botón del acordeón */
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    font-weight: 500;
+    padding: 0 0 0.5rem 0;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .discountAccordionContent {
+    max-height: 0; /* Ocultamos el contenido por defecto */
+    overflow: hidden;
+    transition: max-height 0.4s ease-out;
+  }
+  .discountAccordionContent.open {
+    max-height: 200px; /* Mostramos el contenido al tener la clase 'open' */
+  }
+  /* Ocultamos la sección de descuento principal para que solo se vea dentro del acordeón */
+  .discountSection {
+    display: none;
+  }
+  /* Mostramos la sección de descuento cuando el acordeón está abierto */
+  .discountAccordionContent.open .discountSection {
+    display: flex;
+    margin-top: 0.5rem;
+  }
+  /* --- 👆 FIN DE LOS NUEVOS ESTILOS --- */
 }

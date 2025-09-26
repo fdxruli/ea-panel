@@ -1,4 +1,4 @@
-/* src/components/CheckoutModal.module.css (ALTURA AUMENTADA) */
+/* src/components/CheckoutModal.module.css (CORREGIDO) */
 
 .modalOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -77,7 +77,10 @@
     padding: 0.8rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    background-color: white;
+    /* --- 👇 AQUÍ ESTÁ LA CORRECCIÓN --- */
+    background-color: var(--bg-primary); 
+    color: var(--text-primary);
+    /* --- 👆 FIN DE LA CORRECCIÓN --- */
     font-family: inherit;
     font-size: 0.9rem;
     min-width: 150px;

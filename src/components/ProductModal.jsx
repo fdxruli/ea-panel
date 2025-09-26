@@ -274,26 +274,33 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     </div>
 
                     <div className={styles.tabContent}>
-                        {activeTab === 'details' && (
-                            <p className={styles.productDescription}>{product.description || 'Descripción no disponible.'}</p>
-                        )}
-                        {activeTab === 'reviews' && (
-                            <div className={styles.reviewsSection}>
-                                <div className={styles.reviewList}>
-                                    {productReviews.length === 0 ? <p>Todavía no hay reseñas. ¡Sé el primero!</p> :
-                                     productReviews.map(review => (
-                                        <div key={review.id} className={styles.reviewItem}>
-                                            <div className={styles.reviewHeader}>
-                                                <strong>{review.customers?.name || 'Anónimo'}</strong>
-                                                <StarRating rating={review.rating} />
-                                            </div>
-                                            <p>{review.comment}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+  {activeTab === 'details' && (
+    <div className={styles.tabContentInner}>
+      <p className={styles.productDescription}>{product.description || 'Descripción no disponible.'}</p>
+    </div>
+  )}
+  {activeTab === 'reviews' && (
+    <div className={styles.tabContentInner}>
+      <div className={styles.reviewsSection}>
+        <div className={styles.reviewList}>
+          {productReviews.length === 0 ? (
+            <p>Todavía no hay reseñas. ¡Sé el primero!</p>
+          ) : (
+            productReviews.map(review => (
+              <div key={review.id} className={styles.reviewItem}>
+                <div className={styles.reviewHeader}>
+                  <strong>{review.customers?.name || 'Anónimo'}</strong>
+                  <StarRating rating={review.rating} />
+                </div>
+                <p>{review.comment}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )}
+</div>
                     
                     {activeTab === 'details' && (
                         <div className={styles.footer}>

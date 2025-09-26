@@ -1,4 +1,4 @@
-// src/components/CheckoutModal.jsx (MODIFICADO)
+// src/components/CheckoutModal.jsx (CORREGIDO)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -50,7 +50,11 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                         setSelectedAddress(newlySavedAddress);
                         setJustSavedAddressId(null);
                     }
-                } else if (!selectedAddress || selectedAddress.isTemporary) { // No sobreescribir si ya hay una seleccionada
+                // --- 👇 AQUÍ ESTÁ LA CORRECCIÓN ---
+                // Se eliminó `|| selectedAddress.isTemporary` para evitar que
+                // la dirección temporal sea reemplazada por la dirección por defecto.
+                } else if (!selectedAddress) {
+                // --- 👆 FIN DE LA CORRECCIÓN ---
                     const defaultAddress = addresses.find(a => a.is_default) || addresses[0];
                     setSelectedAddress(defaultAddress);
                 }
@@ -133,7 +137,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
             if (itemsError) throw itemsError;
 
-            const mapLink = `https://www.google.com/maps/search/?api=1&query=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
+            const mapLink = `https://www.google.com/maps?q=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
             let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
             cartItems.forEach(item => { message += `- ${item.quantity}x ${item.name}\n`; });
             message += `\n*Total: $${total.toFixed(2)}*\n\n*Entregar a:*\n*Nombre:* ${customer?.name}\n*Ubicación:* ${mapLink}\n`;
@@ -156,8 +160,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             setIsSubmitting(false);
         }
     };
-    // ... (El resto del return y JSX no necesita cambios, solo el llamado a AddressModal)
-
+    
     if (isLoading) {
         return (
             <div className={styles.modalOverlay}>
@@ -193,12 +196,10 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         );
     }
     if (customer && addresses.length === 0) {
-        // Si el modal de dirección aún no está abierto, ábrelo.
         if (!isAddressModalOpen) {
             openAddressModal(null);
         }
 
-        // Muestra un fondo mientras el modal de dirección está activo
         return (
             <>
                 <div className={styles.modalOverlay} onClick={onClose}>
@@ -306,7 +307,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                     onSave={handleSaveAddress}
                     address={addressToEdit}
                     customerId={customer?.id}
-                    showSaveOption={true} // <-- SE ACTIVA LA OPCIÓN
+                    showSaveOption={true}
                 />
             )}
         </>
