@@ -1,68 +1,102 @@
-/* src/pages/MyOrders.module.css (MODIFICADO) */
+/* src/pages/MyOrders.module.css (CORREGIDO Y UNIFICADO) */
+
 .container {
-    max-width: 700px;
+    max-width: 100%; /* Permitimos que ocupe todo el ancho para el carrusel */
     margin: 2rem auto;
-    padding: 1rem;
+    padding: 0 1rem; /* Padding horizontal para que el carrusel no toque los bordes */
     font-family: 'Poppins', sans-serif;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .container h1, .container h2, .container h3 {
-    text-align: center;
+    text-align: left; /* Alineamos los títulos a la izquierda */
     color: var(--text-primary);
-}
-
-.searchButton {
-    padding: 0.8rem 1.5rem;
-    background-color: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.searchButton:disabled {
-    background-color: var(--text-secondary); /* VARIABLE */
-    opacity: 0.7;
-}
-
-.error {
-    color: var(--color-error);
-    text-align: center;
     margin-bottom: 1rem;
+    padding: 0 0.5rem; /* Pequeño padding para alinear con las tarjetas */
 }
 
-.latestOrderContainer, .historyContainer {
-    margin-top: 2rem;
+/* --- ESTILOS DEL CARRUSEL DE PEDIDOS --- */
+.ordersContainer {
+    display: flex;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding: 0.5rem; /* Espacio para la sombra de las tarjetas */
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
 }
+/* Ocultar la barra de scroll */
+.ordersContainer::-webkit-scrollbar { display: none; }
+.ordersContainer { -ms-overflow-style: none; scrollbar-width: none; }
 
-.orderCard, .latestOrderCard {
+
+/* --- TARJETA DE PEDIDO (COMBINA ACORDEÓN Y TARJETA) --- */
+.orderCard {
+    flex: 0 0 320px; /* Ancho fijo para cada tarjeta de pedido */
+    scroll-snap-align: start;
     background-color: var(--bg-secondary);
-    padding: 1.5rem;
     border-radius: var(--border-radius);
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 8px var(--shadow-color);
     border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-.latestOrderCard {
-    border: 2px solid var(--color-primary);
+.orderCard.open {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 15px var(--shadow-color);
 }
 
-.orderHeader {
+.cardHeader {
+    width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.orderHeader h3 {
-    margin: 0;
+.headerInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.toggleIcon {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+}
+
+.orderCard.open .toggleIcon {
+    transform: rotate(45deg);
+    color: var(--color-primary);
+}
+
+/* Contenido expandible (lógica del acordeón) */
+.orderDetails {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease;
+}
+
+.orderCard.open .orderDetails {
+    max-height: 1000px;
+    padding: 0 1.5rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    transition: max-height 0.5s ease-in;
+}
+
+
+/* --- ESTILOS INTERNOS (SE MANTIENEN CASI IGUAL) --- */
+.activeOrdersContainer,
+.historyContainer {
+    margin-top: 1rem;
 }
 
 .status {
@@ -74,29 +108,31 @@
     text-transform: capitalize;
 }
 
-.pendiente { background-color: #f0ad4e; } /* Se mantiene por ser color específico de estado */
-.en_proceso { background-color: #3498db; } /* Se mantiene por ser color específico de estado */
+.pendiente { background-color: #f0ad4e; }
+.en_proceso { background-color: #3498db; }
 .completado { background-color: var(--color-success); }
 .cancelado { background-color: var(--color-error); }
 
-.orderCard ul {
+.orderDetails ul {
     list-style: none;
     padding: 0;
+    margin: 1rem 0;
 }
 
-.orderCard li {
+.orderDetails li {
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-color);
 }
-.orderCard li:last-child {
+.orderDetails li:last-child {
     border-bottom: none;
 }
 
 .orderFooter {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
+    flex-direction: column; /* Apilamos total y botones */
+    align-items: flex-start; /* Alineamos a la izquierda */
+    gap: 1rem; /* Espacio entre total y botones */
+    margin-top: 1.5rem;
     font-size: 1.2rem;
 }
 
@@ -104,6 +140,7 @@
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .editButton, .cancelButton, .reorderButton {
@@ -113,19 +150,13 @@
     border-radius: 50px;
     cursor: pointer;
     font-size: 0.9rem;
+    flex-grow: 1; /* Hacemos que los botones ocupen el espacio */
+    text-align: center;
 }
 
-.editButton {
-    background-color: #3498db; /* Se mantiene por ser color específico de acción */
-}
-
-.cancelButton {
-    background-color: var(--color-error);
-}
-
-.reorderButton {
-    background-color: var(--color-success);
-}
+.editButton { background-color: #3498db; }
+.cancelButton { background-color: var(--color-error); }
+.reorderButton { background-color: var(--color-success); }
 
 .prompt {
     text-align: center;
@@ -133,13 +164,9 @@
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
     box-shadow: 0 2px 8px var(--shadow-color);
+    margin: 0 1rem; /* Para que no ocupe todo el ancho */
 }
 
-.prompt h2 {
-    margin-top: 0;
-}
-
-/* --- 👇 NUEVO ESTILO AÑADIDO --- */
 .cancellationReason {
     margin-top: 1rem;
     padding: 0.8rem 1rem;

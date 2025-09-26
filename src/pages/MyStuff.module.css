@@ -1,4 +1,4 @@
-/* src/pages/MyStuff.module.css (CORREGIDO) */
+/* src/pages/MyStuff.module.css (MODIFICADO PARA AMBOS CARRUSELES) */
 
 .container {
     max-width: 700px;
@@ -42,12 +42,23 @@
     font-size: 1.5rem;
     color: var(--text-primary);
 }
+
+/* --- ESTILOS DEL CARRUSEL DE FAVORITOS (YA IMPLEMENTADO) --- */
 .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    display: flex;
+    overflow-x: auto;
     gap: 1.5rem;
+    padding: 0.5rem 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
 }
+.grid::-webkit-scrollbar { display: none; }
+.grid { -ms-overflow-style: none; scrollbar-width: none; }
+
 .gridItem {
+    flex: 0 0 180px;
+    scroll-snap-align: start;
+    /* ... (otros estilos de gridItem se mantienen) ... */
     text-align: center;
     border: 1px solid var(--border-color);
     padding: 1rem;
@@ -59,9 +70,36 @@
     position: relative;
     overflow: hidden;
 }
+
+/* --- 👇 NUEVOS ESTILOS PARA EL CARRUSEL DE RESEÑAS --- */
+.reviewList {
+    display: flex; /* 1. Convertimos la lista en un flex container */
+    overflow-x: auto; /* 2. Habilitamos el scroll horizontal */
+    gap: 2rem;
+    padding: 0.5rem 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.reviewList::-webkit-scrollbar { display: none; }
+.reviewList { -ms-overflow-style: none; scrollbar-width: none; }
+
+.reviewItem {
+    flex: 0 0 300px; /* 3. Damos un ancho fijo a cada tarjeta de reseña */
+    scroll-snap-align: start;
+    border: none; /* Quitamos el borde inferior que ya no es necesario */
+    padding: 1.5rem; /* Añadimos padding para que se vea como una tarjeta */
+    background-color: var(--bg-primary); /* Un color de fondo sutil */
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+/* --- 👆 FIN DE LOS NUEVOS ESTILOS --- */
+
+
 .gridItem:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 20px var(--shadow-color); /* VARIABLE */
+    box-shadow: 0 6px 20px var(--shadow-color);
 }
 .gridItem img {
     width: 100%;
@@ -96,18 +134,10 @@
     padding: 0.6rem;
     border-radius: 50px;
 }
-.reviewList {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-.reviewItem {
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 2rem;
-}
+
 .reviewItem:last-child {
     border-bottom: none;
-    padding-bottom: 0;
+    padding-bottom: 1.5rem; /* Ajustamos para que coincida con el padding general */
 }
 .reviewProductInfo {
     display: flex;
@@ -129,12 +159,14 @@
     font-style: italic;
     color: var(--text-secondary);
     margin: 0 0 1rem;
-    padding-left: 76px;
+    padding-left: 0; /* Lo reseteamos porque ya no está anidado */
+    flex-grow: 1; /* Hacemos que ocupe el espacio disponible */
 }
 .reviewActions {
     display: flex;
     gap: 0.8rem;
     justify-content: flex-end;
+    margin-top: auto; /* Empuja las acciones hacia abajo */
 }
 .reviewActions button, .actionButton, .cancelButton {
     padding: 0.6rem 1.2rem;

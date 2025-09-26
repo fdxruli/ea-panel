@@ -10,6 +10,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
+import AuthPrompt from '../components/AuthPrompt';
 
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
@@ -79,14 +80,11 @@ export default function MyStuff() {
 
     const renderContent = () => {
         if (!phone) {
-            return (
-                <div className={styles.prompt}>
-                    <h2>Ingresa tu número para ver tu actividad</h2>
-                    <p>Para ver tus favoritos y reseñas, necesitamos tu número de WhatsApp.</p>
-                    <button onClick={() => setPhoneModalOpen(true)} className={styles.actionButton}>
-                        Ingresar Número
-                    </button>
-                </div>
+             return (
+                <AuthPrompt
+                    title="Ingresa tu número para ver tu actividad"
+                    message="Para ver tus favoritos y reseñas, necesitamos tu número de WhatsApp."
+                />
             );
         }
     
@@ -116,8 +114,6 @@ export default function MyStuff() {
         if (customer) {
             return (
                 <>
-                    {/* --- 👇 AQUÍ ESTÁ EL CAMBIO --- */}
-                    <h1>Mi Actividad</h1>
                     <p className={styles.subtitle}>Gestiona tus productos favoritos y tus reseñas.</p>
                     {/* --- 👆 FIN DEL CAMBIO --- */}
 

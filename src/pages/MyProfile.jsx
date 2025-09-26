@@ -1,4 +1,4 @@
-// src/pages/MyProfile.jsx (CORREGIDO)
+// src/pages/MyProfile.jsx (CORREGIDO CON CARRUSEL)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -9,13 +9,14 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import AddressModal from '../components/AddressModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useAlert } from '../context/AlertContext';
-import { useTheme } from '../context/ThemeContext'; // <-- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+import { useTheme } from '../context/ThemeContext';
+import AuthPrompt from '../components/AuthPrompt';
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone, savePhone, setCheckoutModalOpen } = useCustomer();
     const { customer, addresses, loading, error, refetch } = useUserData();
-    const { theme, changeTheme } = useTheme(); // Ahora esta línea funcionará
+    const { theme, changeTheme } = useTheme();
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -52,17 +53,15 @@ export default function MyProfile() {
     const handleDeleteAddress = async () => {
         if (!addressToDelete) return;
         await supabase.from('customer_addresses').delete().eq('id', addressToDelete.id);
+        showAlert('Dirección eliminada.');
         setAddressToDelete(null);
         refetch();
     };
 
-    const handleSaveAddress = async (addressData, savePermanently, addressId) => {
-        // La lógica de guardado ya contempla si debe ser permanente o no
-        // pero para el perfil, siempre es permanente.
+    const handleSaveAddress = async (addressData, addressId) => {
         let response;
         const dataToSave = { ...addressData, customer_id: customer.id };
-        delete dataToSave.isTemporary; // Asegurarse de no guardar propiedades temporales
-
+        
         if (addressId) {
             response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId);
         } else {
@@ -87,27 +86,11 @@ export default function MyProfile() {
 
     const renderContent = () => {
         if (!phone) {
-            return (
-                <div className={styles.prompt}>
-                    <h2>Ingresa tu número para ver tu perfil</h2>
-                    <p>Para ver y editar tu información, necesitamos tu número de WhatsApp.</p>
-                    <button onClick={() => setPhoneModalOpen(true)} className={styles.actionButton}>
-                        Ingresar Número
-                    </button>
-                </div>
-            );
+             return ( <AuthPrompt title="Ingresa tu número" message="Para ver y editar tu información, necesitamos tu número de WhatsApp." /> );
         }
 
         if (loading) return <LoadingSpinner />;
-
-        if (error) {
-            return (
-                <div className={styles.prompt}>
-                    <h2>Error Inesperado</h2>
-                    <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p>
-                </div>
-            );
-        }
+        if (error) { return ( <div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos.</p> </div> ); }
 
         if (!customer) {
             return (
@@ -139,12 +122,7 @@ export default function MyProfile() {
                         <h2>Apariencia</h2>
                         <div className={styles.formGroup}>
                             <label htmlFor="theme-select">Tema de la aplicación</label>
-                            <select 
-                                id="theme-select"
-                                value={theme} 
-                                onChange={(e) => changeTheme(e.target.value)}
-                                className={styles.themeSelector}
-                            >
+                            <select id="theme-select" value={theme} onChange={(e) => changeTheme(e.target.value)} className={styles.themeSelector}>
                                 <option value="light">Claro</option>
                                 <option value="dark">Oscuro</option>
                                 <option value="system">Automático (definido por el sistema)</option>
@@ -155,23 +133,23 @@ export default function MyProfile() {
                     <div className={styles.card}>
                         <div className={styles.addressHeader}>
                             <h2>Mis Direcciones</h2>
-                            <button onClick={() => openAddressModal()} className={styles.addButton}>
-                                + Añadir Nueva
-                            </button>
+                            <button onClick={() => openAddressModal()} className={styles.addButton}> + Añadir Nueva </button>
                         </div>
                         {addresses.length > 0 ? (
-                            addresses.map(addr => (
-                                <div key={addr.id} className={styles.addressItem}>
-                                    <div>
-                                        <strong>{addr.label}</strong>
-                                        <p>{addr.address_reference || 'Sin referencia'}</p>
+                            <div className={styles.addressCarousel}>
+                                {addresses.map(addr => (
+                                    <div key={addr.id} className={styles.addressItem}>
+                                        <div>
+                                            <strong>{addr.label}</strong>
+                                            <p>{addr.address_reference || 'Sin referencia'}</p>
+                                        </div>
+                                        <div className={styles.addressActions}>
+                                            <button onClick={() => openAddressModal(addr)} className={styles.editButton}>Editar</button>
+                                            <button onClick={() => setAddressToDelete(addr)} className={styles.deleteButton}>Eliminar</button>
+                                        </div>
                                     </div>
-                                    <div className={styles.addressActions}>
-                                        <button onClick={() => openAddressModal(addr)} className={styles.editButton}>Editar</button>
-                                        <button onClick={() => setAddressToDelete(addr)} className={styles.deleteButton}>Eliminar</button>
-                                    </div>
-                                </div>
-                            ))
+                                ))}
+                            </div>
                         ) : <p>No tienes direcciones guardadas.</p>}
                     </div>
 
@@ -189,32 +167,21 @@ export default function MyProfile() {
 
     return (
         <div className={styles.container}>
-            <h1>Mi Perfil</h1>
             {renderContent()}
 
             <AddressModal
                 isOpen={isAddressModalOpen}
                 onClose={() => setAddressModalOpen(false)}
-                onSave={(addressData, savePermanently, addressId) => handleSaveAddress(addressData, addressId)}
+                onSave={handleSaveAddress}
                 address={editingAddress}
                 customerId={customer?.id}
             />
             
-            <ConfirmModal
-                isOpen={!!addressToDelete}
-                onClose={() => setAddressToDelete(null)}
-                onConfirm={handleDeleteAddress}
-                title="¿Eliminar Dirección?"
-            >
+            <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
                 Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.
             </ConfirmModal>
 
-            <ConfirmModal
-                isOpen={isLogoutModalOpen}
-                onClose={() => setLogoutModalOpen(false)}
-                onConfirm={confirmLogout}
-                title="¿Cerrar Sesión?"
-            >
+            <ConfirmModal isOpen={isLogoutModalOpen} onClose={() => setLogoutModalOpen(false)} onConfirm={confirmLogout} title="¿Cerrar Sesión?">
                 Tu número se eliminará de este dispositivo y tendrás que volver a ingresarlo para ver tu perfil y pedidos.
             </ConfirmModal>
         </div>

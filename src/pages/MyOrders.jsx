@@ -1,4 +1,4 @@
-// src/pages/MyOrders.jsx (MODIFICADO)
+// src/pages/MyOrders.jsx (CORREGIDO)
 
 import React, { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -11,9 +11,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EditOrderModal from '../components/EditOrderModal';
 import ConfirmModal from '../components/ConfirmModal';
 import CancellationRequestModal from '../components/CancellationRequestModal';
+import AuthPrompt from '../components/AuthPrompt';
 
 export default function MyOrders() {
-    const { phone, setPhoneModalOpen, setCheckoutModalOpen } = useCustomer();
+    const { phone, setCheckoutModalOpen } = useCustomer();
     const { cartItems, replaceCart, toggleCart, showToast } = useCart();
     const navigate = useNavigate();
 
@@ -23,7 +24,11 @@ export default function MyOrders() {
     const [orderToCancel, setOrderToCancel] = useState(null);
     const [isRequestingCancel, setIsRequestingCancel] = useState(false);
     const [orderToReorder, setOrderToReorder] = useState(null);
+    const [openOrderId, setOpenOrderId] = useState(null);
 
+    const handleToggleOrder = (orderId) => {
+        setOpenOrderId(prevId => (prevId === orderId ? null : orderId));
+    };
 
     const handleCancelClick = (order) => {
         if (order.status === 'pendiente') {
@@ -78,30 +83,24 @@ export default function MyOrders() {
     const handleOrderUpdated = useCallback(() => { refetch(); }, [refetch]);
     const handleCloseModal = useCallback(() => { setEditingOrder(null); }, []);
 
-    const renderOrder = (order, isLatest = false) => (
-        <div key={order.id} className={isLatest ? styles.latestOrderCard : styles.orderCard}>
-            <div className={styles.orderHeader}>
-                <h3>Pedido #{order.order_code}</h3>
-                <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
-            </div>
+    const renderOrderDetails = (order, isActionable = false) => (
+        <>
             <p><strong>Fecha:</strong> {new Date(order.created_at).toLocaleString()}</p>
             <ul>
                 {order.order_items.map(item => ( <li key={item.id}>{item.quantity}x {item.products?.name || 'Producto no disponible'}</li> ))}
             </ul>
-            {/* --- 👇 AQUÍ ESTÁ LA LÓGICA PARA MOSTRAR EL MOTIVO --- */}
             {order.status === 'cancelado' && order.cancellation_reason && (
                 <p className={styles.cancellationReason}>
                     <strong>Motivo:</strong> {order.cancellation_reason}
                 </p>
             )}
-            {/* --- 👆 FIN DE LA LÓGICA --- */}
             <div className={styles.orderFooter}>
                 <strong>Total: ${order.total_amount.toFixed(2)}</strong>
                 <div className={styles.actionsContainer}>
-                    {isLatest && order.status === 'pendiente' &&
+                    {isActionable && order.status === 'pendiente' &&
                         <button className={styles.editButton} onClick={() => setEditingOrder(order)}>✏️ Editar</button>
                     }
-                    {isLatest && (order.status === 'pendiente' || order.status === 'en_proceso') && (
+                    {isActionable && (order.status === 'pendiente' || order.status === 'en_proceso') && (
                          <button className={styles.cancelButton} onClick={() => handleCancelClick(order)}>
                             Cancelar Pedido
                         </button>
@@ -113,31 +112,23 @@ export default function MyOrders() {
                     )}
                 </div>
             </div>
-        </div>
+        </>
     );
     
     const renderContent = () => {
         if (!phone) {
-            return (
-                <div className={styles.prompt}>
-                    <h2>Ingresa tu número para ver tus pedidos</h2>
-                    <p>Para buscar tu historial de pedidos, necesitamos tu número de WhatsApp.</p>
-                    <button onClick={() => setPhoneModalOpen(true)} className={styles.searchButton}>
-                        Ingresar Número
-                    </button>
-                </div>
+             return (
+                <AuthPrompt
+                    title="Ingresa tu número para ver tus pedidos"
+                    message="Para buscar tu historial de pedidos, necesitamos tu número de WhatsApp."
+                />
             );
         }
 
         if (loading) return <LoadingSpinner />;
 
         if (error) {
-            return (
-                <div className={styles.prompt}>
-                    <h2>Error Inesperado</h2>
-                    <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p>
-                </div>
-            );
+            return ( <div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p> </div> );
         }
 
         if (!customer) {
@@ -145,7 +136,7 @@ export default function MyOrders() {
                  <div className={styles.prompt}>
                     <h2>¡Bienvenido!</h2>
                     <p>Parece que eres nuevo por aquí. Completa tu perfil para que podamos registrar tus pedidos.</p>
-                    <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.searchButton}>
+                    <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>
                         Completar mi perfil
                     </button>
                 </div>
@@ -153,22 +144,54 @@ export default function MyOrders() {
         }
 
         if (customer) {
-            const latestOrder = orders.length > 0 ? orders[0] : null;
-            const pastOrders = orders.length > 1 ? orders.slice(1) : [];
+            const activeOrders = orders.filter(o => o.status === 'pendiente' || o.status === 'en_proceso');
+            const pastOrders = orders.filter(o => o.status !== 'pendiente' && o.status !== 'en_proceso');
+            
             return (
-                 <div className={styles.ordersSection}>
+                 <>
                     {orders.length > 0 ? (
                         <>
-                            {latestOrder && (
-                                <div className={styles.latestOrderContainer}>
-                                    <h3>Último Pedido</h3>
-                                    {renderOrder(latestOrder, true)}
+                            {activeOrders.length > 0 && (
+                                <div className={styles.activeOrdersContainer}>
+                                    <h3>Pedidos Activos</h3>
+                                    <div className={styles.ordersContainer}>
+                                        {activeOrders.map(order => (
+                                            <div key={order.id} className={`${styles.orderCard} ${openOrderId === order.id ? styles.open : ''}`}>
+                                                <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
+                                                    <span>Pedido #{order.order_code}</span>
+                                                    <div className={styles.headerInfo}>
+                                                        <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
+                                                        <span className={styles.toggleIcon}>+</span>
+                                                    </div>
+                                                </button>
+                                                <div className={styles.orderDetails}>
+                                                    {renderOrderDetails(order, true)}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
+
                             {pastOrders.length > 0 && (
                                 <div className={styles.historyContainer}>
                                     <h3>Historial de Pedidos</h3>
-                                    {pastOrders.map(order => renderOrder(order, false))}
+                                    <div className={styles.ordersContainer}>
+                                        {pastOrders.map(order => (
+                                             <div key={order.id} className={`${styles.orderCard} ${openOrderId === order.id ? styles.open : ''}`}>
+                                                <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
+                                                    <span>Pedido #{order.order_code}</span>
+                                                    <div className={styles.headerInfo}>
+                                                        <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
+                                                        <span className={styles.toggleIcon}>+</span>
+                                                    </div>
+                                                </button>
+                                                <div className={styles.orderDetails}>
+                                                    {renderOrderDetails(order, false)}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </>
@@ -178,7 +201,7 @@ export default function MyOrders() {
                             <p>Parece que aún no has realizado ningún pedido con este número.</p>
                          </div>
                     )}
-                </div>
+                </>
             );
         }
         
@@ -188,7 +211,6 @@ export default function MyOrders() {
 
     return (
         <div className={styles.container}>
-            <h1>Mis Pedidos</h1>
             {renderContent()}
 
             {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}
@@ -197,12 +219,7 @@ export default function MyOrders() {
                 Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
             </ConfirmModal>
 
-            <ConfirmModal
-                isOpen={!!orderToReorder}
-                onClose={() => setOrderToReorder(null)}
-                onConfirm={confirmReorder}
-                title="¿Reemplazar Carrito?"
-            >
+            <ConfirmModal isOpen={!!orderToReorder} onClose={() => setOrderToReorder(null)} onConfirm={confirmReorder} title="¿Reemplazar Carrito?">
                 Tu carrito ya tiene productos. ¿Deseas vaciarlo y agregar los productos de este pedido?
             </ConfirmModal>
 
