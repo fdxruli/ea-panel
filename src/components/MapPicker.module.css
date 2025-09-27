@@ -48,4 +48,26 @@
 
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     display: none;
+
+}
+
+.locationButton {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: background-color 0.2s;
+}
+
+.locationButton:hover {
+    background-color: #2980b9;
 }
