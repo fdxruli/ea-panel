@@ -1,4 +1,4 @@
-// src/components/MapPicker.jsx (ACTUALIZADO)
+// src/components/MapPicker.jsx (ACTUALIZADO CON BOTÓN DE GEOLOCALIZACIÓN)
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
@@ -71,7 +71,6 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
     }
   }, [JSON.stringify(initialPosition)]);
 
-
   const onPolygonLoad = useCallback(polygon => {
     polygonRef.current = polygon;
   }, []);
@@ -100,6 +99,61 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
     }
   }, [onLocationSelect, isLoaded, lastValidPosition, showAlert]);
 
+  const handleAutomaticLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const newPosition = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+
+          const newLatLng = new window.google.maps.LatLng(newPosition.lat, newPosition.lng);
+
+          if (isLoaded && polygonRef.current && window.google.maps.geometry.poly.containsLocation(newLatLng, polygonRef.current)) {
+            setMarkerPosition(newPosition);
+            setLastValidPosition(newPosition);
+            setMapCenter(newPosition);
+            if (onLocationSelect) {
+              onLocationSelect(newPosition);
+            }
+            showAlert('¡Ubicación encontrada!');
+          } else {
+             showAlert("Estás fuera de nuestra zona de reparto, pero hemos colocado el pin en el punto válido más cercano para ti.");
+             setMarkerPosition(lastValidPosition);
+             setMapCenter(lastValidPosition);
+          }
+        },
+        (error) => {
+          let errorMessage = 'No se pudo obtener la ubicación. ';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'Necesitamos tu permiso para acceder a tu ubicación.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'La información de ubicación no está disponible.';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'La solicitud de ubicación tardó demasiado.';
+              break;
+            default:
+              errorMessage += 'Ocurrió un error desconocido.';
+              break;
+          }
+          showAlert(errorMessage);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    } else {
+      showAlert('La geolocalización no es compatible con tu navegador.');
+    }
+  };
+
+
   if (loadError) {
     return (
         <div style={{ padding: '20px', textAlign: 'center', color: 'red' }}>
@@ -115,13 +169,19 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
           Mueve el pin rojo hasta tu ubicación exacta.
         </p>
       )}
+      
+      {isDraggable && (
+        <button onClick={handleAutomaticLocation} className={styles.locationButton}>
+          Ubicarme automáticamente
+        </button>
+      )}
 
       <div className={styles.mapContainer}>
         {isLoaded ? (
           <GoogleMap
             mapContainerStyle={containerStyle}
             center={mapCenter}
-            zoom={18} /* <-- ZOOM AUMENTADO */
+            zoom={18}
             options={mapOptions}
           >
             <Marker
