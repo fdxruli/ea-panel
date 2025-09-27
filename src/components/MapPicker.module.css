@@ -2,72 +2,57 @@
 
 .wrapper {
   display: flex;
-  flex-direction: column; /* Apila la instrucción y el mapa verticalmente */
+  flex-direction: column;
   height: 100%;
   width: 100%;
+  position: relative; /* Contenedor para el botón flotante */
 }
 
 .instruction {
   text-align: center;
-  padding-bottom: 0.8rem; /* Espacio entre la instrucción y el mapa */
-  color: var(--text-secondary); /* Color más sutil del tema */
+  padding-bottom: 0.8rem;
+  color: var(--text-secondary);
   font-weight: 500;
   font-size: 0.9rem;
-  flex-shrink: 0; /* Evita que el texto se encoja */
-  /* Se eliminó la posición absoluta y el fondo oscuro */
+  flex-shrink: 0;
 }
 
 .mapContainer {
   width: 100%;
-  flex-grow: 1; /* Hace que el mapa ocupe todo el espacio vertical restante */
+  flex-grow: 1;
   position: relative;
-  border-radius: var(--border-radius); /* Bordes redondeados para un mejor look */
-  overflow: hidden; /* Asegura que el mapa respete los bordes */
+  border-radius: var(--border-radius);
+  overflow: hidden;
 }
 
+/* --- 👇 NUEVOS ESTILOS PARA EL BOTÓN DE UBICACIÓN --- */
 .locationButton {
     position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 30px;
-    font-weight: 600;
+    bottom: 15px;
+    right: 15px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     cursor: pointer;
     z-index: 1000;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    transition: background-color 0.2s;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .locationButton:hover {
-    background-color: #2980b9;
+    background-color: var(--bg-primary);
+    border-color: var(--color-primary);
+    transform: scale(1.05);
 }
+/* --- 👆 FIN DE LOS NUEVOS ESTILOS --- */
+
 
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     display: none;
-
-}
-
-.locationButton {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 30px;
-    font-weight: 600;
-    cursor: pointer;
-    z-index: 1000;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    transition: background-color 0.2s;
-}
-
-.locationButton:hover {
-    background-color: #2980b9;
 }
