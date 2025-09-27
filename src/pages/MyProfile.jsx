@@ -1,4 +1,4 @@
-// src/pages/MyProfile.jsx (MODIFICADO)
+// src/pages/MyProfile.jsx (CORREGIDO)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -11,8 +11,6 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useAlert } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthPrompt from '../components/AuthPrompt';
-
-// --- (El resto de los imports y el componente principal se mantienen igual) ---
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
@@ -32,9 +30,7 @@ export default function MyProfile() {
         }
     }, [customer]);
 
-    // --- 👇 NUEVA FUNCIÓN PARA ESTABLECER LA DIRECCIÓN PREDETERMINADA ---
     const handleSetDefaultAddress = async (addressId) => {
-        // Primero, quitamos la marca de 'default' de todas las demás direcciones del usuario
         const { error: unsetError } = await supabase
             .from('customer_addresses')
             .update({ is_default: false })
@@ -45,7 +41,6 @@ export default function MyProfile() {
             return;
         }
 
-        // Luego, establecemos la nueva dirección como predeterminada
         const { error: setError } = await supabase
             .from('customer_addresses')
             .update({ is_default: true })
@@ -55,12 +50,9 @@ export default function MyProfile() {
             showAlert("Error al establecer la dirección predeterminada.");
         } else {
             showAlert("Dirección predeterminada actualizada.");
-            refetch(); // Recargamos los datos para que la UI se actualice
+            refetch();
         }
     };
-    // --- 👆 FIN DE LA NUEVA FUNCIÓN ---
-
-    // --- (El resto de las funciones como handleInfoSubmit, etc., se mantienen igual) ---
 
     const handleInfoSubmit = async (e) => {
         e.preventDefault();
@@ -89,7 +81,11 @@ export default function MyProfile() {
         refetch();
     };
 
-    const handleSaveAddress = async (addressData, addressId) => {
+    // --- 👇 AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
+    // La función ahora acepta 3 parámetros para coincidir con la llamada desde AddressModal.
+    const handleSaveAddress = async (addressData, shouldSave, addressId) => {
+        // La lógica interna no necesita el parámetro 'shouldSave' aquí,
+        // porque desde "Mi Perfil" siempre queremos guardar la dirección.
         let response;
         const dataToSave = { ...addressData, customer_id: customer.id };
 
@@ -98,11 +94,16 @@ export default function MyProfile() {
         } else {
             response = await supabase.from('customer_addresses').insert(dataToSave);
         }
-        if (response.error) throw new Error(response.error.message);
+        
+        if (response.error) {
+            showAlert(`Error al guardar: ${response.error.message}`);
+            throw new Error(response.error.message);
+        }
 
         showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         refetch();
     };
+    // --- 👆 FIN DE LA CORRECCIÓN ---
 
 
     const openAddressModal = (address = null) => {
@@ -170,7 +171,6 @@ export default function MyProfile() {
                         {addresses.length > 0 ? (
                             <div className={styles.addressCarousel}>
                                 {addresses.map(addr => (
-                                    // --- 👇 MODIFICACIÓN EN LA TARJETA DE DIRECCIÓN ---
                                     <div key={addr.id} className={`${styles.addressItem} ${addr.is_default ? styles.defaultAddress : ''}`}>
                                         <div>
                                             <div className={styles.addressLabelContainer}>
@@ -189,7 +189,6 @@ export default function MyProfile() {
                                             )}
                                         </div>
                                     </div>
-                                    // --- 👆 FIN DE LA MODIFICACIÓN ---
                                 ))}
                             </div>
                         ) : <p>No tienes direcciones guardadas.</p>}
@@ -206,7 +205,6 @@ export default function MyProfile() {
 
         return null;
     };
-    // --- (El return principal con los modales se mantiene igual) ---
     return (
         <div className={styles.container}>
             {renderContent()}
