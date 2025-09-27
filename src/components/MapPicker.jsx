@@ -1,4 +1,4 @@
-// src/components/MapPicker.jsx (ACTUALIZADO CON ESTILOS E ICONO)
+// src/components/MapPicker.jsx (CORREGIDO Y FINAL)
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
@@ -119,7 +119,7 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
             showAlert('¡Ubicación encontrada!');
           } else {
              showAlert("Estás fuera de la zona de reparto, pero hemos colocado el pin en una ubicación válida para ti.");
-             setMarkerPosition(defaultCenter); // O `lastValidPosition` si prefieres
+             setMarkerPosition(defaultCenter);
              setMapCenter(defaultCenter);
           }
         },
@@ -133,7 +133,7 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
               errorMessage += 'La información de ubicación no está disponible.';
               break;
             case error.TIMEOUT:
-              errorMessage += 'La solicitud tardó demasiado.';
+              errorMessage += 'La solicitud de ubicación tardó demasiado.';
               break;
             default:
               errorMessage += 'Ocurrió un error desconocido.';
@@ -173,6 +173,7 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
           <>
             {isDraggable && (
                 <button 
+                  type="button" // <-- ¡LA CORRECCIÓN ESTÁ AQUÍ!
                   onClick={handleAutomaticLocation} 
                   className={styles.locationButton}
                   title="Ubicarme automáticamente"
