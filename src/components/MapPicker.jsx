@@ -55,6 +55,9 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
   const [lastValidPosition, setLastValidPosition] = useState(initialPosition || defaultCenter);
   const polygonRef = useRef(null);
 
+  const [instructionText, setInstructionText] = useState('Mueve el pin rojo hasta tu ubicación exacta.');
+
+
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
@@ -100,6 +103,7 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
   }, [onLocationSelect, isLoaded, lastValidPosition, showAlert]);
 
   const handleAutomaticLocation = () => {
+    setInstructionText('Verifica que el pin esté en tu ubicación exacta. Si no es así, arrástralo para corregirlo.');
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -164,7 +168,7 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
     <div className={styles.wrapper}>
       {isDraggable && (
         <p className={styles.instruction}>
-          Mueve el pin rojo hasta tu ubicación exacta.
+          {instructionText}
         </p>
       )}
       

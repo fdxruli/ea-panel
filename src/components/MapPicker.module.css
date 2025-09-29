@@ -1,4 +1,4 @@
-/* src/components/MapPicker.module.css (ACTUALIZADO) */
+/* src/components/MapPicker.module.css (CORREGIDO) */
 
 .wrapper {
   display: flex;
@@ -25,11 +25,11 @@
   overflow: hidden;
 }
 
-/* --- 👇 NUEVOS ESTILOS PARA EL BOTÓN DE UBICACIÓN --- */
+/* --- 👇 AQUÍ ESTÁ LA CORRECCIÓN --- */
 .locationButton {
     position: absolute;
     bottom: 15px;
-    right: 15px;
+    left: 15px; /* Cambiado de 'right' a 'left' */
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
@@ -44,14 +44,13 @@
     align-items: center;
     justify-content: center;
 }
+/* --- 👆 FIN DE LA CORRECCIÓN --- */
 
 .locationButton:hover {
     background-color: var(--bg-primary);
     border-color: var(--color-primary);
     transform: scale(1.05);
 }
-/* --- 👆 FIN DE LOS NUEVOS ESTILOS --- */
-
 
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     display: none;

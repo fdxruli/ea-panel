@@ -1,4 +1,4 @@
-// src/components/AddressModal.jsx (MODIFICADO)
+// src/components/AddressModal.jsx (MODIFICADO PARA ESCRITORIO)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './AddressModal.module.css';
@@ -13,7 +13,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
         address_reference: '',
         coords: null
     });
-    const [shouldSave, setShouldSave] = useState(true); // Estado para el checkbox
+    const [shouldSave, setShouldSave] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -23,11 +23,9 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 address_reference: address.address_reference || '',
                 coords: { lat: address.latitude, lng: address.longitude }
             });
-            // Si editamos una dirección existente, siempre la guardamos
             setShouldSave(true);
         } else {
              setFormData({ label: 'Casa', address_reference: '', coords: null });
-             // Por defecto, la opción de guardar está marcada
              setShouldSave(true);
         }
     }, [address, isOpen]);
@@ -56,8 +54,6 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 latitude: formData.coords.lat,
                 longitude: formData.coords.lng
             };
-            // Si el checkbox no es visible (ej. desde "Mi Perfil"), siempre se guarda.
-            // Si es visible, se respeta la decisión del usuario.
             const savePermanently = showSaveOption ? shouldSave : true;
             await onSave(addressData, savePermanently, address?.id);
             onClose();
@@ -78,7 +74,8 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 <button onClick={onClose} className={styles.closeButton}>×</button>
                 <h2>{address ? 'Editar Dirección' : 'Nueva Dirección'}</h2>
                 
-                <form onSubmit={handleSubmit} className={styles.form}>
+                {/* --- 👇 CAMBIO: Wrapper para el layout de dos columnas --- */}
+                <div className={styles.contentWrapper}>
                     <div className={styles.mapContainer}>
                        <ClientOnly>
                            <DynamicMapPicker
@@ -88,33 +85,33 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                        </ClientOnly>
                     </div>
 
-                    <label htmlFor="label">Etiqueta (ej: Casa, Oficina):</label>
-                    <input id="label" name="label" type="text" value={formData.label} onChange={handleChange} required />
+                    <form onSubmit={handleSubmit} className={styles.form}>
+                        <label htmlFor="label">Etiqueta (ej: Casa, Oficina):</label>
+                        <input id="label" name="label" type="text" value={formData.label} onChange={handleChange} required />
 
-                    <label htmlFor="address_reference">Referencia (ej: portón rojo):</label>
-                    <input id="address_reference" name="address_reference" type="text" value={formData.address_reference} onChange={handleChange} />
+                        <label htmlFor="address_reference">Referencia (ej: portón rojo):</label>
+                        <input id="address_reference" name="address_reference" type="text" value={formData.address_reference} onChange={handleChange} />
 
-                    {/* --- 👇 AQUÍ APARECE EL CHECKBOX CONDICIONALMENTE --- */}
-                    {showSaveOption && !address && (
-                        <div className={styles.saveOption}>
-                            <input
-                                type="checkbox"
-                                id="shouldSave"
-                                checked={shouldSave}
-                                onChange={(e) => setShouldSave(e.target.checked)}
-                            />
-                            <label htmlFor="shouldSave">
-                                Guardar esta dirección para futuros pedidos.
-                            </label>
-                        </div>
-                    )}
-                    {/* --- 👆 FIN DEL CHECKBOX --- */}
+                        {showSaveOption && !address && (
+                            <div className={styles.saveOption}>
+                                <input
+                                    type="checkbox"
+                                    id="shouldSave"
+                                    checked={shouldSave}
+                                    onChange={(e) => setShouldSave(e.target.checked)}
+                                />
+                                <label htmlFor="shouldSave">
+                                    Guardar esta dirección para futuros pedidos.
+                                </label>
+                            </div>
+                        )}
 
-
-                    <button type="submit" disabled={isSubmitting} className={styles.saveButton}>
-                        {isSubmitting ? 'Procesando...' : (address ? 'Guardar Cambios' : 'Usar esta Dirección')}
-                    </button>
-                </form>
+                        <button type="submit" disabled={isSubmitting} className={styles.saveButton}>
+                            {isSubmitting ? 'Procesando...' : (address ? 'Guardar Cambios' : 'Usar esta Dirección')}
+                        </button>
+                    </form>
+                </div>
+                 {/* --- 👆 FIN DEL CAMBIO --- */}
             </div>
         </div>
     );
