@@ -85,34 +85,33 @@ export default function Menu() {
                 </div>
             </div>
 
-            <div className={`${styles.productList} ${layout === 'grid' ? styles.grid : styles.list}`}>
-    {filteredProducts.length > 0 ? filteredProducts.map(product => (
-        <div key={product.id} className={styles.productCard}>
-            {/* --- 👇 CAMBIO: En la vista de lista, el contenido se envuelve en un div para un mejor control del layout --- */}
-            <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: layout === 'list' ? 'row' : 'column', flexGrow: 1 }}>
-                <div className={styles.imageContainer}>
-                    <img src={product.image_url || 'https://placehold.co/150'} alt={product.name} />
-                </div>
-                <div className={styles.cardContent}>
-                    <h3>{product.name}</h3>
-                </div>
+            <div className={`${styles.productList} ${styles[layout]}`}>
+                {filteredProducts.length > 0 ? filteredProducts.map(product => (
+                    <div key={product.id} className={styles.productCard}>
+                        <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                            <div className={styles.imageContainer}>
+                                <img src={product.image_url || 'https://placehold.co/150'} alt={product.name} />
+                            </div>
+                            <div className={styles.cardContent}>
+                                <h3>{product.name}</h3>
+                            </div>
+                        </div>
+                        <div className={styles.cardFooter}>
+                            <div className={styles.priceContainer}>
+                                {product.original_price ? (
+                                    <>
+                                        <span className={styles.originalPrice}>${product.original_price.toFixed(2)}</span>
+                                        <span className={styles.specialPrice}>${product.price.toFixed(2)}</span>
+                                    </>
+                                ) : (
+                                    <span className={styles.price}>${product.price.toFixed(2)}</span>
+                                )}
+                            </div>
+                            <button onClick={(e) => handleAddToCart(product, 1, e)}>Añadir</button>
+                        </div>
+                    </div>
+                )) : <p>No se encontraron productos.</p>}
             </div>
-            <div className={styles.cardFooter}>
-                <div className={styles.priceContainer}>
-                    {product.original_price ? (
-                        <>
-                            <span className={styles.originalPrice}>${product.original_price.toFixed(2)}</span>
-                            <span className={styles.specialPrice}>${product.price.toFixed(2)}</span>
-                        </>
-                    ) : (
-                        <span className={styles.price}>${product.price.toFixed(2)}</span>
-                    )}
-                </div>
-                <button onClick={(e) => handleAddToCart(product, 1, e)}>Añadir</button>
-            </div>
-        </div>
-    )) : <p>No se encontraron productos.</p>}
-</div>
 
             <ProductModal
                 product={selectedProduct}
@@ -121,5 +120,4 @@ export default function Menu() {
             />
         </div>
     );
-
 }

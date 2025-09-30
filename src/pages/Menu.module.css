@@ -77,37 +77,12 @@
     background-color: var(--color-primary-light);
 }
 
-/* --- 👇 AQUÍ ESTÁN LOS CAMBIOS IMPORTANTES --- */
-/* Estilos base para la lista (pantallas pequeñas) */
 .productList.list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem; /* Un poco menos de espacio en móviles */
-  padding: 0;
+  gap: 1.5rem;
+  padding: 0; /* Sin padding */
 }
-
-.productList.list .productCard {
-  flex-direction: row; /* Elementos en fila */
-  align-items: center;
-}
-
-.productList.list .imageContainer {
-  width: 100px; /* Ancho fijo para la imagen */
-  height: 100px;
-  padding-top: 0;
-  flex-shrink: 0;
-}
-
-.productList.list .cardContent {
-  padding: 0.8rem 1rem;
-  text-align: left;
-}
-
-.productList.list .cardFooter {
-    padding: 0 1rem 0.8rem 1rem;
-    align-self: flex-end; /* Alinea el footer a la derecha */
-}
-/* --- 👆 FIN DE CAMBIOS IMPORTANTES --- */
 
 .productList.grid {
   display: grid;
@@ -234,7 +209,6 @@
 
 /* --- AJUSTES PARA PANTALLAS GRANDES --- */
 @media (min-width: 768px) {
-  /* Ahora la vista de lista en pantallas grandes será de 2 columnas */
   .productList.list {
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
@@ -245,16 +219,14 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 
-  /* --- 👇 AQUÍ ESTÁN LOS CAMBIOS DE TAMAÑO --- */
-  /* Ajustamos el footer para la vista de lista en pantallas grandes */
   .productList.list .cardFooter {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    align-self: unset; /* Reseteamos el self-align */
   }
 
+  /* --- 👇 AQUÍ ESTÁN LOS CAMBIOS DE TAMAÑO --- */
   .productList.list .price,
   .productList.list .specialPrice {
     font-size: 1.4rem; /* Hacemos el precio principal más grande */

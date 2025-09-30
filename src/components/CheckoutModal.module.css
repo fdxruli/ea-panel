@@ -1,4 +1,4 @@
-/* src/components/CheckoutModal.module.css (CORREGIDO) */
+/* src/components/CheckoutModal.module.css (CORREGIDO Y CON ESTILOS) */
 
 .modalOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -27,7 +27,7 @@
 .closeButton { background: none; border: none; font-size: 2.5rem; cursor: pointer; color: var(--text-secondary); }
 
 .mapDisplay {
-    height: 220px; /* <-- ALTURA AUMENTADA */
+    height: 220px;
     position: relative;
     flex-shrink: 0;
     margin: 0 1.5rem;
@@ -77,10 +77,8 @@
     padding: 0.8rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    /* --- 👇 AQUÍ ESTÁ LA CORRECCIÓN --- */
     background-color: var(--bg-primary); 
     color: var(--text-primary);
-    /* --- 👆 FIN DE LA CORRECCIÓN --- */
     font-family: inherit;
     font-size: 0.9rem;
     min-width: 150px;
@@ -136,6 +134,49 @@
   border-top: 4px solid #25d366; border-radius: 50%; animation: spin 1s linear infinite;
 }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+
+/* --- 👇 ESTILOS CORREGIDOS Y MEJORADOS --- */
+.deliveryOptions {
+    display: flex;
+    gap: 0.5rem; /* Reducimos el espacio */
+    background-color: var(--bg-primary); /* Fondo del contenedor */
+    border-radius: 8px;
+    padding: 5px;
+    border: 1px solid var(--border-color);
+}
+.deliveryOptions button {
+    flex: 1;
+    padding: 0.8rem;
+    border-radius: 6px;
+    font-weight: 600; /* Hacemos el texto más notorio */
+    background-color: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.deliveryOptions button.activeOption {
+    background-color: var(--color-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.datePicker {
+    /* Hereda los estilos globales de input, pero podemos ser explícitos */
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+}
+/* Para cambiar el color del icono del calendario en Webkit (Chrome, Safari) */
+.datePicker::-webkit-calendar-picker-indicator {
+    filter: invert(0.8); /* Ajusta este valor si es necesario */
+}
+/* --- 👆 FIN DE LA CORRECCIÓN DE ESTILOS --- */
+
 
 @media (min-width: 768px) {
     .modalContent {

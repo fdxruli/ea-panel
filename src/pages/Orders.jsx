@@ -1,4 +1,4 @@
-// src/pages/Orders.jsx (MODIFICADO Y CON REAL-TIME)
+// src/pages/Orders.jsx (MODIFICADO)
 
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
@@ -10,14 +10,14 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
 
-  // --- 👇 SE ENVOLVIÓ EN useCallback PARA OPTIMIZACIÓN ---
+  // MODIFICADO: La consulta ahora pide explícitamente la columna 'scheduled_for'
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
       .select(`
         id, order_code, customer_id, status, total_amount, created_at,
-        cancellation_reason, customers(name, phone)
+        cancellation_reason, scheduled_for, customers(name, phone)
       `)
       .order("created_at", { ascending: false });
 
@@ -26,11 +26,9 @@ export default function Orders() {
     setLoading(false);
   }, []);
 
-  // --- 👇 useEffect AHORA INCLUYE LA SUSCRIPCIÓN EN TIEMPO REAL ---
   useEffect(() => {
-    fetchOrders(); // Carga inicial de datos
+    fetchOrders();
 
-    // Escucha cambios en la tabla 'orders' en tiempo real
     const channel = supabase
       .channel('public:orders:admin')
       .on(
@@ -38,12 +36,11 @@ export default function Orders() {
         { event: '*', schema: 'public', table: 'orders' },
         (payload) => {
           console.log('Cambio detectado en pedidos (admin), actualizando...', payload);
-          fetchOrders(); // Vuelve a cargar los datos cuando hay un cambio
+          fetchOrders();
         }
       )
       .subscribe();
 
-    // Se desuscribe del canal al desmontar el componente para evitar fugas de memoria
     return () => {
       supabase.removeChannel(channel);
     };
@@ -75,7 +72,6 @@ export default function Orders() {
       .eq("id", orderId);
 
     if (error) console.error(error);
-    // Ya no es necesario llamar a fetchOrders() aquí, el listener de websocket lo hará automáticamente
   };
 
   if (loading) return <LoadingSpinner />;
@@ -92,7 +88,9 @@ export default function Orders() {
             <th>Teléfono</th>
             <th>Total</th>
             <th>Estado</th>
-            <th>Fecha</th>
+            <th>Fecha del Pedido</th>
+            {/* NUEVO: Columna para la fecha de entrega */}
+            <th>Fecha de Entrega</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -110,6 +108,16 @@ export default function Orders() {
                 )}
               </td>
               <td>{new Date(o.created_at).toLocaleString()}</td>
+              {/* NUEVO: Celda que muestra la fecha de entrega */}
+              <td>
+                {o.scheduled_for ? (
+                  <strong style={{ color: '#e74c3c' }}>
+                    {new Date(o.scheduled_for).toLocaleString()}
+                  </strong>
+                ) : (
+                  'Inmediato'
+                )}
+              </td>
               <td>
                 <button onClick={() => {
                   setSelectedOrder(o.id);
@@ -136,7 +144,22 @@ export default function Orders() {
         <div className="form-container">
           <h3>Detalle del pedido</h3>
           <table className="products-table">
-            {/* ... (contenido del detalle del pedido sin cambios) ... */}
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio Unitario</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orderItems.map((item, index) => (
+                <tr key={index}>
+                  <td>{item.products.name}</td>
+                  <td>{item.quantity}</td>
+                  <td>${item.price}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
           <button onClick={() => setSelectedOrder(null)}>Cerrar detalle</button>
         </div>

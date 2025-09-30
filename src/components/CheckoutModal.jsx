@@ -1,4 +1,4 @@
-// src/components/CheckoutModal.jsx (CORREGIDO)
+// src/components/CheckoutModal.jsx (COMPLETO Y FINAL)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -40,6 +40,54 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     const [addressToEdit, setAddressToEdit] = useState(null);
     const [justSavedAddressId, setJustSavedAddressId] = useState(null);
     const [newCustomerName, setNewCustomerName] = useState('');
+    
+    const [isScheduling, setIsScheduling] = useState(false);
+    const [scheduledTime, setScheduledTime] = useState(null);
+    
+    const [scheduleDetails, setScheduleDetails] = useState({
+        date: '',
+        hour: '07',
+        minute: '00',
+        period: 'pm'
+    });
+
+    useEffect(() => {
+        if (isScheduling) {
+            const { date, hour, minute, period } = scheduleDetails;
+            if (!date) {
+                 setScheduledTime(null);
+                 return;
+            };
+
+            let twentyFourHour = parseInt(hour, 10);
+            if (period === 'pm' && twentyFourHour < 12) {
+                twentyFourHour += 12;
+            }
+            if (period === 'am' && twentyFourHour === 12) { // 12 AM es 00:00
+                twentyFourHour = 0;
+            }
+
+            const finalDate = new Date(`${date}T00:00:00`);
+            finalDate.setHours(twentyFourHour, parseInt(minute, 10));
+            
+            setScheduledTime(finalDate.toISOString());
+
+        } else {
+            setScheduledTime(null);
+        }
+    }, [isScheduling, scheduleDetails]);
+    
+    const handleToggleScheduling = (shouldSchedule) => {
+        setIsScheduling(shouldSchedule);
+        if (shouldSchedule && !scheduleDetails.date) {
+            const now = new Date();
+            if (now.getHours() >= 19) {
+                 now.setDate(now.getDate() + 1);
+            }
+            const defaultDate = now.toISOString().split('T')[0];
+            setScheduleDetails(prev => ({ ...prev, date: defaultDate }));
+        }
+    };
 
     useEffect(() => {
         if (customer && addresses) {
@@ -50,11 +98,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                         setSelectedAddress(newlySavedAddress);
                         setJustSavedAddressId(null);
                     }
-                // --- 👇 AQUÍ ESTÁ LA CORRECCIÓN ---
-                // Se eliminó `|| selectedAddress.isTemporary` para evitar que
-                // la dirección temporal sea reemplazada por la dirección por defecto.
                 } else if (!selectedAddress) {
-                // --- 👆 FIN DE LA CORRECCIÓN ---
                     const defaultAddress = addresses.find(a => a.is_default) || addresses[0];
                     setSelectedAddress(defaultAddress);
                 }
@@ -84,7 +128,6 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             setSelectedAddress(response.data);
             showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
         } else {
-            // Si no se debe guardar, se crea un objeto temporal solo para el estado local
             const temporaryAddress = {
                 id: `temp_${Date.now()}`,
                 ...addressData,
@@ -126,21 +169,36 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             showAlert("Por favor, selecciona o añade una dirección de entrega.");
             return;
         }
+        if (isScheduling && !scheduledTime) {
+            showAlert("Por favor, selecciona una fecha y hora válidas para programar tu pedido.");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
             const { data: orderData, error: orderError } = await supabase
-                .from('orders').insert({ customer_id: customer.id, total_amount: total, status: 'pendiente' }).select().single();
+                .from('orders').insert({ 
+                    customer_id: customer.id, 
+                    total_amount: total, 
+                    status: 'pendiente',
+                    scheduled_for: scheduledTime
+                }).select().single();
             if (orderError) throw orderError;
 
             const orderItemsToInsert = cartItems.map(item => ({ order_id: orderData.id, product_id: item.id, quantity: item.quantity, price: item.price }));
             const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
             if (itemsError) throw itemsError;
 
-            const mapLink = `https://www.google.com/maps?q=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
+            const mapLink = `http://maps.google.com/?q=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
             let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
             cartItems.forEach(item => { message += `- ${item.quantity}x ${item.name}\n`; });
-            message += `\n*Total: $${total.toFixed(2)}*\n\n*Entregar a:*\n*Nombre:* ${customer?.name}\n*Ubicación:* ${mapLink}\n`;
+            message += `\n*Total: $${total.toFixed(2)}*\n`;
+            
+            if (scheduledTime) {
+                message += `\n*Programado para:*\n${new Date(scheduledTime).toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}\n`;
+            }
+
+            message += `\n*Entregar a:*\n*Nombre:* ${customer?.name}\n*Ubicación:* ${mapLink}\n`;
             if (selectedAddress?.address_reference) message += `*Referencia:* ${selectedAddress.address_reference}`;
 
             const businessNumber = '9633870587';
@@ -160,6 +218,11 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             setIsSubmitting(false);
         }
     };
+
+    const handleScheduleChange = (e) => {
+        const { name, value } = e.target;
+        setScheduleDetails(prev => ({...prev, [name]: value}));
+    }
     
     if (isLoading) {
         return (
@@ -277,6 +340,53 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                             <button onClick={() => openAddressModal(null)} className={styles.addNewAddressButton}>
                                 + Añadir Nueva
                             </button>
+                        </div>
+
+                        <div className={styles.detailsGroup}>
+                            <h4>¿Cuándo lo quieres recibir?</h4>
+                            <div className={styles.deliveryOptions}>
+                                <button 
+                                    className={!isScheduling ? styles.activeOption : ''} 
+                                    onClick={() => handleToggleScheduling(false)}>
+                                    Lo antes posible
+                                </button>
+                                <button 
+                                    className={isScheduling ? styles.activeOption : ''}
+                                    onClick={() => handleToggleScheduling(true)}>
+                                    Programar
+                                </button>
+                            </div>
+                            
+                            {isScheduling && (
+                                <div className={styles.schedulePickerContainer}>
+                                    <input
+                                        type="date"
+                                        name="date"
+                                        className={styles.datePicker}
+                                        value={scheduleDetails.date}
+                                        onChange={handleScheduleChange}
+                                        min={new Date().toISOString().split('T')[0]}
+                                    />
+                                    <div className={styles.timePickerContainer}>
+                                        <select name="hour" value={scheduleDetails.hour} onChange={handleScheduleChange}>
+                                            {Array.from({length: 12}, (_, i) => i + 1).map(h => 
+                                                <option key={h} value={String(h).padStart(2, '0')}>{String(h).padStart(2, '0')}</option>
+                                            )}
+                                        </select>
+                                        <span>:</span>
+                                        <select name="minute" value={scheduleDetails.minute} onChange={handleScheduleChange}>
+                                            <option value="00">00</option>
+                                            <option value="15">15</option>
+                                            <option value="30">30</option>
+                                            <option value="45">45</option>
+                                        </select>
+                                        <select name="period" value={scheduleDetails.period} onChange={handleScheduleChange}>
+                                            <option value="am">AM</option>
+                                            <option value="pm">PM</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className={styles.summary}>
