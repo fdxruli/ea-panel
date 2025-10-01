@@ -12,10 +12,11 @@ const PermissionsMatrix = ({ permissions, setPermissions }) => {
         { key: 'pedidos', label: 'Pedidos' },
         { key: 'productos', label: 'Productos' },
         { key: 'clientes', label: 'Clientes' },
+        { key: 'horarios', label: 'Horarios' }, // <-- AÑADIDO
         { key: 'descuentos', label: 'Descuentos' },
         { key: 'terminos', label: 'Términos y Cond.' },
         { key: 'registrar-admin', label: 'Gestionar Admins' },
-        { key: 'special-price', label: 'Precios '}
+        { key: 'special-price', label: 'Precios ' }
     ];
 
     const actions = ['view', 'edit', 'delete'];

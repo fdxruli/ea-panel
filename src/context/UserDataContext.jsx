@@ -17,18 +17,17 @@ export const UserDataProvider = ({ children }) => {
         addresses: [],
         orders: [],
     });
-    const [loading, setLoading] = useState(true); // Se mantiene para la carga inicial absoluta
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const fetchAndCacheUserData = useCallback(async (phoneNumber) => {
+        // ... (la lógica de esta función se mantiene igual, es tu "revalidate")
         if (!phoneNumber) {
             setUserData({ customer: null, addresses: [], orders: [] });
             localStorage.removeItem(USER_DATA_CACHE_KEY);
             setLoading(false);
             return;
         }
-
-        // No mostramos un loader aquí para que la actualización sea en segundo plano
         setError(null);
         try {
             const { data: customerData, error: customerError } = await supabase
@@ -62,16 +61,12 @@ export const UserDataProvider = ({ children }) => {
 
         } catch (err) {
             setError(err.message);
-            // No limpiamos los datos si falla, el usuario puede seguir viendo los datos cacheados.
         } finally {
-            // El loading principal solo se desactiva una vez, en el useEffect de montaje.
             if (loading) setLoading(false);
         }
-    }, [loading]); // Se añade 'loading' a las dependencias
+    }, [loading]);
 
-    // --- 👇 AQUÍ ESTÁ LA OPTIMIZACIÓN PRINCIPAL ---
     useEffect(() => {
-        // Paso 1: Intentar cargar desde el caché INMEDIATAMENTE
         try {
             const cachedData = localStorage.getItem(USER_DATA_CACHE_KEY);
             if (cachedData) {
@@ -81,50 +76,65 @@ export const UserDataProvider = ({ children }) => {
             console.error("Error parsing user cache", e);
             localStorage.removeItem(USER_DATA_CACHE_KEY);
         } finally {
-            // Siempre quitamos el loader después de checar el caché.
-            // La app se siente instantánea.
             setLoading(false);
         }
 
-        // Paso 2: Si hay un teléfono, buscar datos frescos en segundo plano
         if (phone) {
             fetchAndCacheUserData(phone);
         } else {
-           // Si no hay teléfono, limpiar todo
            setUserData({ customer: null, addresses: [], orders: [] });
            localStorage.removeItem(USER_DATA_CACHE_KEY);
         }
     }, [phone, fetchAndCacheUserData]);
-    // --- 👆 FIN DE LA OPTIMIZACIÓN ---
 
-
+    // --- 👇 MEJORA: AQUÍ IMPLEMENTAMOS LA ACTUALIZACIÓN GRANULAR ---
     useEffect(() => {
         if (!userData.customer?.id) return;
 
-        const handleChanges = () => {
-             console.log('Real-time change detected for user data, refetching...');
-             fetchAndCacheUserData(phone);
+        const handleOrderChanges = (payload) => {
+             console.log('Cambio en pedido:', payload);
+             setUserData(prev => {
+                let newOrders = [...prev.orders];
+                if (payload.eventType === 'INSERT') {
+                    // Para que el nuevo pedido tenga toda la info, lo ideal sería pedirlo completo
+                    // O si el payload ya trae todo, insertarlo directamente.
+                    // Por simplicidad aquí, llamamos a refetch, pero en un caso más complejo
+                    // se podría añadir `payload.new` directamente a `newOrders`.
+                    fetchAndCacheUserData(phone); // Refetch es más seguro para pedidos complejos.
+                } else if (payload.eventType === 'UPDATE') {
+                    newOrders = newOrders.map(order => order.id === payload.new.id ? { ...order, ...payload.new } : order);
+                } else if (payload.eventType === 'DELETE') {
+                    newOrders = newOrders.filter(order => order.id !== payload.old.id);
+                }
+                return { ...prev, orders: newOrders };
+             });
         };
 
-        const customersSubscription = supabase.channel(`public:customers:${userData.customer.id}`)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'customers', filter: `id=eq.${userData.customer.id}` }, (payload) => {
-                console.log('Real-time update for customer:', payload.new);
-                setUserData(prev => ({ ...prev, customer: payload.new }));
-            })
+         const handleAddressChanges = (payload) => {
+            setUserData(prev => {
+                let newAddresses = [...prev.addresses];
+                if (payload.eventType === 'INSERT') {
+                    newAddresses.push(payload.new);
+                } else if (payload.eventType === 'UPDATE') {
+                    newAddresses = newAddresses.map(addr => addr.id === payload.new.id ? payload.new : addr);
+                } else if (payload.eventType === 'DELETE') {
+                    newAddresses = newAddresses.filter(addr => addr.id !== payload.old.id);
+                }
+                return { ...prev, addresses: newAddresses };
+            });
+        };
+
+        const ordersSubscription = supabase.channel(`public:orders:customer=${userData.customer.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `customer_id=eq.${userData.customer.id}` }, handleOrderChanges)
             .subscribe();
 
-        const addressesSubscription = supabase.channel(`public:customer_addresses:${userData.customer.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_addresses', filter: `customer_id=eq.${userData.customer.id}` }, handleChanges)
-            .subscribe();
-
-        const ordersSubscription = supabase.channel(`public:orders:${userData.customer.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `customer_id=eq.${userData.customer.id}` }, handleChanges)
+        const addressesSubscription = supabase.channel(`public:customer_addresses:customer=${userData.customer.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_addresses', filter: `customer_id=eq.${userData.customer.id}` }, handleAddressChanges)
             .subscribe();
 
         return () => {
-            supabase.removeChannel(customersSubscription);
-            supabase.removeChannel(addressesSubscription);
             supabase.removeChannel(ordersSubscription);
+            supabase.removeChannel(addressesSubscription);
         };
 
     }, [userData.customer?.id, fetchAndCacheUserData, phone]);

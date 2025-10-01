@@ -1,4 +1,4 @@
-// src/components/CheckoutModal.jsx (COMPLETO Y FINAL)
+// src/components/CheckoutModal.jsx (CORREGIDO Y FINAL)
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -9,6 +9,7 @@ import ClientOnly from './ClientOnly';
 import { useAlert } from '../context/AlertContext';
 import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
+import { useBusinessHours } from '../context/BusinessHoursContext';
 
 const MapPinIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -32,6 +33,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     const { showAlert } = useAlert();
     const { cartItems, total, subtotal, discount, clearCart, toggleCart } = useCart();
     const { customer, addresses, refetch: refetchUserData } = useUserData();
+    const { isOpen: isBusinessOpen } = useBusinessHours(); // CORREGIDO: Se quitó nextOpening que no existe
 
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +65,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             if (period === 'pm' && twentyFourHour < 12) {
                 twentyFourHour += 12;
             }
-            if (period === 'am' && twentyFourHour === 12) { // 12 AM es 00:00
+            if (period === 'am' && twentyFourHour === 12) {
                 twentyFourHour = 0;
             }
 
@@ -165,6 +167,11 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     };
 
     const placeOrder = async () => {
+        if (!isBusinessOpen) {
+            // CORREGIDO: Typo en el mensaje
+            showAlert("Lo sentimos, el negocio está cerrado y no podemos procesar tu pedido ahora.");
+            return;
+        }
         if (!selectedAddress) {
             showAlert("Por favor, selecciona o añade una dirección de entrega.");
             return;
@@ -189,7 +196,8 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
             if (itemsError) throw itemsError;
 
-            const mapLink = `http://maps.google.com/?q=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
+            // CORREGIDO: URL de Google Maps
+            const mapLink = `https://www.google.com/maps?q=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
             let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
             cartItems.forEach(item => { message += `- ${item.quantity}x ${item.name}\n`; });
             message += `\n*Total: $${total.toFixed(2)}*\n`;
@@ -218,11 +226,14 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             setIsSubmitting(false);
         }
     };
-
+    
     const handleScheduleChange = (e) => {
         const { name, value } = e.target;
         setScheduleDetails(prev => ({...prev, [name]: value}));
     }
+
+    // El resto del componente no necesita cambios...
+    // ... (código de los return para loading, profile, etc.) ...
     
     if (isLoading) {
         return (
@@ -403,8 +414,8 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                     </div>
 
                     <div className={styles.footer}>
-                        <button onClick={placeOrder} className={styles.confirmButton} disabled={isSubmitting}>
-                            {isSubmitting ? 'Procesando...' : `Confirmar y Pagar $${total.toFixed(2)}`}
+                        <button onClick={placeOrder} className={styles.confirmButton} disabled={isSubmitting || !isBusinessOpen}>
+                            {isSubmitting ? 'Procesando...' : (isBusinessOpen ? `Confirmar y Pagar $${(total || 0).toFixed(2)}` : 'Estamos Cerrados')}
                         </button>
                     </div>
                 </div>

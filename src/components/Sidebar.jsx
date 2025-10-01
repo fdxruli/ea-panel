@@ -13,6 +13,7 @@ export default function Sidebar({ isOpen }) {
       {hasPermission('pedidos.view') && <Link to="/admin/pedidos">Pedidos</Link>}
       {hasPermission('clientes.view') && <Link to="/admin/clientes">Clientes</Link>}
       {hasPermission('productos.view') && <Link to="/admin/productos">Productos</Link>}
+      {hasPermission('horarios.view') && <Link to="/admin/horarios">Horarios</Link>} {/* <-- AÑADIR ENLACE */}
       {hasPermission('descuentos.view') && <Link to="/admin/descuentos">Descuentos</Link>}
       {hasPermission('terminos.view') && <Link to="/admin/terminos">Términos y Cond.</Link>}
       {hasPermission('registrar-admin.view') && <Link to="/admin/registrar-admin">Registrar Admin</Link>}

@@ -1,4 +1,4 @@
-// src/context/ProductExtrasContext.jsx (MODIFICADO)
+// src/context/ProductExtrasContext.jsx (OPTIMIZADO)
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -9,6 +9,7 @@ const ProductExtrasContext = createContext();
 export const useProductExtras = () => useContext(ProductExtrasContext);
 
 const FAVORITES_CACHE_KEY = 'ea-favorites-cache';
+const REVIEWS_CACHE_KEY = 'ea-reviews-cache'; // Añadimos caché para reseñas
 
 export const ProductExtrasProvider = ({ children }) => {
     const { phone } = useCustomer();
@@ -18,16 +19,16 @@ export const ProductExtrasProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
-        setLoading(true);
+        // Esta función se mantiene para la carga inicial y la revalidación
         try {
-            // --- 👇 AQUÍ ESTÁ EL CAMBIO ---
-            // Ahora pedimos más datos del producto asociado a la reseña.
             const { data: revData } = await supabase
                 .from('product_reviews')
                 .select('*, products(id, name, image_url, is_active), customers(name)')
                 .order('created_at', { ascending: false });
-            // --- 👆 FIN DEL CAMBIO ---
-            setReviews(revData || []);
+            
+            const validReviews = revData || [];
+            setReviews(validReviews);
+            localStorage.setItem(REVIEWS_CACHE_KEY, JSON.stringify(validReviews));
 
             if (currentCustomerId) {
                 const { data: favData } = await supabase
@@ -49,63 +50,84 @@ export const ProductExtrasProvider = ({ children }) => {
         }
     }, []);
 
+    // MEJORA: Carga inicial desde caché (Stale-While-Revalidate)
     useEffect(() => {
+        setLoading(true);
+        try {
+            const cachedFavs = localStorage.getItem(FAVORITES_CACHE_KEY);
+            if (cachedFavs) setFavorites(JSON.parse(cachedFavs));
+            const cachedRevs = localStorage.getItem(REVIEWS_CACHE_KEY);
+            if (cachedRevs) setReviews(JSON.parse(cachedRevs));
+        } catch(e) {
+            console.error("Error al leer caché de extras", e);
+        }
+
         const getCustomerIdAndFetch = async () => {
             if (!phone) {
                 setCustomerId(null);
-                fetchAndCacheExtras(null);
+                setLoading(false);
                 return;
             }
             const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
             const currentId = data ? data.id : null;
             setCustomerId(currentId);
-            const cachedFavs = localStorage.getItem(FAVORITES_CACHE_KEY);
-            if (cachedFavs) {
-                setFavorites(JSON.parse(cachedFavs));
-            }
-            fetchAndCacheExtras(currentId);
+            fetchAndCacheExtras(currentId); // Revalida en segundo plano
         };
+
         getCustomerIdAndFetch();
     }, [phone, fetchAndCacheExtras]);
 
+    // MEJORA: WebSockets con actualizaciones granulares
     useEffect(() => {
-        const handleChanges = (payload, table) => {
-            console.log(`Real-time change in ${table}:`, payload);
-            if (customerId) {
-                fetchAndCacheExtras(customerId);
-            }
+        const handleFavoriteChanges = (payload) => {
+            console.log('Cambio en Favoritos:', payload);
+            setFavorites(prevFavs => {
+                if (payload.eventType === 'INSERT') {
+                    return [...prevFavs, payload.new];
+                }
+                if (payload.eventType === 'DELETE') {
+                    return prevFavs.filter(fav => fav.id !== payload.old.id);
+                }
+                return prevFavs; // UPDATE es raro en favoritos, pero se puede añadir
+            });
+        };
+        
+        const handleReviewChanges = (payload) => {
+            console.log('Cambio en Reseñas:', payload);
+            setReviews(prevRevs => {
+                if (payload.eventType === 'INSERT') {
+                    return [payload.new, ...prevRevs];
+                }
+                if (payload.eventType === 'UPDATE') {
+                    return prevRevs.map(rev => rev.id === payload.new.id ? payload.new : rev);
+                }
+                if (payload.eventType === 'DELETE') {
+                    return prevRevs.filter(rev => rev.id !== payload.old.id);
+                }
+                return prevRevs;
+            });
         };
 
-        const channel = supabase.channel('product-extras');
+        const channel = supabase.channel('product-extras-granular');
+        
+        // Escucha solo los favoritos del cliente actual
+        if (customerId) {
+            channel.on('postgres_changes', { 
+                event: '*', schema: 'public', table: 'customer_favorites', filter: `customer_id=eq.${customerId}` 
+            }, handleFavoriteChanges);
+        }
+        
+        // Escucha todas las reseñas (son públicas en la app)
+        channel.on('postgres_changes', { 
+            event: '*', schema: 'public', table: 'product_reviews' 
+        }, handleReviewChanges);
 
-        channel
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'product_reviews' },
-                (payload) => handleChanges(payload, 'product_reviews')
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'customer_favorites' },
-                (payload) => handleChanges(payload, 'customer_favorites')
-            )
-            .subscribe((status, err) => {
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Conectado al canal de extras en tiempo real.');
-                }
-                if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Error en el canal de tiempo real:', err);
-                }
-                 if (status === 'TIMED_OUT') {
-                    console.warn('⌛ La conexión de tiempo real expiró. Intentando reconectar...');
-                }
-            });
+        channel.subscribe();
 
         return () => {
-            console.log('Desuscribiendo del canal de extras.');
             supabase.removeChannel(channel);
         };
-    }, [customerId, fetchAndCacheExtras]);
+    }, [customerId]);
 
     const value = {
         reviews,

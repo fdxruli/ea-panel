@@ -10,6 +10,7 @@ import { ProductExtrasProvider } from "./context/ProductExtrasContext";
 import { AlertProvider } from "./context/AlertContext";
 import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext"; // <-- 2. IMPORTAR useAdminAuth
 import { ThemeProvider } from "./context/ThemeContext";
+import { BusinessHoursProvider } from "./context/BusinessHoursContext"; // <-- IMPORTAR
 
 // Componentes y páginas
 import AdminLayout from "./layouts/AdminLayout";
@@ -30,6 +31,7 @@ import LoadingSpinner from "./components/LoadingSpinner"; // <-- 3. IMPORTAR Loa
 import SpecialPrices from "./pages/SpecialPrices";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import BusinessHours from "./pages/BusinessHours"; // <-- IMPORTAR
 import 'leaflet/dist/leaflet.css';
 
 // --- 👇 4. COMPONENTE GUARDIÁN PARA LAS RUTAS ---
@@ -54,24 +56,26 @@ const PermissionWrapper = ({ permissionKey, element }) => {
 function App() {
   return (
     <Routes>
-      {/* --- RUTAS PARA EL CLIENTE (SIN CAMBIOS) --- */}
+      {/* --- RUTAS PARA EL CLIENTE (AHORA CON HORARIOS) --- */}
       <Route
         path="/"
         element={
           <ThemeProvider>
-            <CustomerProvider>
-              <ProductProvider>
-                <CartProvider>
-                  <UserDataProvider>
-                    <ProductExtrasProvider>
-                      <AlertProvider>
-                        <ClientLayout />
-                      </AlertProvider>
-                    </ProductExtrasProvider>
-                  </UserDataProvider>
-                </CartProvider>
-              </ProductProvider>
-            </CustomerProvider>
+            <BusinessHoursProvider> {/* <-- ENVOLVER */}
+              <CustomerProvider>
+                <ProductProvider>
+                  <CartProvider>
+                    <UserDataProvider>
+                      <ProductExtrasProvider>
+                        <AlertProvider>
+                          <ClientLayout />
+                        </AlertProvider>
+                      </ProductExtrasProvider>
+                    </UserDataProvider>
+                  </CartProvider>
+                </ProductProvider>
+              </CustomerProvider>
+            </BusinessHoursProvider>
           </ThemeProvider>
         }
       >
@@ -84,7 +88,7 @@ function App() {
 
       <Route path="/login" element={<Login />} />
 
-      {/* --- RUTAS PARA EL ADMINISTRADOR (AHORA CON RUTAS PROTEGIDAS) --- */}
+      {/* --- RUTAS PARA EL ADMINISTRADOR --- */}
       <Route element={<ProtectedRoute />}>
         <Route
           path="/admin"
@@ -96,7 +100,6 @@ function App() {
             </AlertProvider>
           }
         >
-          {/* --- 👇 5. CADA RUTA ESTÁ ENVUELTA EN EL GUARDIÁN --- */}
           <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} />} />
           <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
           <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />
@@ -105,6 +108,7 @@ function App() {
           <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
           <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
           <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
+          <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} /> {/* <-- NUEVA RUTA */}
         </Route>
       </Route>
     </Routes>
