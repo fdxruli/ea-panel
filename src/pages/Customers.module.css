@@ -1,0 +1,151 @@
+/* src/pages/Customers.module.css (NUEVO ARCHIVO) */
+
+.container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.container h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+}
+
+.customerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.customerCard {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: all 0.4s ease;
+}
+
+.customerCard.open {
+    box-shadow: 0 8px 30px var(--shadow-color);
+    border-color: var(--color-primary);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    cursor: pointer;
+}
+
+.customerName {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--text-primary);
+}
+
+.customerPhone {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.toggleButton {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.customerCard.open .toggleButton {
+    transform: rotate(45deg);
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.detailsContent {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out, padding 0.5s ease;
+    padding: 0 1.5rem;
+}
+
+.customerCard.open .detailsContent {
+    max-height: 1000px;
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    transition: max-height 0.6s ease-in;
+}
+
+.infoSection {
+    margin-bottom: 2rem;
+}
+.infoSection:last-child {
+    margin-bottom: 0;
+}
+
+.infoSection h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.8rem;
+}
+.infoSection svg {
+    color: var(--color-primary);
+}
+.infoSection p {
+    color: var(--text-secondary);
+}
+.infoSection ul {
+    list-style: none;
+    padding: 0;
+}
+.infoSection li {
+    padding: 0.8rem;
+    border-radius: 8px;
+    background-color: var(--bg-primary);
+    margin-bottom: 0.5rem;
+}
+.infoSection li p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+.infoSection li span {
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+.orderList li {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.status {
+    padding: 0.2rem 0.6rem;
+    border-radius: 50px;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    text-align: center;
+}
+
+.pendiente { background-color: #f0ad4e; }
+.en_proceso { background-color: #3498db; }
+.completado { background-color: var(--color-success); }
+.cancelado { background-color: var(--color-error); }

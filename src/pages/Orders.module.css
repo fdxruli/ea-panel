@@ -1,0 +1,206 @@
+/* src/pages/Orders.module.css (ACTUALIZADO CON MEJORAS VISUALES Y DE UX) */
+
+.container {
+    padding: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+    background-color: var(--bg-primary); 
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+}
+
+.filters {
+    display: flex;
+    gap: 1rem;
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    margin-bottom: 2.5rem;
+}
+
+.searchInput {
+    flex-grow: 1;
+    min-width: 250px;
+}
+
+.statusFilter {
+    min-width: 180px;
+}
+
+.orderGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 2rem;
+}
+
+.orderCard {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    border-color: var(--color-primary);
+}
+
+.orderCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px var(--shadow-color);
+}
+
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cardHeader h3 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.statusBadge {
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.pendiente { background-color: #f0ad4e; }
+.en_proceso { background-color: #3498db; }
+.completado { background-color: var(--color-success); }
+.cancelado { background-color: var(--color-error); }
+
+.cardBody {
+    padding: 1.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.infoSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.infoSection h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.customerInfo {
+    font-size: 1.1rem;
+}
+.customerInfo span {
+    font-weight: 600;
+}
+
+.productsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-primary);
+}
+.productsList li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.8rem;
+}
+.productsList li:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+.productName {
+    font-weight: 500;
+}
+.productQuantity {
+    color: var(--text-secondary);
+}
+
+.scheduledTime {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* --- 👇 SECCIÓN CORREGIDA Y MEJORADA --- */
+.cardFooter {
+    display: flex;
+    flex-direction: column; /* Apila el total y los botones */
+    gap: 1rem; /* Espacio entre el total y la fila de botones */
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+}
+
+.totalAmount {
+    font-size: 1.8rem; /* Aumentamos el tamaño del total */
+    font-weight: 700;
+    text-align: right; /* Alineamos el total a la derecha */
+    margin-bottom: 0.5rem; /* Pequeño margen inferior */
+}
+
+.actionButtons {
+    display: grid; /* Usamos grid para que los botones tengan el mismo tamaño */
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Columnas flexibles */
+    gap: 0.8rem;
+}
+
+.actionButtons button {
+    padding: 0.8rem 1rem; /* Hacemos los botones más grandes */
+    border-radius: 8px; /* Bordes ligeramente menos redondeados para un look más sólido */
+    font-weight: 600; /* Texto más notorio */
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+}
+/* --- 👆 FIN DE LA CORRECCIÓN --- */
+
+.deliveryButton {
+    background-color: var(--color-accent);
+    color: white;
+}
+.processButton {
+    background-color: #3498db;
+    color: white;
+}
+.completeButton {
+    background-color: var(--color-success);
+    color: white;
+}
+.cancelButton {
+    background-color: var(--color-error);
+    color: white;
+}

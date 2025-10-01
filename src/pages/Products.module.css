@@ -1,0 +1,246 @@
+/* src/pages/Products.module.css (ACTUALIZADO) */
+.container {
+    padding: 2rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap; /* Permitir que los elementos se envuelvan */
+    gap: 1rem; /* Espacio entre el título y los botones */
+}
+.header h1 { margin: 0; font-size: 2.5rem; }
+
+/* --- NUEVO CONTENEDOR PARA LOS BOTONES --- */
+.headerActions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap; /* Para que los botones se apilen en pantallas pequeñas */
+}
+
+.addButton {
+    background-color: var(--color-primary);
+    color: white;
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+.addButton:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* Estilo para el nuevo botón de categorías */
+.manageButton {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+.manageButton:hover {
+    border-color: var(--color-primary);
+}
+
+
+.filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.searchInput { flex-grow: 1; min-width: 200px; }
+.categorySelect, .statusSelect {
+    min-width: 200px;
+}
+
+.productGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.productCard {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+.productCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px var(--shadow-color);
+}
+
+.productCard.inactive {
+    opacity: 0.6;
+}
+.productCard.inactive .imageContainer img {
+    filter: grayscale(1);
+}
+
+.imageContainer {
+    width: 100%;
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+.imageContainer img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.imageCount {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.cardContent {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.categoryTag {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    padding: 0.25rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    align-self: flex-start;
+    margin-bottom: 1rem;
+}
+.productName {
+    font-size: 1.4rem;
+    margin: 0 0 0.5rem;
+}
+.productDescription {
+    color: var(--text-secondary);
+    flex-grow: 1;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+.priceInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+.price {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.cost {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.cardActions {
+    margin-top: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+}
+.cardActions button {
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.cardActions .editButton, .cardActions .manageButton {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.toggleButton {
+    background-color: var(--color-accent);
+    color: white;
+}
+.inactive .toggleButton {
+    background-color: var(--color-success);
+}
+
+
+/* --- Estilos para el Modal del Formulario --- */
+.modalOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5); z-index: 1000;
+    display: flex; justify-content: center; align-items: center;
+}
+.modalContent {
+    background-color: var(--bg-secondary);
+    padding: 2.5rem;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.productForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.formGroup label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+.imagePreview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+}
+.modalActions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+.modalActions button {
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.cancelButton {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+.saveButton {
+    background-color: var(--color-primary);
+    color: white;
+}
+.saveButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

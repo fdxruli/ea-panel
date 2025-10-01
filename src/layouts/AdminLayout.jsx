@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
-import AlertModal from "../components/AlertModal"; // <-- 1. IMPORTAR EL MODAL
-import '../App.css'; 
+import AlertModal from "../components/AlertModal";
+import '../App.css';
 
 export default function AdminLayout() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -14,12 +14,18 @@ export default function AdminLayout() {
     setSidebarOpen(!isSidebarOpen);
   };
 
+  // --- 👇 NUEVA FUNCIÓN PARA CERRAR EL SIDEBAR ---
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+  };
+
   return (
     <>
-      <AlertModal /> {/* <-- 2. AÑADIR EL MODAL AQUÍ */}
+      <AlertModal />
       <Navbar toggleSidebar={toggleSidebar} />
       <div className="container">
-        <Sidebar isOpen={isSidebarOpen} />
+        {/* --- 👇 PASAMOS LA NUEVA FUNCIÓN AL COMPONENTE HIJO --- */}
+        <Sidebar isOpen={isSidebarOpen} closeSidebar={closeSidebar} />
         <main className="main-content">
           <Outlet />
         </main>

@@ -1,42 +1,66 @@
-// src/components/ManageImagesModal.jsx
-
+// src/components/ManageImagesModal.jsx (ACTUALIZADO)
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageImagesModal.module.css';
-import { useAlert } from '../context/AlertContext'; // <-- IMPORTAR
+import { useAlert } from '../context/AlertContext';
 
-export default function ManageImagesModal({ product, onClose, onImagesUpdate }) {
-  const { showAlert } = useAlert(); // <-- INICIALIZAR
+export default function ManageImagesModal({ product, isOpen, onClose, onImagesUpdate }) {
+  const { showAlert } = useAlert();
   const [images, setImages] = useState([]);
-  const [newImageUrl, setNewImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // La imagen principal y las secundarias se combinan para la vista
-    const allImages = [
-      { id: 'main', image_url: product.image_url, is_main: true },
-      ...product.product_images.map(img => ({ ...img, is_main: false }))
-    ].filter(img => img.image_url); // Filtra por si la principal es nula
-    setImages(allImages);
+    if (product) {
+      const allImages = [
+        { id: 'main', image_url: product.image_url, is_main: true },
+        ...product.product_images.map(img => ({ ...img, is_main: false }))
+      ].filter(img => img.image_url);
+      setImages(allImages);
+    }
   }, [product]);
 
+  if (!isOpen) return null;
+
+  const handleFileChange = (e) => {
+      if (e.target.files && e.target.files[0]) {
+          setImageFile(e.target.files[0]);
+      }
+  };
+
   const addImage = async () => {
-    if (!newImageUrl.trim()) {
-      showAlert("La URL de la imagen no puede estar vacía.");
+    if (!imageFile) {
+      showAlert("Por favor, selecciona un archivo de imagen.");
       return;
     }
     setLoading(true);
-    const { error } = await supabase
-      .from('product_images')
-      .insert({ product_id: product.id, image_url: newImageUrl });
 
-    if (error) {
-      showAlert(`Error al añadir la imagen: ${error.message}`);
-    } else {
-      setNewImageUrl('');
-      onImagesUpdate(); // Llama a la función para refrescar los datos en la página de Productos
+    try {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${product.id}-${Date.now()}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, imageFile);
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(filePath);
+
+        const { error: insertError } = await supabase
+            .from('product_images')
+            .insert({ product_id: product.id, image_url: publicUrl });
+        
+        if (insertError) throw insertError;
+
+        setImageFile(null);
+        document.getElementById('image-upload-input').value = ""; // Limpiar el input
+        onImagesUpdate(); // Refresca los datos en la página de Productos
+        showAlert("Imagen añadida con éxito.");
+
+    } catch (error) {
+        showAlert(`Error al añadir la imagen: ${error.message}`);
+    } finally {
+        setLoading(false);
     }
-    setLoading(false);
   };
 
   const deleteImage = async (imageId, isMain) => {
@@ -56,6 +80,7 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
       showAlert(`Error al eliminar la imagen: ${error.message}`);
     } else {
       onImagesUpdate();
+      showAlert("Imagen eliminada.");
     }
     setLoading(false);
   };
@@ -68,13 +93,13 @@ export default function ManageImagesModal({ product, onClose, onImagesUpdate }) 
         
         <div className={styles.addImageForm}>
           <input
-            type="text"
-            placeholder="URL de la nueva imagen"
-            value={newImageUrl}
-            onChange={(e) => setNewImageUrl(e.target.value)}
+            id="image-upload-input"
+            type="file"
+            onChange={handleFileChange}
+            accept="image/*"
           />
           <button onClick={addImage} disabled={loading}>
-            {loading ? 'Añadiendo...' : 'Añadir Imagen'}
+            {loading ? 'Subiendo...' : 'Añadir Imagen'}
           </button>
         </div>
 

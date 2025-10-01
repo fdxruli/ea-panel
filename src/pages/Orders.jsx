@@ -1,24 +1,112 @@
-// src/pages/Orders.jsx (MODIFICADO)
+// src/pages/Orders.jsx (ACTUALIZADO CON BOTÓN Y MODAL DE ENVÍO)
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
+import styles from "./Orders.module.css";
+import DeliveryInfoModal from "../components/DeliveryInfoModal"; // <-- 1. IMPORTAR MODAL
+
+// --- Componente de Tarjeta de Pedido ---
+const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo }) => { // <-- 2. AÑADIR PROP
+  const [items, setItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  const fetchOrderItems = async (orderId) => {
+    setLoadingItems(true);
+    const { data, error } = await supabase
+      .from("order_items")
+      .select(`quantity, price, products(name)`)
+      .eq("order_id", orderId);
+    if (error) console.error(error);
+    else setItems(data);
+    setLoadingItems(false);
+  };
+
+  useEffect(() => {
+    fetchOrderItems(order.id);
+  }, [order.id]);
+
+  return (
+    <div className={styles.orderCard}>
+        <div className={styles.cardHeader}>
+            <h3>Pedido #{order.order_code}</h3>
+            <span className={`${styles.statusBadge} ${styles[order.status]}`}>
+              {order.status.replace('_', ' ')}
+            </span>
+        </div>
+        <div className={styles.cardBody}>
+            <div className={styles.infoSection}>
+                <h4>Cliente</h4>
+                <p className={styles.customerInfo}>
+                    <span>{order.customers?.name || 'N/A'}</span> ({order.customers?.phone || 'N/A'})
+                </p>
+            </div>
+            {order.scheduled_for && (
+            <div className={styles.infoSection}>
+                <p className={styles.scheduledTime}>
+                Programado para: {new Date(order.scheduled_for).toLocaleString()}
+                </p>
+            </div>
+            )}
+            <div className={styles.infoSection}>
+                <h4>Productos</h4>
+                {loadingItems ? <p>Cargando...</p> : (
+                    <ul className={styles.productsList}>
+                    {items.map((item, index) => (
+                        <li key={index}>
+                          <span className={styles.productName}>{item.products.name}</span>
+                          <span className={styles.productQuantity}>{item.quantity} x ${item.price}</span>
+                        </li>
+                    ))}
+                    </ul>
+                )}
+            </div>
+        </div>
+      <div className={styles.cardFooter}>
+        <span className={styles.totalAmount}>${order.total_amount.toFixed(2)}</span>
+        <div className={styles.actionButtons}>
+          {/* -- 3. AÑADIR NUEVO BOTÓN -- */}
+          <button onClick={() => onShowDeliveryInfo(order)} className={styles.deliveryButton}>
+            Ver Envío
+          </button>
+          {order.status === 'pendiente' && (
+            <button onClick={() => onUpdateStatus(order.id, "en_proceso")} className={styles.processButton}>
+              Procesar
+            </button>
+          )}
+          {order.status === 'en_proceso' && (
+            <button onClick={() => onUpdateStatus(order.id, "completado")} className={styles.completeButton}>
+              Completar
+            </button>
+          )}
+          {order.status !== 'completado' && order.status !== 'cancelado' && (
+            <button onClick={() => onUpdateStatus(order.id, "cancelado")} className={styles.cancelButton}>
+              Cancelar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [orderItems, setOrderItems] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("activos");
+  
+  // -- 4. ESTADOS PARA EL MODAL --
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [deliveryInfo, setDeliveryInfo] = useState(null);
 
-  // MODIFICADO: La consulta ahora pide explícitamente la columna 'scheduled_for'
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("orders")
-      .select(`
-        id, order_code, customer_id, status, total_amount, created_at,
-        cancellation_reason, scheduled_for, customers(name, phone)
-      `)
+      .select(`*, customers(name, phone)`)
       .order("created_at", { ascending: false });
 
     if (error) console.error(error);
@@ -28,142 +116,103 @@ export default function Orders() {
 
   useEffect(() => {
     fetchOrders();
-
-    const channel = supabase
-      .channel('public:orders:admin')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        (payload) => {
-          console.log('Cambio detectado en pedidos (admin), actualizando...', payload);
-          fetchOrders();
-        }
-      )
+    const channel = supabase.channel('public:orders:admin')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [fetchOrders]);
-
-
-  const fetchOrderItems = async (orderId) => {
-    const { data, error } = await supabase
-      .from("order_items")
-      .select(`quantity, price, products(name)`)
-      .eq("order_id", orderId);
-
-    if (error) console.error(error);
-    else setOrderItems(data);
-  };
   
   const updateStatus = async (orderId, newStatus) => {
     let updateData = { status: newStatus };
-    
     if (newStatus === 'cancelado') {
-      const reason = prompt("Por favor, introduce el motivo de la cancelación:");
+      const reason = prompt("Motivo de la cancelación (opcional):");
       if (reason === null) return;
-      updateData.cancellation_reason = reason || 'Cancelado por el administrador.';
+      updateData.cancellation_reason = reason || 'Cancelado por administrador.';
     }
-
-    const { error } = await supabase
-      .from("orders")
-      .update(updateData)
-      .eq("id", orderId);
-
-    if (error) console.error(error);
+    await supabase.from("orders").update(updateData).eq("id", orderId);
   };
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      const matchesSearch = o.order_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            o.customers?.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (statusFilter === 'todos') return matchesSearch;
+      if (statusFilter === 'activos') return (o.status === 'pendiente' || o.status === 'en_proceso') && matchesSearch;
+      return o.status === statusFilter && matchesSearch;
+    });
+  }, [orders, searchTerm, statusFilter]);
+
+  // --- 5. FUNCIÓN PARA MOSTRAR LA INFO DE ENVÍO ---
+  const handleShowDeliveryInfo = async (order) => {
+    // Primero, buscamos la dirección predeterminada del cliente
+    const { data: address, error } = await supabase
+      .from('customer_addresses')
+      .select('*')
+      .eq('customer_id', order.customer_id)
+      .eq('is_default', true)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching address:", error);
+      // Opcional: mostrar una alerta al usuario
+      return;
+    }
+    
+    setDeliveryInfo({
+      customer: order.customers,
+      address: address // puede ser null si no hay default
+    });
+    setIsDeliveryModalOpen(true);
+  };
+
 
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div>
-      <h1>Pedidos</h1>
-
-      <table className="products-table">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Cliente</th>
-            <th>Teléfono</th>
-            <th>Total</th>
-            <th>Estado</th>
-            <th>Fecha del Pedido</th>
-            {/* NUEVO: Columna para la fecha de entrega */}
-            <th>Fecha de Entrega</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o) => (
-            <tr key={o.id}>
-              <td>{o.order_code}</td>
-              <td>{o.customers?.name}</td>
-              <td>{o.customers?.phone}</td>
-              <td>${o.total_amount}</td>
-              <td>
-                {o.status}
-                {o.status === 'cancelado' && o.cancellation_reason && (
-                  <small style={{display: 'block', color: '#777'}}>Motivo: {o.cancellation_reason}</small>
-                )}
-              </td>
-              <td>{new Date(o.created_at).toLocaleString()}</td>
-              {/* NUEVO: Celda que muestra la fecha de entrega */}
-              <td>
-                {o.scheduled_for ? (
-                  <strong style={{ color: '#e74c3c' }}>
-                    {new Date(o.scheduled_for).toLocaleString()}
-                  </strong>
-                ) : (
-                  'Inmediato'
-                )}
-              </td>
-              <td>
-                <button onClick={() => {
-                  setSelectedOrder(o.id);
-                  fetchOrderItems(o.id);
-                }}>
-                  Ver detalle
-                </button>
-                {o.status !== "completado" && o.status !== "cancelado" && (
-                  <>
-                    <button onClick={() => updateStatus(o.id, "en_proceso")}>En proceso</button>
-                    <button onClick={() => updateStatus(o.id, "completado")}>Completado</button>
-                  </>
-                )}
-                {o.status !== "cancelado" &&
-                    <button onClick={() => updateStatus(o.id, "cancelado")}>Cancelar</button>
-                }
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {selectedOrder && (
-        <div className="form-container">
-          <h3>Detalle del pedido</h3>
-          <table className="products-table">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio Unitario</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orderItems.map((item, index) => (
-                <tr key={index}>
-                  <td>{item.products.name}</td>
-                  <td>{item.quantity}</td>
-                  <td>${item.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button onClick={() => setSelectedOrder(null)}>Cerrar detalle</button>
+    <div className={styles.container}>
+        <div className={styles.header}>
+            <h1>Gestión de Pedidos</h1>
         </div>
-      )}
+        <div className={styles.filters}>
+            <input 
+              type="text" 
+              placeholder="Buscar por código o cliente..." 
+              className={styles.searchInput}
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            <select 
+              className={styles.statusFilter} 
+              value={statusFilter} 
+              onChange={e => setStatusFilter(e.target.value)}
+            >
+              <option value="activos">Pedidos Activos</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="en_proceso">En Proceso</option>
+              <option value="completado">Completados</option>
+              <option value="cancelado">Cancelados</option>
+              <option value="todos">Todos los Pedidos</option>
+            </select>
+        </div>
+      <div className={styles.orderGrid}>
+        {filteredOrders.map(order => (
+          <OrderCard 
+            key={order.id} 
+            order={order} 
+            onUpdateStatus={updateStatus}
+            onShowDeliveryInfo={handleShowDeliveryInfo} // <-- 6. PASAR LA FUNCIÓN
+          />
+        ))}
+      </div>
+      {filteredOrders.length === 0 && <p>No se encontraron pedidos con los filtros actuales.</p>}
+
+      {/* -- 7. RENDERIZAR EL MODAL -- */}
+      <DeliveryInfoModal 
+        isOpen={isDeliveryModalOpen}
+        onClose={() => setIsDeliveryModalOpen(false)}
+        deliveryInfo={deliveryInfo}
+      />
     </div>
   );
 }
