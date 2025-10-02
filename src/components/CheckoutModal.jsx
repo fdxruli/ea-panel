@@ -209,7 +209,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             message += `\n*Entregar a:*\n*Nombre:* ${customer?.name}\n*Ubicación:* ${mapLink}\n`;
             if (selectedAddress?.address_reference) message += `*Referencia:* ${selectedAddress.address_reference}`;
 
-            const businessNumber = '9633870587';
+            const businessNumber = import.meta.env.VITE_BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
 

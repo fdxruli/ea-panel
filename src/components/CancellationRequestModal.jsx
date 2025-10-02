@@ -5,7 +5,7 @@ import styles from './CancellationRequestModal.module.css';
 
 export default function CancellationRequestModal({ order, onClose }) {
   const [reason, setReason] = useState('');
-  const businessPhoneNumber = '9633870587'; // Reemplaza con tu número de WhatsApp
+  const businessPhoneNumber = import.meta.env.VITE_BUSINESS_PHONE; // Reemplaza con tu número de WhatsApp
 
   const handleSendRequest = () => {
     if (!reason.trim()) {
