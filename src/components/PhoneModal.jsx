@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import styles from './PhoneModal.module.css';
+import DOMPurify from 'dompurify';
 
 export default function PhoneModal() {
   const { 
@@ -55,7 +56,8 @@ export default function PhoneModal() {
             setError('Parece que eres nuevo, por favor ingresa tu nombre.');
             return;
         }
-        const registered = await registerNewCustomer(inputValue, name.trim());
+        const cleanName = DOMPurify.sanitize(name.trim());
+        const registered = await registerNewCustomer(inputValue, cleanName);
         if (!registered) {
             setError('Hubo un error al registrar tu cuenta. Inténtalo de nuevo.');
         }

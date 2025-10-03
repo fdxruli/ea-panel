@@ -11,6 +11,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useAlert } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthPrompt from '../components/AuthPrompt';
+import DOMPurify from 'dompurify';
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
@@ -56,6 +57,8 @@ export default function MyProfile() {
 
     const handleInfoSubmit = async (e) => {
         e.preventDefault();
+        const cleanName = DOMPurify.sanitize(editForm.name);
+        const cleanPhone = DOMPurify.sanitize(editForm.phone);
         const { error } = await supabase
             .from('customers')
             .update({ name: editForm.name, phone: editForm.phone })

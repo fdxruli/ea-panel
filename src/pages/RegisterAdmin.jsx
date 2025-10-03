@@ -1,18 +1,18 @@
-// src/pages/RegisterAdmin.jsx (CORREGIDO Y MEJORADO)
-
+// src/pages/RegisterAdmin.jsx (ACTUALIZADO CON DOMPURIFY)
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import DOMPurify from 'dompurify'; // <-- 1. IMPORTADO
 
-// --- COMPONENTE PARA LA MATRIZ DE PERMISOS ---
+// ... (El componente PermissionsMatrix no cambia) ...
 const PermissionsMatrix = ({ permissions, setPermissions }) => {
     const sections = [
         { key: 'dashboard', label: 'Dashboard' },
         { key: 'pedidos', label: 'Pedidos' },
         { key: 'productos', label: 'Productos' },
         { key: 'clientes', label: 'Clientes' },
-        { key: 'horarios', label: 'Horarios' }, // <-- AÑADIDO
+        { key: 'horarios', label: 'Horarios' },
         { key: 'descuentos', label: 'Descuentos' },
         { key: 'terminos', label: 'Términos y Cond.' },
         { key: 'registrar-admin', label: 'Gestionar Admins' },
@@ -60,8 +60,7 @@ const PermissionsMatrix = ({ permissions, setPermissions }) => {
         </table>
     );
 };
-
-// --- COMPONENTE PARA EL MODAL DE EDICIÓN ---
+// ... (El componente EditPermissionsModal no cambia) ...
 const EditPermissionsModal = ({ admin, onClose, onSave }) => {
     const [permissions, setPermissions] = useState(admin.permissions || {});
 
@@ -120,13 +119,18 @@ export default function RegisterAdmin() {
     const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
+
+        // --- 👇 2. SANITIZACIÓN DE DATOS ---
+        const cleanName = DOMPurify.sanitize(name);
+        // --- 👆 FIN DE LA SANITIZACIÓN ---
+
         const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
                 data: {
                     role: role,
-                    name: name,
+                    name: cleanName, // Usamos la variable saneada
                     permissions: permissions
                 }
             }

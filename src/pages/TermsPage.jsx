@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import LoadingSpinner from '../components/LoadingSpinner';
 import styles from './TermsPage.module.css';
+import DOMPurify from 'dompurify'; // <-- 1. Importar
 
 export default function TermsPage() {
     const [terms, setTerms] = useState(null);
@@ -28,6 +29,9 @@ export default function TermsPage() {
 
     if (loading) return <LoadingSpinner />;
 
+    // --- 👇 2. Sanear el HTML antes de renderizarlo ---
+    const cleanHTML = terms ? DOMPurify.sanitize(terms.content.replace(/\n/g, '<br />')) : '';
+
     return (
         <div className={styles.container}>
             <h1>Términos y Condiciones</h1>
@@ -36,10 +40,11 @@ export default function TermsPage() {
                     <p className={styles.meta}>
                         Última actualización: {new Date(terms.published_at).toLocaleDateString()}
                     </p>
-                    <div className={styles.content} dangerouslySetInnerHTML={{ __html: terms.content.replace(/\n/g, '<br />') }} />
+                    {/* 3. Usar el HTML ya saneado */}
+                    <div className={styles.content} dangerouslySetInnerHTML={{ __html: cleanHTML }} />
                 </>
             ) : (
-                <p>No se pudieron cargar los términos y condiciones en este momento.</p>
+                <p>No se pudieron cargar los términos y condiciones.</p>
             )}
         </div>
     );

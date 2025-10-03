@@ -1,14 +1,14 @@
-// src/pages/Products.jsx (ACTUALIZADO PARA GESTIONAR CATEGORÍAS)
+// src/pages/Products.jsx (ACTUALIZADO CON DOMPURIFY)
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 import styles from "./Products.module.css";
 import { useAlert } from "../context/AlertContext";
 import ManageImagesModal from "../components/ManageImagesModal";
-import ManageCategoriesModal from "../components/ManageCategoriesModal"; // <-- 1. IMPORTAR EL NUEVO MODAL
+import ManageCategoriesModal from "../components/ManageCategoriesModal";
+import DOMPurify from 'dompurify'; // <-- 1. IMPORTADO
 
-// ... (El resto de los componentes ProductCard y ProductFormModal no cambian) ...
-
+// ... (El componente ProductCard no cambia) ...
 const ProductCard = ({ product, categoryName, onToggle, onEdit, onManageImages }) => (
     <div className={`${styles.productCard} ${!product.is_active ? styles.inactive : ''}`}>
         <div className={styles.imageContainer}>
@@ -33,6 +33,8 @@ const ProductCard = ({ product, categoryName, onToggle, onEdit, onManageImages }
         </div>
     </div>
 );
+
+
 const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initialProduct }) => {
     const { showAlert } = useAlert();
     const [formData, setFormData] = useState({ name: "", description: "", price: "", cost: "", category_id: "" });
@@ -89,7 +91,16 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
             if (imageFile) {
                 imageUrl = await uploadImage(imageFile);
             }
-            const dataToSave = { ...formData, image_url: imageUrl };
+            
+            // --- 👇 2. SANITIZACIÓN DE DATOS ---
+            const dataToSave = { 
+                ...formData, 
+                name: DOMPurify.sanitize(formData.name),
+                description: DOMPurify.sanitize(formData.description),
+                image_url: imageUrl 
+            };
+            // --- 👆 FIN DE LA SANITIZACIÓN ---
+
             await onSave(dataToSave);
         } catch (error) {
             showAlert(`Error al subir la imagen: ${error.message}`);
@@ -145,6 +156,8 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
     );
 };
 
+
+// ... (El resto del componente Products no cambia) ...
 export default function Products() {
   const { showAlert } = useAlert();
   const [products, setProducts] = useState([]);
@@ -153,7 +166,7 @@ export default function Products() {
   
   const [isFormModalOpen, setFormModalOpen] = useState(false);
   const [isImagesModalOpen, setImagesModalOpen] = useState(false);
-  const [isCategoriesModalOpen, setCategoriesModalOpen] = useState(false); // <-- 2. NUEVO ESTADO PARA EL MODAL DE CATEGORÍAS
+  const [isCategoriesModalOpen, setCategoriesModalOpen] = useState(false); 
   
   const [selectedProduct, setSelectedProduct] = useState(null);
   
@@ -226,7 +239,6 @@ export default function Products() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>Catálogo de Productos</h1>
-        {/* --- 3. NUEVO CONTENEDOR PARA BOTONES --- */}
         <div className={styles.headerActions}>
             <button onClick={() => setCategoriesModalOpen(true)} className={styles.manageButton}>
                 Administrar Categorías
@@ -280,11 +292,10 @@ export default function Products() {
         />
       )}
 
-      {/* --- 4. RENDERIZAR EL NUEVO MODAL --- */}
       <ManageCategoriesModal 
         isOpen={isCategoriesModalOpen}
         onClose={() => setCategoriesModalOpen(false)}
-        onCategoriesUpdate={fetchData} // Para que se actualice la lista de productos y filtros
+        onCategoriesUpdate={fetchData}
       />
     </div>
   );

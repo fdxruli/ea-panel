@@ -7,6 +7,7 @@ import { useCustomer } from '../context/CustomerContext';
 import { useProductExtras } from '../context/ProductExtrasContext';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
+import Dashboard from 'dompurify';
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -209,6 +210,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             return;
         }
         setIsSubmittingReview(true);
+        const cleanComment = DOMPurify.sanitize(userComment);
         const { error } = await supabase.from('product_reviews').insert({
             product_id: product.id, customer_id: customerId, rating: userRating, comment: userComment
         });

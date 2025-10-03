@@ -1,9 +1,10 @@
-// src/components/ManageCategoriesModal.jsx (CORREGIDO)
+// src/components/ManageCategoriesModal.jsx (ACTUALIZADO CON DOMPURIFY)
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageCategoriesModal.module.css';
 import { useAlert } from '../context/AlertContext';
 import LoadingSpinner from './LoadingSpinner';
+import DOMPurify from 'dompurify'; // <-- 1. IMPORTADO
 
 export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpdate }) {
     const { showAlert } = useAlert();
@@ -11,7 +12,6 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // Estado para el formulario (puede ser para crear o editar)
     const [formData, setFormData] = useState({ id: null, name: '', description: '' });
 
     useEffect(() => {
@@ -52,17 +52,17 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
         }
         setIsSubmitting(true);
 
+        // --- 👇 2. SANITIZACIÓN DE DATOS ---
         const dataToSave = {
-            name: formData.name,
-            description: formData.description
+            name: DOMPurify.sanitize(formData.name),
+            description: DOMPurify.sanitize(formData.description)
         };
+        // --- 👆 FIN DE LA SANITIZACIÓN ---
 
         let error;
         if (formData.id) {
-            // Actualizar existente
             ({ error } = await supabase.from('categories').update(dataToSave).eq('id', formData.id));
         } else {
-            // Crear nueva
             ({ error } = await supabase.from('categories').insert(dataToSave));
         }
 
@@ -71,8 +71,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
         } else {
             showAlert(`Categoría ${formData.id ? 'actualizada' : 'creada'} con éxito.`);
             resetForm();
-            fetchCategories(); // Recargar la lista en el modal
-            onCategoriesUpdate(); // Avisar a la página de Productos para que se actualice
+            fetchCategories(); 
+            onCategoriesUpdate();
         }
         setIsSubmitting(false);
     };
@@ -86,7 +86,6 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
                 <h2>Administrar Categorías</h2>
 
                 <div className={styles.contentWrapper}>
-                    {/* Columna Izquierda: Lista de Categorías */}
                     <div className={styles.categoryListSection}>
                         <h3>Categorías Existentes</h3>
                         {loading ? <LoadingSpinner /> : (
@@ -101,7 +100,6 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
                         )}
                     </div>
 
-                    {/* Columna Derecha: Formulario */}
                     <div className={styles.formSection}>
                         <h3>{formData.id ? 'Editar Categoría' : 'Crear Nueva Categoría'}</h3>
                         <form onSubmit={handleSubmit}>

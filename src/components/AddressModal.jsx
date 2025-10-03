@@ -5,6 +5,7 @@ import styles from './AddressModal.module.css';
 import ClientOnly from './ClientOnly';
 import DynamicMapPicker from './DynamicMapPicker';
 import { useAlert } from '../context/AlertContext';
+import DOMPurify from 'dompurify';
 
 export default function AddressModal({ isOpen, onClose, onSave, address = null, customerId, showSaveOption = false }) {
     const { showAlert } = useAlert();
@@ -49,8 +50,8 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
         try {
             const addressData = {
                 customer_id: customerId,
-                label: formData.label,
-                address_reference: formData.address_reference,
+                label: DOMPurify.sanitize(formData.label),
+                address_reference: DOMPurify.sanitize(formData.address_reference),
                 latitude: formData.coords.lat,
                 longitude: formData.coords.lng
             };
