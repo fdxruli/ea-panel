@@ -1,3 +1,4 @@
+// src/pages/BusinessHours.jsx (CORREGIDO)
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -136,9 +137,11 @@ export default function BusinessHours() {
                             <strong>{weekDays.find(d => d.id === day.day_of_week)?.name}</strong>
                             {isEditing ? (
                                 <>
-                                    <input type="time" value={day.open_time} onChange={e => handleHourChange(day.day_of_week, 'open_time', e.target.value)} disabled={day.is_closed} />
-                                    <span>-</span>
-                                    <input type="time" value={day.close_time} onChange={e => handleHourChange(day.day_of_week, 'close_time', e.target.value)} disabled={day.is_closed} />
+                                    <div className={styles.timeInputs}>
+                                        <input type="time" value={day.open_time} onChange={e => handleHourChange(day.day_of_week, 'open_time', e.target.value)} disabled={day.is_closed} />
+                                        <span>-</span>
+                                        <input type="time" value={day.close_time} onChange={e => handleHourChange(day.day_of_week, 'close_time', e.target.value)} disabled={day.is_closed} />
+                                    </div>
                                     <label className={styles.switch}>
                                         <input type="checkbox" checked={!day.is_closed} onChange={e => handleHourChange(day.day_of_week, 'is_closed', !e.target.checked)} />
                                         <span className={styles.slider}></span>
@@ -158,7 +161,8 @@ export default function BusinessHours() {
                     </div>
                 ) : (
                     <div className={styles.actions}>
-                        <button onClick={() => setIsEditing(true)}>Editar Horarios</button>
+                        {/* --- 👇 CLASE AÑADIDA AQUÍ --- */}
+                        <button onClick={() => setIsEditing(true)} className={styles.editButton}>Editar Horarios</button>
                     </div>
                 )}
             </div>
@@ -166,33 +170,42 @@ export default function BusinessHours() {
             <div className={styles.card}>
                 <h2>Excepciones (Feriados o Días Especiales)</h2>
                 <div className={styles.exceptionForm}>
-                     <input type="date" value={newException.date} onChange={e => setNewException({...newException, date: e.target.value})} />
-                     <input type="text" placeholder="Motivo (ej. Aniversario)" value={newException.reason} onChange={e => setNewException({...newException, reason: e.target.value})} />
-                     <button onClick={handleAddException}>Añadir Excepción</button>
+                    <div className={styles.formGroup}>
+                        <label>Fecha</label>
+                        <input type="date" value={newException.date} onChange={e => setNewException({...newException, date: e.target.value})} />
+                    </div>
+                     <div className={styles.formGroup}>
+                        <label>Motivo (Opcional)</label>
+                        <input type="text" placeholder="Ej. Aniversario" value={newException.reason} onChange={e => setNewException({...newException, reason: e.target.value})} />
+                     </div>
+                     {/* --- 👇 CLASE AÑADIDA AQUÍ --- */}
+                     <button onClick={handleAddException} className={styles.addButton}>Añadir</button>
                 </div>
                 
-                 <table className="products-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                            <th>Motivo</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {exceptions.map(ex => (
-                            <tr key={ex.id}>
-                                <td>{new Date(ex.date).toLocaleDateString()}</td>
-                                <td>{ex.is_closed ? 'Cerrado' : `${ex.open_time} - ${ex.close_time}`}</td>
-                                <td>{ex.reason || 'N/A'}</td>
-                                <td>
-                                    <button onClick={() => handleDeleteException(ex.id)} className={styles.deleteButton}>Eliminar</button>
-                                </td>
+                 <div className="table-wrapper">
+                    <table className="products-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Motivo</th>
+                                <th>Acciones</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {exceptions.map(ex => (
+                                <tr key={ex.id}>
+                                    <td>{new Date(ex.date).toLocaleDateString()}</td>
+                                    <td>{ex.is_closed ? 'Cerrado' : `${ex.open_time} - ${ex.close_time}`}</td>
+                                    <td>{ex.reason || 'N/A'}</td>
+                                    <td>
+                                        <button onClick={() => handleDeleteException(ex.id)} className={styles.deleteButton}>Eliminar</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                 </div>
             </div>
         </div>
     );

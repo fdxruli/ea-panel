@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './SpecialPriceForm.module.css';
+import { useAlert } from '../context/AlertContext';
 
 const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
-  const [targetType, setTargetType] = useState(initialData?.product_id ? 'product' : 'category');
-  const [targetId, setTargetId] = useState(initialData?.product_id || initialData?.category_id || '');
-  const [overridePrice, setOverridePrice] = useState(initialData?.override_price || '');
-  const [startDate, setStartDate] = useState(initialData?.start_date || '');
-  const [endDate, setEndDate] = useState(initialData?.end_date || '');
-  const [reason, setReason] = useState(initialData?.reason || '');
+  const { showAlert } = useAlert();
+  const [targetType, setTargetType] = useState('product');
+  const [targetId, setTargetId] = useState('');
+  const [overridePrice, setOverridePrice] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -20,11 +22,23 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
       setStartDate(initialData.start_date);
       setEndDate(initialData.end_date);
       setReason(initialData.reason);
+    } else {
+      // Reset form when creating a new one
+      setTargetType('product');
+      setTargetId('');
+      setOverridePrice('');
+      setStartDate('');
+      setEndDate('');
+      setReason('');
     }
   }, [initialData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (new Date(endDate) < new Date(startDate)) {
+        showAlert('La fecha de fin no puede ser anterior a la de inicio.');
+        return;
+    }
     setIsSubmitting(true);
 
     const specialPriceData = {
@@ -44,14 +58,13 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
         response = await supabase.from('special_prices').insert([specialPriceData]);
       }
       
-      if (response.error) {
-        throw response.error;
-      }
+      if (response.error) throw response.error;
       
+      showAlert(`Promoción ${initialData ? 'actualizada' : 'creada'} con éxito.`);
       onSubmit();
 
     } catch (error) {
-      console.error('Error submitting form:', error);
+      showAlert(`Error al guardar la promoción: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -61,15 +74,15 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
-      <div>
+      <div className={styles.formGroup}>
         <label>Aplicar a:</label>
         <select value={targetType} onChange={(e) => { setTargetType(e.target.value); setTargetId(''); }}>
-          <option value="product">Producto</option>
-          <option value="category">Categoría</option>
+          <option value="product">Producto Específico</option>
+          <option value="category">Categoría Completa</option>
         </select>
       </div>
 
-      <div>
+      <div className={styles.formGroup}>
         <label>{targetType === 'product' ? 'Producto' : 'Categoría'}:</label>
         <select value={targetId} onChange={(e) => setTargetId(e.target.value)} required>
           <option value="">Selecciona una opción</option>
@@ -79,27 +92,27 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
         </select>
       </div>
 
-      <div>
-        <label>Precio Especial:</label>
+      <div className={styles.formGroup}>
+        <label>Nuevo Precio (Ej: 99.99)</label>
         <input type="number" step="0.01" value={overridePrice} onChange={(e) => setOverridePrice(e.target.value)} required />
       </div>
 
-      <div>
+       <div className={styles.formGroup}>
+        <label>Motivo (Ej: Oferta de Aniversario)</label>
+        <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ej: Aniversario"/>
+      </div>
+
+      <div className={styles.formGroup}>
         <label>Fecha de Inicio:</label>
         <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
       </div>
       
-      <div>
+      <div className={styles.formGroup}>
         <label>Fecha de Fin:</label>
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
       </div>
 
-      <div>
-        <label>Motivo:</label>
-        <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Ej: Aniversario"/>
-      </div>
-
-      <button type="submit" disabled={isSubmitting}>
+      <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
         {isSubmitting ? 'Guardando...' : (initialData ? 'Actualizar Promoción' : 'Crear Promoción')}
       </button>
     </form>

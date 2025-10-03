@@ -1,6 +1,6 @@
-// src/pages/Customers.jsx (FINAL)
+// src/pages/Customers.jsx (FINAL - CON ESTADÍSTICAS)
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 import styles from "./Customers.module.css"; 
@@ -8,15 +8,15 @@ import styles from "./Customers.module.css";
 // --- Iconos para la UI ---
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const MapPinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
-const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
 const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
+const DollarSignIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>;
 
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(""); // <-- NUEVO ESTADO PARA EL BUSCADOR
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -47,11 +47,28 @@ export default function Customers() {
     setExpandedCustomerId(prevId => (prevId === customerId ? null : customerId));
   };
 
-  // --- 👇 LÓGICA PARA FILTRAR CLIENTES ---
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm)
   );
+
+  // --- 👇 CÁLCULO DE ESTADÍSTICAS DEL CLIENTE ---
+  const customerStats = useMemo(() => {
+    const stats = {};
+    if (expandedCustomerId) {
+        const customer = customers.find(c => c.id === expandedCustomerId);
+        if (customer) {
+            stats.lifetimeValue = customer.orders
+                .filter(o => o.status === 'completado')
+                .reduce((sum, order) => sum + order.total_amount, 0);
+            stats.lastOrderDate = customer.orders.length > 0
+                ? new Date(customer.orders[0].created_at).toLocaleDateString()
+                : 'N/A';
+        }
+    }
+    return stats;
+  }, [expandedCustomerId, customers]);
+
 
   if (loading) return <LoadingSpinner />;
 
@@ -59,7 +76,6 @@ export default function Customers() {
     <div className={styles.container}>
       <h1><UserIcon /> Clientes ({filteredCustomers.length})</h1>
 
-      {/* --- 👇 INPUT DEL BUSCADOR --- */}
       <div className={styles.searchContainer}>
         <input
           type="text"
@@ -88,6 +104,27 @@ export default function Customers() {
               </div>
 
               <div className={styles.detailsContent}>
+                
+                {/* --- 👇 NUEVA SECCIÓN DE ESTADÍSTICAS --- */}
+                <div className={styles.statsSection}>
+                    <div className={styles.statItem}>
+                        <span>Valor Total</span>
+                        <strong>${customerStats.lifetimeValue?.toFixed(2) || '0.00'}</strong>
+                    </div>
+                    <div className={styles.statItem}>
+                        <span>Total Pedidos</span>
+                        <strong>{customer.orders.length}</strong>
+                    </div>
+                     <div className={styles.statItem}>
+                        <span>Último Pedido</span>
+                        <strong>{customerStats.lastOrderDate || 'N/A'}</strong>
+                    </div>
+                    <div className={styles.statItem}>
+                        <span>Favoritos</span>
+                        <strong>{customer.favorites.length}</strong>
+                    </div>
+                </div>
+
                 <div className={styles.infoSection}>
                   <h4><MapPinIcon /> Direcciones ({customer.addresses.length})</h4>
                   {customer.addresses.length > 0 ? (
@@ -116,11 +153,6 @@ export default function Customers() {
                       ))}
                     </ul>
                   ) : <p>No ha realizado ningún pedido.</p>}
-                </div>
-                
-                <div className={styles.infoSection}>
-                   <h4><HeartIcon/> Favoritos ({customer.favorites.length})</h4>
-                   <p>{customer.favorites.length > 0 ? `Tiene ${customer.favorites.length} producto(s) en sus favoritos.` : 'No tiene productos favoritos.'}</p>
                 </div>
 
               </div>

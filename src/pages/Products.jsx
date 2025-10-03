@@ -1,4 +1,4 @@
-// src/pages/Products.jsx (ACTUALIZADO CON DOMPURIFY)
+// src/pages/Products.jsx (ACTUALIZADO CON ESTADÍSTICAS)
 import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -6,9 +6,12 @@ import styles from "./Products.module.css";
 import { useAlert } from "../context/AlertContext";
 import ManageImagesModal from "../components/ManageImagesModal";
 import ManageCategoriesModal from "../components/ManageCategoriesModal";
-import DOMPurify from 'dompurify'; // <-- 1. IMPORTADO
+import DOMPurify from 'dompurify';
 
-// ... (El componente ProductCard no cambia) ...
+// --- Iconos para la UI ---
+const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffc107" stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
+const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#e74c3c" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
+
 const ProductCard = ({ product, categoryName, onToggle, onEdit, onManageImages }) => (
     <div className={`${styles.productCard} ${!product.is_active ? styles.inactive : ''}`}>
         <div className={styles.imageContainer}>
@@ -18,24 +21,52 @@ const ProductCard = ({ product, categoryName, onToggle, onEdit, onManageImages }
         <div className={styles.cardContent}>
             <span className={styles.categoryTag}>{categoryName}</span>
             <h3 className={styles.productName}>{product.name}</h3>
-            <p className={styles.productDescription}>{product.description || 'Sin descripción'}</p>
+            
+            {/* --- 👇 NUEVA SECCIÓN DE ESTADÍSTICAS DEL PRODUCTO --- */}
+            <div className={styles.productStats}>
+                <div className={styles.statItem}>
+                    <strong>{product.total_sold || 0}</strong>
+                    <span>Vendidos</span>
+                </div>
+                <div className={styles.statItem}>
+                    <strong>${(product.total_revenue || 0).toFixed(2)}</strong>
+                    <span>Ingresos</span>
+                </div>
+                <div className={styles.statItem}>
+                    <div className={styles.iconStat}>
+                        <StarIcon />
+                        <strong>{product.avg_rating?.toFixed(1) || 'N/A'}</strong>
+                    </div>
+                    <span>({product.reviews_count || 0} reseñas)</span>
+                </div>
+                 <div className={styles.statItem}>
+                    <div className={styles.iconStat}>
+                        <HeartIcon />
+                        <strong>{product.favorites_count || 0}</strong>
+                    </div>
+                    <span>Favoritos</span>
+                </div>
+            </div>
+
             <div className={styles.priceInfo}>
-                <span className={styles.price}>${product.price.toFixed(2)}</span>
+                <span className={styles.price}>Precio: ${product.price.toFixed(2)}</span>
                 <span className={styles.cost}>Costo: ${product.cost.toFixed(2)}</span>
             </div>
-            <div className={styles.cardActions}>
-                <button onClick={() => onEdit(product)} className={styles.editButton}>Editar</button>
-                <button onClick={() => onManageImages(product)} className={styles.manageButton}>Imágenes</button>
-                <button onClick={() => onToggle(product.id, product.is_active)} className={styles.toggleButton}>
-                    {product.is_active ? "Desactivar" : "Activar"}
-                </button>
-            </div>
+            
+        </div>
+        <div className={styles.cardActions}>
+            <button onClick={() => onEdit(product)} className={styles.editButton}>Editar</button>
+            <button onClick={() => onManageImages(product)} className={styles.manageButton}>Imágenes</button>
+            <button onClick={() => onToggle(product.id, product.is_active)} className={styles.toggleButton}>
+                {product.is_active ? "Desactivar" : "Activar"}
+            </button>
         </div>
     </div>
 );
 
 
 const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initialProduct }) => {
+    // ... (El contenido de este componente no cambia, se mantiene igual)
     const { showAlert } = useAlert();
     const [formData, setFormData] = useState({ name: "", description: "", price: "", cost: "", category_id: "" });
     const [imageFile, setImageFile] = useState(null);
@@ -92,14 +123,12 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
                 imageUrl = await uploadImage(imageFile);
             }
             
-            // --- 👇 2. SANITIZACIÓN DE DATOS ---
             const dataToSave = { 
                 ...formData, 
                 name: DOMPurify.sanitize(formData.name),
                 description: DOMPurify.sanitize(formData.description),
                 image_url: imageUrl 
             };
-            // --- 👆 FIN DE LA SANITIZACIÓN ---
 
             await onSave(dataToSave);
         } catch (error) {
@@ -157,7 +186,6 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
 };
 
 
-// ... (El resto del componente Products no cambia) ...
 export default function Products() {
   const { showAlert } = useAlert();
   const [products, setProducts] = useState([]);
@@ -175,12 +203,13 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const fetchData = async () => {
-    // No reseteamos el loading aquí para una recarga más suave
-    const { data: productsData, error: productsError } = await supabase.from("products").select(`*, product_images(*)`).order("name");
+    // --- 👇 RPC para obtener datos agregados de los productos ---
+    const { data: productsData, error: productsError } = await supabase.rpc('get_product_stats');
     const { data: categoriesData, error: categoriesError } = await supabase.from("categories").select("*");
 
     if (productsError || categoriesError) {
         console.error(productsError || categoriesError);
+        showAlert("Error al cargar los datos de los productos.");
     } else {
         setProducts(productsData);
         setCategories(categoriesData);
@@ -193,7 +222,8 @@ export default function Products() {
   }, []);
 
   const handleSaveProduct = async (productData) => {
-    const { product_images, ...dataToUpsert } = productData;
+    // Quitamos los campos calculados antes de guardar
+    const { total_sold, total_revenue, avg_rating, reviews_count, favorites_count, product_images, ...dataToUpsert } = productData;
     const { error } = await supabase.from('products').upsert(dataToUpsert.id ? dataToUpsert : [dataToUpsert]).select();
 
     if (error) {

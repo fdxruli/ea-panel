@@ -1,26 +1,25 @@
-// src/pages/RegisterAdmin.jsx (ACTUALIZADO CON DOMPURIFY)
-import React, { useState, useEffect } from 'react';
+// src/pages/RegisterAdmin.jsx (ACTUALIZADO CON NUEVOS ESTILOS)
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import DOMPurify from 'dompurify'; // <-- 1. IMPORTADO
+import DOMPurify from 'dompurify';
+import styles from './RegisterAdmin.module.css'; // <-- Importamos los nuevos estilos
 
-// ... (El componente PermissionsMatrix no cambia) ...
+const sections = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'pedidos', label: 'Pedidos' },
+    { key: 'productos', label: 'Productos' },
+    { key: 'clientes', label: 'Clientes' },
+    { key: 'horarios', label: 'Horarios' },
+    { key: 'descuentos', label: 'Descuentos' },
+    { key: 'terminos', label: 'Términos y Cond.' },
+    { key: 'registrar-admin', label: 'Gestionar Admins' },
+    { key: 'special-prices', label: 'Precios Especiales' } // Corregido para coincidir con el enrutador
+];
+const actions = ['view', 'edit', 'delete'];
+
 const PermissionsMatrix = ({ permissions, setPermissions }) => {
-    const sections = [
-        { key: 'dashboard', label: 'Dashboard' },
-        { key: 'pedidos', label: 'Pedidos' },
-        { key: 'productos', label: 'Productos' },
-        { key: 'clientes', label: 'Clientes' },
-        { key: 'horarios', label: 'Horarios' },
-        { key: 'descuentos', label: 'Descuentos' },
-        { key: 'terminos', label: 'Términos y Cond.' },
-        { key: 'registrar-admin', label: 'Gestionar Admins' },
-        { key: 'special-price', label: 'Precios ' }
-    ];
-
-    const actions = ['view', 'edit', 'delete'];
-
     const handlePermissionChange = (section, action) => {
         setPermissions(prev => ({
             ...prev,
@@ -32,35 +31,37 @@ const PermissionsMatrix = ({ permissions, setPermissions }) => {
     };
 
     return (
-        <table className="products-table" style={{ marginBottom: '1.5rem' }}>
-            <thead>
-                <tr>
-                    <th>Sección</th>
-                    <th>Ver</th>
-                    <th>Editar/Crear</th>
-                    <th>Eliminar</th>
-                </tr>
-            </thead>
-            <tbody>
-                {sections.map(section => (
-                    <tr key={section.key}>
-                        <td>{section.label}</td>
-                        {actions.map(action => (
-                            <td key={action} style={{ textAlign: 'center' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={!!permissions[section.key]?.[action]}
-                                    onChange={() => handlePermissionChange(section.key, action)}
-                                />
-                            </td>
-                        ))}
+        <div className="table-wrapper">
+            <table className={styles.permissionsTable}>
+                <thead>
+                    <tr>
+                        <th>Sección</th>
+                        <th>Ver</th>
+                        <th>Editar/Crear</th>
+                        <th>Eliminar</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {sections.map(section => (
+                        <tr key={section.key}>
+                            <td>{section.label}</td>
+                            {actions.map(action => (
+                                <td key={action}>
+                                    <input
+                                        type="checkbox"
+                                        checked={!!permissions[section.key]?.[action]}
+                                        onChange={() => handlePermissionChange(section.key, action)}
+                                    />
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
     );
 };
-// ... (El componente EditPermissionsModal no cambia) ...
+
 const EditPermissionsModal = ({ admin, onClose, onSave }) => {
     const [permissions, setPermissions] = useState(admin.permissions || {});
 
@@ -69,13 +70,15 @@ const EditPermissionsModal = ({ admin, onClose, onSave }) => {
     };
 
     return (
-        <div className="modalOverlay">
-            <div className="modalContent">
+        <div className={styles.modalOverlay}>
+            <div className={styles.modalContent}>
                 <h2>Editando permisos de {admin.name}</h2>
-                <PermissionsMatrix permissions={permissions} setPermissions={setPermissions} />
-                <div className="modalActions">
-                    <button onClick={onClose}>Cancelar</button>
-                    <button onClick={handleSave}>Guardar Cambios</button>
+                <div className={styles.modalBody}>
+                    <PermissionsMatrix permissions={permissions} setPermissions={setPermissions} />
+                </div>
+                <div className={styles.modalActions}>
+                    <button onClick={onClose} className={styles.cancelButton}>Cancelar</button>
+                    <button onClick={handleSave} className={styles.saveButton}>Guardar Cambios</button>
                 </div>
             </div>
         </div>
@@ -84,24 +87,21 @@ const EditPermissionsModal = ({ admin, onClose, onSave }) => {
 
 
 export default function RegisterAdmin() {
+    const { showAlert } = useAlert();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('staff');
     const [loading, setLoading] = useState(false);
-    const { showAlert } = useAlert();
-
-    const initialPermissions = {
-        dashboard: { view: true },
-        pedidos: { view: true },
-    };
+    
+    const initialPermissions = { dashboard: { view: true }, pedidos: { view: true } };
     const [permissions, setPermissions] = useState(initialPermissions);
 
     const [admins, setAdmins] = useState([]);
     const [loadingAdmins, setLoadingAdmins] = useState(true);
     const [editingAdmin, setEditingAdmin] = useState(null);
 
-    const fetchAdmins = async () => {
+    const fetchAdmins = useCallback(async () => {
         setLoadingAdmins(true);
         const { data, error } = await supabase.from('admins').select('*');
         if (error) {
@@ -110,27 +110,24 @@ export default function RegisterAdmin() {
             setAdmins(data);
         }
         setLoadingAdmins(false);
-    };
+    }, [showAlert]);
 
     useEffect(() => {
         fetchAdmins();
-    }, []);
+    }, [fetchAdmins]);
 
     const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
 
-        // --- 👇 2. SANITIZACIÓN DE DATOS ---
         const cleanName = DOMPurify.sanitize(name);
-        // --- 👆 FIN DE LA SANITIZACIÓN ---
-
         const { data, error } = await supabase.auth.signUp({
             email: email,
             password: password,
             options: {
                 data: {
                     role: role,
-                    name: cleanName, // Usamos la variable saneada
+                    name: cleanName,
                     permissions: permissions
                 }
             }
@@ -138,7 +135,7 @@ export default function RegisterAdmin() {
         if (error) {
             showAlert(`Error: ${error.message}`);
         } else {
-            showAlert(`¡Usuario ${data.user.email} creado!`);
+            showAlert(`¡Usuario ${data.user.email} creado! Revisa el correo para confirmar la cuenta.`);
             setName('');
             setEmail('');
             setPassword('');
@@ -149,11 +146,7 @@ export default function RegisterAdmin() {
     };
 
     const handleUpdatePermissions = async (adminId, newPermissions) => {
-        const { error } = await supabase
-            .from('admins')
-            .update({ permissions: newPermissions })
-            .eq('id', adminId);
-
+        const { error } = await supabase.from('admins').update({ permissions: newPermissions }).eq('id', adminId);
         if (error) {
             showAlert(`Error al actualizar permisos: ${error.message}`);
         } else {
@@ -165,56 +158,74 @@ export default function RegisterAdmin() {
 
 
     return (
-        <div style={{ maxWidth: '700px', margin: '2rem auto' }}>
-            <h1>Gestionar Administradores</h1>
+        <div className={styles.container}>
+            <h1>Gestión de Administradores</h1>
 
-            <div className="form-container" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                <h3>Crear Nuevo Administrador</h3>
-                <input type="text" placeholder="Nombre completo" value={name} onChange={(e) => setName(e.target.value)} required />
-                <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                <input type="password" placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <div className={styles.formCard}>
+                <h2 className={styles.cardTitle}>Crear Nuevo Administrador</h2>
+                <form onSubmit={handleRegister}>
+                    <div className={styles.formGrid}>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="name">Nombre completo</label>
+                            <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+                        </div>
+                         <div className={styles.formGroup}>
+                            <label htmlFor="email">Email</label>
+                            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        </div>
+                         <div className={styles.formGroup}>
+                            <label htmlFor="password">Contraseña</label>
+                            <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="role">Rol principal</label>
+                            <select id="role" value={role} onChange={(e) => setRole(e.target.value)}>
+                                <option value="staff">Staff (Permisos limitados)</option>
+                                <option value="admin">Admin (Acceso total)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                        <h3 className={styles.permissionsTitle}>Permisos Específicos (para rol Staff)</h3>
+                        <PermissionsMatrix permissions={permissions} setPermissions={setPermissions} />
+                    </div>
 
-                <label>Rol principal:</label>
-                <select value={role} onChange={(e) => setRole(e.target.value)}>
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin (Acceso total)</option>
-                </select>
-
-                <h4 style={{ marginTop: '2rem' }}>Permisos Específicos:</h4>
-                <PermissionsMatrix permissions={permissions} setPermissions={setPermissions} />
-
-                <button onClick={handleRegister} disabled={loading}>
-                    {loading ? 'Creando...' : 'Crear Usuario'}
-                </button>
+                    <button type="submit" disabled={loading} className={styles.createButton}>
+                        {loading ? 'Creando...' : 'Crear Administrador'}
+                    </button>
+                </form>
             </div>
 
-            <div style={{ marginTop: '3rem' }}>
-                <h2>Administradores Actuales</h2>
+            <div className={styles.listCard}>
+                <h2 className={styles.cardTitle}>Administradores Actuales</h2>
                 {loadingAdmins ? <LoadingSpinner /> : (
-                    <table className="products-table">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Email</th>
-                                <th>Rol</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {admins.map((admin) => (
-                                <tr key={admin.id}>
-                                    <td>{admin.name}</td>
-                                    <td>{admin.email}</td>
-                                    <td>{admin.role}</td>
-                                    <td>
-                                        <button onClick={() => setEditingAdmin(admin)}>
-                                            Editar Permisos
-                                        </button>
-                                    </td>
+                    <div className="table-wrapper">
+                        <table className="products-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Rol</th>
+                                    <th>Acciones</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {admins.map((admin) => (
+                                    <tr key={admin.id}>
+                                        <td>{admin.name}</td>
+                                        <td>{admin.email}</td>
+                                        <td>{admin.role}</td>
+                                        <td>
+                                            <button onClick={() => setEditingAdmin(admin)} className="admin-button-secondary">
+                                                Editar Permisos
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
 
