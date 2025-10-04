@@ -8,6 +8,7 @@ import styles from './RegisterAdmin.module.css'; // <-- Importamos los nuevos es
 
 const sections = [
     { key: 'dashboard', label: 'Dashboard' },
+    { key: 'crear-pedido', label: 'Crear Pedido' }, // <-- AÑADIR ESTA LÍNEA
     { key: 'pedidos', label: 'Pedidos' },
     { key: 'productos', label: 'Productos' },
     { key: 'clientes', label: 'Clientes' },
@@ -15,7 +16,7 @@ const sections = [
     { key: 'descuentos', label: 'Descuentos' },
     { key: 'terminos', label: 'Términos y Cond.' },
     { key: 'registrar-admin', label: 'Gestionar Admins' },
-    { key: 'special-prices', label: 'Precios Especiales' } // Corregido para coincidir con el enrutador
+    { key: 'special-prices', label: 'Precios Especiales' } 
 ];
 const actions = ['view', 'edit', 'delete'];
 
@@ -238,4 +239,5 @@ export default function RegisterAdmin() {
             )}
         </div>
     );
+
 }
