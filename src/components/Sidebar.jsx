@@ -12,6 +12,7 @@ export default function Sidebar({ isOpen, closeSidebar }) {
     <div className={`sidebar ${isOpen ? "open" : ""}`}>
       {/* --- 👇 AÑADIMOS onClick A CADA ENLACE --- */}
       {hasPermission('dashboard.view') && <Link to="/admin" onClick={closeSidebar}>Dashboard</Link>}
+      {hasPermission('crear-pedido.view') && <Link to="/admin/crear-pedido" onClick={closeSidebar}>Crear Pedido</Link>}
       {hasPermission('pedidos.view') && <Link to="/admin/pedidos" onClick={closeSidebar}>Pedidos</Link>}
       {hasPermission('clientes.view') && <Link to="/admin/clientes" onClick={closeSidebar}>Clientes</Link>}
       {hasPermission('productos.view') && <Link to="/admin/productos" onClick={closeSidebar}>Productos</Link>}

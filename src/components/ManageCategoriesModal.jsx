@@ -1,10 +1,12 @@
-// src/components/ManageCategoriesModal.jsx (ACTUALIZADO CON DOMPURIFY)
+// src/components/ManageCategoriesModal.jsx (ACTUALIZADO CON REASIGNACIÓN)
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageCategoriesModal.module.css';
 import { useAlert } from '../context/AlertContext';
 import LoadingSpinner from './LoadingSpinner';
-import DOMPurify from 'dompurify'; // <-- 1. IMPORTADO
+import ConfirmModal from './ConfirmModal';
+import ReassignProductsModal from './ReassignProductsModal'; // <-- 1. IMPORTAR NUEVO MODAL
+import DOMPurify from 'dompurify';
 
 export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpdate }) {
     const { showAlert } = useAlert();
@@ -13,6 +15,11 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const [formData, setFormData] = useState({ id: null, name: '', description: '' });
+    const [categoryToDelete, setCategoryToDelete] = useState(null);
+    
+    // --- 2. NUEVOS ESTADOS PARA EL FLUJO DE REASIGNACIÓN ---
+    const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+    const [productsInCateogryCount, setProductsInCategoryCount] = useState(0);
 
     useEffect(() => {
         if (isOpen) {
@@ -25,7 +32,6 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
         const { data, error } = await supabase.from('categories').select('*').order('name');
         if (error) {
             showAlert('Error al cargar las categorías.');
-            console.error(error);
         } else {
             setCategories(data);
         }
@@ -33,11 +39,79 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
     };
 
     const handleEditClick = (category) => {
-        setFormData({
-            id: category.id,
-            name: category.name,
-            description: category.description || ''
-        });
+        setFormData({ id: category.id, name: category.name, description: category.description || '' });
+    };
+    
+    // --- 3. LÓGICA DE ELIMINACIÓN MODIFICADA ---
+    const handleDeleteClick = async (category) => {
+        // Primero, contamos cuántos productos tiene esta categoría
+        const { count, error } = await supabase
+            .from('products')
+            .select('id', { count: 'exact' })
+            .eq('category_id', category.id);
+
+        if (error) {
+            showAlert('No se pudo verificar los productos de la categoría.');
+            return;
+        }
+
+        setCategoryToDelete(category);
+
+        if (count > 0) {
+            // Si hay productos, abrimos el modal de reasignación
+            setProductsInCategoryCount(count);
+            setIsReassignModalOpen(true);
+        } else {
+            // Si no hay productos, abrimos el modal de confirmación simple
+            setIsReassignModalOpen(false); // Asegurarnos que el otro esté cerrado
+        }
+    };
+
+    const confirmSimpleDelete = async () => {
+        if (!categoryToDelete) return;
+
+        const { error } = await supabase.from('categories').delete().eq('id', categoryToDelete.id);
+        if (error) {
+            showAlert(`Error al eliminar: ${error.message}`);
+        } else {
+            showAlert('Categoría eliminada con éxito.');
+        }
+        setCategoryToDelete(null);
+        fetchCategories();
+        onCategoriesUpdate();
+    };
+    
+    const confirmReassignAndDelete = async (newCategoryId) => {
+        if (!categoryToDelete) return;
+        
+        // Paso 1: Reasignar productos
+        const { error: updateError } = await supabase
+            .from('products')
+            .update({ category_id: newCategoryId })
+            .eq('category_id', categoryToDelete.id);
+
+        if (updateError) {
+            showAlert(`Error al reasignar productos: ${updateError.message}`);
+            return;
+        }
+
+        // Paso 2: Eliminar la categoría original (ahora vacía)
+        const { error: deleteError } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', categoryToDelete.id);
+
+        if (deleteError) {
+            showAlert(`Productos reasignados, pero hubo un error al eliminar la categoría: ${deleteError.message}`);
+        } else {
+            showAlert('Productos reasignados y categoría eliminada con éxito.');
+        }
+        
+        // Cerrar modales y recargar datos
+        setIsReassignModalOpen(false);
+        setCategoryToDelete(null);
+        fetchCategories();
+        onCategoriesUpdate();
     };
 
     const resetForm = () => {
@@ -46,26 +120,22 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // ... (esta función no cambia)
         if (!formData.name.trim()) {
             showAlert('El nombre de la categoría es obligatorio.');
             return;
         }
         setIsSubmitting(true);
-
-        // --- 👇 2. SANITIZACIÓN DE DATOS ---
         const dataToSave = {
             name: DOMPurify.sanitize(formData.name),
             description: DOMPurify.sanitize(formData.description)
         };
-        // --- 👆 FIN DE LA SANITIZACIÓN ---
-
         let error;
         if (formData.id) {
             ({ error } = await supabase.from('categories').update(dataToSave).eq('id', formData.id));
         } else {
             ({ error } = await supabase.from('categories').insert(dataToSave));
         }
-
         if (error) {
             showAlert(`Error al guardar: ${error.message}`);
         } else {
@@ -79,61 +149,73 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
     
     if (!isOpen) return null;
 
+    const otherCategories = categories.filter(cat => cat.id !== categoryToDelete?.id);
+
     return (
-        <div className={styles.overlay} onClick={onClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button onClick={onClose} className={styles.closeButton}>×</button>
-                <h2>Administrar Categorías</h2>
-
-                <div className={styles.contentWrapper}>
-                    <div className={styles.categoryListSection}>
-                        <h3>Categorías Existentes</h3>
-                        {loading ? <LoadingSpinner /> : (
-                            <div className={styles.categoryList}>
-                                {categories.map(cat => (
-                                    <div key={cat.id} className={styles.categoryItem}>
-                                        <span>{cat.name}</span>
-                                        <button onClick={() => handleEditClick(cat)}>Editar</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className={styles.formSection}>
-                        <h3>{formData.id ? 'Editar Categoría' : 'Crear Nueva Categoría'}</h3>
-                        <form onSubmit={handleSubmit}>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="category-name">Nombre</label>
-                                <input
-                                    id="category-name"
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="Ej: Bebidas"
-                                    required
-                                />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label htmlFor="category-desc">Descripción (Opcional)</label>
-                                <textarea
-                                    id="category-desc"
-                                    rows="4"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Ej: Bebidas frías y calientes"
-                                />
-                            </div>
-                            <div className={styles.formActions}>
-                                {formData.id && <button type="button" onClick={resetForm} className={styles.cancelButton}>Cancelar Edición</button>}
-                                <button type="submit" disabled={isSubmitting} className={styles.saveButton}>
-                                    {isSubmitting ? 'Guardando...' : (formData.id ? 'Actualizar' : 'Crear')}
-                                </button>
-                            </div>
-                        </form>
+        <>
+            <div className={styles.overlay} onClick={onClose}>
+                <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                    <button onClick={onClose} className={styles.closeButton}>×</button>
+                    <h2>Administrar Categorías</h2>
+                    <div className={styles.mainLayout}>
+                        {/* El formulario no cambia */}
+                        <div className={styles.formSection}>
+                             <h3>{formData.id ? 'Editar Categoría' : 'Crear Nueva'}</h3>
+                            <form onSubmit={handleSubmit}>
+                                <div className={styles.formGroup}>
+                                    <label htmlFor="category-name">Nombre</label>
+                                    <input id="category-name" type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Bebidas" required />
+                                </div>
+                                <div className={styles.formGroup}>
+                                    <label htmlFor="category-desc">Descripción (Opcional)</label>
+                                    <textarea id="category-desc" rows="3" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Ej: Bebidas frías y calientes" />
+                                </div>
+                                <div className={styles.formActions}>
+                                    {formData.id && <button type="button" onClick={resetForm} className={styles.cancelButton}>Cancelar Edición</button>}
+                                    <button type="submit" disabled={isSubmitting} className={styles.saveButton}>{isSubmitting ? 'Guardando...' : (formData.id ? 'Actualizar' : 'Crear')}</button>
+                                </div>
+                            </form>
+                        </div>
+                        {/* La lista de categorías ahora llama a la nueva función de borrado */}
+                        <div className={styles.categoryListSection}>
+                            <h3>Categorías Existentes</h3>
+                            {loading ? <LoadingSpinner /> : (
+                                <div className={styles.categoryList}>
+                                    {categories.map(cat => (
+                                        <div key={cat.id} className={styles.categoryItem}>
+                                            <span className={styles.categoryName}>{cat.name}</span>
+                                            <div className={styles.categoryActions}>
+                                                <button onClick={() => handleEditClick(cat)} className={styles.editButton}>Editar</button>
+                                                {/* --- 4. El botón ahora llama a la nueva función --- */}
+                                                <button onClick={() => handleDeleteClick(cat)} className={styles.deleteButton}>Eliminar</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            
+            {/* --- 5. RENDERIZADO CONDICIONAL DE LOS MODALES DE CONFIRMACIÓN --- */}
+            <ConfirmModal
+                isOpen={!!categoryToDelete && !isReassignModalOpen}
+                onClose={() => setCategoryToDelete(null)}
+                onConfirm={confirmSimpleDelete}
+                title="¿Eliminar Categoría?"
+            >
+                Estás a punto de eliminar la categoría "{categoryToDelete?.name}". Esta acción no se puede deshacer.
+            </ConfirmModal>
+
+            <ReassignProductsModal
+                isOpen={isReassignModalOpen}
+                onClose={() => setIsReassignModalOpen(false)}
+                onConfirm={confirmReassignAndDelete}
+                categoryToDelete={categoryToDelete}
+                otherCategories={otherCategories}
+                productsCount={productsInCateogryCount}
+            />
+        </>
     );
 }
