@@ -1,0 +1,373 @@
+.overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.6); display: flex;
+  justify-content: center; align-items: flex-end;
+  z-index: 2000;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease, visibility 0s 0.5s;
+}
+
+.overlay.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.5s ease;
+}
+
+.modalContent {
+  background: var(--bg-secondary);
+  width: 100%;
+  max-width: 100%;
+  height: auto; 
+  max-height: 85vh; 
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -5px 25px rgba(0,0,0,0.15);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  border-radius: 1.5rem 1.5rem 0 0;
+  transform: translateY(100%);
+  opacity: 1;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+.modalContent.open {
+    transform: translateY(0);
+}
+
+.galleryContainer {
+  position: relative; width: 100%; padding-top: 56.25%;
+  background-color: #f0f0f0; flex-shrink: 0;
+}
+.productImage {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+.productImage.active {
+  opacity: 1;
+}
+.navButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.2);
+  color: white;
+  border: none;
+  cursor: pointer;
+  z-index: 10;
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease, background-color 0.2s;
+}
+.galleryContainer:hover .navButton {
+  opacity: 1;
+}
+.navButton:hover {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.prev { left: 1rem; }
+.next { right: 1rem; }
+
+.closeButton {
+  position: absolute; top: 10px; right: 15px; background: rgba(0, 0, 0, 0.4);
+  color: white; border: none; font-size: 2rem; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; line-height: 1;
+  z-index: 15;
+}
+
+.productDetails {
+  padding: 1.5rem; 
+  display: flex; 
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 300px;
+}
+
+.productDescription {
+  line-height: 1.6; color: var(--text-secondary);
+}
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+.headerInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.productName { margin: 0; font-size: 1.8rem; }
+.favoriteButton {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-secondary); padding: 0.5rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.favoriteButton:hover { background-color: #f0f0f0; }
+.averageRatingContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stars {
+    color: #ffc107;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+}
+.starIcon {
+    line-height: 1;
+}
+.partialStarContainer {
+    position: relative;
+    display: inline-block;
+    line-height: 1;
+}
+.partialStarFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    height: 100%;
+    color: #ffc107;
+}
+.ratingText {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.noRating {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+    font-style: italic;
+}
+.tabButtons {
+    display: flex; gap: 1rem; border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1.5rem; flex-shrink: 0;
+}
+.tabButtons button {
+    background: none; border: none; padding: 0.8rem 0;
+    cursor: pointer; font-size: 1rem; font-weight: 500;
+    color: var(--text-secondary); border-bottom: 3px solid transparent;
+}
+.tabButtons button.active { color: var(--text-primary); border-bottom-color: var(--color-primary); }
+
+.tabContent {
+  text-align: left; 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tabContentInner {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.reviewsSection {
+  display: flex; 
+  flex-direction: column;
+  width: 100%;
+  height: 100%; 
+}
+
+.reviewList {
+  display: flex; 
+  flex-direction: column; 
+  gap: 1.5rem;
+  padding-right: 1rem;
+  max-height: none;
+}
+
+.reviewItem { 
+  border-bottom: 1px solid var(--border-color); 
+  padding-bottom: 1rem;
+  min-height: auto; 
+}
+
+.reviewItem:last-child { border-bottom: none; }
+.reviewHeader {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 0.5rem;
+}
+.reviewHeader strong { font-size: 1rem; }
+.reviewItem p { margin: 0; color: var(--text-secondary); line-height: 1.5; }
+.starRating { display: flex; justify-content: center; gap: 4px; }
+.star { cursor: pointer; font-size: 2rem; color: #ffc107; }
+
+.footer {
+  margin-top: auto; 
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color); display: flex;
+  gap: 1rem; align-items: center; flex-shrink: 0;
+}
+
+
+.quantitySelector { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 50px; }
+.quantitySelector button { background: none; border: none; font-size: 1.5rem; width: 40px; height: 40px; }
+.quantitySelector span { font-size: 1.2rem; padding: 0 1rem; }
+.addButton, .showReviewFormButton {
+  flex-grow: 1; padding: 0.8rem; font-size: 1rem;
+  font-weight: 600; background-color: var(--color-primary);
+  color: white; border-radius: 50px;
+}
+.actionButtons {
+    flex-grow: 1;
+}
+.addButton.added { background-color: var(--color-success); }
+.showReviewFormButton:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+.reviewForm {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: center;
+  max-height: 200px;
+  overflow-y: auto; 
+}
+.reviewForm textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    resize: vertical;
+}
+.formActions {
+    display: flex;
+    width: 100%;
+    gap: 0.8rem;
+    margin-top: 0.5rem;
+}
+.reviewSubmitButton, .cancelButton {
+    flex-grow: 1;
+    padding: 0.8rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 50px;
+}
+.reviewSubmitButton {
+  background-color: var(--color-accent);
+  color: white;
+}
+.cancelButton {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.desktopOnly {
+    display: none;
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+  .modalContent {
+    flex-direction: row;
+    position: relative;
+    bottom: auto;
+    left: auto;
+    border-radius: var(--border-radius);
+    max-width: 900px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    transform: scale(0.95);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .modalContent.open {
+    transform: scale(1);
+  }
+  .galleryContainer { width: 50%; padding-top: 0; height: auto; }
+  .productDetails { width: 50%; overflow: hidden; }
+
+  .mobileOnly {
+    display: none !important;
+  }
+  .desktopOnly {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .closeButton.desktopOnly {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    z-index: 20;
+    background: none;
+    color: var(--text-secondary);
+  }
+  .closeButton.desktopOnly:hover {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .actionButtons {
+    display: flex;
+    gap: 0.8rem;
+    flex-grow: 1;
+    align-items: stretch;
+  }
+
+  .favoriteButton.desktopOnly {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    color: var(--text-secondary);
+    padding: 0 1rem;
+    flex-shrink: 0;
+  }
+  .favoriteButton.desktopOnly:hover {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+  }
+  
+  .addButton {
+    width: 100%;
+    flex-grow: 1;
+  }
+}
+
+.tabContentInner::-webkit-scrollbar,
+.reviewList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tabContentInner::-webkit-scrollbar-track,
+.reviewList::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+.tabContentInner::-webkit-scrollbar-thumb,
+.reviewList::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}

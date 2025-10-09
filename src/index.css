@@ -1,0 +1,131 @@
+/* --- TEMA CLARO (POR DEFECTO) --- */
+:root {
+  /* --- PALETA DE COLORES MODERNA Y ATRACTIVA --- */
+  /* Primarios y Acentos */
+  --color-primary: #E57373; /* Terracota/Óxido Suave */
+  --color-primary-dark: #D32F2F;
+  --color-primary-light: #FFCDD2;
+  --color-accent: #4DB6AC;      /* Verde Azulado (Teal) Profundo */
+
+  /* Acciones y Notificaciones */
+  --color-success: #81C784;
+  --color-error: #F44336;
+
+  /* Fondos */
+  --bg-primary: #FDFDFD;     /* Blanco Roto / Marfil */
+  --bg-secondary: #FFFFFF;     /* Blanco Puro para Tarjetas */
+
+  /* Texto */
+  --text-primary: #263238;      /* Gris Carbón (Casi Negro) */
+  --text-secondary: #546E7A;    /* Gris Pizarra Medio */
+  --text-light: #FFFFFF;
+
+  /* Bordes y Sombras */
+  --border-color: #ECEFF1;
+  --shadow-color: rgba(38, 50, 56, 0.08);
+
+  /* --- TIPOGRAFÍA --- */
+  --font-family: 'Poppins', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-size-base: 16px;
+  --line-height-base: 1.6;
+
+  /* --- OTROS --- */
+  --border-radius: 12px;
+  --transition-speed: 0.3s;
+}
+
+/* --- TEMA OSCURO CÁLIDO --- */
+/* Se activará cuando el elemento <html> o <body> tenga el atributo data-theme="dark" */
+[data-theme="dark"] {
+  /* Primarios y Acentos */
+  --color-primary: #E57373; /* El terracota resalta maravillosamente */
+  --color-primary-dark: #FF8A80;
+  --color-primary-light: #45272A;
+  --color-accent: #4DB6AC;      /* El teal se mantiene vibrante */
+
+  /* Fondos */
+  --bg-primary: #1A1A1A;      /* Azul Pizarra Muy Oscuro */
+  --bg-secondary: #2C2C2C;   /* Un gris ligeramente más claro para tarjetas */
+
+  /* Texto */
+  --text-primary: #F5F5F5;      /* Blanco Roto / Crema Claro */
+  --text-secondary: #B0BEC5;    /* Gris Cálido y Legible */
+
+  /* Bordes y Sombras */
+  --border-color: #37474F;
+  --shadow-color: rgba(0, 0, 0, 0.2);
+}
+
+
+/* --- RESET BÁSICO Y ESTILOS GLOBALES (Sin cambios) --- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color var(--transition-speed) ease;
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+button {
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius);
+  transition: all var(--transition-speed) ease;
+}
+
+/* --- ESTILOS DE FORMULARIO GLOBALES --- */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  font-family: var(--font-family);
+  font-size: 1rem;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box; /* Asegura que el padding no afecte el ancho total */
+  transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}

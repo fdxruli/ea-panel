@@ -1,0 +1,104 @@
+.container {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    align-items: flex-end;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.formGroup label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.addButton {
+    grid-column: -1 / -2; 
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--color-primary);
+    color: white;
+}
+.addButton:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+
+.toggleButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+.toggleButton:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+
+.toggleButton.active {
+    background-color: var(--color-success);
+    color: white;
+    border-color: var(--color-success);
+}
+
+.toggleButton.inactive {
+    background-color: var(--color-error);
+    color: white;
+    border-color: var(--color-error);
+}
+
+.statusBadge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    color: white;
+    text-align: center;
+    display: inline-block;
+}
+
+.statusActive {
+    background-color: var(--color-success);
+}
+
+.statusInactive {
+    background-color: var(--text-secondary);
+}
+
+.typeBadge {
+     background-color: var(--color-primary-light);
+     color: var(--color-primary-dark);
+}
+
+@media (max-width: 600px) {
+    .addButton {
+        grid-column: 1 / -1;
+        margin-top: 1rem;
+    }
+}
