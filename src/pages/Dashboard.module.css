@@ -73,16 +73,6 @@
     flex-shrink: 0;
 }
 
-.mainGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: auto auto;
-    gap: 1.5rem;
-    grid-template-areas:
-        "top-products top-products order-status"
-        "recent-orders recent-orders order-status";
-}
-
 .chartCard {
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
@@ -91,6 +81,7 @@
     box-shadow: 0 4px 15px var(--shadow-color);
     display: flex;
     flex-direction: column;
+    min-width: 0; /* Asegura que la tarjeta pueda encogerse correctamente */
 }
 
 .chartCard h3 {
@@ -101,12 +92,45 @@
 .chartContainer {
     flex-grow: 1;
     position: relative;
-    min-height: 250px;
+    min-height: 300px;
 }
 
-.topProducts { grid-area: top-products; }
-.orderStatus { grid-area: order-status; }
-.recentOrders { grid-area: recent-orders; }
+/* --- ESTRUCTURA MOBILE-FIRST CORREGIDA --- */
+
+/* Por defecto (móvil), es una sola columna. No se usan grid-areas. */
+.mainGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+/* Vista para tablets: Introducimos grid-areas aquí */
+@media (min-width: 768px) {
+    .mainGrid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "top-products top-products"
+            "order-status recent-orders";
+    }
+    /* Asignamos las áreas solo para esta vista y superiores */
+    .topProducts { grid-area: top-products; }
+    .orderStatus { grid-area: order-status; }
+    .recentOrders { grid-area: recent-orders; }
+
+    .title { font-size: 2rem; }
+}
+
+/* Vista para escritorio: Redefinimos el layout */
+@media (min-width: 1024px) {
+    .mainGrid {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-areas:
+            "top-products top-products order-status"
+            "recent-orders recent-orders order-status";
+    }
+}
+/* --- FIN DE LA CORRECCIÓN --- */
+
 
 .recentList {
     list-style: none;
@@ -143,23 +167,3 @@
 .en_proceso { background-color: #3498db; }
 .completado { background-color: var(--color-success); }
 .cancelado { background-color: var(--color-error); }
-
-@media (max-width: 1024px) {
-    .mainGrid {
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas:
-            "top-products top-products"
-            "order-status recent-orders";
-    }
-}
-
-@media (max-width: 768px) {
-    .mainGrid {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "top-products"
-            "order-status"
-            "recent-orders";
-    }
-    .title { font-size: 2rem; }
-}
