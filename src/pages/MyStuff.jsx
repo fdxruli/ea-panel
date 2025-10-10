@@ -18,6 +18,34 @@ const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" heigh
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3"/></svg>;
 
+const ReferralSystem = ({ customer }) => {
+    const { showAlert } = useAlert();
+    const referralLink = `${window.location.origin}/?ref=${customer.referral_code}`;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referralLink).then(() => {
+            showAlert('¡Enlace de referido copiado!');
+        });
+    };
+
+    return (
+        <div className={styles.card}>
+            <div className={styles.cardHeader}><TrophyIcon /><h2>Invita y Gana</h2></div>
+            <p>
+                Comparte tu enlace de referido con tus amigos. Cuando se registren usando tu enlace, 
+                ¡acumularás puntos para subir de nivel y obtener recompensas!
+            </p>
+            <div className={styles.referralBox}>
+                <input type="text" readOnly value={referralLink} />
+                <button onClick={handleCopy} className={styles.actionButton}>Copiar Enlace</button>
+            </div>
+            <div className={styles.referralStats}>
+                <p><strong>Amigos Invitados:</strong> {customer.referral_count || 0}</p>
+            </div>
+        </div>
+    );
+};
+
 const RewardsSection = ({ customerId }) => {
     const [progress, setProgress] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -47,7 +75,6 @@ const RewardsSection = ({ customerId }) => {
             fetchProgress();
         };
 
-        // Escuchamos cambios en 3 tablas diferentes:
         const channel = supabase
             .channel(`customer-rewards-${customerId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, handleChanges)
@@ -109,7 +136,6 @@ const RewardsSection = ({ customerId }) => {
                 <div>
                     <div className={styles.accordionHeader} onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
                         <h4>Recompensas Desbloqueadas</h4>
-                        {/* El ícono de flecha para el acordeón */}
                         <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>▼</span>
                     </div>
                     <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
@@ -159,7 +185,6 @@ const RewardsSection = ({ customerId }) => {
         </div>
     );
 };
-
 
 export default function MyStuff() {
     const { phone, setCheckoutModalOpen } = useCustomer();
@@ -222,6 +247,7 @@ export default function MyStuff() {
         return (
             <>
                 <p className={styles.subtitle}>Gestiona tus recompensas, productos favoritos y reseñas.</p>
+                {customer.referral_code && <ReferralSystem customer={customer} />}
                 <RewardsSection customerId={customer.id} />
                 <div className={styles.card}>
                     <div className={styles.cardHeader}><HeartIcon /><h2>Mis Favoritos ({favorites.length})</h2></div>
