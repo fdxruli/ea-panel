@@ -102,3 +102,19 @@
         margin-top: 1rem;
     }
 }
+
+/* src/pages/Discounts.module.css (AÑADIR AL FINAL) */
+.fullWidth {
+    grid-column: 1 / -1;
+}
+.checkboxLabel {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+.checkboxLabel input {
+    width: auto;
+}

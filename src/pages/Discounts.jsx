@@ -19,7 +19,8 @@ export default function Discounts() {
         target_id: null,
         start_date: "",
         end_date: "",
-        is_active: true
+        is_active: true,
+        is_single_use: false
     });
     
     const canEdit = hasPermission('descuentos.edit');
@@ -82,14 +83,24 @@ export default function Discounts() {
         if (!canEdit) return;
         if (!validateDiscount()) return;
         
-        const dataToInsert = { ...newDiscount, target_id: newDiscount.target_id || null };
+        // Convertimos las fechas vacías a null antes de insertar
+        const dataToInsert = {
+            ...newDiscount,
+            target_id: newDiscount.target_id || null,
+            start_date: newDiscount.start_date || null,
+            end_date: newDiscount.end_date || null
+        };
         
         const { error } = await supabase.from("discounts").insert([dataToInsert]);
         if (error) {
             showAlert(`Error al crear el descuento: ${error.message}`);
         } else {
             showAlert("¡Descuento creado con éxito!");
-            setNewDiscount({ code: "", type: "global", value: "", target_id: null, start_date: "", end_date: "", is_active: true });
+            // Reseteamos el formulario al estado inicial
+            setNewDiscount({
+                code: "", type: "global", value: "", target_id: null,
+                start_date: "", end_date: "", is_active: true, is_single_use: false
+            });
             fetchData();
         }
     };
@@ -157,6 +168,17 @@ export default function Discounts() {
                             <label htmlFor="end_date">Fecha de Fin (Opcional)</label>
                             <input id="end_date" type="date" value={newDiscount.end_date} onChange={(e) => setNewDiscount({ ...newDiscount, end_date: e.target.value })} />
                         </div>
+                        <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                            <label className={styles.checkboxLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={newDiscount.is_single_use}
+                                    onChange={(e) => setNewDiscount({ ...newDiscount, is_single_use: e.target.checked })}
+                                />
+                                Es un código de un solo uso por cliente
+                            </label>
+                        </div>
+
 
                         <button onClick={addDiscount} className={styles.addButton}>Crear Descuento</button>
                     </div>
@@ -188,6 +210,7 @@ export default function Discounts() {
                                 </td>
                                 <td>{getTargetName(d)}</td>
                                 <td>{d.start_date || "N/A"} - {d.end_date || "N/A"}</td>
+                                <td>{d.is_single_use ? 'Único' : 'Múltiple'}</td>
                                 <td>
                                     <span className={`${styles.statusBadge} ${d.is_active ? styles.statusActive : styles.statusInactive}`}>
                                         {d.is_active ? "Activo" : "Inactivo"}

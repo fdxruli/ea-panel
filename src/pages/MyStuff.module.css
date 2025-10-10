@@ -294,3 +294,33 @@
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* src/pages/MyStuff.module.css (AÑADIR AL FINAL) */
+.unlockedReward {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.copyCodeButton {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    border: 1px dashed var(--color-primary);
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    align-self: flex-start; /* Para que el botón no ocupe todo el ancho */
+    font-size: 0.9rem;
+}
+
+/* src/pages/MyStuff.module.css (AÑADIR AL FINAL) */
+.claimCodeButton {
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    align-self: flex-start;
+    font-weight: 500;
+}

@@ -1,3 +1,5 @@
+// src/components/ManageReferralLevelsModal.jsx (ACTUALIZADO)
+
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageReferralLevelsModal.module.css';
@@ -6,7 +8,10 @@ import DOMPurify from 'dompurify';
 
 const RewardItem = ({ reward, onDelete }) => (
     <div className={styles.rewardItem}>
-        <span>🎁 {reward.description}</span>
+        <div className={styles.rewardInfo}>
+            <span>🎁 {reward.description}</span>
+            {reward.reward_code && <small>Código: <code>{reward.reward_code}</code></small>}
+        </div>
         <button onClick={() => onDelete(reward.id)} className={styles.deleteRewardButton}>×</button>
     </div>
 );
@@ -14,6 +19,7 @@ const RewardItem = ({ reward, onDelete }) => (
 const LevelItem = ({ level, rewards, onDeleteLevel, onUpdate }) => {
     const { showAlert } = useAlert();
     const [description, setDescription] = useState('');
+    const [rewardCode, setRewardCode] = useState(''); // <-- Nuevo estado para el código
 
     const handleAddReward = async () => {
         if (!description.trim()) {
@@ -22,12 +28,14 @@ const LevelItem = ({ level, rewards, onDeleteLevel, onUpdate }) => {
         }
         const { error } = await supabase.from('rewards').insert({
             level_id: level.id,
-            description: DOMPurify.sanitize(description)
+            description: DOMPurify.sanitize(description),
+            reward_code: DOMPurify.sanitize(rewardCode.toUpperCase()) || null // <-- Guardar el código
         });
         if (error) {
             showAlert(`Error al añadir recompensa: ${error.message}`);
         } else {
             setDescription('');
+            setRewardCode(''); // <-- Limpiar el campo
             onUpdate();
         }
     };
@@ -55,16 +63,23 @@ const LevelItem = ({ level, rewards, onDeleteLevel, onUpdate }) => {
             <div className={styles.addRewardForm}>
                 <input
                     type="text"
-                    placeholder="Descripción de la nueva recompensa"
+                    placeholder="Descripción pública (ej: 10% Descuento)"
                     value={description}
                     onChange={e => setDescription(e.target.value)}
                 />
-                <button onClick={handleAddReward}>Añadir Recompensa</button>
+                <input
+                    type="text"
+                    placeholder="Código (ej: PROMO10)"
+                    value={rewardCode}
+                    onChange={e => setRewardCode(e.target.value)}
+                />
+                <button onClick={handleAddReward}>Añadir</button>
             </div>
         </div>
     );
 };
 
+// ... (El resto del componente ManageReferralLevelsModal no cambia)
 export default function ManageReferralLevelsModal({ levels, rewards, isOpen, onClose, onUpdate }) {
     const { showAlert } = useAlert();
     const [levelName, setLevelName] = useState('');
@@ -76,25 +91,15 @@ export default function ManageReferralLevelsModal({ levels, rewards, isOpen, onC
             return;
         }
         const { error } = await supabase.from('referral_levels').insert({ name: levelName, min_referrals: minReferrals });
-        if (error) {
-            showAlert(`Error: ${error.message}`);
-        } else {
-            showAlert('Nivel creado con éxito.');
-            setLevelName('');
-            setMinReferrals(0);
-            onUpdate();
-        }
+        if (error) { showAlert(`Error: ${error.message}`); }
+        else { showAlert('Nivel creado con éxito.'); setLevelName(''); setMinReferrals(0); onUpdate(); }
     };
 
     const handleDeleteLevel = async (levelId) => {
         if (!window.confirm('¿Seguro que quieres eliminar este nivel y todas sus recompensas asociadas?')) return;
         const { error } = await supabase.rpc('delete_referral_level', { level_id_to_delete: levelId });
-        if (error) {
-            showAlert(`Error: ${error.message}`);
-        } else {
-            showAlert('Nivel eliminado.');
-            onUpdate();
-        }
+        if (error) { showAlert(`Error: ${error.message}`); }
+        else { showAlert('Nivel eliminado.'); onUpdate(); }
     };
 
     if (!isOpen) return null;

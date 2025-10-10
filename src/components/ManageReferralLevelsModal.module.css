@@ -30,3 +30,20 @@
 .addButton { background-color: var(--color-primary); color: white; padding: 0.7rem; }
 .deleteButton { background-color: transparent; border: 1px solid var(--color-error); color: var(--color-error); padding: 0.5rem 0.8rem; font-size: 0.8rem; border-radius: 6px; }
 .deleteRewardButton { background: none; border: none; color: var(--color-error); font-size: 1.2rem; cursor: pointer; }
+
+/* src/components/ManageReferralLevelsModal.module.css (AÑADIR ESTILOS) */
+.rewardInfo {
+    display: flex;
+    flex-direction: column;
+}
+.rewardInfo small {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.addRewardForm {
+    display: grid; /* Cambiamos a grid */
+    grid-template-columns: 2fr 1fr auto; /* Distribuimos el espacio */
+    gap: 0.8rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}

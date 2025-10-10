@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+// src/pages/MyStuff.jsx (CORREGIDO)
+
+import React, { useState, useMemo, useEffect, useCallback } from 'react'; // <-- AQUÍ ESTÁ LA CORRECCIÓN
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
@@ -10,6 +12,7 @@ import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
 import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
+import { useAlert } from '../context/AlertContext';
 
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
@@ -18,21 +21,44 @@ const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" heig
 const RewardsSection = ({ customerId }) => {
     const [progress, setProgress] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { showAlert } = useAlert();
+
+    const fetchProgress = useCallback(async () => {
+        if (!customerId) return;
+        setLoading(true);
+        const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
+        if (error) {
+            console.error("Error fetching rewards progress:", error);
+        } else {
+            setProgress(data);
+        }
+        setLoading(false);
+    }, [customerId]);
 
     useEffect(() => {
-        const fetchProgress = async () => {
-            if (!customerId) return;
-            setLoading(true);
-            const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
-            if (error) {
-                console.error("Error fetching rewards progress:", error);
-            } else {
-                setProgress(data);
-            }
-            setLoading(false);
-        };
         fetchProgress();
-    }, [customerId]);
+    }, [fetchProgress]);
+
+     const handleClaimCode = async (reward) => {
+        const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
+            p_customer_id: customerId,
+            p_reward_id: reward.id
+        });
+
+        if (error) {
+            showAlert('Hubo un error al generar tu código. Es posible que ya lo hayas reclamado.');
+            console.error(error);
+        } else {
+            showAlert(`¡Código personal generado! Cópialo y úsalo en tu carrito.`);
+            // Volvemos a cargar los datos para que la UI se actualice
+            fetchProgress(); 
+        }
+    };
+
+    const handleCopyCode = (code) => {
+        navigator.clipboard.writeText(code);
+        showAlert(`¡Código "${code}" copiado!`);
+    };
 
     if (loading) return <LoadingSpinner />;
     if (!progress) return <p>No se pudo cargar tu progreso de recompensas.</p>;
@@ -63,8 +89,32 @@ const RewardsSection = ({ customerId }) => {
                     <h4>Recompensas Desbloqueadas</h4>
                     <ul>
                         {progress.unlocked_rewards?.length > 0
-                            ? progress.unlocked_rewards.map(r => <li key={r.id}>🎁 {r.description}</li>)
-                            : <li>Invita a tu primer amigo para desbloquear recompensas.</li>
+                            ? progress.unlocked_rewards.map(reward => {
+                                // Buscamos si esta recompensa ya fue reclamada
+                                const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
+
+                                return (
+                                    <li key={reward.id}>
+                                        <div className={styles.unlockedReward}>
+                                            <span>🎁 {reward.description}</span>
+                                            {claim ? (
+                                                // Si ya hay un reclamo, mostramos el código
+                                                <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
+                                                    Copiar: <strong>{claim.generated_code}</strong>
+                                                </button>
+                                            ) : (
+                                                // Si no hay reclamo y la recompensa tiene un código base, mostramos el botón de reclamar
+                                                reward.reward_code && (
+                                                    <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
+                                                        Reclamar mi código único
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                    </li>
+                                );
+                            })
+                            : <li>Invita a familiares y amigos a registrarse para desbloquear recompensas.</li>
                         }
                     </ul>
                 </div>
@@ -73,7 +123,11 @@ const RewardsSection = ({ customerId }) => {
                         <h4>Próximas Recompensas</h4>
                         <ul className={styles.upcomingRewards}>
                              {progress.upcoming_rewards?.length > 0
-                                ? progress.upcoming_rewards.map(r => <li key={r.id}>✨ {r.description}</li>)
+                                ? progress.upcoming_rewards.map(r => (
+                                    <li key={r.id}>
+                                        ✨ {r.description}
+                                    </li>
+                                ))
                                 : <li>Próximamente...</li>
                             }
                         </ul>
@@ -86,7 +140,7 @@ const RewardsSection = ({ customerId }) => {
 
 
 export default function MyStuff() {
-    const { phone, setPhoneModalOpen, setCheckoutModalOpen } = useCustomer();
+    const { phone, setCheckoutModalOpen } = useCustomer();
     const { addToCart, showToast } = useCart();
     const { products: liveProducts } = useProducts();
     const { customer, loading: userLoading, error } = useUserData();
@@ -147,7 +201,6 @@ export default function MyStuff() {
             <>
                 <p className={styles.subtitle}>Gestiona tus recompensas, productos favoritos y reseñas.</p>
                 
-                {/* --- SECCIÓN DE RECOMPENSAS --- */}
                 <RewardsSection customerId={customer.id} />
 
                 <div className={styles.card}>

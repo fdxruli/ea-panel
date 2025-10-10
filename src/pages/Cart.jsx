@@ -1,6 +1,9 @@
+// src/pages/Cart.jsx (CORREGIDO)
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
+import { useUserData } from '../context/UserDataContext'; // <-- 1. AÑADIR ESTE IMPORT
 import styles from './Cart.module.css';
 import CheckoutModal from '../components/CheckoutModal';
 import { useAlert } from '../context/AlertContext';
@@ -24,6 +27,8 @@ export default function Cart() {
     } = useCart();
 
     const { phone, setPhoneModalOpen } = useCustomer();
+    const { customer } = useUserData(); // <-- 2. OBTENER LA INFO DEL CLIENTE
+    
     const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
@@ -47,7 +52,8 @@ export default function Cart() {
 
     const handleApplyDiscount = async () => {
         if (!discountCode.trim()) return;
-        const result = await applyDiscount(discountCode);
+        // --- 👇 3. AHORA 'customer' SÍ EXISTE Y EL ERROR SE SOLUCIONA ---
+        const result = await applyDiscount(discountCode, customer?.id);
         setDiscountMessage(result.message);
         setTimeout(() => setDiscountMessage(''), 3000);
     };

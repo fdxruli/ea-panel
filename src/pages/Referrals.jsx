@@ -13,27 +13,46 @@ const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" he
 const GiftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>;
 
 const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
+    // ... (estados existentes)
     const [reward, setReward] = useState({ enabled: true, message: '', discount_code: '' });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchReward = async () => {
-            const { data, error } = await supabase.from('settings').select('value').eq('key', 'welcome_reward').single();
-            if (data) {
-                setReward(data.value);
-            }
-            setLoading(false);
-        };
-        fetchReward();
+        // ... (lógica de fetch no cambia)
     }, []);
 
     const handleSave = async () => {
-        const { error } = await supabase.from('settings').update({ value: reward }).eq('key', 'welcome_reward');
-        if (error) {
-            showAlert(`Error al guardar: ${error.message}`);
-        } else {
-            showAlert('Recompensa de bienvenida actualizada.');
+        // --- 👇 LÓGICA DE GUARDADO ACTUALIZADA ---
+        try {
+            // Primero, busca el descuento por su código
+            const { data: discount, error: findError } = await supabase
+                .from('discounts')
+                .select('id')
+                .eq('code', reward.discount_code)
+                .single();
+
+            if (findError) {
+                showAlert(`Error: El código de descuento "${reward.discount_code}" no existe. Por favor, créalo primero en la sección de Descuentos.`);
+                return;
+            }
+
+            // Si existe, actualízalo para que requiera el estado de referido
+            const { error: updateError } = await supabase
+                .from('discounts')
+                .update({ requires_referred_status: true, is_single_use: true }) // Lo forzamos a ser de un solo uso
+                .eq('id', discount.id);
+            
+            if (updateError) throw updateError;
+
+            // Finalmente, guarda la configuración del mensaje
+            const { error: settingsError } = await supabase.from('settings').update({ value: reward }).eq('key', 'welcome_reward');
+            if (settingsError) throw settingsError;
+
+            showAlert('Recompensa de bienvenida actualizada. El código ahora es de un solo uso y solo para referidos.');
             onUpdate();
+
+        } catch (error) {
+            showAlert(`Error al guardar: ${error.message}`);
         }
     };
 
@@ -49,17 +68,18 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
                     onChange={e => setReward({ ...reward, message: e.target.value })}
                     placeholder="Ej: ¡Bienvenido! Usa el código {CODE} para un descuento."
                 />
-                <small>Usa `&#123;CODE&#125;` donde quieras que aparezca el código de descuento.</small>
+                <small>Usa `&#123;CODE&#125;` donde quieras que aparezca el código.</small>
             </div>
             <div className={styles.formGroup}>
-                <label>Código de descuento a mostrar:</label>
+                <label>Código de descuento a aplicar:</label>
                 <input
                     type="text"
                     value={reward.discount_code}
                     onChange={e => setReward({ ...reward, discount_code: e.target.value.toUpperCase() })}
                 />
+                <small>Este código debe existir en la sección "Descuentos" y será de un solo uso.</small>
             </div>
-            <button onClick={handleSave} className="admin-button-primary">Guardar Cambios</button>
+            <button onClick={handleSave} className="admin-button-primary">Guardar y Aplicar Reglas</button>
         </div>
     );
 };

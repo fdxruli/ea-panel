@@ -193,7 +193,22 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
             if (itemsError) throw itemsError;
 
-            const mapLink = `http://maps.google.com/?q=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
+            // --- 👇 LÓGICA DE DESCUENTO CORREGIDA ---
+            // Ahora, en lugar de insertar, llamamos a nuestra nueva función
+            if (discount && discount.details.is_single_use) {
+                const { error: usageError } = await supabase.rpc('record_discount_usage_and_deactivate', {
+                    p_customer_id: customer.id,
+                    p_discount_id: discount.details.id
+                });
+                
+                if (usageError) {
+                    // No detenemos el pedido, pero registramos el error para depuración
+                    console.error("Error al registrar y desactivar el descuento:", usageError);
+                }
+            }
+            // --- FIN DE LA LÓGICA CORREGIDA ---
+
+            const mapLink = `https://www.google.com/maps/search/?api=1&query=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
             let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
             cartItems.forEach(item => { message += `- ${item.quantity}x ${item.name}\n`; });
             message += `\n*Total: $${total.toFixed(2)}*\n`;
