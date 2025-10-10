@@ -49,7 +49,16 @@ const OrderStatusChart = ({ orders }) => {
     return <Doughnut data={data} options={options} />;
 };
 
+// --- 👇 COMPONENTE MODIFICADO ---
 const TopProductsChart = ({ items }) => {
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const checkSize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', checkSize);
+        return () => window.removeEventListener('resize', checkSize);
+    }, []);
+
     const productCounts = items.reduce((acc, item) => {
         const productName = item.products?.name || 'Producto Desconocido';
         acc[productName] = (acc[productName] || 0) + item.quantity;
@@ -58,8 +67,17 @@ const TopProductsChart = ({ items }) => {
 
     const sortedProducts = Object.entries(productCounts).sort(([, a], [, b]) => b - a).slice(0, 5);
 
+    const getLabels = () => {
+        return sortedProducts.map(([name]) => {
+            if (isMobile && name.length > 15) {
+                return name.substring(0, 12) + '...'; // Acortar nombres largos en móvil
+            }
+            return name;
+        });
+    };
+    
     const data = {
-        labels: sortedProducts.map(([name]) => name),
+        labels: getLabels(),
         datasets: [{
             label: 'Cantidad Vendida',
             data: sortedProducts.map(([, count]) => count),
@@ -70,17 +88,44 @@ const TopProductsChart = ({ items }) => {
     };
     
     const options = {
-        indexAxis: 'y',
+        indexAxis: isMobile ? 'x' : 'y', // <-- Eje condicional
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-            legend: {
-                display: false,
+            legend: { display: false },
+            tooltip: {
+                // Muestra el nombre completo del producto en el tooltip en móvil
+                callbacks: {
+                    title: (tooltipItems) => {
+                        if (isMobile) {
+                            const index = tooltipItems[0].dataIndex;
+                            return sortedProducts[index][0]; 
+                        }
+                        return tooltipItems[0].label;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    // Ligeramente rota las etiquetas en móvil para evitar superposición
+                    maxRotation: isMobile ? 25 : 0,
+                    minRotation: isMobile ? 25 : 0,
+                }
+            },
+            y: {
+                ticks: {
+                    // Asegura que la cuenta de ventas sea en números enteros
+                    stepSize: 1
+                }
             }
         }
     };
     
     return <Bar data={data} options={options} />;
 };
+// --- 👆 FIN DEL COMPONENTE MODIFICADO ---
 
 
 export default function Dashboard() {
