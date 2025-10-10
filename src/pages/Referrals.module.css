@@ -1,3 +1,5 @@
+/* src/pages/Referrals.module.css */
+
 .container {
     padding: 0;
 }
@@ -8,25 +10,57 @@
     margin-bottom: 2rem;
 }
 
+/* --- MAQUETACIÓN CON FLEXBOX (MOBILE-FIRST) --- */
+
+/* Por defecto (móvil), los elementos se apilan verticalmente */
 .mainGrid {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
+    display: flex;
+    flex-direction: column; 
     gap: 2rem;
-    align-items: flex-start;
+    align-items: stretch;
 }
 
 .sideColumn {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+    flex-shrink: 0;
 }
+
+.mainColumn {
+    /* Permite que el contenido interno (como las tablas) se encoja y use su propio scroll */
+    min-width: 0; 
+}
+
+/* A partir de 900px, cambiamos a un layout horizontal */
+@media (min-width: 900px) {
+    .mainGrid {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    .sideColumn {
+        /* Asignamos un ancho base a la columna lateral */
+        flex-basis: 340px; 
+    }
+    .mainColumn {
+        flex-grow: 1;
+    }
+}
+/* --- FIN DE LA MAQUETACIÓN --- */
+
 
 .card {
     background-color: var(--bg-secondary);
-    padding: 1.5rem;
+    /* Padding reducido para móviles */
+    padding: 1rem; 
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
 }
+/* Restauramos el padding en pantallas más grandes */
+@media (min-width: 768px) {
+    .card {
+        padding: 1.5rem;
+    }
+}
+
+
 .card h3 {
     margin-top: 0;
     border-bottom: 1px solid var(--border-color);
@@ -112,12 +146,6 @@
     border-bottom: 1px solid var(--border-color);
 }
 
-@media (max-width: 900px) {
-    .mainGrid {
-        grid-template-columns: 1fr;
-    }
-}
-
 .cardHeader {
     display: flex;
     justify-content: space-between;
@@ -127,6 +155,7 @@
 .actionsCell {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap; /* Permite que los botones se apilen si no hay espacio */
 }
 
 .editButton, .viewButton {
@@ -165,4 +194,19 @@
 .formGroup small {
     font-size: 0.8rem;
     color: var(--text-secondary);
+    /* Permite que el texto largo se divida en varias líneas */
+    word-break: break-word;
+}
+
+
+/* --- NUEVOS ESTILOS PARA LA TABLA --- */
+.customerTable th,
+.customerTable td {
+    padding: 1rem 0.75rem; /* Mantenemos el padding vertical, reducimos el horizontal */
+    white-space: nowrap;   /* La clave: evita que el texto se divida y activa el scroll */
+}
+
+/* Devolvemos el comportamiento normal a la celda de acciones para que los botones se apilen si es necesario */
+.customerTable .actionsCell {
+    white-space: normal; 
 }
