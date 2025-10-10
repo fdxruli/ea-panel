@@ -289,13 +289,37 @@
     border-left: 4px solid var(--color-accent);
 }
 
+.referralBox {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: center;
+}
+
+.referralBox input {
+    flex-grow: 1;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.referralStats {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
 @media (min-width: 600px) {
     .rewardsLists {
         grid-template-columns: 1fr 1fr;
     }
 }
 
-/* src/pages/MyStuff.module.css (AÑADIR AL FINAL) */
 .unlockedReward {
     display: flex;
     flex-direction: column;
@@ -309,11 +333,10 @@
     padding: 0.5rem 0.8rem;
     border-radius: 6px;
     cursor: pointer;
-    align-self: flex-start; /* Para que el botón no ocupe todo el ancho */
+    align-self: flex-start; 
     font-size: 0.9rem;
 }
 
-/* src/pages/MyStuff.module.css (AÑADIR AL FINAL) */
 .claimCodeButton {
     background-color: var(--color-accent);
     color: white;
@@ -325,15 +348,13 @@
     font-weight: 500;
 }
 
-/* src/pages/MyStuff.module.css (AÑADIR AL FINAL) */
-
 @media (min-width: 600px) {
     .rewardsLists.centeredLayout {
-        grid-template-columns: 1fr; /* Forzar una sola columna */
+        grid-template-columns: 1fr; 
     }
 
     .rewardsLists.centeredLayout > div {
-        margin: 0 auto; /* Centrar el contenedor del acordeón */
+        margin: 0 auto; 
         max-width: 400px;
         width: 100%;
     }
@@ -344,7 +365,7 @@
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    user-select: none; /* Evita que el texto se seleccione al hacer clic */
+    user-select: none; 
 }
 
 .accordionIcon {
@@ -362,48 +383,7 @@
 }
 
 .accordionContent.open {
-    max-height: 1000px; /* Un valor suficientemente grande */
+    max-height: 1000px; 
     transition: max-height 0.5s ease-in;
-    margin-top: 1rem; /* Espacio entre el título y la lista */
-}
-
-
-@media (min-width: 600px) {
-    .rewardsLists.centeredLayout {
-        grid-template-columns: 1fr; /* Forzar una sola columna */
-    }
-
-    .rewardsLists.centeredLayout > div {
-        margin: 0 auto; /* Centrar el contenedor del acordeón */
-        max-width: 400px;
-        width: 100%;
-    }
-}
-
-.accordionHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none; /* Evita que el texto se seleccione al hacer clic */
-}
-
-.accordionIcon {
-    transition: transform 0.3s ease;
-}
-
-.accordionIcon.open {
-    transform: rotate(180deg);
-}
-
-.accordionContent {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-out;
-}
-
-.accordionContent.open {
-    max-height: 1000px; /* Un valor suficientemente grande */
-    transition: max-height 0.5s ease-in;
-    margin-top: 1rem; /* Espacio entre el título y la lista */
+    margin-top: 1rem; 
 }
