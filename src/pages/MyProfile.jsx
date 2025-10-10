@@ -11,36 +11,6 @@ import { useTheme } from '../context/ThemeContext';
 import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
 
-const ReferralSystem = ({ customer }) => {
-    const { showAlert } = useAlert();
-    const referralLink = `${window.location.origin}/?ref=${customer.referral_code}`;
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(referralLink).then(() => {
-            showAlert('¡Enlace de referido copiado!');
-        });
-    };
-
-    return (
-        <div className={styles.card}>
-            <h2>Invita y Gana</h2>
-            <p>
-                Comparte tu enlace de referido con tus amigos. Cuando se registren, 
-                ¡acumularás puntos para subir de nivel y obtener recompensas!
-            </p>
-            <div className={styles.referralBox}>
-                <input type="text" readOnly value={referralLink} />
-                <button onClick={handleCopy} className={styles.actionButton}>Copiar Enlace</button>
-            </div>
-            <div className={styles.referralStats}>
-                <p><strong>Amigos Invitados:</strong> {customer.referral_count || 0}</p>
-                {/** agregar aqui la logica para mostrar al cliente sus premios. Ya lo hacemos en mi actividad... mejor ver si pasamos esta seccion a mi actividad */}
-            </div>
-        </div>
-    );
-};
-
-
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone, setCheckoutModalOpen } = useCustomer();
@@ -153,8 +123,6 @@ export default function MyProfile() {
                         <button type="submit" className={styles.actionButton}>Guardar Cambios</button>
                     </form>
                 </div>
-
-                {customer.referral_code && <ReferralSystem customer={customer} />}
 
                 <div className={styles.card}>
                     <h2>Apariencia</h2>
