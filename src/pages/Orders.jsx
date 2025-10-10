@@ -6,7 +6,7 @@ import DeliveryInfoModal from "../components/DeliveryInfoModal";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
 const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo }) => {
-  const [items, setIstems] = useState([]);
+  const [items, setItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
   const fetchOrderItems = async (orderId) => {
