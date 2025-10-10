@@ -213,28 +213,3 @@
     background-color: var(--color-error);
     color: var(--text-light);
 }
-
-.referralBox {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
-    align-items: center;
-}
-
-.referralBox input {
-    flex-grow: 1;
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    padding: 0.8rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.referralStats {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-    font-size: 1rem;
-    color: var(--text-primary);
-}
