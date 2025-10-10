@@ -324,3 +324,45 @@
     align-self: flex-start;
     font-weight: 500;
 }
+
+/* src/pages/MyStuff.module.css (AÑADIR AL FINAL) */
+
+@media (min-width: 600px) {
+    .rewardsLists.centeredLayout {
+        grid-template-columns: 1fr; /* Forzar una sola columna */
+    }
+
+    .rewardsLists.centeredLayout > div {
+        margin: 0 auto; /* Centrar el contenedor del acordeón */
+        max-width: 400px;
+        width: 100%;
+    }
+}
+
+.accordionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none; /* Evita que el texto se seleccione al hacer clic */
+}
+
+.accordionIcon {
+    transition: transform 0.3s ease;
+}
+
+.accordionIcon.open {
+    transform: rotate(180deg);
+}
+
+.accordionContent {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out;
+}
+
+.accordionContent.open {
+    max-height: 1000px; /* Un valor suficientemente grande */
+    transition: max-height 0.5s ease-in;
+    margin-top: 1rem; /* Espacio entre el título y la lista */
+}

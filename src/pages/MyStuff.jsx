@@ -1,6 +1,6 @@
-// src/pages/MyStuff.jsx (CORREGIDO)
+// src/pages/MyStuff.jsx (ACTUALIZADO)
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react'; // <-- AQUÍ ESTÁ LA CORRECCIÓN
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
@@ -22,10 +22,10 @@ const RewardsSection = ({ customerId }) => {
     const [progress, setProgress] = useState(null);
     const [loading, setLoading] = useState(true);
     const { showAlert } = useAlert();
-
+    const [isAccordionOpen, setIsAccordionOpen] = useState(true); // Estado para el acordeón
+    
     const fetchProgress = useCallback(async () => {
         if (!customerId) return;
-        setLoading(true);
         const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
         if (error) {
             console.error("Error fetching rewards progress:", error);
@@ -39,18 +39,37 @@ const RewardsSection = ({ customerId }) => {
         fetchProgress();
     }, [fetchProgress]);
 
-     const handleClaimCode = async (reward) => {
+    useEffect(() => {
+        if (!customerId) return;
+
+        const handleChanges = (payload) => {
+            console.log('Cambio detectado, actualizando recompensas...', payload);
+            fetchProgress();
+        };
+
+        // Escuchamos cambios en 3 tablas diferentes:
+        const channel = supabase
+            .channel(`customer-rewards-${customerId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, handleChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'referral_levels' }, handleChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, handleChanges)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+
+    }, [customerId, fetchProgress]);
+
+    const handleClaimCode = async (reward) => {
         const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
             p_customer_id: customerId,
             p_reward_id: reward.id
         });
-
         if (error) {
             showAlert('Hubo un error al generar tu código. Es posible que ya lo hayas reclamado.');
-            console.error(error);
         } else {
             showAlert(`¡Código personal generado! Cópialo y úsalo en tu carrito.`);
-            // Volvemos a cargar los datos para que la UI se actualice
             fetchProgress(); 
         }
     };
@@ -64,7 +83,9 @@ const RewardsSection = ({ customerId }) => {
     if (!progress) return <p>No se pudo cargar tu progreso de recompensas.</p>;
 
     const { current_level, next_level, referral_count } = progress;
-    const progressPercentage = next_level ? (referral_count / next_level.min_referrals) * 100 : 100;
+    
+    const progressPercentage = (next_level?.min_referrals) ? (referral_count / next_level.min_referrals) * 100 : 100;
+    const hasReachedMaxLevel = !next_level?.name;
 
     return (
         <div className={styles.card}>
@@ -72,61 +93,62 @@ const RewardsSection = ({ customerId }) => {
             <div className={styles.rewardsProgress}>
                 <div className={styles.levelInfo}>
                     <span>Nivel actual: <strong>{current_level?.name || 'Novato'}</strong></span>
-                    {next_level && <span>Siguiente nivel: <strong>{next_level.name}</strong></span>}
+                    {next_level?.name && <span>Siguiente nivel: <strong>{next_level.name}</strong></span>}
                 </div>
                 <div className={styles.progressBarContainer}>
                     <div className={styles.progressBar} style={{ width: `${progressPercentage}%` }}></div>
                 </div>
                 <p className={styles.progressText}>
-                    {next_level
+                    {next_level?.min_referrals
                         ? `${referral_count} de ${next_level.min_referrals} referidos para el siguiente nivel.`
-                        : `¡Has alcanzado el nivel más alto!`}
+                        : `¡Has alcanzado el nivel más alto! Eres un(a) crack. 😎`
+                    }
                 </p>
             </div>
-
-            <div className={styles.rewardsLists}>
+            <div className={`${styles.rewardsLists} ${hasReachedMaxLevel ? styles.centeredLayout : ''}`}>
                 <div>
-                    <h4>Recompensas Desbloqueadas</h4>
-                    <ul>
-                        {progress.unlocked_rewards?.length > 0
-                            ? progress.unlocked_rewards.map(reward => {
-                                // Buscamos si esta recompensa ya fue reclamada
-                                const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
-
-                                return (
-                                    <li key={reward.id}>
-                                        <div className={styles.unlockedReward}>
-                                            <span>🎁 {reward.description}</span>
-                                            {claim ? (
-                                                // Si ya hay un reclamo, mostramos el código
-                                                <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
-                                                    Copiar: <strong>{claim.generated_code}</strong>
-                                                </button>
-                                            ) : (
-                                                // Si no hay reclamo y la recompensa tiene un código base, mostramos el botón de reclamar
-                                                reward.reward_code && (
-                                                    <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
-                                                        Reclamar mi código único
+                    <div className={styles.accordionHeader} onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
+                        <h4>Recompensas Desbloqueadas</h4>
+                        {/* El ícono de flecha para el acordeón */}
+                        <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>▼</span>
+                    </div>
+                    <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
+                        <ul>
+                            {progress.unlocked_rewards?.length > 0
+                                ? progress.unlocked_rewards.map(reward => {
+                                    const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
+                                    return (
+                                        <li key={reward.id}>
+                                            <div className={styles.unlockedReward}>
+                                                <span>🎁 {reward.description}</span>
+                                                {claim ? (
+                                                    <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
+                                                        Copiar: <strong>{claim.generated_code}</strong>
                                                     </button>
-                                                )
-                                            )}
-                                        </div>
-                                    </li>
-                                );
-                            })
-                            : <li>Invita a familiares y amigos a registrarse para desbloquear recompensas.</li>
-                        }
-                    </ul>
+                                                ) : (
+                                                    reward.reward_code && (
+                                                        <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
+                                                            Reclamar mi código único
+                                                        </button>
+                                                    )
+                                                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })
+                                : <li>Invita a familiares y amigos a registrarse para desbloquear recompensas.</li>
+                            }
+                        </ul>
+                    </div>
                 </div>
-                {next_level && (
+                
+                {next_level?.name && (
                     <div>
                         <h4>Próximas Recompensas</h4>
                         <ul className={styles.upcomingRewards}>
                              {progress.upcoming_rewards?.length > 0
                                 ? progress.upcoming_rewards.map(r => (
-                                    <li key={r.id}>
-                                        ✨ {r.description}
-                                    </li>
+                                    <li key={r.id}>✨ {r.description}</li>
                                 ))
                                 : <li>Próximamente...</li>
                             }
@@ -153,6 +175,7 @@ export default function MyStuff() {
         if (!customer) return [];
         return allReviews.filter(review => review.customer_id === customer.id);
     }, [allReviews, customer]);
+
     const handleRemoveFavorite = async () => {
         if (!favoriteToRemove || !customer) return;
         await supabase.from('customer_favorites').delete().match({ customer_id: customer.id, product_id: favoriteToRemove.products.id });
@@ -162,7 +185,6 @@ export default function MyStuff() {
     };
     const handleUpdateReview = async () => {
         if (!editingReview) return;
-        const cleanComment = DOMPurify.sanitize(editingReview.comment);
         const { error } = await supabase.from('product_reviews').update({ comment: editingReview.comment, rating: editingReview.rating }).eq('id', editingReview.id);
         if (error) { showToast("Error al actualizar la reseña."); }
         else { showToast("Reseña actualizada con éxito."); setEditingReview(null); refetchExtras(); }
@@ -200,9 +222,7 @@ export default function MyStuff() {
         return (
             <>
                 <p className={styles.subtitle}>Gestiona tus recompensas, productos favoritos y reseñas.</p>
-                
                 <RewardsSection customerId={customer.id} />
-
                 <div className={styles.card}>
                     <div className={styles.cardHeader}><HeartIcon /><h2>Mis Favoritos ({favorites.length})</h2></div>
                     {favorites.length > 0 ? (
@@ -221,7 +241,6 @@ export default function MyStuff() {
                         </div>
                     ) : <p>Aún no has guardado productos favoritos.</p>}
                 </div>
-
                 <div className={styles.card}>
                     <div className={styles.cardHeader}><StarIcon /><h2>Mis Reseñas ({myReviews.length})</h2></div>
                     {myReviews.length > 0 ? (

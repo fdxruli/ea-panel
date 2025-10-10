@@ -1,3 +1,5 @@
+// src/context/CartContext.jsx (CORREGIDO Y FINAL)
+
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useProducts } from './ProductContext';
@@ -81,52 +83,40 @@ export const CartProvider = ({ children }) => {
         if (!customerId) {
             return { success: false, message: 'Debes iniciar sesión para usar un código.' };
         }
-
         const upperCaseCode = code.toUpperCase();
-        
-        // --- 👇 LÓGICA DE VALIDACIÓN ACTUALIZADA ---
         try {
-            const { data: discount, error } = await supabase.from('discounts').select('*').eq('code', upperCaseCode).single();
-            if (error || !discount) return { success: false, message: 'El código no es válido.' };
+            const { data: discountData, error } = await supabase.from('discounts').select('*').eq('code', upperCaseCode).single();
+            if (error || !discountData) return { success: false, message: 'El código no es válido.' };
 
-            // 1. Validar si está activo y en fecha
             const today = new Date().toISOString().split('T')[0];
-            if (!discount.is_active || (discount.end_date && discount.end_date < today) || (discount.start_date && discount.start_date > today)) {
+            if (!discountData.is_active || (discountData.end_date && discountData.end_date < today) || (discountData.start_date && discountData.start_date > today)) {
                 return { success: false, message: 'Este código ha expirado o no está activo.' };
             }
-            
-            // 2. NUEVO: Validar si es un código personal
-            if (discount.specific_customer_id && discount.specific_customer_id !== customerId) {
+            if (discountData.specific_customer_id && discountData.specific_customer_id !== customerId) {
                 return { success: false, message: 'Este código de recompensa es personal y no te pertenece.' };
             }
-
-            // 3. NUEVO: Validar si requiere ser referido
-            if (discount.requires_referred_status) {
+            if (discountData.requires_referred_status) {
                 const { data: customerData } = await supabase.from('customers').select('referrer_id').eq('id', customerId).single();
                 if (!customerData.referrer_id) {
                     return { success: false, message: 'Este código es exclusivo para clientes invitados.' };
                 }
             }
-            
-            // 4. Validar si es de un solo uso y ya fue canjeado
-            if (discount.is_single_use) {
-                const { data: usageData } = await supabase.from('customer_discount_usage').select('customer_id').eq('customer_id', customerId).eq('discount_id', discount.id).maybeSingle();
+            if (discountData.is_single_use) {
+                const { data: usageData } = await supabase.from('customer_discount_usage').select('customer_id').eq('customer_id', customerId).eq('discount_id', discountData.id).maybeSingle();
                 if (usageData) {
                     return { success: false, message: 'Este código de un solo uso ya ha sido canjeado.' };
                 }
             }
 
-            // 5. Calcular si aplica al carrito
             const currentSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const discountAmount = calculateDiscount(currentSubtotal, cartItems, discount);
+            const discountAmount = calculateDiscount(currentSubtotal, cartItems, discountData);
 
             if (discountAmount > 0) {
-                setDiscount({ code: discount.code, value: discount.value, details: discount });
+                setDiscount({ code: discountData.code, value: discountData.value, details: discountData });
                 return { success: true, message: '¡Descuento aplicado!' };
             } else {
                 return { success: false, message: 'Este código no aplica para los productos en tu carrito.' };
             }
-
         } catch (error) {
             console.error("Error applying discount:", error);
             return { success: false, message: 'Ocurrió un error inesperado al validar el código.' };
@@ -135,7 +125,6 @@ export const CartProvider = ({ children }) => {
 
     const removeDiscount = () => setDiscount(null);
     const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
-
     const addToCart = useCallback((product, quantityToAdd = 1) => {
         setCartItems(prevItems => {
             const existingItem = prevItems.find(item => item.id === product.id);
@@ -151,13 +140,8 @@ export const CartProvider = ({ children }) => {
     }, []);
 
     const updateQuantity = useCallback((productId, quantity) => {
-        if (quantity === '') {
-            setCartItems(prevItems => prevItems.map(item => item.id === productId ? { ...item, quantity: '' } : item));
-            return;
-        }
         const numQuantity = parseInt(quantity, 10);
-        if (isNaN(numQuantity) || numQuantity < 0) return;
-        if (numQuantity === 0) {
+        if (isNaN(numQuantity) || numQuantity < 1) {
             removeFromCart(productId);
             return;
         }

@@ -18,7 +18,14 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // ... (lógica de fetch no cambia)
+        const fetchReward = async () => {
+            const { data, error } = await supabase.from('settings').select('value').eq('key', 'welcome_reward').single();
+            if (data) {
+                setReward(data.value);
+            }
+            setLoading(false);
+        };
+        fetchReward();
     }, []);
 
     const handleSave = async () => {

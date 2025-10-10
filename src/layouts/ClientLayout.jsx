@@ -1,3 +1,5 @@
+// src/layouts/ClientLayout.jsx (CORREGIDO)
+
 import React, { useState, useEffect } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
