@@ -7,6 +7,8 @@ import ManageImagesModal from "../components/ManageImagesModal";
 import ManageCategoriesModal from "../components/ManageCategoriesModal";
 import DOMPurify from 'dompurify';
 import { useAdminAuth } from "../context/AdminAuthContext";
+import imageCompression from "browser-image-compression";
+import ImageWithFallback from '../components/ImageWithFallback'; // <-- AÑADE ESTA LÍNEA
 
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffc107" stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#e74c3c" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
@@ -16,7 +18,10 @@ const ProductCard = ({ product, categoryName, onToggle, onEdit, onManageImages }
     return (
         <div className={`${styles.productCard} ${!product.is_active ? styles.inactive : ''}`}>
             <div className={styles.imageContainer}>
-                <img src={product.image_url || 'https://placehold.co/300x200'} alt={product.name} />
+                <ImageWithFallback
+                    src={product.image_url || 'https://placehold.co/300x200'}
+                    alt={product.name}
+                />
                 <span className={styles.imageCount}>{1 + (product.product_images?.length || 0)} 📸</span>
             </div>
             <div className={styles.cardContent}>
@@ -88,9 +93,25 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setImageFile(e.target.files[0]);
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1024,
+            useWebWorker: true,
+        };
+
+        try {
+            showAlert('Comprimiendo imagen, por favor espera...');
+            const compressedFile = await imageCompression(file, options);
+            setImageFile(compressedFile);
+            showAlert('¡Imagen lista para subir!');
+        } catch (error) {
+            console.error(error);
+            showAlert('Hubo un error al comprimir la imagen. Intenta con otra.');
+            setImageFile(null);
         }
     };
 
@@ -170,7 +191,13 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
                     <div className={styles.formGroup}>
                         <label htmlFor="imageFile">Imagen Principal</label>
                         <input id="imageFile" name="imageFile" type="file" onChange={handleFileChange} accept="image/*" />
-                        {formData.image_url && !imageFile && <img src={formData.image_url} alt="preview" className={styles.imagePreview} />}
+                        {formData.image_url && !imageFile &&
+                            <ImageWithFallback
+                                src={formData.image_url}
+                                alt="preview"
+                                className={styles.imagePreview}
+                            />
+                        }
                     </div>
                     <div className={styles.modalActions}>
                         <button type="button" onClick={onClose} className={styles.cancelButton}>Cancelar</button>
@@ -184,22 +211,19 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
     );
 };
 
+// ... El resto del componente 'Products' no cambia ...
 export default function Products() {
     const { showAlert } = useAlert();
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
-
     const [isFormModalOpen, setFormModalOpen] = useState(false);
     const [isImagesModalOpen, setImagesModalOpen] = useState(false);
     const [isCategoriesModalOpen, setCategoriesModalOpen] = useState(false);
-
     const [selectedProduct, setSelectedProduct] = useState(null);
-
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [statusFilter, setStatusFilter] = useState("all");
-
     const { hasPermission } = useAdminAuth();
 
     const fetchData = useCallback(async () => {
@@ -218,27 +242,21 @@ export default function Products() {
 
     useEffect(() => {
         fetchData();
-
         const channel = supabase.channel('public:products_admin')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, fetchData)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchData)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, fetchData)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites' }, fetchData)
-          .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites' }, fetchData)
+            .subscribe();
+        return () => supabase.removeChannel(channel);
     }, [fetchData]);
 
     const handleSaveProduct = async (productData) => {
         const { total_sold, total_revenue, avg_rating, reviews_count, favorites_count, product_images, ...dataToUpsert } = productData;
         const { error } = await supabase.from('products').upsert(dataToUpsert.id ? dataToUpsert : [dataToUpsert]).select();
-
-        if (error) {
-            showAlert(`Error: ${error.message}`);
-        } else {
+        if (error) showAlert(`Error: ${error.message}`);
+        else {
             showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`);
             fetchData();
             setFormModalOpen(false);
@@ -288,7 +306,6 @@ export default function Products() {
                     </button>}
                 </div>
             </div>
-
             <div className={styles.filters}>
                 <input type="text" placeholder="Buscar producto..." onChange={(e) => setSearchTerm(e.target.value)} className={styles.searchInput} />
                 <select onChange={(e) => setSelectedCategory(e.target.value)} className={styles.categorySelect}>
@@ -301,7 +318,6 @@ export default function Products() {
                     <option value="inactive">Inactivos</option>
                 </select>
             </div>
-
             <div className={styles.productGrid}>
                 {filteredProducts.map(p => (
                     <ProductCard
@@ -314,7 +330,6 @@ export default function Products() {
                     />
                 ))}
             </div>
-
             <ProductFormModal
                 isOpen={isFormModalOpen}
                 onClose={() => { setFormModalOpen(false); setSelectedProduct(null); }}
@@ -322,7 +337,6 @@ export default function Products() {
                 categories={categories}
                 product={selectedProduct}
             />
-
             {selectedProduct && (
                 <ManageImagesModal
                     product={selectedProduct}
@@ -331,7 +345,6 @@ export default function Products() {
                     onImagesUpdate={fetchData}
                 />
             )}
-
             <ManageCategoriesModal
                 isOpen={isCategoriesModalOpen}
                 onClose={() => setCategoriesModalOpen(false)}

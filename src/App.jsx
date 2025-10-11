@@ -1,4 +1,6 @@
-import React from "react";
+// src/App.jsx
+
+import React, { useEffect } from "react"; // <-- CAMBIO AQUÍ
 import { Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./context/CartContext.jsx";
 import { CustomerProvider } from "./context/CustomerContext.jsx";
@@ -32,6 +34,7 @@ import CreateOrder from "./pages/CreateOrder.jsx";
 import 'leaflet/dist/leaflet.css';
 import Referrals from "./pages/Referrals.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
+import { cleanupExpiredCache } from "./utils/cache.js";
 
 const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
@@ -53,29 +56,33 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
 
 
 function App() {
+  useEffect(() => {
+    cleanupExpiredCache();
+  }, []);
+  
   return (
     <Routes>
       <Route
         path="/"
         element={
           <ThemeProvider>
-            <BusinessHoursProvider>
-              <CustomerProvider>
-                <ProductProvider>
-                  <SettingsProvider>
-                    <CartProvider>
-                      <UserDataProvider>
+            <AlertProvider>
+              <BusinessHoursProvider>
+                <CustomerProvider>
+                  <UserDataProvider>
+                    <ProductProvider>
+                       <SettingsProvider>
                         <ProductExtrasProvider>
-                          <AlertProvider>
+                          <CartProvider>
                             <ClientLayout />
-                          </AlertProvider>
+                          </CartProvider>
                         </ProductExtrasProvider>
-                      </UserDataProvider>
-                    </CartProvider>
-                  </SettingsProvider>
-                </ProductProvider>
-              </CustomerProvider>
-            </BusinessHoursProvider>
+                      </SettingsProvider>
+                    </ProductProvider>
+                  </UserDataProvider>
+                </CustomerProvider>
+              </BusinessHoursProvider>
+            </AlertProvider>
           </ThemeProvider>
         }
       >
@@ -117,5 +124,3 @@ function App() {
 }
 
 export default App;
-
-//chance y tengamos suerte

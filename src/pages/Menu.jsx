@@ -5,6 +5,7 @@ import styles from './Menu.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProductModal from '../components/ProductModal';
 import { useBusinessHours } from '../context/BusinessHoursContext';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
 const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
@@ -93,7 +94,10 @@ export default function Menu() {
                     <div key={product.id} className={styles.productCard}>
                         <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                             <div className={styles.imageContainer}>
-                                <img src={product.image_url || 'https://placehold.co/150'} alt={product.name} />
+                                <ImageWithFallback
+                                    src={product.image_url}
+                                    alt={product.name}
+                                />
                             </div>
                             <div className={styles.cardContent}>
                                 <h3>{product.name}</h3>

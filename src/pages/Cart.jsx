@@ -8,6 +8,7 @@ import styles from './Cart.module.css';
 import CheckoutModal from '../components/CheckoutModal';
 import { useAlert } from '../context/AlertContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,12 +29,12 @@ export default function Cart() {
 
     const { phone, setPhoneModalOpen } = useCustomer();
     const { customer } = useUserData(); // <-- 2. OBTENER LA INFO DEL CLIENTE
-    
+
     const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
-    
+
     const [isDiscountVisible, setDiscountVisible] = useState(false);
 
     useEffect(() => {
@@ -100,7 +101,10 @@ export default function Cart() {
                             <div className={styles.cartItemsList}>
                                 {cartItems.map(item => (
                                     <div key={item.id} className={styles.cartItem}>
-                                        <img src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
+                                        <ImageWithFallback
+                                            src={item.image_url}
+                                            alt={item.name}
+                                        />
                                         <div className={styles.itemInfo}>
                                             <span className={styles.itemName}>{item.name}</span>
                                             <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
@@ -128,14 +132,14 @@ export default function Cart() {
                         <div className={styles.cartFooter}>
                             <div className={styles.discountAccordion}>
                                 {!discount && (
-                                    <button 
+                                    <button
                                         onClick={() => setDiscountVisible(!isDiscountVisible)}
                                         className={styles.discountToggleButton}
                                     >
                                         ¿Tienes un codigo? click aquí
                                     </button>
                                 )}
-                                
+
                                 <div className={`${styles.discountAccordionContent} ${isDiscountVisible || discount ? styles.open : ''}`}>
                                     {!discount && (
                                         <div className={styles.discountSection}>
