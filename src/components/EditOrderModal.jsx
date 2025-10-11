@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import styles from './EditOrderModal.module.css';
 import LoadingSpinner from './LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
+import ImageWithFallback from './ImageWithFallback';
 
 const TrashIcon = () => (
     <svg xmlns="http://www.ww3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
@@ -150,7 +151,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                             <div className={styles.itemsList}>
                                 {orderItems.length > 0 ? orderItems.map(item => (
                                     <div key={item.id} className={styles.cartItem}>
-                                        <img src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
+                                        <ImageWithFallback src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
                                         <div className={styles.itemInfo}>
                                             <span className={styles.itemName}>{item.name}</span>
                                             <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
@@ -183,7 +184,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                 <div className={styles.productList}>
                                     {availableProducts.map(product => (
                                         <div key={product.id} className={styles.productCard} onClick={() => addProduct(product)}>
-                                            <img src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
+                                            <ImageWithFallback src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
                                             <div className={styles.productInfo}>
                                                 <span>{product.name}</span>
                                                 <strong>${product.price.toFixed(2)}</strong>
