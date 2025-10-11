@@ -120,77 +120,92 @@ const RewardsSection = ({ customerId }) => {
 
     const { current_level, next_level, referral_count } = progress;
 
-    const progressPercentage = (next_level?.min_referrals) ? (referral_count / next_level.min_referrals) * 100 : 100;
-    const hasReachedMaxLevel = !next_level?.name;
+    const progressPercentage = next_level?.min_referrals
+        ? (referral_count / next_level.min_referrals) * 100
+        : (current_level?.name ? 100 : 0);
+
+    // La condición ahora comprueba si los niveles tienen un nombre, lo cual es más fiable.
+    const noLevelsConfigured = !current_level?.name && !next_level?.name;
+    const hasReachedMaxLevel = current_level?.name && !next_level?.name;
 
     return (
         <div className={styles.card}>
             <div className={styles.cardHeader}><TrophyIcon /><h2>Mis Recompensas</h2></div>
             <div className={styles.rewardsProgress}>
                 <div className={styles.levelInfo}>
-                    <span>Nivel actual: <strong>{current_level?.name || 'Novato'}</strong></span>
+                    {/* Mostramos el nivel solo si realmente existe, si no, no mostramos la línea */}
+                    {current_level?.name && <span>Nivel actual: <strong>{current_level.name}</strong></span>}
                     {next_level?.name && <span>Siguiente nivel: <strong>{next_level.name}</strong></span>}
                 </div>
-                <div className={styles.progressBarContainer}>
-                    <div className={styles.progressBar} style={{ width: `${progressPercentage}%` }}></div>
-                </div>
+
+                {/* Ocultamos la barra de progreso si no hay niveles configurados */}
+                {!noLevelsConfigured && (
+                    <div className={styles.progressBarContainer}>
+                        <div className={styles.progressBar} style={{ width: `${progressPercentage}%` }}></div>
+                    </div>
+                )}
+
                 <p className={styles.progressText}>
-                    {next_level?.min_referrals
-                        ? `${referral_count} de ${next_level.min_referrals} referidos para el siguiente nivel.`
-                        : `¡Has alcanzado el nivel más alto! Eres un(a) crack. 😎`
+                    {noLevelsConfigured
+                        ? "El sistema de recompensas se está preparando. ¡Vuelve pronto!"
+                        : hasReachedMaxLevel
+                            ? "¡Has alcanzado el nivel más alto! Eres un(a) crack. 😎"
+                            : `Necesitas ${next_level.min_referrals - referral_count} referidos más para el siguiente nivel.`
                     }
                 </p>
             </div>
-            <div className={`${styles.rewardsLists} ${hasReachedMaxLevel ? styles.centeredLayout : ''}`}>
-                <div>
-                    <div className={styles.accordionHeader} onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
-                        <h4>Recompensas Desbloqueadas</h4>
-                        <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>▼</span>
-                    </div>
-                    <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
-                        <ul>
-                            {progress.unlocked_rewards?.length > 0
-                                ? progress.unlocked_rewards.map(reward => {
-                                    const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
-                                    return (
-                                        <li key={reward.id}>
-                                            <div className={styles.unlockedReward}>
-                                                <span>🎁 {reward.description}</span>
-                                                {claim ? (
-                                                    <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
-                                                        Copiar: <strong>{claim.generated_code}</strong>
-                                                    </button>
-                                                ) : (
-                                                    reward.reward_code && (
-                                                        <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
-                                                            Reclamar mi código único
-                                                        </button>
-                                                    )
-                                                )}
-                                            </div>
-                                        </li>
-                                    );
-                                })
-                                : <li>Invita a familiares y amigos a registrarse para desbloquear recompensas.</li>
-                            }
-                        </ul>
-                    </div>
-                </div>
-
-                {next_level?.name && (
+            {!noLevelsConfigured && (
+                <div className={`${styles.rewardsLists} ${hasReachedMaxLevel ? styles.centeredLayout : ''}`}>
                     <div>
-                        <h4>Próximas Recompensas</h4>
-                        <ul className={styles.upcomingRewards}>
-                            {progress.upcoming_rewards?.length > 0
-                                ? progress.upcoming_rewards.map(r => (
-                                    <li key={r.id}>✨ {r.description}</li>
-                                ))
-                                : <li>Próximamente...</li>
-                            }
-                        </ul>
+                        <div className={styles.accordionHeader} onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
+                            <h4>Recompensas Desbloqueadas</h4>
+                            <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>▼</span>
+                        </div>
+                        <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
+                            <ul>
+                                {progress.unlocked_rewards?.length > 0
+                                    ? progress.unlocked_rewards.map(reward => {
+                                        const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
+                                        return (
+                                            <li key={reward.id}>
+                                                <div className={styles.unlockedReward}>
+                                                    <span>🎁 {reward.description}</span>
+                                                    {claim ? (
+                                                        <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
+                                                            Copiar: <strong>{claim.generated_code}</strong>
+                                                        </button>
+                                                    ) : (
+                                                        reward.reward_code && (
+                                                            <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
+                                                                Reclama tu código único
+                                                            </button>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </li>
+                                        );
+                                    })
+                                    : <li>Cuando hayas alcanzado la meta aqui apareceran tus remcompensa</li>
+                                }
+                            </ul>
+                        </div>
                     </div>
-                )}
-            </div>
+
+                    {next_level?.name && (
+                        <div>
+                            <h4>Próximas Recompensas</h4>
+                            <ul className={styles.upcomingRewards}>
+                                {progress.upcoming_rewards?.length > 0
+                                    ? progress.upcoming_rewards.map(r => (
+                                        <li key={r.id}>✨ {r.description}</li>
+                                    ))
+                                    : <li>Próximamente...</li>
+                                }
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

@@ -16,7 +16,9 @@ export const ProductExtrasProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
+        setLoading(true);
         try {
+            // 1. Las reseñas son públicas, siempre se obtienen.
             const { data: revData } = await supabase
                 .from('product_reviews')
                 .select('*, products(id, name, image_url, is_active), customers(name)')
@@ -26,6 +28,7 @@ export const ProductExtrasProvider = ({ children }) => {
             setReviews(validReviews);
             setCache(CACHE_KEYS.REVIEWS, validReviews);
 
+            // 2. Los favoritos son privados, solo se obtienen si hay un cliente.
             if (currentCustomerId) {
                 const favoritesCacheKey = `${CACHE_KEYS.FAVORITES}-${currentCustomerId}`;
                 const { data: favData } = await supabase
@@ -37,7 +40,7 @@ export const ProductExtrasProvider = ({ children }) => {
                 setFavorites(validFavorites);
                 setCache(favoritesCacheKey, validFavorites);
             } else {
-                setFavorites([]);
+                setFavorites([]); // Si no hay cliente, los favoritos están vacíos.
             }
         } catch (error) {
             console.error("Error fetching extras:", error);
@@ -47,65 +50,57 @@ export const ProductExtrasProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        const getCustomerIdAndFetch = async () => {
-            if (!phone) {
+        const initializeAndFetch = async () => {
+            setLoading(true);
+            let currentId = null;
+            let shouldRevalidate = false;
+
+            // --- Lógica para datos del usuario ---
+            if (phone) {
+                const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
+                currentId = data ? data.id : null;
+                setCustomerId(currentId);
+                
+                if (currentId) {
+                    const favoritesCacheKey = `${CACHE_KEYS.FAVORITES}-${currentId}`;
+                    const { data: cachedFavs, isStale } = getCache(favoritesCacheKey, CACHE_TTL.PRODUCT_EXTRAS);
+                    if (cachedFavs) setFavorites(cachedFavs);
+                    if (isStale || !cachedFavs) shouldRevalidate = true;
+                }
+            } else {
                 setCustomerId(null);
                 setFavorites([]);
-                setLoading(false);
-                return;
-            }
-
-            // Obtenemos el ID del cliente primero
-            const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
-            const currentId = data ? data.id : null;
-            setCustomerId(currentId);
-
-            // Cargamos reseñas desde caché/revalidamos
-            const { data: cachedRevs, isStale: isRevsStale } = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
-            if (cachedRevs) {
-                setReviews(cachedRevs);
-                setLoading(false);
             }
             
-            // Cargamos favoritos desde caché/revalidamos (si hay cliente)
-            if (currentId) {
-                const favoritesCacheKey = `${CACHE_KEYS.FAVORITES}-${currentId}`;
-                const { data: cachedFavs, isStale: isFavsStale } = getCache(favoritesCacheKey, CACHE_TTL.PRODUCT_EXTRAS);
-                 if (cachedFavs) {
-                    setFavorites(cachedFavs);
-                 }
-                 // Revalidamos si cualquiera de los dos cachés está "stale" o no existe
-                 if (isRevsStale || isFavsStale) {
-                    fetchAndCacheExtras(currentId);
-                 }
-            } else if (isRevsStale) { // Si no hay cliente, solo revalidamos reseñas
-                 fetchAndCacheExtras(null);
+            // --- Lógica para datos públicos (reseñas) ---
+            const { data: cachedRevs, isStale } = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
+            if (cachedRevs) setReviews(cachedRevs);
+            if (isStale || !cachedRevs) shouldRevalidate = true;
+
+            // --- Decisión final ---
+            if (shouldRevalidate) {
+                await fetchAndCacheExtras(currentId);
+            } else {
+                setLoading(false);
             }
         };
 
-        getCustomerIdAndFetch();
+        initializeAndFetch();
     }, [phone, fetchAndCacheExtras]);
 
     useEffect(() => {
         const handleChanges = () => {
             console.log('Cambio detectado en extras, revalidando...');
-            if (customerId) {
-                fetchAndCacheExtras(customerId);
-            }
+            fetchAndCacheExtras(customerId);
         };
 
-        const channel = supabase.channel('product-extras-granular');
+        const channel = supabase.channel('product-extras-listener');
         
-        // La suscripción fuerza una recarga de datos, invalidando el caché
+        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, handleChanges);
+        
         if (customerId) {
-            channel.on('postgres_changes', { 
-                event: '*', schema: 'public', table: 'customer_favorites', filter: `customer_id=eq.${customerId}` 
-            }, handleChanges);
+            channel.on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites', filter: `customer_id=eq.${customerId}` }, handleChanges);
         }
-        
-        channel.on('postgres_changes', { 
-            event: '*', schema: 'public', table: 'product_reviews' 
-        }, handleChanges);
 
         channel.subscribe();
 
@@ -119,7 +114,7 @@ export const ProductExtrasProvider = ({ children }) => {
         favorites,
         customerId,
         loading,
-        refetch: () => customerId && fetchAndCacheExtras(customerId)
+        refetch: () => fetchAndCacheExtras(customerId)
     };
 
     return (
