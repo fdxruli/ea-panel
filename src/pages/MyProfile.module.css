@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* src/pages/MyProfile.module.css (CORREGIDO) */
 .container {
     max-width: 700px;
@@ -212,4 +213,220 @@
 .logoutButton:hover {
     background-color: var(--color-error);
     color: var(--text-light);
+=======
+/* src/pages/MyProfile.module.css (CORREGIDO) */
+.container {
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 1rem;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+
+.card {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    border: 1px solid var(--border-color);
+}
+
+/* --- ESTILOS PARA EL FORMULARIO "MIS DATOS" --- */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    /* Espacio entre la etiqueta y su campo */
+    margin-top: 1.5rem;
+}
+
+.form label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Añade espacio superior a las etiquetas que no sean la primera para separar los pares */
+.form label:not(:first-of-type) {
+    margin-top: 1rem;
+}
+
+.actionButton {
+    padding: 0.8rem 1.5rem;
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    margin-top: 1rem;
+    align-self: flex-start;
+}
+
+/* --- ESTILOS PARA LA SECCIÓN "APARIENCIA" --- */
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    /* Espacio vertical entre la etiqueta y el selector */
+    margin-top: 1.5rem;
+}
+
+.formGroup label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: left;
+}
+
+.themeSelector {
+    width: 100%;
+    font-size: 1rem;
+}
+
+/* --- ESTILOS PARA LA SECCIÓN "MIS DIRECCIONES" --- */
+.addressHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.addButton {
+    background-color: var(--color-accent);
+    color: var(--text-light);
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.addressCarousel {
+    display: flex;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+    scroll-snap-type: x mandatory;
+}
+
+.addressCarousel::-webkit-scrollbar {
+    display: none;
+}
+
+.addressCarousel {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.addressItem {
+    flex: 0 0 280px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--bg-primary);
+
+    position: relative;
+    border: 2px solid var(--border-color); /* Borde por defecto */
+    transition: border-color 0.3s ease;
+}
+
+.defaultAddress {
+    border-color: var(--color-primary); /* Borde destacado para la dirección por defecto */
+}
+
+.addressLabelContainer {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.defaultBadge {
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    padding: 0.2rem 0.6rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.addressItem p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.addressActions {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.setDefaultButton {
+    background: none;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    padding: 0.6rem 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    flex-grow: 1;
+    width: 100%; 
+    margin-top: 0.5rem;
+}
+
+.editButton {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 0.6rem 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+.deleteButton {
+    background-color: var(--color-error);
+    color: var(--text-light);
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    flex-grow: 1;
+}
+
+.prompt {
+    text-align: center;
+    padding: 2rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+}
+
+.logoutSection {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.logoutButton {
+    background: none;
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.logoutButton:hover {
+    background-color: var(--color-error);
+    color: var(--text-light);
+>>>>>>> 901f8aa95ca640c871ec1f2bf6437b2b2a625efc
 }

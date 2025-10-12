@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -55,4 +56,63 @@ export default function TermsPage() {
             </div>
         </>
     );
+=======
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import LoadingSpinner from '../components/LoadingSpinner';
+import styles from './TermsPage.module.css';
+import DOMPurify from 'dompurify';
+import SEO from '../components/SEO';
+
+export default function TermsPage() {
+    const [terms, setTerms] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchLatestTerms = async () => {
+            const { data, error } = await supabase
+                .from('terms_and_conditions')
+                .select('content, published_at')
+                .order('version', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (error) {
+                console.error(error);
+            } else {
+                setTerms(data);
+            }
+            setLoading(false);
+        };
+        fetchLatestTerms();
+    }, []);
+
+    if (loading) return <LoadingSpinner />;
+
+    const cleanHTML = terms ? DOMPurify.sanitize(terms.content.replace(/\n/g, '<br />')) : '';
+
+    return (
+        <>
+            <SEO
+                title="Términos y Condiciones - Entre Alas"
+                description="Lee los términos y condiciones de servicio y uso de la plataforma de Entre Alas."
+                name="Entre Alas"
+                type="website"
+            />
+            <div className={styles.container}>
+                <h1>Términos y Condiciones</h1>
+                {terms ? (
+                    <>
+                        <p className={styles.meta}>
+                            Última actualización: {new Date(terms.published_at).toLocaleDateString()}
+                        </p>
+                        <div className={styles.content} dangerouslySetInnerHTML={{ __html: cleanHTML }} />
+                    </>
+                ) : (
+                    <p>No se pudieron cargar los términos y condiciones.</p>
+                )}
+            </div>
+        </>
+    );
+>>>>>>> 901f8aa95ca640c871ec1f2bf6437b2b2a625efc
 }
