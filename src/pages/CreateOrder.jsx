@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import styles from './CreateOrder.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ImageWithFallback from '../components/ImageWithFallback';
 
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
@@ -215,7 +216,7 @@ export default function CreateOrder() {
                         <div className={styles.productList}>
                             {selectedCustomer ? filteredProducts.map(p => (
                                 <div key={p.id} className={styles.productItem} onClick={() => addToCart(p)}>
-                                    <img src={p.image_url || 'https://placehold.co/100'} alt={p.name} />
+                                    <ImageWithFallback src={p.image_url || 'https://placehold.co/100'} alt={p.name} />
                                     <div className={styles.productInfo}>
                                         <strong>{p.name}</strong>
                                         <span>${p.price.toFixed(2)}</span>

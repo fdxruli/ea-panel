@@ -6,6 +6,7 @@ import { useProductExtras } from '../context/ProductExtrasContext';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import DOMPurify from 'dompurify';
+import ImageWithFallback from './ImageWithFallback';
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -28,9 +29,9 @@ const StarRating = ({ rating, onRatingChange }) => {
 };
 const HeartIcon = ({ isFavorite }) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
-         fill={isFavorite ? 'var(--color-primary)' : 'none'}
-         stroke={isFavorite ? 'var(--color-primary)' : 'currentColor'}
-         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        fill={isFavorite ? 'var(--color-primary)' : 'none'}
+        stroke={isFavorite ? 'var(--color-primary)' : 'currentColor'}
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
     </svg>
 );
@@ -54,7 +55,7 @@ const AverageRating = ({ reviews }) => {
                     <span className={styles.partialStarContainer}>
                         <span className={styles.starIcon}>☆</span>
                         <span className={styles.partialStarFill} style={{ width: `${decimalPart * 100}%` }}>
-                           <span className={styles.starIcon}>★</span>
+                            <span className={styles.starIcon}>★</span>
                         </span>
                     </span>
                 )}
@@ -71,13 +72,13 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [wasAdded, setWasAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('details');
-    
+
     const { reviews: allReviews, favorites, customerId, refetch: refetchExtras } = useProductExtras();
-    
+
     const [productReviews, setProductReviews] = useState([]);
     const [isFavorite, setIsFavorite] = useState(false);
     const [hasUserReviewed, setHasUserReviewed] = useState(false);
-    
+
     const [userRating, setUserRating] = useState(0);
     const [userComment, setUserComment] = useState('');
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -99,6 +100,41 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             return () => clearTimeout(timer);
         }
     }, [product]);
+
+    // --- 👇 CAMBIOS PRINCIPALES AQUÍ ---
+
+    // 1. Este Effect se encarga de reiniciar los estados BÁSICOS solo cuando el producto cambia.
+    useEffect(() => {
+        if (product) {
+            setQuantity(1);
+            setCurrentImageIndex(0);
+            setWasAdded(false);
+            setActiveTab('details');
+            setUserRating(0);
+            setUserComment('');
+            setIsReviewFormVisible(false);
+        }
+    }, [product?.id]); // Usamos product.id para evitar reinicios innecesarios
+
+    // 2. Este Effect actualiza las reseñas del producto actual cuando cambian las reseñas generales.
+    useEffect(() => {
+        if (product) {
+            const currentProductReviews = allReviews.filter(r => r.products?.id === product.id);
+            setProductReviews(currentProductReviews);
+        }
+    }, [product?.id, allReviews]);
+
+    // 3. Este Effect actualiza el estado de favorito y si el usuario ya ha reseñado.
+    useEffect(() => {
+        if (product && customerId) {
+            setIsFavorite(favorites.some(f => f.products?.id === product.id));
+            setHasUserReviewed(productReviews.some(r => r.customer_id === customerId));
+        } else {
+            setIsFavorite(false);
+            setHasUserReviewed(false);
+        }
+    }, [product?.id, favorites, productReviews, customerId]);
+
 
     const handleClose = useCallback(() => {
         setIsAnimating(false);
@@ -131,28 +167,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         startCarousel();
         return () => stopCarousel();
     }, [startCarousel]);
-
-    useEffect(() => {
-        if (product) {
-            const currentProductReviews = allReviews.filter(r => r.products?.id === product.id);
-            setProductReviews(currentProductReviews);
-
-            if (customerId) {
-                setIsFavorite(favorites.some(f => f.products?.id === product.id));
-                setHasUserReviewed(currentProductReviews.some(r => r.customer_id === customerId));
-            } else {
-                setIsFavorite(false);
-                setHasUserReviewed(false);
-            }
-            setQuantity(1);
-            setCurrentImageIndex(0);
-            setWasAdded(false);
-            setActiveTab('details');
-            setUserRating(0);
-            setUserComment('');
-            setIsReviewFormVisible(false);
-        }
-    }, [product, allReviews, favorites, customerId]);
+    
     if (!product) return null;
 
     const handleAddToCartClick = (event) => {
@@ -222,20 +237,20 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     return (
         <div className={`${styles.overlay} ${isAnimating ? styles.open : ''}`} onClick={handleClose}>
             <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''}`} onClick={(e) => e.stopPropagation()}>
-                <button onClick={handleClose} className={`${styles.closeButton} ${styles.desktopOnly}`}>×</button>                
+                <button onClick={handleClose} className={`${styles.closeButton} ${styles.desktopOnly}`}>×</button>
                 <div
                     className={styles.galleryContainer}
                     onMouseEnter={stopCarousel}
                     onMouseLeave={startCarousel}
                 >
                     {galleryImages.length > 1 && (
-                      <>
-                        <button onClick={handlePrevImage} className={`${styles.navButton} ${styles.prev}`}>&#10094;</button>
-                        <button onClick={handleNextImage} className={`${styles.navButton} ${styles.next}`}>&#10095;</button>
-                      </>
+                        <>
+                            <button onClick={handlePrevImage} className={`${styles.navButton} ${styles.prev}`}>&#10094;</button>
+                            <button onClick={handleNextImage} className={`${styles.navButton} ${styles.next}`}>&#10095;</button>
+                        </>
                     )}
                     {galleryImages.map((src, index) => (
-                         <img
+                        <ImageWithFallback
                             key={index}
                             src={src || 'https://placehold.co/400'}
                             alt={`${product.name} ${index + 1}`}
@@ -249,7 +264,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     <div className={styles.header}>
                         <div className={styles.headerInfo}>
                             <h2 className={styles.productName}>{product.name}</h2>
-                            <AverageRating reviews={productReviews} /> 
+                            <AverageRating reviews={productReviews} />
                         </div>
                         <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.mobileOnly}`}>
                             <HeartIcon isFavorite={isFavorite} />
@@ -271,25 +286,25 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             <div className={styles.tabContentInner}>
                                 <div className={styles.reviewsSection}>
                                     <div className={styles.reviewList}>
-                                    {productReviews.length === 0 ? (
-                                        <p>Todavía no hay reseñas. ¡Sé el primero!</p>
-                                    ) : (
-                                        productReviews.map(review => (
-                                        <div key={review.id} className={styles.reviewItem}>
-                                            <div className={styles.reviewHeader}>
-                                            <strong>{review.customers?.name || 'Anónimo'}</strong>
-                                            <StarRating rating={review.rating} />
-                                            </div>
-                                            <p>{review.comment}</p>
-                                        </div>
-                                        ))
-                                    )}
+                                        {productReviews.length === 0 ? (
+                                            <p>Todavía no hay reseñas. ¡Sé el primero!</p>
+                                        ) : (
+                                            productReviews.map(review => (
+                                                <div key={review.id} className={styles.reviewItem}>
+                                                    <div className={styles.reviewHeader}>
+                                                        <strong>{review.customers?.name || 'Anónimo'}</strong>
+                                                        <StarRating rating={review.rating} />
+                                                    </div>
+                                                    <p>{review.comment}</p>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
                     </div>
-                    
+
                     {activeTab === 'details' && (
                         <div className={styles.footer}>
                             <div className={styles.quantitySelector}>
@@ -309,10 +324,10 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     )}
                     {activeTab === 'reviews' && (
                         <div className={styles.footer}>
-                             {!isReviewFormVisible ? (
-                                <button 
-                                    type="button" 
-                                    onClick={() => setIsReviewFormVisible(true)} 
+                            {!isReviewFormVisible ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReviewFormVisible(true)}
                                     className={styles.showReviewFormButton}
                                     disabled={hasUserReviewed}
                                 >

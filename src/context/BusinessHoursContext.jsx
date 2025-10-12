@@ -1,29 +1,25 @@
+// src/context/BusinessHoursContext.jsx
+
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { getCache, setCache } from '../utils/cache';
+import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
 
 const BusinessHoursContext = createContext();
-
-const BUSINESS_STATUS_CACHE_KEY = 'ea-business-status-cache';
 
 export const useBusinessHours = () => useContext(BusinessHoursContext);
 
 export const BusinessHoursProvider = ({ children }) => {
-    const [businessStatus, setBusinessStatus] = useState(() => {
-        try {
-            const cachedStatus = localStorage.getItem(BUSINESS_STATUS_CACHE_KEY);
-            if (cachedStatus) {
-                return JSON.parse(cachedStatus);
-            }
-        } catch (error) {
-            console.error("Error al leer el caché de estado del negocio:", error);
-        }
-        return { isOpen: false, message: 'Verificando horario...', loading: true };
+    const [businessStatus, setBusinessStatus] = useState({ 
+        isOpen: false, 
+        message: 'Verificando horario...', 
+        loading: true 
     });
 
+    // --- 👇 MEJORA: Envolvemos en useCallback para consistencia y estabilidad ---
     const checkBusinessHours = useCallback(async () => {
         try {
             const { data, error } = await supabase.rpc('get_business_status');
-
             if (error) throw error;
             
             const newStatus = {
@@ -33,7 +29,7 @@ export const BusinessHoursProvider = ({ children }) => {
             };
 
             setBusinessStatus(newStatus);
-            localStorage.setItem(BUSINESS_STATUS_CACHE_KEY, JSON.stringify(newStatus));
+            setCache(CACHE_KEYS.BUSINESS_STATUS, newStatus);
 
         } catch (error) {
             console.error("Error fetching business status:", error);
@@ -43,13 +39,23 @@ export const BusinessHoursProvider = ({ children }) => {
                 loading: false,
             }));
         }
-    }, []);
+    }, []); // <-- Array vacío para una función estable
 
     useEffect(() => {
-        checkBusinessHours();
+        const { data: cachedStatus, isStale } = getCache(CACHE_KEYS.BUSINESS_STATUS, CACHE_TTL.BUSINESS_STATUS);
+
+        if (cachedStatus) {
+            setBusinessStatus({ ...cachedStatus, loading: false });
+        }
+
+        if (isStale) {
+            checkBusinessHours();
+        }
+
         const interval = setInterval(checkBusinessHours, 60000); 
         return () => clearInterval(interval);
     }, [checkBusinessHours]);
+
     useEffect(() => {
         const handleChanges = () => {
             console.log('Cambio detectado en los horarios, actualizando instantáneamente...');
@@ -64,7 +70,7 @@ export const BusinessHoursProvider = ({ children }) => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [checkBusinessHours]);
+    }, [checkBusinessHours]); // <-- Dependencia estable
 
 
     return (

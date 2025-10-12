@@ -1,7 +1,11 @@
+// src/components/ManageImagesModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageImagesModal.module.css';
 import { useAlert } from '../context/AlertContext';
+import ImageWithFallback from './ImageWithFallback';
+import imageCompression from 'browser-image-compression';
 
 export default function ManageImagesModal({ product, isOpen, onClose, onImagesUpdate }) {
   const { showAlert } = useAlert();
@@ -13,11 +17,13 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
     if (product) {
       const allImages = [
         { id: 'main', image_url: product.image_url, is_main: true },
-        ...product.product_images.map(img => ({ ...img, is_main: false }))
+        // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
+        // Añadimos '|| []' para que si 'product_images' es null, se use un arreglo vacío en su lugar.
+        ...(product.product_images || []).map(img => ({ ...img, is_main: false }))
       ].filter(img => img.image_url);
       setImages(allImages);
     }
-  }, [product]);
+  }, [product, isOpen]); // Añadimos isOpen para asegurar que se recargue al abrir
 
   if (!isOpen) return null;
 
@@ -35,11 +41,23 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
     setLoading(true);
 
     try {
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+        fileType: 'image/webp',
+        initialQuality: 0.8
+      };
+      showAlert("Comprimiendo y convirtiendo imagen...");
+      const compressedFile = await imageCompression(imageFile, options);
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${product.id}-${Date.now()}.${fileExt}`;
+        const fileName = `${product.id}-${Date.now()}.webp`;
         const filePath = `products/${fileName}`;
         
-        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, imageFile);
+        const { error: uploadError } = await supabase.storage
+            .from('images')
+            .upload(filePath, compressedFile, { contentType: 'image/webp' });
+
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(filePath);
@@ -51,8 +69,10 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
         if (insertError) throw insertError;
 
         setImageFile(null);
-        document.getElementById('image-upload-input').value = ""; 
-        onImagesUpdate();
+        if (document.getElementById('image-upload-input')) {
+            document.getElementById('image-upload-input').value = ""; 
+        }
+        onImagesUpdate(); // Esto refrescará los datos en la vista de Productos
         showAlert("Imagen añadida con éxito.");
 
     } catch (error) {
@@ -105,7 +125,7 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
         <div className={styles.imageList}>
           {images.map(img => (
             <div key={img.id} className={styles.imageItem}>
-              <img src={img.image_url} alt="Vista previa del producto" />
+              <ImageWithFallback src={img.image_url} alt="Vista previa del producto" />
               <span>{img.is_main ? 'Principal' : 'Secundaria'}</span>
               {!img.is_main && (
                 <button onClick={() => deleteImage(img.id, img.is_main)} disabled={loading} className={styles.deleteButton}>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ea-panel.vercel.app/</loc>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/mis-pedidos</loc>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/mi-perfil</loc>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/mi-actividad</loc>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/terminos</loc>
+    <priority>0.3</priority>
+  </url>
+</urlset>

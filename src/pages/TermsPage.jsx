@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import LoadingSpinner from '../components/LoadingSpinner';
 import styles from './TermsPage.module.css';
 import DOMPurify from 'dompurify';
+import SEO from '../components/SEO';
 
 export default function TermsPage() {
     const [terms, setTerms] = useState(null);
@@ -16,7 +17,7 @@ export default function TermsPage() {
                 .order('version', { ascending: false })
                 .limit(1)
                 .single();
-            
+
             if (error) {
                 console.error(error);
             } else {
@@ -32,18 +33,26 @@ export default function TermsPage() {
     const cleanHTML = terms ? DOMPurify.sanitize(terms.content.replace(/\n/g, '<br />')) : '';
 
     return (
-        <div className={styles.container}>
-            <h1>Términos y Condiciones</h1>
-            {terms ? (
-                <>
-                    <p className={styles.meta}>
-                        Última actualización: {new Date(terms.published_at).toLocaleDateString()}
-                    </p>
-                    <div className={styles.content} dangerouslySetInnerHTML={{ __html: cleanHTML }} />
-                </>
-            ) : (
-                <p>No se pudieron cargar los términos y condiciones.</p>
-            )}
-        </div>
+        <>
+            <SEO
+                title="Términos y Condiciones - Entre Alas"
+                description="Lee los términos y condiciones de servicio y uso de la plataforma de Entre Alas."
+                name="Entre Alas"
+                type="website"
+            />
+            <div className={styles.container}>
+                <h1>Términos y Condiciones</h1>
+                {terms ? (
+                    <>
+                        <p className={styles.meta}>
+                            Última actualización: {new Date(terms.published_at).toLocaleDateString()}
+                        </p>
+                        <div className={styles.content} dangerouslySetInnerHTML={{ __html: cleanHTML }} />
+                    </>
+                ) : (
+                    <p>No se pudieron cargar los términos y condiciones.</p>
+                )}
+            </div>
+        </>
     );
 }

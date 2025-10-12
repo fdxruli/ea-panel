@@ -10,6 +10,7 @@ import EditOrderModal from '../components/EditOrderModal';
 import ConfirmModal from '../components/ConfirmModal';
 import CancellationRequestModal from '../components/CancellationRequestModal';
 import AuthPrompt from '../components/AuthPrompt';
+import SEO from '../components/SEO';
 
 export default function MyOrders() {
     const { phone, setCheckoutModalOpen } = useCustomer();
@@ -217,6 +218,13 @@ export default function MyOrders() {
 
 
     return (
+        <>
+        <SEO
+            title="Mis Pedidos - Entre Alas"
+            description="Consulta el estado de tus pedidos, edítalos o vuelve a pedir tus favoritos en Entre Alas."
+            name="Entre Alas"
+            type="website"
+        />
         <div className={styles.container}>
             {renderContent()}
 
@@ -232,5 +240,6 @@ export default function MyOrders() {
 
             {isRequestingCancel && orderToCancel && <CancellationRequestModal order={orderToCancel} onClose={() => { setIsRequestingCancel(false); setOrderToCancel(null); }} />}
         </div>
+        </>
     );
 }

@@ -1,4 +1,4 @@
-// src/pages/Referrals.jsx (ACTUALIZADO CON EDITOR DE RECOMPENSA)
+// src/pages/Referrals.jsx 
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -175,7 +175,7 @@ export default function Referrals() {
                             <h3>Todos los Clientes</h3>
                             <input type="text" placeholder="Buscar por nombre o código..." className={styles.searchInput} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                             <div className="table-wrapper">
-                                <table className="products-table">
+                                <table className={`products-table ${styles.customerTable}`}>
                                     <thead><tr><th>Cliente</th><th>Código</th><th>Referidos</th><th>Nivel</th><th>Acciones</th></tr></thead>
                                     <tbody>
                                         {filteredCustomers.map(customer => (

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, lazy, Suspense } from "react"; // <-- CAMBIO AQUÍ
 import { Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./context/CartContext.jsx";
 import { CustomerProvider } from "./context/CustomerContext.jsx";
@@ -32,6 +32,8 @@ import CreateOrder from "./pages/CreateOrder.jsx";
 import 'leaflet/dist/leaflet.css';
 import Referrals from "./pages/Referrals.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
+import { cleanupExpiredCache } from "./utils/cache.js";
+import ReloadPrompt from "./components/ReloadPrompt.jsx";
 
 const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
@@ -53,69 +55,76 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
 
 
 function App() {
+  useEffect(() => {
+    cleanupExpiredCache();
+  }, []);
+
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <ThemeProvider>
-            <BusinessHoursProvider>
-              <CustomerProvider>
-                <ProductProvider>
-                  <SettingsProvider>
-                    <CartProvider>
-                      <UserDataProvider>
-                        <ProductExtrasProvider>
-                          <AlertProvider>
-                            <ClientLayout />
-                          </AlertProvider>
-                        </ProductExtrasProvider>
-                      </UserDataProvider>
-                    </CartProvider>
-                  </SettingsProvider>
-                </ProductProvider>
-              </CustomerProvider>
-            </BusinessHoursProvider>
-          </ThemeProvider>
-        }
-      >
-        <Route path="/terminos" element={<TermsPage />} />
-        <Route index element={<Menu />} />
-        <Route path="mis-pedidos" element={<MyOrders />} />
-        <Route path="mi-perfil" element={<MyProfile />} />
-        <Route path="mi-actividad" element={<MyStuff />} />
-      </Route>
-
-      <Route path="/login" element={<Login />} />
-
-      <Route element={<ProtectedRoute />}>
+    <>
+      <ReloadPrompt />
+      <Routes>
         <Route
-          path="/admin"
+          path="/"
           element={
-            <AlertProvider>
-              <AdminAuthProvider>
-                <AdminLayout />
-              </AdminAuthProvider>
-            </AlertProvider>
+            <ThemeProvider>
+              <AlertProvider>
+                <BusinessHoursProvider>
+                  <CustomerProvider>
+                    <UserDataProvider>
+                      <ProductProvider>
+                        <SettingsProvider>
+                          <ProductExtrasProvider>
+                            <CartProvider>
+                              <ClientLayout />
+                            </CartProvider>
+                          </ProductExtrasProvider>
+                        </SettingsProvider>
+                      </ProductProvider>
+                    </UserDataProvider>
+                  </CustomerProvider>
+                </BusinessHoursProvider>
+              </AlertProvider>
+            </ThemeProvider>
           }
         >
-          <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
-          <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
-          <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
-          <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />
-          <Route path="clientes" element={<PermissionWrapper permissionKey="clientes.view" element={<Customers />} />} />
-          <Route path="referidos" element={<PermissionWrapper permissionKey="referidos.view" element={<Referrals />} />} />
-          <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
-          <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
-          <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
-          <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
-          <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
+          <Route index element={<Menu />} />
+          <Route path="mis-pedidos" element={<MyOrders />} />
+          <Route path="mi-perfil" element={<MyProfile />} />
+          <Route path="mi-actividad" element={<MyStuff />} />
+          <Route path="/terminos" element={<TermsPage />} />
         </Route>
-      </Route>
-    </Routes>
+
+        <Route path="/login" element={<Login />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/admin"
+            element={
+              <AlertProvider>
+                <Suspense>
+                  <AdminAuthProvider>
+                    <AdminLayout />
+                  </AdminAuthProvider>
+                </Suspense>
+              </AlertProvider>
+            }
+          >
+            <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
+            <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
+            <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
+            <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />
+            <Route path="clientes" element={<PermissionWrapper permissionKey="clientes.view" element={<Customers />} />} />
+            <Route path="referidos" element={<PermissionWrapper permissionKey="referidos.view" element={<Referrals />} />} />
+            <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
+            <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
+            <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
+            <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
+            <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
+          </Route>
+        </Route>
+      </Routes>
+    </>
   );
 }
 
 export default App;
-
-//chance y tengamos suerte

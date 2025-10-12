@@ -62,20 +62,16 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
     libraries: libraries,
   });
 
+  // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
+  // Se inicializa la posición una sola vez, pero no se fuerza un reseteo
+  // cada vez que el componente padre se actualiza.
   useEffect(() => {
     if (onLocationSelect && !initialPosition) {
       onLocationSelect(defaultCenter);
     }
   }, []);
+  // --- 👆 FIN DE LA CORRECCIÓN ---
   
-  useEffect(() => {
-    if (initialPosition) {
-        setMarkerPosition(initialPosition);
-        setMapCenter(initialPosition);
-        setLastValidPosition(initialPosition);
-    }
-  }, [initialPosition]);
-
   const onPolygonLoad = useCallback(polygon => {
     polygonRef.current = polygon;
   }, []);
