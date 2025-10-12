@@ -17,10 +17,12 @@ export default function ImageWithFallback({ src, alt, className, ...props }) {
 
     const handleError = () => {
         if (retries === 0) {
+            // Intenta recargar la imagen con un parámetro para evitar el caché
             const retrySrc = `${src}?t=${new Date().getTime()}`;
             setImageSrc(retrySrc);
             setRetries(prev => prev + 1);
         } else {
+            // Si el reintento también falla, muestra el placeholder
             setHasError(true);
             setImageSrc(PLACEHOLDER_IMAGE);
         }
@@ -42,6 +44,7 @@ export default function ImageWithFallback({ src, alt, className, ...props }) {
             // Combina las clases existentes con la de la animación
             className={`${styles.image} ${className}`}
             onError={handleError}
+            loading="lazy" // <-- Carga diferida para mejorar el rendimiento
             {...props}
         />
     );
