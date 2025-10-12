@@ -20,6 +20,16 @@ export const AdminAuthProvider = ({ children }) => {
             console.error("Error fetching admin profile:", error);
             setAdmin(null);
         } else {
+            // ¡AQUÍ LA MAGIA!
+            // Si los permisos vienen como texto desde la BD, los convertimos de nuevo a un objeto.
+            if (data && typeof data.permissions === 'string') {
+                try {
+                    data.permissions = JSON.parse(data.permissions);
+                } catch (e) {
+                    console.error("Error al interpretar los permisos del admin:", e);
+                    data.permissions = {}; // Si hay un error, no se asigna ningún permiso.
+                }
+            }
             setAdmin(data);
         }
         setLoading(false);
@@ -31,8 +41,11 @@ export const AdminAuthProvider = ({ children }) => {
             if (session) { fetchAdminData(session.user); } else { setLoading(false); }
         };
         getSession();
-        const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-             fetchAdminData(session?.user);
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            // Añadimos una condición para ignorar el evento 'SIGNED_UP'
+            if (event !== 'SIGNED_UP') {
+                fetchAdminData(session?.user);
+            }
         });
         return () => { authListener.subscription.unsubscribe(); };
     }, [fetchAdminData]);
@@ -41,7 +54,7 @@ export const AdminAuthProvider = ({ children }) => {
         if (admin?.role === 'admin') {
             return true;
         }
-        
+
         if (!admin?.permissions) {
             return false;
         }
@@ -58,7 +71,7 @@ export const AdminAuthProvider = ({ children }) => {
 
         return !!currentPermission;
     };
-    
+
     const value = { admin, loading, hasPermission };
 
     return (

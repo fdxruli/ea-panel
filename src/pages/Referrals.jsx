@@ -5,13 +5,15 @@ import styles from './Referrals.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ManageReferralLevelsModal from '../components/ManageReferralLevelsModal';
 import EditReferralCountModal from '../components/EditReferralCountModal';
+import { useAdminAuth } from '../context/AdminAuthContext'; // Importar hook
 
 const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3"/></svg>;
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>;
 const GiftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>;
 
 const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
-    // ... (estados existentes)
+    const { hasPermission } = useAdminAuth();
+    const canEdit = hasPermission('referidos.edit');
     const [reward, setReward] = useState({ enabled: true, message: '', discount_code: '' });
     const [loading, setLoading] = useState(true);
 
@@ -27,9 +29,8 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
     }, []);
 
     const handleSave = async () => {
-        // --- 👇 LÓGICA DE GUARDADO ACTUALIZADA ---
+        if (!canEdit) return;
         try {
-            // Primero, busca el descuento por su código
             const { data: discount, error: findError } = await supabase
                 .from('discounts')
                 .select('id')
@@ -41,15 +42,13 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
                 return;
             }
 
-            // Si existe, actualízalo para que requiera el estado de referido
             const { error: updateError } = await supabase
                 .from('discounts')
-                .update({ requires_referred_status: true, is_single_use: true }) // Lo forzamos a ser de un solo uso
+                .update({ requires_referred_status: true, is_single_use: true })
                 .eq('id', discount.id);
             
             if (updateError) throw updateError;
 
-            // Finalmente, guarda la configuración del mensaje
             const { error: settingsError } = await supabase.from('settings').update({ value: reward }).eq('key', 'welcome_reward');
             if (settingsError) throw settingsError;
 
@@ -72,6 +71,7 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
                     value={reward.message}
                     onChange={e => setReward({ ...reward, message: e.target.value })}
                     placeholder="Ej: ¡Bienvenido! Usa el código {CODE} para un descuento."
+                    disabled={!canEdit}
                 />
                 <small>Usa `&#123;CODE&#125;` donde quieras que aparezca el código.</small>
             </div>
@@ -81,10 +81,11 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
                     type="text"
                     value={reward.discount_code}
                     onChange={e => setReward({ ...reward, discount_code: e.target.value.toUpperCase() })}
+                    disabled={!canEdit}
                 />
                 <small>Este código debe existir en la sección "Descuentos" y será de un solo uso.</small>
             </div>
-            <button onClick={handleSave} className="admin-button-primary">Guardar y Aplicar Reglas</button>
+            {canEdit && <button onClick={handleSave} className="admin-button-primary">Guardar y Aplicar Reglas</button>}
         </div>
     );
 };
@@ -92,6 +93,7 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
 
 export default function Referrals() {
     const { showAlert } = useAlert();
+    const { hasPermission } = useAdminAuth(); // Usar hook
     const [loading, setLoading] = useState(true);
     const [referralData, setReferralData] = useState([]);
     const [levels, setLevels] = useState([]);
@@ -100,6 +102,8 @@ export default function Referrals() {
     const [expandedCustomerId, setExpandedCustomerId] = useState(null);
     const [isLevelsModalOpen, setIsLevelsModalOpen] = useState(false);
     const [customerToEdit, setCustomerToEdit] = useState(null);
+    
+    const canEdit = hasPermission('referidos.edit');
 
     const fetchData = useCallback(async () => {
         try {
@@ -144,7 +148,7 @@ export default function Referrals() {
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
                                 <h3><TrophyIcon /> Niveles y Recompensas</h3>
-                                <button onClick={() => setIsLevelsModalOpen(true)} className="admin-button-secondary">Gestionar</button>
+                                {canEdit && <button onClick={() => setIsLevelsModalOpen(true)} className="admin-button-secondary">Gestionar</button>}
                             </div>
                             <div className={styles.levelsContainer}>
                                 {levels.length > 0 ? levels.map(level => (
@@ -178,7 +182,7 @@ export default function Referrals() {
                                     <tbody>
                                         {filteredCustomers.map(customer => (
                                             <React.Fragment key={customer.customer_id}>
-                                                <tr><td>{customer.customer_name}</td><td>{customer.referral_code}</td><td>{customer.referral_count}</td><td>{customer.level_name || 'Novato'}</td><td><div className={styles.actionsCell}><button onClick={() => setCustomerToEdit(customer)} className={styles.editButton}>Editar</button><button onClick={() => toggleDetails(customer.customer_id)} disabled={!customer.referred_customers} className={styles.viewButton}>{expandedCustomerId === customer.customer_id ? 'Ocultar' : 'Ver'}</button></div></td></tr>
+                                                <tr><td>{customer.customer_name}</td><td>{customer.referral_code}</td><td>{customer.referral_count}</td><td>{customer.level_name || 'Novato'}</td><td><div className={styles.actionsCell}>{canEdit && <button onClick={() => setCustomerToEdit(customer)} className={styles.editButton}>Editar</button>}<button onClick={() => toggleDetails(customer.customer_id)} disabled={!customer.referred_customers} className={styles.viewButton}>{expandedCustomerId === customer.customer_id ? 'Ocultar' : 'Ver'}</button></div></td></tr>
                                                 {expandedCustomerId === customer.customer_id && (
                                                     <tr className={styles.detailsRow}><td colSpan="5"><div className={styles.detailsContent}><h4>Clientes referidos por {customer.customer_name}:</h4>{customer.referred_customers?.length > 0 ? (<ul>{customer.referred_customers.map(ref => (<li key={ref.phone}><span>{ref.name} ({ref.phone})</span><small>Registrado: {new Date(ref.registered_at).toLocaleDateString()}</small></li>))}</ul>) : <p>Sin referidos aún.</p>}</div></td></tr>
                                                 )}

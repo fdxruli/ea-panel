@@ -4,12 +4,14 @@ import { useAlert } from '../context/AlertContext';
 import styles from './CreateOrder.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ImageWithFallback from '../components/ImageWithFallback';
+import { useAdminAuth } from '../context/AdminAuthContext'; // Importar hook de permisos
 
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 
 export default function CreateOrder() {
     const { showAlert } = useAlert();
+    const { hasPermission } = useAdminAuth(); // Usar hook de permisos
     const [step, setStep] = useState(1);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -24,6 +26,8 @@ export default function CreateOrder() {
     
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const canEdit = hasPermission('crear-pedido.edit'); // Verificar permiso
 
     useEffect(() => {
         const fetchData = async () => {
@@ -66,6 +70,7 @@ export default function CreateOrder() {
     }, [products, productSearch, categoryFilter]);
 
     const handleCreateCustomer = async () => {
+        if (!canEdit) return;
         if (!newCustomer.name || !newCustomer.phone) {
             showAlert('El nombre y el teléfono son obligatorios.');
             return;
@@ -85,6 +90,7 @@ export default function CreateOrder() {
     };
 
     const addToCart = (product) => {
+        if (!canEdit) return;
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
@@ -95,6 +101,7 @@ export default function CreateOrder() {
     };
     
     const updateQuantity = (productId, newQuantity) => {
+        if (!canEdit) return;
         if (newQuantity <= 0) {
             setCart(prev => prev.filter(item => item.id !== productId));
         } else {
@@ -107,6 +114,7 @@ export default function CreateOrder() {
     }, [cart]);
 
     const handlePlaceOrder = async () => {
+        if (!canEdit) return;
         if (!selectedCustomer || cart.length === 0) {
             showAlert('Debes seleccionar un cliente y añadir al menos un producto.');
             return;
@@ -162,7 +170,7 @@ export default function CreateOrder() {
                             <div className={styles.selectedCustomer}>
                                 <p><strong>Cliente:</strong> {selectedCustomer.name}</p>
                                 <p><strong>Teléfono:</strong> {selectedCustomer.phone}</p>
-                                <button onClick={() => { setSelectedCustomer(null); setStep(1); }} className={styles.changeButton}>Cambiar</button>
+                                <button onClick={() => { if(canEdit) {setSelectedCustomer(null); setStep(1);}}} className={styles.changeButton} disabled={!canEdit}>Cambiar</button>
                             </div>
                         ) : (
                             <div className={styles.customerSearch}>
@@ -173,19 +181,20 @@ export default function CreateOrder() {
                                         placeholder="Buscar por nombre o teléfono..."
                                         value={customerSearch}
                                         onChange={(e) => setCustomerSearch(e.target.value)}
+                                        disabled={!canEdit}
                                     />
                                 </div>
                                 {filteredCustomers.length > 0 && (
                                     <ul className={styles.customerResults}>
                                         {filteredCustomers.map(c => (
-                                            <li key={c.id} onClick={() => { setSelectedCustomer(c); setStep(2); }}>
+                                            <li key={c.id} onClick={() => { if(canEdit) {setSelectedCustomer(c); setStep(2); }}}>
                                                 {c.name} - {c.phone}
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                                 <p className={styles.orText}>o</p>
-                                <button onClick={() => setIsCreatingCustomer(true)} className={styles.createCustomerButton}>
+                                <button onClick={() => setIsCreatingCustomer(true)} className={styles.createCustomerButton} disabled={!canEdit}>
                                     <UserPlusIcon /> Crear Nuevo Cliente
                                 </button>
                             </div>
@@ -205,10 +214,10 @@ export default function CreateOrder() {
                                     placeholder="Buscar producto..."
                                     value={productSearch}
                                     onChange={(e) => setProductSearch(e.target.value)}
-                                    disabled={!selectedCustomer}
+                                    disabled={!selectedCustomer || !canEdit}
                                 />
                              </div>
-                            <select onChange={(e) => setCategoryFilter(e.target.value)} disabled={!selectedCustomer}>
+                            <select onChange={(e) => setCategoryFilter(e.target.value)} disabled={!selectedCustomer || !canEdit}>
                                 <option value="all">Todas las categorías</option>
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
@@ -242,9 +251,9 @@ export default function CreateOrder() {
                                                 <small>${item.price.toFixed(2)}</small>
                                             </div>
                                             <div className={styles.quantityControl}>
-                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                                                <input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} />
-                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} disabled={!canEdit}>-</button>
+                                                <input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} disabled={!canEdit} />
+                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} disabled={!canEdit}>+</button>
                                             </div>
                                             <strong>${(item.price * item.quantity).toFixed(2)}</strong>
                                         </li>
@@ -259,7 +268,7 @@ export default function CreateOrder() {
                         <button 
                             className={styles.placeOrderButton} 
                             onClick={handlePlaceOrder}
-                            disabled={isSubmitting || cart.length === 0 || !selectedCustomer}
+                            disabled={isSubmitting || cart.length === 0 || !selectedCustomer || !canEdit}
                         >
                             {isSubmitting ? 'Creando...' : 'Crear Pedido'}
                         </button>
