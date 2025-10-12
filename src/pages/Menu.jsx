@@ -33,21 +33,26 @@ export default function Menu() {
         }
         addToCart(product, quantity);
         const quantityAdded = quantity || 1;
+        const isMobile = window.innerWidth < 768;
 
-        showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
-
-        if (event && event.currentTarget) {
-            const rect = event.currentTarget.getBoundingClientRect();
-            const newImage = {
-                id: Date.now(),
-                src: product.image_url || 'https://placehold.co/150',
-                top: rect.top + rect.height / 2,
-                left: rect.left + rect.width / 2,
-            };
-            setFlyingImages(prev => [...prev, newImage]);
-            setTimeout(() => {
-                setFlyingImages(prev => prev.filter(img => img.id !== newImage.id));
-            }, 1000);
+        if (isMobile) {
+            // Animación de imagen voladora para móviles
+            if (event && event.currentTarget) {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const newImage = {
+                    id: Date.now(),
+                    src: product.image_url || 'https://placehold.co/150',
+                    top: rect.top + rect.height / 2,
+                    left: rect.left + rect.width / 2,
+                };
+                setFlyingImages(prev => [...prev, newImage]);
+                setTimeout(() => {
+                    setFlyingImages(prev => prev.filter(img => img.id !== newImage.id));
+                }, 1000); // Duración de la animación
+            }
+        } else {
+            // Notificación "Toast" para escritorio
+            showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
         }
     };
 
