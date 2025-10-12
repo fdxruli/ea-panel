@@ -54,7 +54,10 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
         const fileName = `${product.id}-${Date.now()}.webp`;
         const filePath = `products/${fileName}`;
         
-        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, compressedFile);
+        const { error: uploadError } = await supabase.storage
+            .from('images')
+            .upload(filePath, compressedFile, { contentType: 'image/webp' });
+
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(filePath);
