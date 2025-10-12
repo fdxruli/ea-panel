@@ -65,7 +65,7 @@ export default function Menu() {
     return (
         <>
             <SEO
-                title="Menú de Entre Alas - Las mejores alitas de la ciudad"
+                title="Menú - Entre Alas"
                 description="Explora nuestro delicioso menú de alitas, hamburguesas, y más. Pide ahora y disfruta del mejor sabor."
                 name="Entre Alas"
                 type="website"
