@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import styles from './ManageImagesModal.module.css';
 import { useAlert } from '../context/AlertContext';
 import ImageWithFallback from './ImageWithFallback';
+import imageCompression from 'browser-image-compression';
 
 export default function ManageImagesModal({ product, isOpen, onClose, onImagesUpdate }) {
   const { showAlert } = useAlert();
@@ -40,11 +41,20 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
     setLoading(true);
 
     try {
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1024,
+        useWebWorker: true,
+        fileType: 'image/webp',
+        initialQuality: 0.8
+      };
+      showAlert("Comprimiendo y convirtiendo imagen...");
+      const compressedFile = await imageCompression(imageFile, options);
         const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${product.id}-${Date.now()}.${fileExt}`;
+        const fileName = `${product.id}-${Date.now()}.webp`;
         const filePath = `products/${fileName}`;
         
-        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, imageFile);
+        const { error: uploadError } = await supabase.storage.from('images').upload(filePath, compressedFile);
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(filePath);
