@@ -101,6 +101,8 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
             maxSizeMB: 1,
             maxWidthOrHeight: 1024,
             useWebWorker: true,
+            fileType: 'image/webp',
+            initialQuality: 0.8
         };
 
         try {
@@ -117,7 +119,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
 
     const uploadImage = async (file) => {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
+        const fileName = `${Date.now()}.webp`;
         const filePath = `products/${fileName}`;
 
         const { error: uploadError } = await supabase.storage

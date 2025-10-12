@@ -10,6 +10,7 @@ import { useAlert } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
+import SEO from '../components/SEO';
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
@@ -50,7 +51,7 @@ export default function MyProfile() {
         else {
             showAlert("Información actualizada con éxito.");
             if (editForm.phone !== phone) {
-                window.location.reload(); 
+                window.location.reload();
             } else {
                 refetch();
             }
@@ -64,7 +65,7 @@ export default function MyProfile() {
         setAddressToDelete(null);
         refetch();
     };
-    
+
     const handleSaveAddress = async (addressData, shouldSave, addressId) => {
         let response;
         const dataToSave = { ...addressData, customer_id: customer.id };
@@ -74,7 +75,7 @@ export default function MyProfile() {
         } else {
             response = await supabase.from('customer_addresses').insert(dataToSave);
         }
-        
+
         if (response.error) {
             showAlert(`Error al guardar: ${response.error.message}`);
             throw new Error(response.error.message);
@@ -177,15 +178,23 @@ export default function MyProfile() {
     };
 
     return (
-        <div className={styles.container}>
-            {renderContent()}
-            <AddressModal isOpen={isAddressModalOpen} onClose={() => setAddressModalOpen(false)} onSave={handleSaveAddress} address={editingAddress} customerId={customer?.id} />
-            <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
-                Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.
-            </ConfirmModal>
-            <ConfirmModal isOpen={isLogoutModalOpen} onClose={() => setLogoutModalOpen(false)} onConfirm={confirmLogout} title="¿Cerrar Sesión?">
-                Tu número se eliminará de este dispositivo y tendrás que volver a ingresarlo para ver tu perfil y pedidos.
-            </ConfirmModal>
-        </div>
+        <>
+            <SEO
+                title="Mi Perfil - Entre Alas"
+                description="Administra tus datos personales, direcciones de entrega y preferencias de la aplicación."
+                name="Entre Alas"
+                type="website"
+            />
+            <div className={styles.container}>
+                {renderContent()}
+                <AddressModal isOpen={isAddressModalOpen} onClose={() => setAddressModalOpen(false)} onSave={handleSaveAddress} address={editingAddress} customerId={customer?.id} />
+                <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
+                    Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.
+                </ConfirmModal>
+                <ConfirmModal isOpen={isLogoutModalOpen} onClose={() => setLogoutModalOpen(false)} onConfirm={confirmLogout} title="¿Cerrar Sesión?">
+                    Tu número se eliminará de este dispositivo y tendrás que volver a ingresarlo para ver tu perfil y pedidos.
+                </ConfirmModal>
+            </div>
+        </>
     );
 }
