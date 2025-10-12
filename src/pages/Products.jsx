@@ -124,7 +124,7 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
 
         const { error: uploadError } = await supabase.storage
             .from('images')
-            .upload(filePath, file);
+            .upload(filePath, file, { contentType: 'image/webp' });
 
         if (uploadError) throw uploadError;
 
