@@ -39,8 +39,10 @@ const ReferralSystem = ({ customer }) => {
             </p>
             <div className={styles.referralBox}>
                 <input type="text" readOnly value={referralLink} />
-                <button onClick={handleCopy} className={styles.actionButton}>Copiar Enlace</button>
-                <button onClick={() => setQrModalOpen(true)} className={styles.actionButton}>Mostrar QR</button>
+                <div className={styles.referralActions}>
+                    <button onClick={handleCopy} className="admin-button-primary">Copiar Enlace</button>
+                    <button onClick={() => setQrModalOpen(true)} className="admin-button-secondary">Mostrar QR</button>
+                </div>
             </div>
             <div className={styles.referralStats}>
                 <p><strong>Amigos Invitados:</strong> {customer.referral_count || 0}</p>

@@ -291,19 +291,47 @@
 
 .referralBox {
     display: flex;
+    flex-direction: column; /* Por defecto (móvil), se apilan */
     gap: 1rem;
     margin-top: 1rem;
-    align-items: center;
+    align-items: stretch; /* Ocupan todo el ancho disponible */
 }
 
 .referralBox input {
-    flex-grow: 1;
+    flex-grow: 1; /* Permite que el input crezca */
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
     padding: 0.8rem;
     border-radius: 8px;
     font-size: 0.9rem;
     color: var(--text-secondary);
+    text-align: center;
+}
+
+.referralActions {
+    display: flex;
+    gap: 1rem;
+    flex-shrink: 0; /* Evita que los botones se encojan */
+}
+
+.referralActions > button {
+    flex-grow: 1; /* Los botones se reparten el espacio disponible */
+}
+
+/* Vista para tablets y escritorio */
+@media (min-width: 600px) {
+    .referralBox {
+        flex-direction: row; /* En pantallas grandes, se alinean horizontalmente */
+        align-items: center;
+    }
+
+    .referralBox input {
+        text-align: left;
+    }
+
+    .referralActions > button {
+        flex-grow: 0; /* Los botones toman su ancho natural */
+    }
 }
 
 .referralStats {
@@ -313,6 +341,7 @@
     font-size: 1rem;
     color: var(--text-primary);
 }
+
 
 @media (min-width: 600px) {
     .rewardsLists {
