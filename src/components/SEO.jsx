@@ -38,7 +38,7 @@ export const restaurantSchema = {
         "postalCode": "30165",
         "addressCountry": "MX"
     },
-    "servesCuisine": "Alitas",
+    "servesCuisine": "Alitas", "Comida rápida", "Delivery",
     "priceRange": "$$",
     "openingHoursSpecification": [
         {
