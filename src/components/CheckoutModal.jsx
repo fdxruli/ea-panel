@@ -208,18 +208,13 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             }
             // --- FIN DE LA LÓGICA CORREGIDA ---
 
-            let message = `🛍️ *Nuevo Pedido - Entre Alas* 🛍️\n\n`;
-            message += `*# Código:* ${orderData.order_code}\n`;
-            message += `*Cliente:* ${customer?.name || 'No especificado'}\n`;
+            let message = `¡Hola! 👋 Quisiera hacer el siguiente pedido:\n\n`;
+            message += `*# Código:* ${orderData.order_code}\n\n`;
 
-            if (scheduledTime) {
-                message += `*Programado para:* ${new Date(scheduledTime).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}\n`;
-            }
-
-            message += `\n📦 *Detalle:*\n`;
+            message += `📦 *Mi pedido:*\n`;
             cartItems.forEach(item => {
                 const itemTotal = (item.price * item.quantity).toFixed(2);
-                message += `🍗 ${item.quantity}x ${item.name} - $${itemTotal}\n`;
+                message += `• ${item.quantity}x ${item.name} - $${itemTotal}\n`;
             });
 
             if (discount) {
@@ -227,11 +222,14 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                 message += `\n*Descuento (${discount.code}):* -$${discount.amount.toFixed(2)}`;
             }
 
-            message += `\n💰 *Total: $${total.toFixed(2)}*\n\n`;
+            message += `\n💰 *Total a pagar: $${total.toFixed(2)}*\n\n`;
+            
+            if (scheduledTime) {
+                message += `*Programado para:* ${new Date(scheduledTime).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}\n\n`;
+            }
 
-            message += `💳 *Métodos de pago:*\nEfectivo 💵, Transferencia 🏦, Tarjetas 💳\n\n`;
+            message += `*Cliente:* ${customer?.name || 'No especificado'}`;
 
-            message += `✅ ¡Gracias por tu pedido!`;
 
             // --- FIN DEL CÓDIGO MODIFICADO ---
 
@@ -473,3 +471,4 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     );
 
 }
+
