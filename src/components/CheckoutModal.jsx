@@ -208,27 +208,47 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             }
             // --- FIN DE LA LÓGICA CORREGIDA ---
 
-            const mapLink = `https://www.google.com/maps/search/?api=1&query=${selectedAddress?.latitude},${selectedAddress?.longitude}`;
-            let message = `¡Hola! 👋 Pedido *${orderData.order_code}*.\n\n*Mi Pedido:*\n`;
-            cartItems.forEach(item => { message += `- ${item.quantity}x ${item.name}\n`; });
-            message += `\n*Total: $${total.toFixed(2)}*\n`;
-            
+            let message = `🛍️ *Nuevo Pedido - Entre Alas* 🛍️\n\n`;
+            message += `*# Código:* ${orderData.order_code}\n`;
+            message += `*Cliente:* ${customer?.name || 'No especificado'}\n`;
+
             if (scheduledTime) {
-                message += `\n*Programado para:*\n${new Date(scheduledTime).toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}\n`;
+                message += `*Programado para:* ${new Date(scheduledTime).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}\n`;
             }
 
-            message += `\n*Entregar a:*\n*Nombre:* ${customer?.name}\n*Ubicación:* ${mapLink}\n`;
-            if (selectedAddress?.address_reference) message += `*Referencia:* ${selectedAddress.address_reference}`;
+            message += `\n📦 *Detalle:*\n`;
+            cartItems.forEach(item => {
+                const itemTotal = (item.price * item.quantity).toFixed(2);
+                message += `🍗 ${item.quantity}x ${item.name} - $${itemTotal}\n`;
+            });
+
+            if (discount) {
+                message += `\n*Subtotal:* $${subtotal.toFixed(2)}`;
+                message += `\n*Descuento (${discount.code}):* -$${discount.amount.toFixed(2)}`;
+            }
+
+            message += `\n💰 *Total: $${total.toFixed(2)}*\n\n`;
+
+            message += `💳 *Métodos de pago:*\nEfectivo 💵, Transferencia 🏦, Tarjetas 💳\n\n`;
+
+            message += `✅ ¡Gracias por tu pedido!`;
+
+            // --- FIN DEL CÓDIGO MODIFICADO ---
 
             const businessNumber = import.meta.env.VITE_BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
 
-            showAlert("¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.");
-            clearCart();
-            toggleCart();
-            onClose();
-            refetchUserData();
+            showAlert(
+                "¡Pedido guardado! Haz clic en 'Entendido' para confirmar por WhatsApp.",
+                'info',
+                () => {
+                    window.open(whatsappUrl, '_blank');
+                    clearCart();
+                    toggleCart();
+                    onClose();
+                    refetchUserData();
+                }
+            );
 
         } catch (error) {
             console.error("Error al procesar el pedido:", error);
@@ -451,4 +471,5 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             )}
         </>
     );
+
 }
