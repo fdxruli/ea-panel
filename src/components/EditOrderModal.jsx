@@ -4,9 +4,10 @@ import styles from './EditOrderModal.module.css';
 import LoadingSpinner from './LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
 import ImageWithFallback from './ImageWithFallback';
+import DeliveryInfoModal from './DeliveryInfoModal';
 
 const TrashIcon = () => (
-    <svg xmlns="http://www.ww3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
 );
 
 export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
@@ -14,6 +15,10 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     const [orderItems, setOrderItems] = useState([]);
     const [allProducts, setAllProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [customerAddresses, setCustomerAddresses] = useState([]);
+    const [selectedAddressId, setSelectedAddressId] = useState('');
+    const [initialAddressId, setInitialAddressId] = useState('');
+    
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,20 +27,33 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState(null);
 
+    const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+    const [deliveryInfo, setDeliveryInfo] = useState(null);
+
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const { data: productsData, error: productsError } = await supabase
-                    .from('products').select('*').eq('is_active', true);
-                if (productsError) throw productsError;
+                const productsPromise = supabase.from('products').select('*').eq('is_active', true);
+                const categoriesPromise = supabase.from('categories').select('*').order('name');
+                const addressesPromise = supabase.from('customer_addresses').select('*').eq('customer_id', order.customer_id);
 
-                const { data: categoriesData, error: categoriesError } = await supabase
-                    .from('categories').select('*').order('name');
-                if (categoriesError) throw categoriesError;
+                const [productsRes, categoriesRes, addressesRes] = await Promise.all([productsPromise, categoriesPromise, addressesPromise]);
 
-                setAllProducts(productsData);
-                setCategories(categoriesData);
+                if (productsRes.error) throw productsRes.error;
+                if (categoriesRes.error) throw categoriesRes.error;
+                if (addressesRes.error) throw addressesRes.error;
+                
+                setAllProducts(productsRes.data);
+                setCategories(categoriesRes.data);
+                setCustomerAddresses(addressesRes.data);
+
+                const defaultAddress = addressesRes.data.find(a => a.is_default) || addressesRes.data[0];
+                if (defaultAddress) {
+                    setSelectedAddressId(defaultAddress.id);
+                    setInitialAddressId(defaultAddress.id);
+                }
 
                 const initialItems = order.order_items.map(item => ({
                     ...item.products,
@@ -60,6 +78,17 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
         const newTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         setTotal(newTotal);
     }, [orderItems]);
+
+    const handleShowDeliveryInfo = () => {
+        const selectedAddress = customerAddresses.find(addr => addr.id === selectedAddressId);
+        if (selectedAddress) {
+            setDeliveryInfo({
+                customer: order.customers,
+                address: selectedAddress
+            });
+            setIsDeliveryModalOpen(true);
+        }
+    };
 
     const updateQuantity = (productId, newQuantity) => {
         const numQuantity = parseInt(newQuantity, 10);
@@ -98,6 +127,11 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
         }
         setIsSubmitting(true);
         try {
+            if (selectedAddressId && selectedAddressId !== initialAddressId) {
+                await supabase.from('customer_addresses').update({ is_default: false }).eq('customer_id', order.customer_id);
+                await supabase.from('customer_addresses').update({ is_default: true }).eq('id', selectedAddressId);
+            }
+
             await supabase.from('order_items').delete().eq('order_id', order.id);
             const newOrderItems = orderItems.map(item => ({
                 order_id: order.id, product_id: item.product_id,
@@ -105,6 +139,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             }));
             await supabase.from('order_items').insert(newOrderItems);
             await supabase.from('orders').update({ total_amount: total }).eq('id', order.id);
+            
             showAlert("¡Pedido actualizado con éxito!");
             onOrderUpdated();
             onClose();
@@ -130,82 +165,115 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     }, [allProducts, orderItems, categories]);
 
     return (
-        <div className={styles.modalOverlay}>
-            <div className={styles.modalContent}>
-                <div className={styles.header}>
-                    <h2>Editando Pedido #{order.order_code}</h2>
-                    <button onClick={onClose} className={styles.closeButton}>×</button>
-                </div>
-                
-                {loading ? <LoadingSpinner /> : (
-                    <>
-                        <div className={styles.tabs}>
-                            <button onClick={() => setActiveTab('current')} className={activeTab === 'current' ? styles.active : ''}>
-                                Pedido Actual ({orderItems.length})
-                            </button>
-                            <button onClick={() => setActiveTab('add')} className={activeTab === 'add' ? styles.active : ''}>
-                                Añadir Productos
-                            </button>
-                        </div>
-                        <div className={`${styles.contentBody} ${activeTab === 'add' ? styles.addMode : ''}`}>
-                            <div className={styles.itemsList}>
-                                {orderItems.length > 0 ? orderItems.map(item => (
-                                    <div key={item.id} className={styles.cartItem}>
-                                        <ImageWithFallback src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
-                                        <div className={styles.itemInfo}>
-                                            <span className={styles.itemName}>{item.name}</span>
-                                            <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
-                                        </div>
-                                        <div className={styles.itemActions}>
-                                            {item.quantity === 1 ? (
-                                                <button onClick={() => removeItem(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
-                                                    <TrashIcon />
-                                                </button>
-                                            ) : (
-                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton}>-</button>
-                                            )}
-                                            <span className={styles.quantityDisplay}>{item.quantity}</span>
-                                            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton}>+</button>
-                                        </div>
-                                    </div>
-                                )) : <p className={styles.emptyMessage}>Añade productos a tu pedido.</p>}
-                            </div>
-
-                            <div className={styles.addProductSection}>
-                                <input type="text" placeholder="Buscar producto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
-                                <div className={styles.categoryFilters}>
-                                    <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>Todos</button>
-                                    {visibleCategories.map(cat => (
-                                        <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={selectedCategory === cat.id ? styles.active : ''}>
-                                            {cat.name}
-                                        </button>
-                                    ))}
+        <>
+            <div className={styles.modalOverlay}>
+                <div className={styles.modalContent}>
+                    <div className={styles.header}>
+                        <h2>Editando Pedido #{order.order_code}</h2>
+                        <button onClick={onClose} className={styles.closeButton}>×</button>
+                    </div>
+                    
+                    {loading ? <LoadingSpinner /> : (
+                        <>
+                            <div className={styles.deliveryInfoSection}>
+                                <label htmlFor="address-select">Dirección de Entrega</label>
+                                <div className={styles.deliveryInfoControls}>
+                                    <select 
+                                        id="address-select" 
+                                        value={selectedAddressId} 
+                                        onChange={(e) => setSelectedAddressId(e.target.value)}
+                                        disabled={customerAddresses.length === 0}
+                                    >
+                                        {customerAddresses.length > 0 ? (
+                                            customerAddresses.map(addr => (
+                                                <option key={addr.id} value={addr.id}>
+                                                    {addr.label} - {addr.address_reference || 'Sin referencia'}
+                                                </option>
+                                            ))
+                                        ) : (
+                                            <option>El cliente no tiene direcciones guardadas.</option>
+                                        )}
+                                    </select>
+                                    <button type="button" onClick={handleShowDeliveryInfo} className={styles.viewAddressButton} disabled={!selectedAddressId}>
+                                        Ver
+                                    </button>
                                 </div>
-                                <div className={styles.productList}>
-                                    {availableProducts.map(product => (
-                                        <div key={product.id} className={styles.productCard} onClick={() => addProduct(product)}>
-                                            <ImageWithFallback src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
-                                            <div className={styles.productInfo}>
-                                                <span>{product.name}</span>
-                                                <strong>${product.price.toFixed(2)}</strong>
+                            </div>
+                            <div className={styles.tabs}>
+                                <button onClick={() => setActiveTab('current')} className={activeTab === 'current' ? styles.active : ''}>
+                                    Pedido Actual ({orderItems.length})
+                                </button>
+                                <button onClick={() => setActiveTab('add')} className={activeTab === 'add' ? styles.active : ''}>
+                                    Añadir Productos
+                                </button>
+                            </div>
+                            <div className={`${styles.contentBody} ${activeTab === 'add' ? styles.addMode : ''}`}>
+                                <div className={styles.itemsList}>
+                                    {orderItems.length > 0 ? orderItems.map(item => (
+                                        <div key={item.id} className={styles.cartItem}>
+                                            <ImageWithFallback src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
+                                            <div className={styles.itemInfo}>
+                                                <span className={styles.itemName}>{item.name}</span>
+                                                <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
+                                            </div>
+                                            <div className={styles.itemActions}>
+                                                {item.quantity === 1 ? (
+                                                    <button onClick={() => removeItem(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
+                                                        <TrashIcon />
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton}>-</button>
+                                                )}
+                                                <span className={styles.quantityDisplay}>{item.quantity}</span>
+                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton}>+</button>
                                             </div>
                                         </div>
-                                    ))}
+                                    )) : <p className={styles.emptyMessage}>Añade productos a tu pedido.</p>}
+                                </div>
+
+                                <div className={styles.addProductSection}>
+                                    <input type="text" placeholder="Buscar producto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
+                                    <div className={styles.categoryFilters}>
+                                        <button onClick={() => setSelectedCategory(null)} className={!selectedCategory ? styles.active : ''}>Todos</button>
+                                        {visibleCategories.map(cat => (
+                                            <button key={cat.id} onClick={() => setSelectedCategory(cat.id)} className={selectedCategory === cat.id ? styles.active : ''}>
+                                                {cat.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className={styles.productList}>
+                                        {availableProducts.map(product => (
+                                            <div key={product.id} className={styles.productCard} onClick={() => addProduct(product)}>
+                                                <ImageWithFallback src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
+                                                <div className={styles.productInfo}>
+                                                    <span>{product.name}</span>
+                                                    <strong>${product.price.toFixed(2)}</strong>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className={styles.footer}>
-                            <div className={styles.totalContainer}>
-                                <span>Total</span>
-                                <strong>${total.toFixed(2)}</strong>
+                            <div className={styles.footer}>
+                                <div className={styles.totalContainer}>
+                                    <span>Total</span>
+                                    <strong>${total.toFixed(2)}</strong>
+                                </div>
+                                <button onClick={handleUpdateOrder} disabled={isSubmitting} className={styles.updateButton}>
+                                    {isSubmitting ? 'Actualizando...' : 'Guardar Cambios'}
+                                </button>
                             </div>
-                            <button onClick={handleUpdateOrder} disabled={isSubmitting} className={styles.updateButton}>
-                                {isSubmitting ? 'Actualizando...' : 'Guardar Cambios'}
-                            </button>
-                        </div>
-                    </>
-                )}
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
+            {isDeliveryModalOpen && (
+                <DeliveryInfoModal
+                    isOpen={isDeliveryModalOpen}
+                    onClose={() => setIsDeliveryModalOpen(false)}
+                    deliveryInfo={deliveryInfo}
+                />
+            )}
+        </>
     );
 }

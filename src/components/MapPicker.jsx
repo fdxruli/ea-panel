@@ -1,16 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
 import styles from './MapPicker.module.css';
 import { useAlert } from '../context/AlertContext';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const libraries = ['geometry'];
-
-const LocationIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>
-    </svg>
-);
 
 const deliveryAreaCoordinates = [
   { lat: 15.888856, lng: -92.003376 },
@@ -44,7 +38,7 @@ const mapOptions = {
   tilt: 0
 };
 
-export default function MapPicker({ onLocationSelect, initialPosition, isDraggable = true }) {
+const MapPicker = forwardRef(({ onLocationSelect, initialPosition, isDraggable = true }, ref) => {
   const { showAlert } = useAlert();
   const defaultCenter = { lat: 15.852182, lng: -91.977533 };
   
@@ -52,9 +46,7 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
   const [mapCenter, setMapCenter] = useState(initialPosition || defaultCenter);
   const [lastValidPosition, setLastValidPosition] = useState(initialPosition || defaultCenter);
   const polygonRef = useRef(null);
-
   const [instructionText, setInstructionText] = useState('Mueve el pin rojo hasta tu ubicación exacta.');
-
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -62,15 +54,11 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
     libraries: libraries,
   });
 
-  // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
-  // Se inicializa la posición una sola vez, pero no se fuerza un reseteo
-  // cada vez que el componente padre se actualiza.
   useEffect(() => {
     if (onLocationSelect && !initialPosition) {
       onLocationSelect(defaultCenter);
     }
   }, []);
-  // --- 👆 FIN DE LA CORRECCIÓN ---
   
   const onPolygonLoad = useCallback(polygon => {
     polygonRef.current = polygon;
@@ -149,6 +137,9 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    locateUser: handleAutomaticLocation
+  }));
 
   if (loadError) {
     return (
@@ -169,16 +160,6 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
       <div className={styles.mapContainer}>
         {isLoaded ? (
           <>
-            {isDraggable && (
-                <button 
-                  type="button"
-                  onClick={handleAutomaticLocation} 
-                  className={styles.locationButton}
-                  title="Ubicarme automáticamente"
-                >
-                    <LocationIcon />
-                </button>
-            )}
             <GoogleMap
               mapContainerStyle={containerStyle}
               center={mapCenter}
@@ -203,4 +184,6 @@ export default function MapPicker({ onLocationSelect, initialPosition, isDraggab
       </div>
     </div>
   );
-}
+});
+
+export default MapPicker;

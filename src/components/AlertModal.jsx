@@ -10,18 +10,16 @@ export default function AlertModal() {
     const { alert, closeAlert } = useAlert();
 
     useEffect(() => {
-        // MODIFICACIÓN: Solo se cierra automáticamente si NO hay una acción de confirmación.
         if (alert && !alert.onConfirm) {
             const timer = setTimeout(() => {
                 closeAlert();
-            }, 5000);
+            }, 5000); // Se cierra solo si NO hay acción de confirmación
             return () => clearTimeout(timer);
         }
     }, [alert, closeAlert]);
 
     if (!alert) return null;
 
-    // MODIFICACIÓN: Nueva función para manejar el clic en el botón.
     const handleConfirm = () => {
         if (alert.onConfirm) {
             alert.onConfirm();

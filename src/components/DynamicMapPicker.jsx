@@ -2,10 +2,12 @@ import React from 'react';
 
 const MapPicker = React.lazy(() => import('./MapPicker'));
 
-export default function DynamicMapPicker({ onLocationSelect, initialPosition, isDraggable }) {
+const DynamicMapPicker = React.forwardRef(({ onLocationSelect, initialPosition, isDraggable }, ref) => {
   return (
     <React.Suspense fallback={<div style={{height: '350px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>Cargando mapa...</div>}>
-      <MapPicker onLocationSelect={onLocationSelect} initialPosition={initialPosition} isDraggable={isDraggable} />
+      <MapPicker ref={ref} onLocationSelect={onLocationSelect} initialPosition={initialPosition} isDraggable={isDraggable} />
     </React.Suspense>
   );
-}
+});
+
+export default DynamicMapPicker;

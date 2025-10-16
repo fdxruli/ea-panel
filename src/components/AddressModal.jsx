@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './AddressModal.module.css';
 import ClientOnly from './ClientOnly';
 import DynamicMapPicker from './DynamicMapPicker';
@@ -14,6 +14,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
     });
     const [shouldSave, setShouldSave] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const mapPickerRef = useRef(null);
 
     useEffect(() => {
         if (address) {
@@ -36,6 +37,12 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAutoLocation = () => {
+        if (mapPickerRef.current) {
+            mapPickerRef.current.locateUser();
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -76,6 +83,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                     <div className={styles.mapContainer}>
                        <ClientOnly>
                            <DynamicMapPicker
+                                ref={mapPickerRef}
                                 onLocationSelect={handleLocationSelect}
                                 initialPosition={mapInitialPosition}
                            />
@@ -83,6 +91,10 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                     </div>
 
                     <form onSubmit={handleSubmit} className={styles.form}>
+                        <button type="button" onClick={handleAutoLocation} className={styles.locationButton}>
+                            Ubicarme automáticamente
+                        </button>
+
                         <label htmlFor="label">Etiqueta (ej: Casa, Oficina):</label>
                         <input id="label" name="label" type="text" value={formData.label} onChange={handleChange} required />
 

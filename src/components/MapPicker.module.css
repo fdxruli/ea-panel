@@ -23,31 +23,6 @@
   overflow: hidden;
 }
 
-.locationButton {
-    position: absolute;
-    bottom: 15px;
-    left: 15px;
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    cursor: pointer;
-    z-index: 1000;
-    box-shadow: 0 2px 8px var(--shadow-color);
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.locationButton:hover {
-    background-color: var(--bg-primary);
-    border-color: var(--color-primary);
-    transform: scale(1.05);
-}
-
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
     display: none;
 }

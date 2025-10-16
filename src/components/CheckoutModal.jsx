@@ -193,8 +193,6 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
             if (itemsError) throw itemsError;
 
-            // --- 👇 LÓGICA DE DESCUENTO CORREGIDA ---
-            // Ahora, en lugar de insertar, llamamos a nuestra nueva función
             if (discount && discount.details.is_single_use) {
                 const { error: usageError } = await supabase.rpc('record_discount_usage_and_deactivate', {
                     p_customer_id: customer.id,
@@ -202,42 +200,34 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                 });
                 
                 if (usageError) {
-                    // No detenemos el pedido, pero registramos el error para depuración
                     console.error("Error al registrar y desactivar el descuento:", usageError);
                 }
             }
-            // --- FIN DE LA LÓGICA CORREGIDA ---
 
-            let message = `¡Hola! 👋 Quisiera hacer el siguiente pedido:\n\n`;
-            message += `*# Código:* ${orderData.order_code}\n\n`;
-
-            message += `📦 *Mi pedido:*\n`;
+            let message = `¡Hola! 👋 Quiero hacer el siguiente pedido:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
             cartItems.forEach(item => {
-                const itemTotal = (item.price * item.quantity).toFixed(2);
-                message += `• ${item.quantity}x ${item.name} - $${itemTotal}\n`;
+                message += `• ${item.quantity}x ${item.name}\n`;
             });
+            message += `\n*Total a pagar: $${total.toFixed(2)}*\n`;
 
-            if (discount) {
-                message += `\n*Subtotal:* $${subtotal.toFixed(2)}`;
-                message += `\n*Descuento (${discount.code}):* -$${discount.amount.toFixed(2)}`;
-            }
-
-            message += `\n💰 *Total a pagar: $${total.toFixed(2)}*\n\n`;
-            
             if (scheduledTime) {
-                message += `*Programado para:* ${new Date(scheduledTime).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}\n\n`;
+                const scheduledDate = new Date(scheduledTime);
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+                const formattedDate = `${scheduledDate.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDate.toLocaleTimeString('es-MX', timeOptions)}`;
+                message += `\n*Programado para entregar:*\n${formattedDate}\n`;
             }
 
-            message += `*Cliente:* ${customer?.name || 'No especificado'}`;
-
-
-            // --- FIN DEL CÓDIGO MODIFICADO ---
+            message += `\n*Datos del cliente:*\n*Nombre:* ${customer?.name}\n`;
+            if (selectedAddress?.address_reference) {
+                message += `*Referencia de domicilio:* ${selectedAddress.address_reference}`;
+            }
 
             const businessNumber = import.meta.env.VITE_BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
-
+            
             showAlert(
-                "¡Pedido guardado! Haz clic en 'Entendido' para confirmar por WhatsApp.",
+                "¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.",
                 'info',
                 () => {
                     window.open(whatsappUrl, '_blank');
@@ -469,6 +459,4 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             )}
         </>
     );
-
 }
-
