@@ -1,0 +1,210 @@
+.container {
+    padding: 0;
+}
+.container h1 {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+}
+
+/* --- MAQUETACIÓN CON FLEXBOX (MOBILE-FIRST) --- */
+
+/* Por defecto (móvil), los elementos se apilan verticalmente */
+.mainGrid {
+    display: flex;
+    flex-direction: column; 
+    gap: 2rem;
+    align-items: stretch;
+}
+
+.sideColumn {
+    flex-shrink: 0;
+}
+
+.mainColumn {
+    /* Permite que el contenido interno (como las tablas) se encoja y use su propio scroll */
+    min-width: 0; 
+}
+
+/* A partir de 900px, cambiamos a un layout horizontal */
+@media (min-width: 900px) {
+    .mainGrid {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    .sideColumn {
+        /* Asignamos un ancho base a la columna lateral */
+        flex-basis: 340px; 
+    }
+    .mainColumn {
+        flex-grow: 1;
+    }
+}
+/* --- FIN DE LA MAQUETACIÓN --- */
+
+
+.card {
+    background-color: var(--bg-secondary);
+    /* Padding reducido para móviles */
+    padding: 1rem; 
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+/* Restauramos el padding en pantallas más grandes */
+@media (min-width: 768px) {
+    .card {
+        padding: 1.5rem;
+    }
+}
+
+
+.card h3 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.levelsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.levelCard {
+    background-color: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+.levelCard h4 {
+    margin: 0 0 0.5rem 0;
+}
+.levelCard ul {
+    list-style: none;
+    padding-left: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.topList {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.topList li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.rank {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+.customerInfo {
+    flex-grow: 1;
+}
+.customerInfo small {
+    color: var(--text-secondary);
+}
+.refCount {
+    font-weight: 600;
+}
+
+.searchInput {
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.detailsRow td {
+    padding: 0 !important;
+    border: 0 !important;
+}
+.detailsContent {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+}
+.detailsContent h4 {
+    margin: 0 0 1rem 0;
+}
+.detailsContent ul {
+    list-style: none;
+    padding: 0;
+}
+.detailsContent li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.actionsCell {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap; /* Permite que los botones se apilen si no hay espacio */
+}
+
+.editButton, .viewButton {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+}
+
+.editButton {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.viewButton {
+    background-color: var(--color-primary-light);
+    border: 1px solid var(--color-primary-light);
+    color: var(--color-primary-dark);
+}
+
+.editorContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.formGroup label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.formGroup small {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    /* Permite que el texto largo se divida en varias líneas */
+    word-break: break-word;
+}
+
+
+/* --- NUEVOS ESTILOS PARA LA TABLA --- */
+.customerTable th,
+.customerTable td {
+    padding: 1rem 0.75rem; /* Mantenemos el padding vertical, reducimos el horizontal */
+    white-space: nowrap;   /* La clave: evita que el texto se divida y activa el scroll */
+}
+
+/* Devolvemos el comportamiento normal a la celda de acciones para que los botones se apilen si es necesario */
+.customerTable .actionsCell {
+    white-space: normal; 
+}

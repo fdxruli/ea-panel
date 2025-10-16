@@ -1,0 +1,23 @@
+.modalContent label {
+  font-weight: bold;
+  margin-top: 1rem;
+}
+
+.modalActions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.meta {
+    text-align: right;
+    color: #666;
+    font-style: italic;
+    margin-bottom: 2rem;
+}
+
+.content {
+    line-height: 1.7;
+    color: #333;
+}

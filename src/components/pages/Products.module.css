@@ -1,0 +1,307 @@
+.container {
+    padding: 0;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.header h1 { margin: 0; }
+
+.headerActions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.addButton, .manageButton {
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.addButton {
+    border: none;
+    background-color: var(--color-primary);
+    color: white;
+}
+.addButton:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.manageButton {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+.manageButton:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+.searchInput, .categorySelect, .statusSelect {
+    flex-grow: 1;
+    min-width: 180px;
+}
+
+.productGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.productCard {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+.productCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px var(--shadow-color);
+}
+
+.productCard.inactive {
+    opacity: 0.6;
+}
+.productCard.inactive .imageContainer img {
+    filter: grayscale(1);
+}
+
+.imageContainer {
+    width: 100%;
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+.imageContainer img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.imageCount {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+}
+
+.cardContent {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.categoryTag {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    padding: 0.25rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    align-self: flex-start;
+    margin-bottom: 1rem;
+}
+.productName {
+    font-size: 1.3rem;
+    margin: 0 0 1rem;
+}
+
+.productStats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+.statItem {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.statItem strong {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.statItem span {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.iconStat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+}
+.iconStat svg {
+    flex-shrink: 0;
+}
+
+.priceInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.cardActions {
+    padding: 1rem 1.5rem 1.5rem;
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    grid-template-areas: 
+        "edit images"
+        "toggle toggle";
+    gap: 0.8rem;
+}
+.cardActions .toggleButton {
+    grid-area: toggle;
+}
+.cardActions .editButton {
+    grid-area: edit;
+}
+.cardActions .manageButton {
+    grid-area: images;
+}
+
+.cardActions button {
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+.editButton, .manageButton {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+.toggleButton {
+    background-color: var(--color-accent);
+    color: white;
+}
+.inactive .toggleButton {
+    background-color: var(--color-success);
+}
+
+.modalOverlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5); z-index: 1000;
+    display: flex; justify-content: center; align-items: center;
+    padding: 1rem;
+}
+.modalContent {
+    background-color: var(--bg-secondary);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.productForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.formGroup label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+.formGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.imagePreview {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+.modalActions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.cancelButton {
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+.cancelButton:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.saveButton {
+    padding: 0.8rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: var(--color-primary);
+    color: white;
+}
+.saveButton:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.saveButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

@@ -1,0 +1,418 @@
+.container {
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 1rem;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+.container h1 {
+    text-align: center;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+.subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+.cardHeader h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.grid {
+    display: flex;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.grid::-webkit-scrollbar { display: none; }
+.grid { -ms-overflow-style: none; scrollbar-width: none; }
+
+.gridItem {
+    flex: 0 0 180px;
+    scroll-snap-align: start;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.reviewList {
+    display: flex;
+    overflow-x: auto;
+    gap: 2rem;
+    padding: 0.5rem 0;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.reviewList::-webkit-scrollbar { display: none; }
+.reviewList { -ms-overflow-style: none; scrollbar-width: none; }
+
+.reviewItem {
+    flex: 0 0 300px; 
+    scroll-snap-align: start;
+    border: none; 
+    padding: 1.5rem; 
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.gridItem:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px var(--shadow-color);
+}
+.gridItem img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+.gridItem h3 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+    flex-grow: 1;
+    color: var(--text-primary);
+}
+.gridItemActions {
+    display: flex;
+    gap: 0.5rem;
+}
+.gridItemActions .addButton {
+    background-color: var(--color-primary);
+    color: white;
+    font-weight: 600;
+    flex-grow: 1;
+    padding: 0.6rem;
+    border-radius: 50px;
+}
+.gridItemActions .removeButton {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+     flex-grow: 1;
+    padding: 0.6rem;
+    border-radius: 50px;
+}
+
+.reviewItem:last-child {
+    border-bottom: none;
+    padding-bottom: 1.5rem;
+}
+.reviewProductInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.reviewProductInfo img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.reviewProductInfo h4 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+.reviewComment {
+    font-style: italic;
+    color: var(--text-secondary);
+    margin: 0 0 1rem;
+    padding-left: 0;
+    flex-grow: 1;
+}
+.reviewActions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: flex-end;
+    margin-top: auto;
+}
+.reviewActions button, .actionButton, .cancelButton {
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    font-weight: 500;
+}
+.actionButton {
+    background-color: var(--color-accent);
+    color: white;
+}
+.removeButton {
+    background-color: var(--bg-primary); 
+    color: var(--color-error);
+    border: 1px solid var(--border-color);
+}
+.cancelButton {
+     background-color: var(--bg-primary); 
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+.reviewEditor textarea {
+    width: 100%;
+    margin: 0.5rem 0;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    resize: vertical;
+}
+.prompt {
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.unavailable {
+    background-color: var(--bg-primary); 
+}
+.unavailable img {
+    filter: grayscale(80%);
+    opacity: 0.7;
+}
+.unavailable h3 {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+.unavailable .addButton {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+    color: var(--text-secondary);
+}
+
+.unavailableBadge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    z-index: 2;
+}
+
+.unavailableText {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.rewardsProgress {
+    margin-bottom: 2rem;
+}
+.levelInfo {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+.progressBarContainer {
+    width: 100%;
+    height: 12px;
+    background-color: var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.progressBar {
+    height: 100%;
+    background-color: var(--color-primary);
+    border-radius: 6px;
+    transition: width 0.5s ease-in-out;
+}
+.progressText {
+    text-align: center;
+    margin-top: 0.8rem;
+    font-weight: 500;
+}
+
+.rewardsLists {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+.rewardsLists h4 {
+    margin: 0 0 1rem 0;
+}
+.rewardsLists ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+.rewardsLists li {
+    background-color: var(--bg-primary);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+}
+.upcomingRewards li {
+    opacity: 0.7;
+    border-left: 4px solid var(--color-accent);
+}
+
+.referralBox {
+    display: flex;
+    flex-direction: column; /* Por defecto (móvil), se apilan */
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: stretch; /* Ocupan todo el ancho disponible */
+}
+
+.referralBox input {
+    flex-grow: 1; /* Permite que el input crezca */
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.referralActions {
+    display: flex;
+    gap: 1rem;
+    flex-shrink: 0; /* Evita que los botones se encojan */
+}
+
+.referralActions > button {
+    flex-grow: 1; /* Los botones se reparten el espacio disponible */
+}
+
+/* Vista para tablets y escritorio */
+@media (min-width: 600px) {
+    .referralBox {
+        flex-direction: row; /* En pantallas grandes, se alinean horizontalmente */
+        align-items: center;
+    }
+
+    .referralBox input {
+        text-align: left;
+    }
+
+    .referralActions > button {
+        flex-grow: 0; /* Los botones toman su ancho natural */
+    }
+}
+
+.referralStats {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+
+@media (min-width: 600px) {
+    .rewardsLists {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.unlockedReward {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.copyCodeButton {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    border: 1px dashed var(--color-primary);
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    align-self: flex-start; 
+    font-size: 0.9rem;
+}
+
+.claimCodeButton {
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    align-self: flex-start;
+    font-weight: 500;
+}
+
+@media (min-width: 600px) {
+    .rewardsLists.centeredLayout {
+        grid-template-columns: 1fr; 
+    }
+
+    .rewardsLists.centeredLayout > div {
+        margin: 0 auto; 
+        max-width: 400px;
+        width: 100%;
+    }
+}
+
+.accordionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none; 
+}
+
+.accordionIcon {
+    transition: transform 0.3s ease;
+}
+
+.accordionIcon.open {
+    transform: rotate(180deg);
+}
+
+.accordionContent {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out;
+}
+
+.accordionContent.open {
+    max-height: 1000px; 
+    transition: max-height 0.5s ease-in;
+    margin-top: 1rem; 
+}
