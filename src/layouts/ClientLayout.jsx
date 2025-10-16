@@ -1,4 +1,4 @@
-// src/layouts/ClientLayout.jsx (CORREGIDO)
+// src/layouts/ClientLayout.jsx (ACTUALIZADO)
 
 import React, { useState, useEffect } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
@@ -39,7 +39,11 @@ export default function ClientLayout() {
   }, [isFirstAddressRequired, customer, setIsFirstAddressRequired]);
 
   const handleSaveFirstAddress = async (addressData) => {
-    const { error } = await supabase.from('customer_addresses').insert({ ...addressData, customer_id: customer.id });
+    const { error } = await supabase.from('customer_addresses').insert({
+      ...addressData,
+      customer_id: customer.id,
+      is_default: true // <-- AQUÍ ESTÁ EL CAMBIO
+    });
     if (error) {
       console.error(error);
     } else {
@@ -85,7 +89,7 @@ export default function ClientLayout() {
         <CheckoutModal
           phone={phone}
           onClose={() => setCheckoutModalOpen(false)}
-          mode={checkoutMode} 
+          mode={checkoutMode}
         />
       )}
 

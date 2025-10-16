@@ -1,3 +1,5 @@
+// src/context/CustomerContext.jsx (CORREGIDO)
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
@@ -156,6 +158,10 @@ export const CustomerProvider = ({ children }) => {
           }
       }
 
+      // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
+      // Actualizamos el estado del 'customer' en este contexto inmediatamente.
+      setCustomer(data);
+      
       savePhoneAndContinue(newPhone);
       setIsFirstAddressRequired(true);
       return true;

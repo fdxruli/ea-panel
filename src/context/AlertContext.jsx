@@ -7,9 +7,8 @@ export const useAlert = () => useContext(AlertContext);
 export const AlertProvider = ({ children }) => {
     const [alert, setAlert] = useState(null);
 
-    // MODIFICACIÓN: Añadimos un parámetro 'onConfirm' opcional
     const showAlert = useCallback((message, type = 'info', onConfirm = null) => {
-        setAlert({ message, type, onConfirm, key: Date.now() });
+        setAlert({ message, type, key: Date.now(), onConfirm });
     }, []);
 
     const closeAlert = () => {

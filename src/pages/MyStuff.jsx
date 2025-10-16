@@ -148,7 +148,7 @@ const RewardsSection = ({ customerId }) => {
 
                 <p className={styles.progressText}>
                     {noLevelsConfigured
-                        ? "El sistema de recompensas se está preparando. ¡Vuelve pronto! Pero puedes compartir tu link y acumular puntos para cuando las recompensas esten disponibles."
+                        ? "El sistema de recompensas se está preparando. ¡Vuelve pronto!"
                         : hasReachedMaxLevel
                             ? "¡Has alcanzado el nivel más alto! Eres un(a) crack. 😎"
                             : `Necesitas ${next_level.min_referrals - referral_count} referidos más para el siguiente nivel.`

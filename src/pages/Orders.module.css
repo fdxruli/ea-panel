@@ -161,20 +161,30 @@
 
 .actionButtons {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+}
+
+@media (min-width: 400px) {
+    .actionButtons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
 }
 
 .actionButtons button {
-    padding: 0.7rem 1rem;
+    padding: 0.8rem 1rem;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     border: none;
     cursor: pointer;
     text-align: center;
     transition: all 0.2s ease;
+    width: 100%;
 }
+
 
 .deliveryButton {
     background-color: var(--color-accent);
@@ -190,5 +200,10 @@
 }
 .cancelButton {
     background-color: var(--color-error);
+    color: white;
+}
+
+.editButton {
+    background-color: #f39c12; /* Naranja */
     color: white;
 }

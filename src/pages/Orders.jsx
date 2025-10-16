@@ -4,27 +4,21 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import styles from "./Orders.module.css";
 import DeliveryInfoModal from "../components/DeliveryInfoModal";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import EditOrderModal from "../components/EditOrderModal";
 
-const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo }) => {
+const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder }) => {
   const [items, setItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
-  const fetchOrderItems = async (orderId) => {
-    setLoadingItems(true);
-    const { data, error } = await supabase
-      .from("order_items")
-      .select(`quantity, price, products(name)`)
-      .eq("order_id", orderId);
-    if (error) console.error(error);
-    else setItems(data);
-    setLoadingItems(false);
-  };
-
   const { hasPermission } = useAdminAuth();
+  const canEdit = hasPermission('pedidos.edit');
 
+  // Simplificado: usamos los items que ya vienen con el pedido.
   useEffect(() => {
-    fetchOrderItems(order.id);
-  }, [order.id]);
+    if (order.order_items) {
+      setItems(order.order_items);
+    }
+  }, [order.order_items]);
 
   return (
     <div className={styles.orderCard}>
@@ -50,7 +44,6 @@ const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo }) => {
         )}
         <div className={styles.infoSection}>
           <h4>Productos</h4>
-          {loadingItems ? <p>Cargando...</p> : (
             <ul className={styles.productsList}>
               {items.map((item, index) => (
                 <li key={index}>
@@ -59,7 +52,6 @@ const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo }) => {
                 </li>
               ))}
             </ul>
-          )}
         </div>
       </div>
       <div className={styles.cardFooter}>
@@ -68,17 +60,24 @@ const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo }) => {
           <button onClick={() => onShowDeliveryInfo(order)} className={styles.deliveryButton}>
             Ver Envío
           </button>
-          {hasPermission('pedidos.edit') && order.status === 'pendiente' && (
+          
+          {canEdit && (order.status === 'pendiente' || order.status === 'en_proceso') && (
+            <button onClick={() => onEditOrder(order)} className={styles.editButton}>
+              Editar
+            </button>
+          )}
+
+          {canEdit && order.status === 'pendiente' && (
             <button onClick={() => onUpdateStatus(order.id, "en_proceso")} className={styles.processButton}>
               Procesar
             </button>
           )}
-          {hasPermission('pedidos.edit') && order.status === 'en_proceso' && (
+          {canEdit && order.status === 'en_proceso' && (
             <button onClick={() => onUpdateStatus(order.id, "completado")} className={styles.completeButton}>
               Completar
             </button>
           )}
-          {hasPermission('pedidos.edit') && order.status !== 'completado' && order.status !== 'cancelado' && (
+          {canEdit && order.status !== 'completado' && order.status !== 'cancelado' && (
             <button onClick={() => onUpdateStatus(order.id, "cancelado")} className={styles.cancelButton}>
               Cancelar
             </button>
@@ -97,11 +96,12 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState("activos");
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState(null);
+  const [editingOrder, setEditingOrder] = useState(null);
 
   const fetchOrders = useCallback(async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select(`*, customers(name, phone)`)
+      .select(`*, customers(name, phone), order_items(*, products(*))`)
       .order("created_at", { ascending: false });
 
     if (error) console.error(error);
@@ -193,10 +193,19 @@ export default function Orders() {
             order={order}
             onUpdateStatus={updateStatus}
             onShowDeliveryInfo={handleShowDeliveryInfo}
+            onEditOrder={setEditingOrder}
           />
         ))}
       </div>
       {filteredOrders.length === 0 && <p>No se encontraron pedidos con los filtros actuales.</p>}
+      
+      {editingOrder && (
+          <EditOrderModal
+              order={editingOrder}
+              onClose={() => setEditingOrder(null)}
+              onOrderUpdated={fetchOrders}
+          />
+      )}
 
       <DeliveryInfoModal
         isOpen={isDeliveryModalOpen}

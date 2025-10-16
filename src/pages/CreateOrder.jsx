@@ -4,14 +4,15 @@ import { useAlert } from '../context/AlertContext';
 import styles from './CreateOrder.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ImageWithFallback from '../components/ImageWithFallback';
-import { useAdminAuth } from '../context/AdminAuthContext'; // Importar hook de permisos
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 
+
 export default function CreateOrder() {
     const { showAlert } = useAlert();
-    const { hasPermission } = useAdminAuth(); // Usar hook de permisos
+    const { hasPermission } = useAdminAuth();
     const [step, setStep] = useState(1);
     const [customers, setCustomers] = useState([]);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -27,9 +28,10 @@ export default function CreateOrder() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const canEdit = hasPermission('crear-pedido.edit'); // Verificar permiso
+    const canEdit = hasPermission('crear-pedido.edit');
 
-    useEffect(() => {
+    // ... (useEffect y otras funciones no cambian)
+     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
@@ -113,6 +115,7 @@ export default function CreateOrder() {
         return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }, [cart]);
 
+
     const handlePlaceOrder = async () => {
         if (!canEdit) return;
         if (!selectedCustomer || cart.length === 0) {
@@ -126,11 +129,12 @@ export default function CreateOrder() {
                 .insert({
                     customer_id: selectedCustomer.id,
                     total_amount: cartTotal,
-                    status: 'completado'
+                    status: 'pendiente' // 1. Cambiamos el estado a 'pendiente' para reflejar la confirmación
                 })
                 .select()
                 .single();
             if (orderError) throw orderError;
+
             const orderItems = cart.map(item => ({
                 order_id: orderData.id,
                 product_id: item.id,
@@ -140,11 +144,28 @@ export default function CreateOrder() {
             const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
             if (itemsError) throw itemsError;
 
-            showAlert(`Pedido #${orderData.order_code} creado con éxito.`);
-            setStep(1);
-            setSelectedCustomer(null);
-            setCart([]);
-            setCustomerSearch('');
+            // 2. Construimos el mensaje de confirmación para WhatsApp
+            let message = `¡Hola, ${selectedCustomer.name}! 👋 Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
+            cart.forEach(item => {
+                message += `• ${item.quantity}x ${item.name}\n`;
+            });
+            message += `\n*Total a pagar: $${cartTotal.toFixed(2)}*`;
+
+            // 3. Creamos la URL de WhatsApp con el número del cliente
+            const whatsappUrl = `https://api.whatsapp.com/send?phone=${selectedCustomer.phone}&text=${encodeURIComponent(message)}`;
+
+            // 4. Usamos showAlert con una función callback para redirigir y limpiar el estado
+            showAlert(
+                `¡Pedido #${orderData.order_code} creado! Serás redirigido a WhatsApp para notificar al cliente.`,
+                'info',
+                () => {
+                    window.open(whatsappUrl, '_blank');
+                    setStep(1);
+                    setSelectedCustomer(null);
+                    setCart([]);
+                    setCustomerSearch('');
+                }
+            );
 
         } catch (error) {
             showAlert(`Error al crear el pedido: ${error.message}`);
@@ -152,6 +173,8 @@ export default function CreateOrder() {
             setIsSubmitting(false);
         }
     };
+    
+    // ... (el resto del componente y el JSX no cambian)
 
     if (loading) return <LoadingSpinner />;
 
