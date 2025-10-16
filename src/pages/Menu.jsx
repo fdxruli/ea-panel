@@ -36,7 +36,6 @@ export default function Menu() {
         const isMobile = window.innerWidth < 768;
 
         if (isMobile) {
-            // Animación de imagen voladora para móviles
             if (event && event.currentTarget) {
                 const rect = event.currentTarget.getBoundingClientRect();
                 const newImage = {
@@ -48,10 +47,9 @@ export default function Menu() {
                 setFlyingImages(prev => [...prev, newImage]);
                 setTimeout(() => {
                     setFlyingImages(prev => prev.filter(img => img.id !== newImage.id));
-                }, 1000); // Duración de la animación
+                }, 1000);
             }
         } else {
-            // Notificación "Toast" para escritorio
             showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
         }
     };
@@ -68,8 +66,8 @@ export default function Menu() {
     return (
         <>
             <SEO
-                title="Menú - Entre Alas"
-                description="Explora nuestro delicioso menú de alitas, hamburguesas, y más. Pide ahora y disfruta del mejor sabor."
+                title="Menú de Alitas y Boneless - Entre Alas"
+                description="Explora nuestro delicioso menú de alitas, boneless, hamburguesas, papas y más. Pide ahora y disfruta del mejor sabor en La Trinitaria, Chiapas."
                 name="Entre Alas"
                 type="website"
                 schemaMarkup={restaurantSchema}
