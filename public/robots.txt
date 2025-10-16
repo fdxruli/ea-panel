@@ -1,12 +1,6 @@
-<<<<<<< HEAD
+
 User-agent: *
 Allow: /
 Disallow: /admin
 
-=======
-User-agent: *
-Allow: /
-Disallow: /admin
-
->>>>>>> 901f8aa95ca640c871ec1f2bf6437b2b2a625efc
 Sitemap: https://ea-panel.vercel.app/sitemap.xml
