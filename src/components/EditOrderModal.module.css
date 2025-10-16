@@ -153,19 +153,6 @@
     font-size: 1rem;
     border-radius: 50px;
 }
-.categoryFilters {
-    display: flex; overflow-x: auto; gap: 0.5rem;
-    padding-bottom: 0.5rem;
-}
-.categoryFilters button {
-    background-color: var(--bg-secondary); color: var(--text-secondary);
-    border: 1px solid var(--border-color); padding: 0.5rem 1rem;
-    border-radius: 50px; white-space: nowrap;
-}
-.categoryFilters button.active {
-    background-color: var(--color-primary); color: white;
-    border-color: var(--color-primary);
-}
 
 .productList {
     display: grid;
