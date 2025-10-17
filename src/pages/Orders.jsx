@@ -73,6 +73,11 @@ const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder }) =
             </button>
           )}
           {canEdit && order.status === 'en_proceso' && (
+            <button onClick={() => onUpdateStatus(order.id, "en_envio")} className={styles.processButton}>
+              Enviar
+            </button>
+          )}
+          {canEdit && order.status === 'en_envio' && (
             <button onClick={() => onUpdateStatus(order.id, "completado")} className={styles.completeButton}>
               Completar
             </button>
@@ -133,7 +138,7 @@ export default function Orders() {
         o.customers?.name.toLowerCase().includes(searchTerm.toLowerCase());
 
       if (statusFilter === 'todos') return matchesSearch;
-      if (statusFilter === 'activos') return (o.status === 'pendiente' || o.status === 'en_proceso') && matchesSearch;
+      if (statusFilter === 'activos') return (o.status === 'pendiente' || o.status === 'en_proceso' || o.status === 'en_envio') && matchesSearch;
       return o.status === statusFilter && matchesSearch;
     });
   }, [orders, searchTerm, statusFilter]);
@@ -181,6 +186,7 @@ export default function Orders() {
           <option value="activos">Pedidos Activos</option>
           <option value="pendiente">Pendientes</option>
           <option value="en_proceso">En Proceso</option>
+          <option value="en_envio">En Envío</option>
           <option value="completado">Completados</option>
           <option value="cancelado">Cancelados</option>
           <option value="todos">Todos los Pedidos</option>

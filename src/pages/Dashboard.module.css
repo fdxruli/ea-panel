@@ -165,5 +165,6 @@
 }
 .pendiente { background-color: #f0ad4e; }
 .en_proceso { background-color: #3498db; }
+.en_envio { background-color: #3498db; }
 .completado { background-color: var(--color-success); }
 .cancelado { background-color: var(--color-error); }
