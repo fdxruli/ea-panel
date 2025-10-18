@@ -446,3 +446,73 @@
         margin-left: 0.5rem; /* Más espacio para el botón de eliminar */
     }
 }
+
+/* ... (Estilos existentes) ... */
+
+/* --- ESTILOS PARA LA SECCIÓN DE PROGRAMACIÓN --- */
+.scheduleSection {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed var(--border-color);
+}
+.scheduleSection h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+.scheduleSection svg {
+    width: 20px;
+    height: 20px;
+}
+
+.scheduleInputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+}
+.scheduleInputs .formGroup {
+    margin-bottom: 0; /* Quitar margen inferior del formGroup */
+}
+.scheduleInputs label {
+    font-size: 0.85rem;
+    margin-bottom: 0.2rem;
+}
+.scheduleInputs input[type="date"],
+.scheduleInputs input[type="time"] {
+    padding: 0.6rem; /* Menos padding */
+    font-size: 0.9rem;
+}
+
+/* Indicador de calendario en tema oscuro */
+[data-theme="dark"] .scheduleInputs input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+}
+
+.clearScheduleButton {
+    background: none;
+    border: 1px solid var(--color-error);
+    color: var(--color-error);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    display: block; /* Ocupa su propia línea */
+}
+.clearScheduleButton:hover {
+    background-color: rgba(244, 67, 54, 0.1); /* Ligero fondo rojo al pasar el mouse */
+}
+
+/* --- FIN ESTILOS PROGRAMACIÓN --- */
+
+/* Ajustes adicionales si son necesarios */
+.summaryCard {
+    /* Puedes añadir padding-bottom si el botón de limpiar queda muy pegado */
+    padding-bottom: 1.5rem;
+}
+
+/* ... (Resto de estilos existentes) ... */
