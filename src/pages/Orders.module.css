@@ -207,4 +207,34 @@
 .editButton {
     background-color: #f39c12; /* Naranja */
     color: white;
+
 }
+
+/* ... (Estilos existentes) ... */
+
+/* Estilo para mostrar la hora programada en la tarjeta */
+.scheduledTime {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    padding: 0.5rem 0.8rem; /* Menos padding */
+    border-radius: 6px; /* Menos redondeado */
+    font-weight: 500; /* Un poco menos bold */
+    text-align: left; /* Alinear a la izquierda */
+    font-size: 0.85rem; /* Más pequeño */
+    border: 1px dashed var(--color-primary); /* Borde punteado opcional */
+}
+.scheduledTime strong {
+    color: var(--text-primary); /* Color normal para la etiqueta */
+}
+
+/* Estilo para cuando no hay pedidos */
+.noOrders {
+    grid-column: 1 / -1; /* Ocupar todo el ancho del grid */
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+
+/* ... (Resto de estilos existentes) ... */
