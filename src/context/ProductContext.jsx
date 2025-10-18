@@ -2,6 +2,8 @@ import React, { createContext, useState, useContext, useEffect, useCallback, use
 import { supabase } from '../lib/supabaseClient';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS } from '../config/cacheConfig';
+// Import necessary hooks
+import { useUserData } from './UserDataContext'; // Importar useUserData para obtener el cliente
 
 const ProductContext = createContext();
 
@@ -14,26 +16,61 @@ export const ProductProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState('');
 
-  // Usamos useCallback sin dependencias, ya que no depende de ningún prop o estado externo.
-  // Su lógica es autocontenida.
+  // Usar UserDataContext para obtener el ID del cliente actual
+  const { customer } = useUserData();
+  const customerId = customer?.id; // Obtener el ID del cliente actual o null si no está logueado
+
   const fetchAndCacheProducts = useCallback(async () => {
-    console.log("🔄 Buscando y cacheando nuevos datos de productos...");
+    console.log("🔄 Fetching and caching product data, considering customer:", customerId);
+    setLoading(true); // Asegurar que el estado de carga se establezca al principio
     try {
-      const { data: productsData, error: productsError } = await supabase.from('products').select(`*, product_images ( id, image_url )`).eq('is_active', true);
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select(`*, product_images ( id, image_url )`)
+        .eq('is_active', true);
       if (productsError) throw productsError;
 
-      const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*');
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*');
       if (categoriesError) throw categoriesError;
-      
+
       const today = new Date().toISOString().split('T')[0];
-      const { data: specialPrices, error: specialPricesError } = await supabase.from('special_prices').select('*').lte('start_date', today).gte('end_date', today);
+
+      // --- QUERY MODIFICADA para special_prices ---
+      let specialPricesQuery = supabase
+        .from('special_prices')
+        .select('*')
+        .lte('start_date', today)
+        .gte('end_date', today);
+
+      if (customerId) {
+        // Si hay un cliente logueado, obtener precios para todos (NULL) O específicamente para él
+        specialPricesQuery = specialPricesQuery.or(`target_customer_ids.is.null,target_customer_ids.cs.{"${customerId}"}`);
+      } else {
+        // Si no hay cliente logueado, solo obtener precios para todos
+        specialPricesQuery = specialPricesQuery.is('target_customer_ids', null);
+      }
+
+      const { data: specialPrices, error: specialPricesError } = await specialPricesQuery;
+      // --- FIN DE LA QUERY MODIFICADA ---
+
       if (specialPricesError) throw specialPricesError;
 
-      const finalProducts = productsData.map(product => {
-        const productPrice = specialPrices.find(p => p.product_id === product.id);
-        const categoryPrice = specialPrices.find(p => p.category_id === product.category_id);
-        let specialPriceInfo = productPrice || categoryPrice;
-        return specialPriceInfo ? { ...product, original_price: product.price, price: parseFloat(specialPriceInfo.override_price) } : product;
+      // --- El resto de la lógica permanece igual ---
+        const finalProducts = productsData.map(product => {
+        // Priorizar precio específico del producto, luego precio de categoría
+        const productSpecificPrice = specialPrices.find(p => p.product_id === product.id);
+        const categorySpecificPrice = specialPrices.find(p => p.category_id === product.category_id && !p.product_id); // Asegurar que sea solo de categoría
+
+        let specialPriceInfo = productSpecificPrice || categorySpecificPrice;
+
+        // Asegurar que el precio encontrado sea aplicable (global o dirigido a este cliente)
+        // Esta doble verificación puede ser redundante si la consulta es correcta, pero añade seguridad.
+        if (specialPriceInfo && (specialPriceInfo.target_customer_ids === null || (customerId && specialPriceInfo.target_customer_ids.includes(customerId)))) {
+           return { ...product, original_price: product.price, price: parseFloat(specialPriceInfo.override_price) };
+        }
+        return product; // Devuelve el producto original si no se encuentra un precio especial aplicable
       });
 
       const uniqueCategories = [...new Set(finalProducts.map(p => p.category_id))];
@@ -42,14 +79,15 @@ export const ProductProvider = ({ children }) => {
       setProducts(finalProducts);
       setCategories(productCategories);
       setCache(CACHE_KEYS.PRODUCTS, { products: finalProducts, categories: productCategories });
-      console.log("✅ Datos frescos guardados en el estado y en el caché.");
+      console.log("✅ Fresh data saved to state and cache.");
     } catch (err) {
-      console.error("Error al obtener productos:", err);
+      console.error("Error fetching products:", err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []); // <-- Array de dependencias vacío es crucial aquí.
+    // Añadir customerId como dependencia
+  }, [customerId]); // Añadir customerId aquí
 
   // --- HOOK DE CARGA INICIAL (SIN CAMBIOS) ---
   useEffect(() => {
@@ -64,39 +102,33 @@ export const ProductProvider = ({ children }) => {
     fetchAndCacheProducts();
   }, [fetchAndCacheProducts]);
 
-  // --- 👇 HOOK DEL LISTENER DE TIEMPO REAL (REFACTORIZACIÓN CLAVE) ---
+  // --- HOOK DEL LISTENER DE TIEMPO REAL (REFACTORIZACIÓN CLAVE) ---
   useEffect(() => {
-    // 1. Usamos una ref para guardar la instancia del canal de Supabase.
-    // La ref sobrevive a los ciclos de render y al doble montaje del StrictMode.
     const channelRef = supabase.channel('public:products_all_changes');
 
     const handleChanges = (payload) => {
       console.log('⚡ ¡Cambio detectado en la base de datos!', payload);
       setNotification('¡El menú se ha actualizado!');
       setTimeout(() => setNotification(''), 4000);
-      
-      // Llamamos a la función estable para buscar los datos.
-      fetchAndCacheProducts(); 
+      fetchAndCacheProducts();
     };
 
-    // 2. Nos suscribimos a los eventos.
     channelRef
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleChanges)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleChanges)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handleChanges) // Escuchar cambios en precios especiales
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleChanges) // Escuchar cambios en categorías
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Listener de tiempo real conectado y suscrito.');
         }
       });
 
-    // 3. La función de limpieza se encarga de desuscribir el canal.
-    // Esto es más seguro que removerlo por completo en cada ciclo de StrictMode.
     return () => {
       console.log("🔌 Desconectando listener de tiempo real.");
       supabase.removeChannel(channelRef);
     };
-  }, [fetchAndCacheProducts]); // <-- La dependencia estable asegura que este hook solo se ejecute lo necesario.
+  }, [fetchAndCacheProducts]);
 
   const value = { products, categories, loading, error, notification };
 
