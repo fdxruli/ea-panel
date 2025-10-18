@@ -20,6 +20,19 @@ const OrderCard = ({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder }) =
     }
   }, [order.order_items]);
 
+const formatScheduledTime = (isoString) => {
+    if (!isoString) return null;
+    try {
+      const date = new Date(isoString);
+      // Opciones para mostrar fecha y hora de forma legible
+      const dateOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+      const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+      return `${date.toLocaleDateString('es-MX', dateOptions)} ${date.toLocaleTimeString('es-MX', timeOptions)}`;
+    } catch (e) {
+      return "Fecha inválida";
+    }
+  };
+  
   return (
     <div className={styles.orderCard}>
       <div className={styles.cardHeader}>
