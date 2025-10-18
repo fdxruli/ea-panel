@@ -55,6 +55,15 @@ const formatScheduledTime = (isoString) => {
             </p>
           </div>
         )}
+
+        {order.scheduled_for && (
+          <div className={styles.infoSection}>
+             <p className={styles.scheduledTime}> {/* Reutiliza el estilo o crea uno nuevo */}
+               <strong>Programado:</strong> {formatScheduledTime(order.scheduled_for)}
+             </p>
+          </div>
+        )}
+        
         <div className={styles.infoSection}>
           <h4>Productos</h4>
             <ul className={styles.productsList}>
@@ -221,8 +230,11 @@ export default function Orders() {
       {editingOrder && (
           <EditOrderModal
               order={editingOrder}
-              onClose={() => setEditingOrder(null)}
-              onOrderUpdated={fetchOrders}
+              onClose={() => setEditingOrder(null)} // Cierra el modal
+              onOrderUpdated={() => {
+                  fetchOrders(); // Refresca la lista explícitamente si la suscripción falla
+                  setEditingOrder(null); // Cierra modal después de guardar exitoso (opcional, EditOrderModal ya lo hace)
+              }}
           />
       )}
 
