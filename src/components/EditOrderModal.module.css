@@ -228,4 +228,117 @@
     .addProductSection {
         display: flex;
     }
+
+}
+
+/* ... (Estilos existentes) ... */
+
+/* --- NUEVOS ESTILOS PARA PROGRAMACIÓN EN EL MODAL --- */
+.scheduleSection {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    background-color: var(--bg-primary); /* Fondo ligeramente distinto opcional */
+}
+
+.scheduleSection label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.scheduleSection svg {
+    flex-shrink: 0;
+}
+
+
+.scheduleInputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.scheduleInputs input[type="date"],
+.scheduleInputs input[type="time"] {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-secondary); /* Fondo inputs */
+    color: var(--text-primary);
+}
+/* Indicador de calendario en tema oscuro */
+[data-theme="dark"] .scheduleInputs input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+}
+
+.clearScheduleButton {
+    background: none;
+    border: 1px solid var(--color-error);
+    color: var(--color-error);
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    align-self: flex-start; /* Alinear botón a la izquierda */
+    margin-top: 0.2rem;
+}
+.clearScheduleButton:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+}
+/* --- FIN NUEVOS ESTILOS --- */
+
+
+/* Ajustes layout Desktop para acomodar nueva sección */
+@media (min-width: 768px) {
+    .modalContent {
+        /* Puede que necesites ajustar max-height si el contenido crece mucho */
+        /* max-height: 95vh; */
+    }
+    .contentBody {
+        /* Grid layout se mantiene */
+        /* Puede que necesites ajustar el height si el modal es muy alto */
+        /* height: calc(90vh - 250px); /* Ajustar según altura de header, delivery, schedule, footer */
+    }
+}
+
+
+/* ... (Resto de estilos existentes) ... */
+
+/* Asegúrate de que .addMode siga funcionando para ocultar/mostrar secciones */
+.addMode .itemsList {
+    display: none;
+}
+.addMode .addProductSection {
+    display: flex; /* Asegúrate de que esto esté presente */
+     flex-direction: column; /* Reafirmar dirección */
+}
+/* Ocultar añadir productos por defecto */
+.addProductSection {
+    display: none;
+    height: 100%; /* Ocupar altura disponible */
+    overflow-y: auto; /* Scroll interno */
+}
+/* Mostrar lista por defecto */
+.itemsList {
+    display: block; /* O flex si usas flexbox dentro */
+    height: 100%; /* Ocupar altura disponible */
+    overflow-y: auto; /* Scroll interno */
+}
+
+/* En desktop, ambas secciones son visibles */
+@media (min-width: 768px) {
+    .addMode .itemsList { display: block; } /* Mostrar siempre en desktop */
+    .addMode .addProductSection { display: flex; } /* Mostrar siempre en desktop */
+    .itemsList { border-right: 1px solid var(--border-color); }
+     .contentBody {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Dos columnas */
+        height: 400px; /* O una altura adecuada */
+        overflow-y: hidden; /* El scroll será interno en cada columna */
+    }
 }
