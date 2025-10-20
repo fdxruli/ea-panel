@@ -48,13 +48,6 @@ const formatScheduledTime = (isoString) => {
             <span>{order.customers?.name || 'N/A'}</span> ({order.customers?.phone || 'N/A'})
           </p>
         </div>
-        {order.scheduled_for && (
-          <div className={styles.infoSection}>
-            <p className={styles.scheduledTime}>
-              Programado para: {new Date(order.scheduled_for).toLocaleString()}
-            </p>
-          </div>
-        )}
 
         {order.scheduled_for && (
           <div className={styles.infoSection}>

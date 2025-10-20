@@ -75,7 +75,7 @@ export const CustomerProvider = ({ children }) => {
         return { exists: false, accepted: false, customer: null };
     }
     
-    setCustomer(customerData);
+    // setCustomer(customerData); // <-- ❌ LÍNEA ELIMINADA: Esta era la causa del bucle.
 
     if (customerData) {
         const { data: latestTerms } = await supabase
@@ -157,22 +157,23 @@ export const CustomerProvider = ({ children }) => {
               console.error("Error incrementing referral count:", rpcError);
           }
       }
-
-      // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
-      // Actualizamos el estado del 'customer' en este contexto inmediatamente.
+      
+      // La actualización del estado del 'customer' aquí es correcta.
       setCustomer(data);
       
-      savePhoneAndContinue(newPhone);
+      savePhoneAndContinue(newPhone, data);
       setIsFirstAddressRequired(true);
       return true;
     }
     return false;
   };
   
-  const savePhoneAndContinue = (newPhone) => {
+  // --- 👇 FUNCIÓN MODIFICADA ---
+  const savePhoneAndContinue = (newPhone, customerData) => {
     if (/^\d{10,12}$/.test(newPhone)) {
         localStorage.setItem(CUSTOMER_PHONE_KEY, newPhone);
         setPhone(newPhone);
+        setCustomer(customerData); // <-- ✅ AÑADIDO: Actualiza el estado del cliente al iniciar sesión.
         setPhoneModalOpen(false);
 
         if (onSuccessCallback) {
