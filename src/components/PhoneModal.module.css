@@ -82,3 +82,24 @@
   font-weight: 500; color: var(--text-primary); margin-top: 0;
   margin-bottom: 1rem !important;
 }
+
+.updateTermsMessage {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-primary-dark); /* Un color que llame la atención */
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: var(--color-primary-light); /* Fondo suave */
+  border: 1px solid var(--color-primary); /* Borde del mismo color primario */
+  border-radius: 8px; /* Bordes redondeados */
+  text-align: left; /* Alinear texto a la izquierda */
+}
+
+/* --- Estilo para el mensaje de Verificando --- */
+.verifying {
+  font-style: italic;
+  color: var(--text-secondary);
+  margin-top: 0.5rem; /* Ajusta según sea necesario */
+  margin-bottom: 0.5rem; /* Ajusta según sea necesario */
+  height: 1.2em; /* Reserva espacio para evitar saltos de layout */
+}
