@@ -17,6 +17,7 @@ export default function Sidebar({ isOpen, closeSidebar }) {
       {hasPermission('terminos.view') && <Link to="/admin/terminos" onClick={closeSidebar}>Términos y Cond.</Link>}
       {hasPermission('registrar-admin.view') && <Link to="/admin/registrar-admin" onClick={closeSidebar}>Registrar Admin</Link>}
       {hasPermission('special-prices.view') && <Link to="/admin/special-prices" onClick={closeSidebar}>Precios Especiales</Link>}
+      {hasPermission('configuracion.view') && <Link to="/admin/configuracion" onClick={closeSidebar}>Configuración</Link>}
     </div>
   );
 }
