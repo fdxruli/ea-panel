@@ -11,13 +11,16 @@ import ConfirmModal from '../components/ConfirmModal';
 import CancellationRequestModal from '../components/CancellationRequestModal';
 import AuthPrompt from '../components/AuthPrompt';
 import SEO from '../components/SEO';
+import { useSettings } from '../context/SettingsContext'; // <-- Importa useSettings
 
 export default function MyOrders() {
     const { phone, setCheckoutModalOpen } = useCustomer();
     const { cartItems, replaceCart, toggleCart, showToast } = useCart();
     const navigate = useNavigate();
 
-    const { customer, orders, loading, error, refetch } = useUserData();
+    const { customer, orders, loading: userLoading, error, refetch } = useUserData(); // Renombrado 'loading' a 'userLoading'
+    const { settings, loading: settingsLoading } = useSettings(); // <-- Obtén settings y su loading
+    const visibilitySettings = settings['client_visibility'] || {}; // <-- Obtén la configuración de visibilidad
 
     const [editingOrder, setEditingOrder] = useState(null);
     const [orderToCancel, setOrderToCancel] = useState(null);
@@ -25,6 +28,9 @@ export default function MyOrders() {
     const [orderToReorder, setOrderToReorder] = useState(null);
 
     const [openOrderIds, setOpenOrderIds] = useState([]);
+
+    // Combinar estados de carga
+    const loading = userLoading || settingsLoading; // <-- Usa el estado de carga combinado
 
     useEffect(() => {
         const isDesktop = window.innerWidth >= 768;
@@ -133,11 +139,23 @@ export default function MyOrders() {
             );
         }
 
-        if (loading) return <LoadingSpinner />;
+        if (loading) return <LoadingSpinner />; // <-- Usa el loading combinado
 
         if (error) {
             return (<div className={styles.prompt}> <h2>Error Inesperado</h2> <p>No pudimos cargar tus datos. Por favor, intenta de nuevo más tarde.</p> </div>);
         }
+
+        // <-- Verifica la visibilidad de la página -->
+        if (visibilitySettings.my_orders_page === false) {
+            return (
+                <div className={styles.prompt}>
+                    <h2>Sección no disponible</h2>
+                    <p>Esta sección está temporalmente desactivada.</p>
+                </div>
+            );
+        }
+        // <-- Fin de la verificación -->
+
 
         if (!customer) {
             return (
@@ -151,9 +169,11 @@ export default function MyOrders() {
             );
         }
 
+        // --- El resto de la lógica para mostrar pedidos ---
         if (customer) {
-            const activeOrders = orders.filter(o => o.status === 'pendiente' || o.status === 'en_proceso');
-            const pastOrders = orders.filter(o => o.status !== 'pendiente' && o.status !== 'en_proceso');
+            const activeOrders = orders.filter(o => o.status === 'pendiente' || o.status === 'en_proceso' || o.status === 'en_envio');
+            const pastOrders = orders.filter(o => !['pendiente', 'en_proceso', 'en_envio'].includes(o.status));
+
 
             return (
                 <>
@@ -162,44 +182,60 @@ export default function MyOrders() {
                             {activeOrders.length > 0 && (
                                 <div className={styles.activeOrdersContainer}>
                                     <h3>Pedidos Activos</h3>
-                                    <div className={styles.ordersContainer}>
-                                        {activeOrders.map(order => (
-                                            <div key={order.id} className={`${styles.orderCard} ${openOrderIds.includes(order.id) ? styles.open : ''}`}>
-                                                <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
-                                                    <span>Pedido #{order.order_code}</span>
-                                                    <div className={styles.headerInfo}>
-                                                        <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
-                                                        <span className={styles.toggleIcon}>{openOrderIds.includes(order.id) ? '−' : '+'}</span>
+                                     {/* --- Contenedor de Carrusel --- */}
+                                    <div className={styles.carouselWrapper}>
+                                        <div className={styles.ordersContainer}>
+                                            {activeOrders.map(order => (
+                                                <div key={order.id} className={`${styles.orderCard} ${openOrderIds.includes(order.id) ? styles.open : ''}`}>
+                                                    <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
+                                                        <span>Pedido #{order.order_code}</span>
+                                                        <div className={styles.headerInfo}>
+                                                            <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
+                                                            {/* Cambiado +/- a X para cerrar cuando está abierto */}
+                                                            <span className={styles.toggleIcon}>{openOrderIds.includes(order.id) ? '✕' : '+'}</span>
+                                                        </div>
+                                                    </button>
+                                                    <div className={styles.orderDetails}>
+                                                        {renderOrderDetails(order, true)}
                                                     </div>
-                                                </button>
-                                                <div className={styles.orderDetails}>
-                                                    {renderOrderDetails(order, true)}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
+                                         {/* Botones de scroll (solo desktop) */}
+                                        <button className={`${styles.scrollButton} ${styles.prev}`}>&#10094;</button>
+                                        <button className={`${styles.scrollButton} ${styles.next}`}>&#10095;</button>
                                     </div>
+                                    {/* --- Fin Contenedor de Carrusel --- */}
                                 </div>
                             )}
 
                             {pastOrders.length > 0 && (
                                 <div className={styles.historyContainer}>
                                     <h3>Historial de Pedidos</h3>
-                                    <div className={styles.ordersContainer}>
-                                        {pastOrders.map(order => (
-                                            <div key={order.id} className={`${styles.orderCard} ${openOrderIds.includes(order.id) ? styles.open : ''}`}>
-                                                <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
-                                                    <span>Pedido #{order.order_code}</span>
-                                                    <div className={styles.headerInfo}>
-                                                        <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
-                                                        <span className={styles.toggleIcon}>{openOrderIds.includes(order.id) ? '−' : '+'}</span>
+                                    {/* --- Contenedor de Carrusel --- */}
+                                    <div className={styles.carouselWrapper}>
+                                        <div className={styles.ordersContainer}>
+                                            {pastOrders.map(order => (
+                                                <div key={order.id} className={`${styles.orderCard} ${openOrderIds.includes(order.id) ? styles.open : ''}`}>
+                                                    <button className={styles.cardHeader} onClick={() => handleToggleOrder(order.id)}>
+                                                        <span>Pedido #{order.order_code}</span>
+                                                        <div className={styles.headerInfo}>
+                                                            <span className={`${styles.status} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
+                                                            {/* Cambiado +/- a X para cerrar cuando está abierto */}
+                                                            <span className={styles.toggleIcon}>{openOrderIds.includes(order.id) ? '✕' : '+'}</span>
+                                                        </div>
+                                                    </button>
+                                                    <div className={styles.orderDetails}>
+                                                        {renderOrderDetails(order, false)}
                                                     </div>
-                                                </button>
-                                                <div className={styles.orderDetails}>
-                                                    {renderOrderDetails(order, false)}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
+                                         {/* Botones de scroll (solo desktop) */}
+                                        <button className={`${styles.scrollButton} ${styles.prev}`}>&#10094;</button>
+                                        <button className={`${styles.scrollButton} ${styles.next}`}>&#10095;</button>
                                     </div>
+                                    {/* --- Fin Contenedor de Carrusel --- */}
                                 </div>
                             )}
                         </>
@@ -219,27 +255,27 @@ export default function MyOrders() {
 
     return (
         <>
-        <SEO
-            title="Mis Pedidos - Entre Alas"
-            description="Consulta el estado de tus pedidos, edítalos o vuelve a pedir tus favoritos en Entre Alas."
-            name="Entre Alas"
-            type="website"
-        />
-        <div className={styles.container}>
-            {renderContent()}
+            <SEO
+                title="Mis Pedidos - Entre Alas"
+                description="Consulta el estado de tus pedidos, edítalos o vuelve a pedir tus favoritos en Entre Alas."
+                name="Entre Alas"
+                type="website"
+            />
+            <div className={styles.container}>
+                {renderContent()}
 
-            {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}
+                {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}
 
-            <ConfirmModal isOpen={!!orderToCancel && !isRequestingCancel} onClose={() => setOrderToCancel(null)} onConfirm={confirmDirectCancel} title="¿Confirmar Cancelación?">
-                Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
-            </ConfirmModal>
+                <ConfirmModal isOpen={!!orderToCancel && !isRequestingCancel} onClose={() => setOrderToCancel(null)} onConfirm={confirmDirectCancel} title="¿Confirmar Cancelación?">
+                    Estás a punto de cancelar tu pedido. Esta acción no se puede deshacer.
+                </ConfirmModal>
 
-            <ConfirmModal isOpen={!!orderToReorder} onClose={() => setOrderToReorder(null)} onConfirm={confirmReorder} title="¿Reemplazar Carrito?">
-                Tu carrito ya tiene productos. ¿Deseas vaciarlo y agregar los productos de este pedido?
-            </ConfirmModal>
+                <ConfirmModal isOpen={!!orderToReorder} onClose={() => setOrderToReorder(null)} onConfirm={confirmReorder} title="¿Reemplazar Carrito?">
+                    Tu carrito ya tiene productos. ¿Deseas vaciarlo y agregar los productos de este pedido?
+                </ConfirmModal>
 
-            {isRequestingCancel && orderToCancel && <CancellationRequestModal order={orderToCancel} onClose={() => { setIsRequestingCancel(false); setOrderToCancel(null); }} />}
-        </div>
+                {isRequestingCancel && orderToCancel && <CancellationRequestModal order={orderToCancel} onClose={() => { setIsRequestingCancel(false); setOrderToCancel(null); }} />}
+            </div>
         </>
     );
 }

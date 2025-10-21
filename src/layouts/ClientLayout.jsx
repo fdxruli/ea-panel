@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient"; // Asegúrate que la ruta sea correcta
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
 import { useCustomer } from "../context/CustomerContext";
@@ -17,20 +17,12 @@ import UserMenu from "../components/UserMenu";
 import AddressModal from "../components/AddressModal";
 import NotificationManager from "../components/NotificationManager";
 
-// --- Importaciones para Modo Mantenimiento ---
+// --- Importaciones para Modo Mantenimiento y Visibilidad ---
 import { useSettings } from "../context/SettingsContext"; // Para leer la configuración
 import MaintenancePage from "../components/MaintenancePage"; // El componente de mantenimiento
 import LoadingSpinner from "../components/LoadingSpinner"; // Para mostrar mientras carga
 
-// --- Iconos (asegúrate que las importaciones o definiciones sean correctas) ---
-// Si los importas como componentes SVG:
-// import HomeIcon from '../assets/icons/home.svg?react'; // Ejemplo, ajusta la ruta
-// import UserIcon from '../assets/icons/user.svg?react';
-// import ClipboardIcon from '../assets/icons/clipboard.svg?react';
-// import HeartIcon from '../assets/icons/heart.svg?react';
-// import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
-
-// O si los defines directamente como antes:
+// --- Iconos ---
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
@@ -45,12 +37,13 @@ export default function ClientLayout() {
   const { customer, refetch: refetchUserData } = useUserData();
   const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
-  // --- Lógica para Modo Mantenimiento ---
-  const { getSetting, loading: settingsLoading } = useSettings();
-  const maintenanceSetting = getSetting('maintenance_mode');
+  // --- Lógica para Modo Mantenimiento y Visibilidad ---
+  const { settings, loading: settingsLoading } = useSettings(); // Ya no necesitamos getSetting directamente
+  const maintenanceSetting = settings['maintenance_mode'] || { enabled: false }; // Fallback
+  const visibilitySettings = settings['client_visibility'] || {}; // Fallback
   const isMaintenanceMode = maintenanceSetting?.enabled === true;
   const maintenanceMessage = maintenanceSetting?.message;
-  // --- Fin Lógica Mantenimiento ---
+  // --- Fin Lógica ---
 
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
@@ -66,7 +59,7 @@ export default function ClientLayout() {
     const { error } = await supabase.from('customer_addresses').insert({
       ...addressData,
       customer_id: customer.id,
-      is_default: true 
+      is_default: true
     });
     if (error) {
       console.error(error);
@@ -98,7 +91,7 @@ export default function ClientLayout() {
       <NotificationManager />
       {notification && <div className="update-toast">{notification}</div>}
       {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}
-      
+
       {/* Modal para la primera dirección */}
       {isAddressModalOpen && customer && (
         <AddressModal
@@ -121,11 +114,11 @@ export default function ClientLayout() {
                 <span>Carrito</span>
                 {totalItems > 0 && <span className="desktop-cart-badge">{totalItems}</span>}
               </button>
-              <UserMenu /> 
+              <UserMenu />
           </nav>
         </div>
       </header>
-      
+
       {/* Carrito Lateral */}
       <Cart />
 
@@ -148,21 +141,26 @@ export default function ClientLayout() {
         </div>
       </main>
 
-      {/* Navegación Inferior (móvil) */}
+      {/* Navegación Inferior (móvil) - CONDICIONAL */}
        <footer className="bottom-nav">
         <NavLink to="/" end className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
             <HomeIcon /> <span>Inicio</span>
         </NavLink>
-        <NavLink to="/mi-perfil" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
-            <UserIcon /> <span>Mi Perfil</span>
-        </NavLink>
-        <NavLink to="/mi-actividad" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
-            <HeartIcon /> <span>Mi Actividad</span>
-        </NavLink>
-        <NavLink to="/mis-pedidos" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
-            <ClipboardIcon /> <span>Mis Pedidos</span>
-        </NavLink>
-        {/* Podrías añadir un botón de carrito aquí también si lo necesitas */}
+        {visibilitySettings.my_profile_page !== false && ( // Default a true si no existe
+          <NavLink to="/mi-perfil" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
+              <UserIcon /> <span>Mi Perfil</span>
+          </NavLink>
+        )}
+        {visibilitySettings.my_stuff_page !== false && ( // Default a true si no existe
+          <NavLink to="/mi-actividad" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
+              <HeartIcon /> <span>Mi Actividad</span>
+          </NavLink>
+        )}
+        {visibilitySettings.my_orders_page !== false && ( // Default a true si no existe
+          <NavLink to="/mis-pedidos" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
+              <ClipboardIcon /> <span>Mis Pedidos</span>
+          </NavLink>
+        )}
       </footer>
     </div>
   );

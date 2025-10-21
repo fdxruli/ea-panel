@@ -34,6 +34,7 @@ import Referrals from "./pages/Referrals.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
 import { cleanupExpiredCache } from "./utils/cache.js";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
+import Settings from "./pages/Settings.jsx";
 
 const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
@@ -68,21 +69,21 @@ function App() {
           element={
             <ThemeProvider>
               <AlertProvider>
-                <BusinessHoursProvider>
-                  <CustomerProvider>
-                    <UserDataProvider>
-                      <ProductProvider>
-                        <SettingsProvider>
+                <SettingsProvider>
+                  <BusinessHoursProvider>
+                    <CustomerProvider>
+                      <UserDataProvider>
+                        <ProductProvider>
                           <ProductExtrasProvider>
                             <CartProvider>
                               <ClientLayout />
                             </CartProvider>
                           </ProductExtrasProvider>
-                        </SettingsProvider>
-                      </ProductProvider>
-                    </UserDataProvider>
-                  </CustomerProvider>
-                </BusinessHoursProvider>
+                        </ProductProvider>
+                      </UserDataProvider>
+                    </CustomerProvider>
+                  </BusinessHoursProvider>
+                </SettingsProvider>
               </AlertProvider>
             </ThemeProvider>
           }
@@ -101,11 +102,13 @@ function App() {
             path="/admin"
             element={
               <AlertProvider>
-                <Suspense>
-                  <AdminAuthProvider>
-                    <AdminLayout />
-                  </AdminAuthProvider>
-                </Suspense>
+                <SettingsProvider>
+                  <Suspense>
+                    <AdminAuthProvider>
+                      <AdminLayout />
+                    </AdminAuthProvider>
+                  </Suspense>
+                </SettingsProvider>
               </AlertProvider>
             }
           >
@@ -120,6 +123,7 @@ function App() {
             <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
             <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
             <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
+            <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
           </Route>
         </Route>
       </Routes>

@@ -17,7 +17,8 @@ const sections = [
     { key: 'descuentos', label: 'Descuentos' },
     { key: 'terminos', label: 'Términos y Cond.' },
     { key: 'registrar-admin', label: 'Gestionar Admins' },
-    { key: 'special-prices', label: 'Precios Especiales' }
+    { key: 'special-prices', label: 'Precios Especiales' },
+    { key: 'configuracion', label: 'Configuración General'}
 ];
 const actions = ['view', 'edit', 'delete'];
 
