@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { useAlert } from '../context/AlertContext';
-import styles from './BusinessHours.module.css';
-import { useAdminAuth } from '../context/AdminAuthContext';
+import { supabase } from '../lib/supabaseClient'; // Adjust path if needed
+import LoadingSpinner from '../components/LoadingSpinner'; // Adjust path if needed
+import { useAlert } from '../context/AlertContext'; // Adjust path if needed
+import styles from './BusinessHours.module.css'; // Adjust path if needed
+import { useAdminAuth } from '../context/AdminAuthContext'; // Adjust path if needed
 
 const weekDays = [
+    // ... (keep weekDays array as is)
     { id: 0, name: 'Domingo' },
     { id: 1, name: 'Lunes' },
     { id: 2, name: 'Martes' },
@@ -21,18 +22,21 @@ export default function BusinessHours() {
     const [hours, setHours] = useState([]);
     const [exceptions, setExceptions] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
+    const [isEditingHours, setIsEditingHours] = useState(false); // Renamed for clarity
     const [newException, setNewException] = useState({
-        date: '',
-        is_closed: true,
+        start_date: '',
+        end_date: '', // Added end_date
+        is_closed: true, // Default to closed for periods
         open_time: '',
         close_time: '',
         reason: ''
     });
 
     const canEdit = hasPermission('horarios.edit');
+    const canDelete = hasPermission('horarios.delete'); // Added delete permission check
 
     const fetchData = useCallback(async () => {
+        // ... (fetchData remains largely the same, just ensure it fetches exceptions correctly)
         setLoading(true);
         try {
             const { data: hoursData, error: hoursError } = await supabase
@@ -50,7 +54,8 @@ export default function BusinessHours() {
             const { data: exceptionsData, error: exceptionsError } = await supabase
                 .from('business_exceptions')
                 .select('*')
-                .order('date', { ascending: false });
+                 // Order by start_date now
+                .order('start_date', { ascending: false });
             if (exceptionsError) throw exceptionsError;
             setExceptions(exceptionsData);
 
@@ -65,8 +70,8 @@ export default function BusinessHours() {
         fetchData();
     }, [fetchData]);
 
-
     const handleHourChange = (day, field, value) => {
+        // ... (handleHourChange remains the same)
         setHours(currentHours =>
             currentHours.map(h =>
                 h.day_of_week === day ? { ...h, [field]: value } : h
@@ -75,8 +80,9 @@ export default function BusinessHours() {
     };
 
     const handleSaveChanges = async () => {
+         // ... (handleSaveChanges remains the same)
         if (!canEdit) return;
-        setIsEditing(false);
+        setIsEditingHours(false); // Use the renamed state variable
         try {
             const { error } = await supabase.from('business_hours').upsert(hours, {
                 onConflict: 'day_of_week'
@@ -88,28 +94,61 @@ export default function BusinessHours() {
             showAlert(`Error al guardar los horarios: ${error.message}`);
         }
     };
-    
+
     const handleAddException = async () => {
         if (!canEdit) return;
-        if (!newException.date) {
-            showAlert('Por favor, selecciona una fecha para la excepción.');
+        if (!newException.start_date) {
+            showAlert('Por favor, selecciona al menos la fecha de inicio.');
             return;
         }
-        
+        // Ensure end_date is not before start_date if both are set
+        if (newException.end_date && newException.end_date < newException.start_date) {
+            showAlert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+            return;
+        }
+
         try {
-            const { error } = await supabase.from('business_exceptions').insert(newException);
+            // Prepare data, setting end_date to null if empty
+            const dataToInsert = {
+                ...newException,
+                end_date: newException.end_date || null, // Handle empty end_date
+                 // Ensure times are null if closed
+                open_time: newException.is_closed ? null : newException.open_time || null,
+                close_time: newException.is_closed ? null : newException.close_time || null,
+            };
+
+            // Basic overlap check (can be improved or rely on DB constraint)
+            const overlaps = exceptions.some(ex => {
+                 const existingEndDate = ex.end_date || ex.start_date;
+                 const newEndDate = dataToInsert.end_date || dataToInsert.start_date;
+                 // Check if new range overlaps existing range
+                 return dataToInsert.start_date <= existingEndDate && newEndDate >= ex.start_date;
+            });
+
+            if (overlaps) {
+                showAlert('El período de excepción se superpone con uno existente. Por favor, ajústalo.');
+                return;
+            }
+
+
+            const { error } = await supabase.from('business_exceptions').insert(dataToInsert);
             if (error) throw error;
 
-            showAlert('Excepción añadida correctamente.');
-            setNewException({ date: '', is_closed: true, open_time: '', close_time: '', reason: '' });
-            fetchData();
+            showAlert('Período de excepción añadido correctamente.');
+            // Reset form
+            setNewException({
+                start_date: '', end_date: '', is_closed: true,
+                open_time: '', close_time: '', reason: ''
+            });
+            fetchData(); // Refresh list
         } catch(error) {
             showAlert(`Error al añadir la excepción: ${error.message}`);
         }
     };
-    
+
     const handleDeleteException = async (exceptionId) => {
-        if (!hasPermission('horarios.delete')) return;
+        // ... (handleDeleteException remains the same, check permission)
+        if (!canDelete) return;
         if (window.confirm('¿Estás seguro de que quieres eliminar esta excepción?')) {
             try {
                 const { error } = await supabase.from('business_exceptions').delete().eq('id', exceptionId);
@@ -122,6 +161,16 @@ export default function BusinessHours() {
         }
     };
 
+    // Helper function to format date display
+    const formatExceptionDate = (ex) => {
+        const startDate = new Date(ex.start_date + 'T00:00:00'); // Adjust for timezone if needed
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        if (ex.end_date && ex.end_date !== ex.start_date) {
+            const endDate = new Date(ex.end_date + 'T00:00:00');
+            return `${startDate.toLocaleDateString('es-MX', options)} - ${endDate.toLocaleDateString('es-MX', options)}`;
+        }
+        return startDate.toLocaleDateString('es-MX', options);
+    };
 
     if (loading) return <LoadingSpinner />;
 
@@ -129,9 +178,10 @@ export default function BusinessHours() {
         <div className={styles.container}>
             <h1>Gestión de Horarios</h1>
 
+            {/* --- Horario Semanal Card --- */}
             <div className={styles.card}>
-                <h2>Horario Semanal</h2>
-                {isEditing ? (
+                <h2>Horario Semanal Regular</h2>
+                {isEditingHours ? ( // Use renamed state variable
                     <p>Modifica los horarios y haz clic en "Guardar Cambios".</p>
                 ) : (
                     <p>Estos son los horarios de apertura y cierre para cada día de la semana.</p>
@@ -141,7 +191,7 @@ export default function BusinessHours() {
                     {hours.map(day => (
                         <div key={day.day_of_week} className={`${styles.dayRow} ${day.is_closed ? styles.closed : ''}`}>
                             <strong>{weekDays.find(d => d.id === day.day_of_week)?.name}</strong>
-                            {isEditing && canEdit ? (
+                            {isEditingHours && canEdit ? ( // Check permission here too
                                 <>
                                     <div className={styles.timeInputs}>
                                         <input type="time" value={day.open_time} onChange={e => handleHourChange(day.day_of_week, 'open_time', e.target.value)} disabled={day.is_closed} />
@@ -154,69 +204,84 @@ export default function BusinessHours() {
                                     </label>
                                 </>
                             ) : (
-                                <span>{day.is_closed ? 'Cerrado' : `${day.open_time} - ${day.close_time}`}</span>
+                                <span>{day.is_closed ? 'Cerrado' : `${day.open_time || 'N/A'} - ${day.close_time || 'N/A'}`}</span>
                             )}
                         </div>
                     ))}
                 </div>
-                
+
                 {canEdit && (
-                    isEditing ? (
+                    isEditingHours ? (
                         <div className={styles.actions}>
-                            <button onClick={() => { setIsEditing(false); fetchData(); }} className={styles.cancelButton}>Cancelar</button>
+                            <button onClick={() => { setIsEditingHours(false); fetchData(); }} className={styles.cancelButton}>Cancelar</button>
                             <button onClick={handleSaveChanges} className={styles.saveButton}>Guardar Cambios</button>
                         </div>
                     ) : (
                         <div className={styles.actions}>
-                            <button onClick={() => setIsEditing(true)} className={styles.editButton}>Editar Horarios</button>
+                            <button onClick={() => setIsEditingHours(true)} className={styles.editButton}>Editar Horarios</button>
                         </div>
                     )
                 )}
             </div>
-            
-            {canEdit && (
-                <div className={styles.card}>
-                    <h2>Excepciones (Feriados o Días Especiales)</h2>
+
+            {/* --- Excepciones Card --- */}
+            <div className={styles.card}>
+                <h2>Excepciones (Feriados, Vacaciones, etc.)</h2>
+                {canEdit && (
                     <div className={styles.exceptionForm}>
+                         {/* Form Group for Start Date */}
                         <div className={styles.formGroup}>
-                            <label>Fecha</label>
-                            <input type="date" value={newException.date} onChange={e => setNewException({...newException, date: e.target.value})} />
+                            <label>Fecha de Inicio</label>
+                            <input type="date" value={newException.start_date} onChange={e => setNewException({...newException, start_date: e.target.value})} />
                         </div>
+                         {/* Form Group for End Date */}
                          <div className={styles.formGroup}>
+                            <label>Fecha de Fin (Opcional)</label>
+                            <input type="date" value={newException.end_date} onChange={e => setNewException({...newException, end_date: e.target.value})} min={newException.start_date} />
+                        </div>
+                        {/* Form Group for Reason */}
+                        <div className={styles.formGroup}>
                             <label>Motivo (Opcional)</label>
-                            <input type="text" placeholder="Ej. Aniversario" value={newException.reason} onChange={e => setNewException({...newException, reason: e.target.value})} />
-                         </div>
-                         <button onClick={handleAddException} className={styles.addButton}>Añadir</button>
+                            <input type="text" placeholder="Ej. Semana Santa" value={newException.reason} onChange={e => setNewException({...newException, reason: e.target.value})} />
+                        </div>
+                        {/* Add Button */}
+                        <button onClick={handleAddException} className={styles.addButton}>Añadir</button>
                     </div>
-                    
-                     <div className="table-wrapper">
-                        <table className="products-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Estado</th>
-                                    <th>Motivo</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {exceptions.map(ex => (
+                )}
+
+                 {/* Table for Existing Exceptions */}
+                 <div className="table-wrapper">
+                    <table className="products-table"> {/* Reuse existing table styles */}
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+                                <th>Estado</th>
+                                <th>Motivo</th>
+                                {canDelete && <th>Acciones</th>} {/* Show only if can delete */}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {exceptions.length === 0 ? (
+                                <tr><td colSpan={canDelete ? 4 : 3}>No hay excepciones definidas.</td></tr>
+                            ) : (
+                                exceptions.map(ex => (
                                     <tr key={ex.id}>
-                                        <td>{new Date(ex.date).toLocaleDateString()}</td>
-                                        <td>{ex.is_closed ? 'Cerrado' : `${ex.open_time} - ${ex.close_time}`}</td>
-                                        <td>{ex.reason || 'N/A'}</td>
-                                        <td>
-                                            {hasPermission('horarios.delete') && (
+                                        <td>{formatExceptionDate(ex)}</td>
+                                        {/* Display 'Cerrado' or the specific hours */}
+                                        <td>{ex.is_closed ? 'Cerrado' : `${ex.open_time || 'N/A'} - ${ex.close_time || 'N/A'}`}</td>
+                                        <td>{ex.reason || '-'}</td>
+                                        {canDelete && (
+                                            <td>
                                                 <button onClick={() => handleDeleteException(ex.id)} className={styles.deleteButton}>Eliminar</button>
-                                            )}
-                                        </td>
+                                            </td>
+                                        )}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                     </div>
-                </div>
-            )}
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                 </div>
+            </div>
         </div>
     );
 }

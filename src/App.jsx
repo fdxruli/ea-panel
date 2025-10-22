@@ -26,7 +26,7 @@ import RegisterAdmin from "./pages/RegisterAdmin.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import SpecialPrices from "./pages/SpecialPrices.jsx";
 import Login from "./pages/Login.jsx";
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx"; // Asegúrate que la ruta sea correcta
 import BusinessHours from "./pages/BusinessHours.jsx";
 import CreateOrder from "./pages/CreateOrder.jsx";
 import 'leaflet/dist/leaflet.css';
@@ -35,6 +35,7 @@ import { SettingsProvider } from "./context/SettingsContext.jsx";
 import { cleanupExpiredCache } from "./utils/cache.js";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
 import Settings from "./pages/Settings.jsx";
+import NotFoundPage from "./components/NotFoundPage.jsx"; // <-- IMPORTA NotFoundPage
 
 const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
@@ -48,9 +49,12 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   }
 
   if (isIndex) {
+    // Si es la página índice del admin y no tiene permiso, redirige a login
     return <Navigate to="/login" replace />;
   }
 
+  // Si no tiene permiso para otras páginas admin, redirige al dashboard del admin (o a login si no tiene acceso a nada)
+  // Ajusta esto según tu lógica preferida
   return <Navigate to="/admin" replace />;
 };
 
@@ -64,6 +68,7 @@ function App() {
     <>
       <ReloadPrompt />
       <Routes>
+        {/* --- Rutas Cliente --- */}
         <Route
           path="/"
           element={
@@ -93,17 +98,21 @@ function App() {
           <Route path="mi-perfil" element={<MyProfile />} />
           <Route path="mi-actividad" element={<MyStuff />} />
           <Route path="/terminos" element={<TermsPage />} />
+          {/* Añade la ruta 404 dentro del ClientLayout si quieres */}
+          {/* <Route path="*" element={<NotFoundPage />} /> */}
         </Route>
 
+        {/* --- Ruta Login Admin --- */}
         <Route path="/login" element={<Login />} />
 
-        <Route element={<ProtectedRoute />}>
+        {/* --- Rutas Admin Protegidas --- */}
+        <Route element={<ProtectedRoute />}> {/* Elemento padre para rutas protegidas */}
           <Route
             path="/admin"
-            element={
+            element={ // Layout para todas las rutas admin
               <AlertProvider>
                 <SettingsProvider>
-                  <Suspense>
+                  <Suspense fallback={<LoadingSpinner />}> {/* Añade Suspense aquí */}
                     <AdminAuthProvider>
                       <AdminLayout />
                     </AdminAuthProvider>
@@ -112,6 +121,7 @@ function App() {
               </AlertProvider>
             }
           >
+            {/* Rutas específicas del admin */}
             <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
             <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
             <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
@@ -124,8 +134,15 @@ function App() {
             <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
             <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
             <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
+
+            {/* Ruta 404 específica para rutas bajo /admin */}
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
-        </Route>
+        </Route> {/* Cierre del elemento ProtectedRoute */}
+
+        {/* Ruta 404 global (fuera de cualquier layout específico) */}
+        <Route path="*" element={<NotFoundPage />} />
+
       </Routes>
     </>
   );

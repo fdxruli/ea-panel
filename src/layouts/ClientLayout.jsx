@@ -22,6 +22,10 @@ import { useSettings } from "../context/SettingsContext"; // Para leer la config
 import MaintenancePage from "../components/MaintenancePage"; // El componente de mantenimiento
 import LoadingSpinner from "../components/LoadingSpinner"; // Para mostrar mientras carga
 
+// --- Importaciones para Mensaje Cerrado ---
+import { useBusinessHours } from "../context/BusinessHoursContext"; // Importa el hook de horario
+import ClosedMessage from "../components/ClosedMessage"; // Importa el componente del mensaje
+
 // --- Iconos ---
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
@@ -38,13 +42,16 @@ export default function ClientLayout() {
   const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
   // --- Lógica para Modo Mantenimiento y Visibilidad ---
-  const { settings, loading: settingsLoading } = useSettings(); // Ya no necesitamos getSetting directamente
-  const maintenanceSetting = settings['maintenance_mode'] || { enabled: false }; // Fallback
-  const visibilitySettings = settings['client_visibility'] || {}; // Fallback
+  const { settings, loading: settingsLoading } = useSettings();
+  const maintenanceSetting = settings['maintenance_mode'] || { enabled: false };
+  const visibilitySettings = settings['client_visibility'] || {};
   const isMaintenanceMode = maintenanceSetting?.enabled === true;
   const maintenanceMessage = maintenanceSetting?.message;
   // --- Fin Lógica ---
 
+  // --- Lógica para Mensaje Cerrado ---
+  const { isOpen: isBusinessOpen, loading: hoursLoading } = useBusinessHours(); // Obtiene el estado del negocio
+  // --- Fin Lógica ---
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
@@ -71,13 +78,13 @@ export default function ClientLayout() {
     }
   };
 
-  // --- Verificación Modo Mantenimiento ---
-  if (settingsLoading) {
-    return <LoadingSpinner />; // Muestra carga mientras se obtienen los ajustes
+  // --- Verificación Modo Mantenimiento / Horario ---
+  if (settingsLoading || hoursLoading) { // Verifica ambos estados de carga
+    return <LoadingSpinner />;
   }
 
   if (isMaintenanceMode) {
-    return <MaintenancePage message={maintenanceMessage} />; // Muestra página de mantenimiento
+    return <MaintenancePage message={maintenanceMessage} />;
   }
   // --- Fin Verificación ---
 
@@ -85,6 +92,9 @@ export default function ClientLayout() {
   // --- Renderizado Normal ---
   return (
     <div className="client-layout">
+      {/* Muestra el mensaje de cerrado si el negocio NO está abierto */}
+      {!isBusinessOpen && <ClosedMessage />}
+
       {/* Componentes globales como modales y notificaciones */}
       <PhoneModal />
       <AlertModal />
@@ -146,17 +156,17 @@ export default function ClientLayout() {
         <NavLink to="/" end className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
             <HomeIcon /> <span>Inicio</span>
         </NavLink>
-        {visibilitySettings.my_profile_page !== false && ( // Default a true si no existe
+        {(visibilitySettings.my_profile_page !== false) && ( // Default a true si no existe
           <NavLink to="/mi-perfil" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
               <UserIcon /> <span>Mi Perfil</span>
           </NavLink>
         )}
-        {visibilitySettings.my_stuff_page !== false && ( // Default a true si no existe
+        {(visibilitySettings.my_stuff_page !== false) && ( // Default a true si no existe
           <NavLink to="/mi-actividad" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
               <HeartIcon /> <span>Mi Actividad</span>
           </NavLink>
         )}
-        {visibilitySettings.my_orders_page !== false && ( // Default a true si no existe
+        {(visibilitySettings.my_orders_page !== false) && ( // Default a true si no existe
           <NavLink to="/mis-pedidos" replace className={({ isActive }) => isActive ? "bottom-nav-link active" : "bottom-nav-link"}>
               <ClipboardIcon /> <span>Mis Pedidos</span>
           </NavLink>
