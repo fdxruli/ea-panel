@@ -1,0 +1,125 @@
+Bienvenido a Entre Alas. Al acceder y utilizar nuestra aplicación web (en adelante, la "Plataforma") para realizar pedidos, aceptas cumplir y estar sujeto a los siguientes términos y condiciones (en adelante, los "Términos"). Por favor, léelos atentamente. Si no estás de acuerdo con estos Términos, no deberás utilizar la Plataforma.
+
+1. Definiciones
+
+"Nosotros", "Nuestro", "Entre Alas": Se refiere al propietario y operador de la Plataforma.
+
+"Tú", "Usuario", "Cliente": Se refiere a cualquier persona que acceda o utilice la Plataforma.
+
+"Plataforma": Se refiere a la aplicación web de Entre Alas accesible a través de navegadores web.
+
+"Servicio": Se refiere a la posibilidad de ver el menú, realizar pedidos de alimentos y bebidas, gestionar tu cuenta y participar en programas ofrecidos a través de la Plataforma.
+
+2. Registro y Cuenta de Usuario
+
+Registro: Para utilizar ciertas funciones, como realizar pedidos y acceder a tu historial, deberás registrarte utilizando tu número de teléfono de WhatsApp válido (10 dígitos) y proporcionar tu nombre completo. Eres responsable de mantener la confidencialidad de tu número y de todas las actividades que ocurran bajo tu cuenta.
+
+Aceptación de Términos: Al registrarte o ingresar tu número por primera vez, se te pedirá que leas y aceptes estos Términos y Condiciones. Tu uso continuado de la Plataforma después de cualquier modificación de los Términos constituirá tu aceptación de dichos cambios.
+
+Información Veraz: Te comprometes a proporcionar información verdadera, precisa, actual y completa durante el registro y a mantenerla actualizada.
+
+Uso Personal: Tu cuenta es para uso personal e intransferible.
+
+3. Uso de la Plataforma y Pedidos
+
+Elegibilidad: Debes tener la edad legal para formar un contrato vinculante en tu jurisdicción para usar la Plataforma.
+
+Menú y Precios: Mostramos nuestro menú de productos con sus precios. Nos esforzamos por mantener la información actualizada, pero los precios y la disponibilidad de los productos están sujetos a cambios sin previo aviso. Pueden aplicarse precios especiales o descuentos bajo ciertas condiciones (ej. promociones, clientes específicos, programas de referidos).
+
+Realización de Pedidos: Puedes seleccionar productos, añadirlos a tu carrito y proceder a la confirmación del pedido. Al confirmar tu pedido, serás redirigido a WhatsApp para finalizar el proceso y enviar tu solicitud. Tu pedido se considera realizado una vez enviado el mensaje de confirmación por WhatsApp.
+
+Horario de Servicio: Los pedidos solo pueden realizarse y serán procesados durante nuestro horario de atención publicado, sujeto a excepciones. Intentar realizar un pedido fuera de horario puede no ser posible.
+
+Zona de Reparto: Nuestro servicio de entrega está limitado a una zona geográfica específica, la cual se indica visualmente mediante un mapa durante el proceso de selección de dirección. Nos reservamos el derecho de rechazar pedidos fuera de esta zona.
+
+Dirección de Entrega: Eres responsable de proporcionar una dirección de entrega precisa y completa, incluyendo referencias si son necesarias. Puedes guardar múltiples direcciones y seleccionar una predeterminada. La ubicación se confirma mediante un mapa interactivo.
+
+Pedidos Programados: Ofrecemos la opción de programar pedidos para una fecha y hora futuras específicas dentro de nuestro horario operativo. Haremos lo posible por cumplir con la hora programada, pero está sujeta a disponibilidad y posibles retrasos imprevistos.
+
+Pago: (Asunción: Pago contra entrega) El pago de tu pedido se realizará al momento de la entrega en efectivo o con tarjeta, según las opciones disponibles y comunicadas por el repartidor. El total a pagar incluirá el costo de los productos y cualquier cargo aplicable por entrega (si lo hubiera).
+
+Confirmación y Seguimiento: Recibirás confirmación de tu pedido vía WhatsApp. Podrás ver el estado de tus pedidos activos ("pendiente", "en proceso", "en envío") y tu historial de pedidos ("completado", "cancelado") en la sección "Mis Pedidos" de la Plataforma.
+
+4. Modificaciones y Cancelaciones de Pedidos
+
+Modificación por el Cliente: Puedes editar los productos de tu pedido únicamente si su estado es "pendiente" a través de la sección "Mis Pedidos".
+
+Cancelación por el Cliente:
+
+Si el pedido está en estado "pendiente", puedes cancelarlo directamente desde la Plataforma.
+
+Si el pedido está "en proceso", la cancelación automática no es posible. Deberás solicitar la cancelación enviando un mensaje a nuestro número de WhatsApp a través de la opción proporcionada en la Plataforma, indicando el motivo. La aceptación de esta solicitud queda a nuestra discreción dependiendo del avance de la preparación.
+
+Los pedidos en estado "en envío", "completado" o "cancelado" no pueden ser modificados ni cancelados por el cliente.
+
+Cancelación por Entre Alas: Nos reservamos el derecho de cancelar un pedido en cualquier momento por razones como falta de disponibilidad de productos, imposibilidad de entrega en la dirección indicada, condiciones climáticas adversas, sospecha de fraude o incumplimiento de estos Términos. Te notificaremos en caso de cancelación por nuestra parte.
+
+5. Descuentos y Promociones
+
+Podemos ofrecer códigos de descuento o promociones. Estos están sujetos a términos específicos (fechas de validez, aplicabilidad a productos/categorías, uso único, etc.).
+
+Para aplicar un descuento, debes ingresar el código válido en el carrito antes de confirmar el pedido.
+
+Algunos códigos pueden ser de un solo uso por cliente. El uso indebido de códigos de descuento puede resultar en la cancelación del pedido o la desactivación de la cuenta.
+
+Los descuentos de bienvenida o por referidos pueden tener condiciones especiales, como ser aplicables solo a clientes nuevos o referidos.
+
+6. Programa de Referidos
+
+Los clientes registrados pueden obtener un código de referido único para invitar a nuevos usuarios.
+
+Cuando un nuevo usuario se registra utilizando un código de referido válido, el referente puede acumular referidos.
+
+Podemos ofrecer recompensas basadas en la cantidad de referidos acumulados, organizadas por niveles. Los detalles, niveles y recompensas del programa están sujetos a cambios a nuestra discreción.
+
+Las recompensas pueden consistir en descripciones o códigos de descuento específicos. Los códigos de recompensa pueden tener condiciones de uso (ej. un solo uso, aplicabilidad).
+
+Nos reservamos el derecho de invalidar referidos o recompensas en caso de detectar fraude o abuso del sistema.
+
+7. Contenido Generado por el Usuario (Reseñas y Favoritos)
+
+Puedes marcar productos como favoritos y escribir reseñas (calificación y comentario) sobre los productos que has pedido.
+
+Al enviar una reseña, nos otorgas una licencia mundial, no exclusiva, libre de regalías, para usar, reproducir, modificar y mostrar tu reseña en conexión con la Plataforma y la promoción de nuestros productos.
+
+Eres responsable del contenido de tus reseñas. No deben contener lenguaje ofensivo, difamatorio, ilegal o inapropiado.
+
+Nos reservamos el derecho de moderar o eliminar reseñas que violen estos Términos o que consideremos inapropiadas, sin previo aviso.
+
+Puedes gestionar tus favoritos y reseñas desde la sección "Mi Actividad".
+
+8. Privacidad y Datos Personales
+
+Recopilamos y utilizamos tu información personal (nombre, número de teléfono, direcciones, historial de pedidos, favoritos, reseñas) para operar la Plataforma, procesar tus pedidos, mejorar nuestro servicio y comunicarnos contigo.
+
+Utilizamos tu número de WhatsApp como identificador principal y para comunicaciones relacionadas con tus pedidos y el servicio.
+
+Podemos utilizar cookies o tecnologías similares para el funcionamiento de la Plataforma y mejorar tu experiencia.
+
+9. Comunicación
+
+Al registrarte, aceptas recibir comunicaciones de nuestra parte a través de WhatsApp relacionadas con tus pedidos (confirmaciones, actualizaciones, solicitudes de cancelación) y potencialmente otras notificaciones sobre el servicio o promociones.
+
+Si tu navegador lo permite y otorgas permiso, podríamos enviarte notificaciones push sobre actualizaciones importantes o promociones. Puedes gestionar estos permisos en la configuración de tu navegador o dispositivo.
+
+10. Propiedad Intelectual
+
+Todo el contenido de la Plataforma, incluyendo textos, gráficos, logos, imágenes y software, es propiedad de Entre Alas o sus licenciantes y está protegido por las leyes de propiedad intelectual. No puedes copiar, modificar, distribuir o utilizar dicho contenido sin nuestro permiso explícito por escrito.
+
+11. Limitación de Responsabilidad y Descargos de Garantía
+
+La Plataforma se proporciona "tal cual" y "según disponibilidad". No garantizamos que la Plataforma esté libre de errores o interrupciones.
+
+Alergias e Intolerancias: Es tu responsabilidad informarnos sobre cualquier alergia o intolerancia alimentaria al momento de realizar tu pedido (preferiblemente en el mensaje de confirmación de WhatsApp, o contactándonos directamente). Aunque tomamos precauciones, no podemos garantizar la ausencia total de alérgenos en nuestros productos o cocina. No nos hacemos responsables por reacciones alérgicas si no fuiste explícito sobre tus restricciones.
+
+En la máxima medida permitida por la ley, Entre Alas no será responsable por daños directos, indirectos, incidentales, especiales o consecuentes que resulten del uso o la imposibilidad de usar la Plataforma o el Servicio.
+
+Nuestra responsabilidad total por cualquier reclamo relacionado con un pedido se limitará al monto pagado por dicho pedido.
+
+12. Modificaciones a los Términos
+
+Nos reservamos el derecho de modificar estos Términos en cualquier momento. Publicaremos los Términos actualizados en la Plataforma. Se te podrá solicitar que aceptes los nuevos términos para continuar utilizando el Servicio. Es tu responsabilidad revisar los Términos periódicamente.
+
+13. Contacto
+
+Si tienes alguna pregunta sobre estos Términos y Condiciones, por favor contáctanos a través de 9631834700 o contacto.entrealas@gmail.com.

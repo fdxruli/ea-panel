@@ -19,7 +19,7 @@ if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !SUPABASE_URL || !SUPABASE_SERVIC
 }
 
 webpush.setVapidDetails(
-  'mailto:tu_email@ejemplo.com', // Reemplaza con tu email
+  'mailto:contacto.entrealas@gmail.com',
   VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY
 );
