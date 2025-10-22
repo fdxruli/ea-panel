@@ -8,6 +8,7 @@ import { useAlert } from '../context/AlertContext';
 import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
 import { useBusinessHours } from '../context/BusinessHoursContext';
+import DOMPurify from 'dompurify'; // Import DOMPurify
 
 const MapPinIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -40,10 +41,10 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     const [addressToEdit, setAddressToEdit] = useState(null);
     const [justSavedAddressId, setJustSavedAddressId] = useState(null);
     const [newCustomerName, setNewCustomerName] = useState('');
-    
+
     const [isScheduling, setIsScheduling] = useState(false);
     const [scheduledTime, setScheduledTime] = useState(null);
-    
+
     const [scheduleDetails, setScheduleDetails] = useState({
         date: '',
         hour: '00',
@@ -69,14 +70,14 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
 
             const finalDate = new Date(`${date}T00:00:00`);
             finalDate.setHours(twentyFourHour, parseInt(minute, 10));
-            
+
             setScheduledTime(finalDate.toISOString());
 
         } else {
             setScheduledTime(null);
         }
     }, [isScheduling, scheduleDetails]);
-    
+
     const handleToggleScheduling = (shouldSchedule) => {
         setIsScheduling(shouldSchedule);
         if (shouldSchedule && !scheduleDetails.date) {
@@ -117,16 +118,29 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
     const handleSaveAddress = async (addressData, shouldSave, addressId) => {
         if (shouldSave) {
             let response;
-            if (addressId) {
-                response = await supabase.from('customer_addresses').update(addressData).eq('id', addressId).select().single();
-            } else {
-                response = await supabase.from('customer_addresses').insert({ ...addressData, customer_id: customer.id }).select().single();
-            }
-            if (response.error) throw new Error(response.error.message);
+            const dataToSave = {
+                 customer_id: customer.id,
+                 label: DOMPurify.sanitize(addressData.label),
+                 address_reference: DOMPurify.sanitize(addressData.address_reference),
+                 latitude: addressData.latitude,
+                 longitude: addressData.longitude
+             };
 
-            refetchUserData();
-            setSelectedAddress(response.data);
-            showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
+            if (addressId) {
+                response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId).select().single();
+            } else {
+                 dataToSave.is_default = addresses.length === 0;
+                response = await supabase.from('customer_addresses').insert(dataToSave).select().single();
+            }
+
+            if (response.error) {
+                 showAlert(`Error al guardar: ${response.error.message}`);
+                 throw new Error(response.error.message);
+            } else {
+                showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
+                refetchUserData();
+                setSelectedAddress(response.data);
+            }
         } else {
             const temporaryAddress = {
                 id: `temp_${Date.now()}`,
@@ -139,7 +153,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         setAddressModalOpen(false);
         setAddressToEdit(null);
     };
-    
+
     const handleCreateProfile = async (e) => {
         e.preventDefault();
         if (!newCustomerName.trim()) {
@@ -181,9 +195,9 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         setIsSubmitting(true);
         try {
             const { data: orderData, error: orderError } = await supabase
-                .from('orders').insert({ 
-                    customer_id: customer.id, 
-                    total_amount: total, 
+                .from('orders').insert({
+                    customer_id: customer.id,
+                    total_amount: total,
                     status: 'pendiente',
                     scheduled_for: scheduledTime
                 }).select().single();
@@ -198,7 +212,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                     p_customer_id: customer.id,
                     p_discount_id: discount.details.id
                 });
-                
+
                 if (usageError) {
                     console.error("Error al registrar y desactivar el descuento:", usageError);
                 }
@@ -225,7 +239,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
 
             const businessNumber = import.meta.env.VITE_BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
-            
+
             showAlert(
                 "¡Pedido guardado! Serás redirigido a WhatsApp para confirmar.",
                 'info',
@@ -245,12 +259,12 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             setIsSubmitting(false);
         }
     };
-    
+
     const handleScheduleChange = (e) => {
         const { name, value } = e.target;
         setScheduleDetails(prev => ({...prev, [name]: value}));
     }
-    
+
     if (isLoading) {
         return (
             <div className={styles.modalOverlay}>
@@ -382,18 +396,18 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                         <div className={styles.detailsGroup}>
                             <h4>¿Cuándo lo quieres recibir?</h4>
                             <div className={styles.deliveryOptions}>
-                                <button 
-                                    className={!isScheduling ? styles.activeOption : ''} 
+                                <button
+                                    className={!isScheduling ? styles.activeOption : ''}
                                     onClick={() => handleToggleScheduling(false)}>
                                     Lo antes posible
                                 </button>
-                                <button 
+                                <button
                                     className={isScheduling ? styles.activeOption : ''}
                                     onClick={() => handleToggleScheduling(true)}>
                                     Programar
                                 </button>
                             </div>
-                            
+
                             {isScheduling && (
                                 <div className={styles.schedulePickerContainer}>
                                     <input
@@ -406,7 +420,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                                     />
                                     <div className={styles.timePickerContainer}>
                                         <select name="hour" value={scheduleDetails.hour} onChange={handleScheduleChange}>
-                                            {Array.from({length: 12}, (_, i) => i + 1).map(h => 
+                                            {Array.from({length: 12}, (_, i) => i + 1).map(h =>
                                                 <option key={h} value={String(h).padStart(2, '0')}>{String(h).padStart(2, '0')}</option>
                                             )}
                                         </select>
