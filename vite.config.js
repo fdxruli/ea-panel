@@ -1,3 +1,4 @@
+// vite.config.js - CORREGIDO
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
@@ -7,15 +8,22 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     react(),
-    svgr(),
+    svgr(), // Para importar SVGs como componentes React
     VitePWA({
-      registerType: 'autoUpdate',
-      injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg,gif}'],
+      registerType: 'autoUpdate', // Mantiene el Service Worker actualizado
+      // === CAMBIOS CLAVE AQUÍ ===
+      strategies: 'injectManifest', // 1. Especifica explícitamente la estrategia
+      srcDir: 'src',                // 2. Directorio donde está tu sw.js (ya estaba bien)
+      filename: 'sw.js',            // 3. Nombre de tu archivo fuente (ya estaba bien)
+      // === FIN CAMBIOS CLAVE ===
+
+      // Opcional: Habilita el SW en desarrollo (importante para probar)
+      devOptions: {
+        enabled: true,
+        type: 'module', // Necesario para importaciones ES Module en sw.js
       },
-      srcDir: 'src', // Directorio donde está nuestro sw.js
-      filename: 'sw.js', // Nombre de nuestro archivo de service worker
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+
+      // El manifest se queda igual
       manifest: {
         name: 'Entre Alas',
         short_name: 'EntreAlas',
