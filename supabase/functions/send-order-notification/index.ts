@@ -1,18 +1,28 @@
 // supabase/functions/send-order-notification/index.ts
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import admin from 'npm:firebase-admin@^12.0.0';
 // === 1️⃣ Variables de entorno ===
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-const FCM_SERVER_KEY = Deno.env.get('FCM_SERVER_KEY'); // 🔥 NUEVA CLAVE
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !FCM_SERVER_KEY) {
-  console.error('❌ Missing environment variables.');
+const FIREBASE_SERVICE_ACCOUNT_JSON = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !FIREBASE_SERVICE_ACCOUNT_JSON) {
+  console.error('❌ Missing environment variables. Make sure SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and FIREBASE_SERVICE_ACCOUNT_JSON are set.');
+  Deno.exit(1);
+}
+try {
+  const serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log('✅ Firebase Admin SDK initialized successfully.');
+} catch (e) {
+  console.error('❌ Failed to parse or initialize Firebase Admin SDK:', e.message);
   Deno.exit(1);
 }
 console.log('🚀 Edge Function initialized: send-order-notification');
-// === Función para eliminar suscripción inválida ===
-async function deleteInvalidSubscription(supabase, endpoint) {
+async function deleteInvalidSubscription(supabaseClient, endpoint) {
   console.warn(`🗑️ Deleting invalid subscription with endpoint: ${endpoint}`);
-  const { error: deleteError } = await supabase.from('push_subscriptions').delete().eq('subscription_token->>endpoint', endpoint); // Usar el endpoint completo para asegurar unicidad
+  const { error: deleteError } = await supabaseClient.from('push_subscriptions').delete().eq('subscription_token->>endpoint', endpoint);
   if (deleteError) {
     console.error(`❌ Failed to delete subscription ${endpoint}:`, deleteError.message);
   } else {
@@ -29,7 +39,6 @@ Deno.serve(async (req)=>{
     if (!order || !order.customer_id) {
       throw new Error('Invalid order data in payload.');
     }
-    // Solo notificar si el estado cambió realmente
     if (oldOrder && order.status === oldOrder.status) {
       console.log(`ℹ️ Order ${order.order_code} status did not change. Skipping.`);
       return new Response('Status did not change', {
@@ -37,10 +46,8 @@ Deno.serve(async (req)=>{
       });
     }
     console.log(`🔔 Order ${order.order_code} status changed to ${order.status}. Fetching subscriptions...`);
-    // Crear cliente Supabase dentro del handler
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: subscriptions, error } = await supabase.from('push_subscriptions').select('subscription_token') // Solo necesitamos el token
-    .eq('customer_id', order.customer_id);
+    const { data: subscriptions, error } = await supabase.from('push_subscriptions').select('subscription_token').eq('customer_id', order.customer_id);
     if (error) throw error;
     if (!subscriptions || subscriptions.length === 0) {
       console.warn(`⚠️ No push subscriptions found for customer: ${order.customer_id}`);
@@ -49,7 +56,6 @@ Deno.serve(async (req)=>{
       });
     }
     console.log(`✅ Found ${subscriptions.length} subscription(s). Sending via FCM...`);
-    // Mensajes según estado
     const statusMessages = {
       en_proceso: 'Tu pedido está en proceso.',
       en_envio: '¡Tu pedido ya va en camino!',
@@ -61,51 +67,44 @@ Deno.serve(async (req)=>{
       body: statusMessages[order.status] || `Estado: ${order.status}`
     };
     const dataPayload = {
-      url: '/mis-pedidos' // URL a abrir al hacer clic
+      url: '/mis-pedidos'
     };
     // === 3️⃣ Enviar notificaciones y manejar errores ===
-    const sendPromises = subscriptions.map(async ({ subscription_token })=>{
-      const endpoint = subscription_token?.endpoint; // Safely access endpoint
-      const fcmToken = subscription_token?.keys?.auth; // O usa el campo correcto donde guardas el token si es diferente
-      if (!endpoint || !fcmToken) {
-        console.warn('⚠️ Invalid subscription object:', subscription_token);
-        return; // Skip this subscription
+    const sendPromises = subscriptions.map(async ({ subscription_token: subscriptionRecord })=>{
+      console.log('DEBUG: subscriptionRecord raw from DB:', JSON.stringify(subscriptionRecord, null, 2));
+      let fcmToken;
+      let endpoint; // Mantener el endpoint para la eliminación
+      if (typeof subscriptionRecord === 'object' && subscriptionRecord !== null && subscriptionRecord.endpoint) {
+        endpoint = subscriptionRecord.endpoint; // Guarda el endpoint
+        // Extraer el token FCM del endpoint
+        const parts = endpoint.split('/');
+        fcmToken = parts[parts.length - 1]; // La última parte es el token FCM
       }
+      console.log('DEBUG: Extracted FCM Token:', fcmToken);
+      console.log('DEBUG: Type of Extracted FCM Token:', typeof fcmToken);
+      if (!fcmToken || typeof fcmToken !== 'string') {
+        console.warn('⚠️ Could not extract a valid FCM Token from PushSubscription. Skipping this subscription.', subscriptionRecord);
+        return;
+      }
+      const message = {
+        notification: notificationData,
+        data: dataPayload,
+        token: fcmToken
+      };
       try {
-        const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `key=${FCM_SERVER_KEY}`
-          },
-          body: JSON.stringify({
-            to: fcmToken,
-            notification: notificationData,
-            data: dataPayload // Envía datos adicionales aquí
-          })
-        });
-        // --- 👇 MANEJO DE RESPUESTA DE FCM ---
-        if (!fcmResponse.ok) {
-          // Si la respuesta NO fue exitosa (ej. 404, 410, etc.)
-          const status = fcmResponse.status;
-          const responseText = await fcmResponse.text(); // Leer el cuerpo para logs
-          console.error(`❌ FCM error for token ${fcmToken} (Endpoint: ${endpoint}) - Status: ${status}, Response: ${responseText}`);
-          // Si el error es 404 (Not Found) o 410 (Gone), el token es inválido
-          if (status === 404 || status === 410) {
-            await deleteInvalidSubscription(supabase, endpoint);
-          }
+        const response = await admin.messaging().send(message);
+        console.log(`📨 FCM success for token ${fcmToken}:`, JSON.stringify(response));
+      } catch (error) {
+        console.error(`❌ Error sending FCM message to token ${fcmToken}:`, error.message);
+        if (error.code === 'messaging/invalid-argument' || error.code === 'messaging/registration-token-not-registered' || error.code === 'messaging/not-found') {
+          console.warn(`🗑️ FCM Token inválido o no registrado. Eliminando suscripción para endpoint: ${endpoint}`);
+          await deleteInvalidSubscription(supabase, endpoint);
         } else {
-          // Si la respuesta fue exitosa (ej. 200 OK)
-          const responseJson = await fcmResponse.json(); // FCM suele devolver JSON en éxito
-          console.log(`📨 FCM success for ${fcmToken} (Endpoint: ${endpoint}):`, JSON.stringify(responseJson));
+          console.error(`💥 Otro error inesperado del Admin SDK al enviar FCM:`, error);
         }
-      // --- 👆 FIN MANEJO DE RESPUESTA ---
-      } catch (fetchError) {
-        // Error al intentar contactar FCM (problema de red, etc.)
-        console.error(`💥 Network or fetch error sending to ${endpoint}:`, fetchError.message);
       }
     });
-    await Promise.all(sendPromises); // Esperar a que todos los envíos terminen
+    await Promise.all(sendPromises);
     console.log('✅ Push notification sending process completed.');
     return new Response(JSON.stringify({
       success: true

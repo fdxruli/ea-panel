@@ -253,3 +253,6 @@ Deno.serve(async (req)=>{
     });
   }
 });
+
+
+podemos hacer que en notificationManager.jsx inicialice el sdk de firebase asi no tendremos problemas en el futuro si queremos escalar la app
