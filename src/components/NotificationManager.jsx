@@ -1,97 +1,82 @@
-// ea-panel-main - copia/src/components/NotificationManager.jsx
-
+// src/components/NotificationManager.jsx
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useUserData } from '../context/UserDataContext';
-
-// La función urlBase64ToUint8Array no cambia
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { requestFCMToken, onForegroundMessage } from '../lib/firebaseConfig';
 
 const NotificationManager = () => {
   const { customer } = useUserData();
 
   useEffect(() => {
-    // Solo proceder si tenemos un cliente y el navegador soporta notificaciones push
-    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !customer) {
-      return;
-    }
+    if (!customer) return;
 
-    const subscribeUser = async () => {
+    const setupNotifications = async () => {
       try {
-        const swRegistration = await navigator.serviceWorker.ready;
-        let subscription = await swRegistration.pushManager.getSubscription();
+        console.log('🚀 Configurando notificaciones...');
 
-        if (subscription === null) {
-          console.log('No subscription found, creating a new one...');
-          const applicationServerKey = urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY);
-          subscription = await swRegistration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey, // Asegúrate de que se usa aquí
-          });
-          console.log('New subscription created:', subscription.toJSON());
-        } else {
-          console.log('Existing subscription found:', subscription.toJSON());
+        // El service worker ya está registrado por Vite PWA
+        // Solo necesitamos obtener el token FCM
+        const fcmToken = await requestFCMToken();
+
+        if (!fcmToken) {
+          console.error('❌ No se obtuvo token FCM');
+          return;
         }
 
-        if (subscription) {
-          console.log(`Checking if subscription for endpoint exists for customer ${customer.id}...`);
-          const { data, error } = await supabase
+        console.log('📱 Token FCM obtenido');
+
+        // Guardar en Supabase
+        const { data: existing, error: checkError } = await supabase
+          .from('push_subscriptions')
+          .select('id, subscription_token')
+          .eq('customer_id', customer.id)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('❌ Error verificando token:', checkError);
+          return;
+        }
+
+        if (!existing || existing.subscription_token !== fcmToken) {
+          const { error: upsertError } = await supabase
             .from('push_subscriptions')
-            .select('id')
-            .eq('customer_id', customer.id)
-            .eq('subscription_token->>endpoint', subscription.toJSON().endpoint)
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error checking for existing subscription:', error);
-            return;
-          }
-
-          if (!data) {
-            console.log('Subscription not found in DB. Saving now...');
-            const { error: insertError } = await supabase.from('push_subscriptions').insert({
+            .upsert({
               customer_id: customer.id,
-              subscription_token: subscription.toJSON(),
+              subscription_token: fcmToken,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'customer_id'
             });
 
-            if (insertError) {
-              console.error('Failed to save subscription:', insertError);
-            } else {
-              console.log('✅ Push subscription successfully saved to DB.');
-            }
+          if (upsertError) {
+            console.error('❌ Error guardando:', upsertError);
           } else {
-            console.log('Subscription already exists in DB. No action needed.');
+            console.log('✅ Token guardado');
           }
+        } else {
+          console.log('ℹ️ Token ya actualizado');
         }
+
       } catch (error) {
-        console.error('Failed to subscribe the user: ', error);
+        console.error('❌ Error setup:', error);
       }
     };
 
-    if (Notification.permission === 'granted') {
-      console.log('Permission already granted. Proceeding to subscribe.');
-      subscribeUser();
-    } else if (Notification.permission !== 'denied') {
-      console.log('Requesting notification permission...');
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-          console.log('Notification permission granted.');
-          subscribeUser();
-        } else {
-          console.warn('Notification permission denied.');
+    setupNotifications();
+
+    // Listener para mensajes en primer plano
+    onForegroundMessage((payload) => {
+      new Notification(
+        payload.notification?.title || 'Notificación',
+        {
+          body: payload.notification?.body || '',
+          icon: '/pwa-192x192.png',
+          data: payload.data
         }
-      });
-    }
-  }, [customer]); // Se ejecuta cada vez que el objeto `customer` cambia
+      );
+    });
+
+  }, [customer]);
 
   return null;
 };
