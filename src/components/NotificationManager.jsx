@@ -35,7 +35,7 @@ const NotificationManager = () => {
           const applicationServerKey = urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY);
           subscription = await swRegistration.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey,
+            applicationServerKey, // Asegúrate de que se usa aquí
           });
           console.log('New subscription created:', subscription.toJSON());
         } else {
