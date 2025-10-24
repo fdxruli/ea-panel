@@ -1,29 +1,44 @@
-// vite.config.js - CORREGIDO
+// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import svgr from 'vite-plugin-svgr';
 import { VitePWA } from 'vite-plugin-pwa';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    svgr(), // Para importar SVGs como componentes React
+    svgr(),
     VitePWA({
-      registerType: 'autoUpdate', // Mantiene el Service Worker actualizado
-      // === CAMBIOS CLAVE AQUÍ ===
-      strategies: 'injectManifest', // 1. Especifica explícitamente la estrategia
-      srcDir: 'src',                // 2. Directorio donde está tu sw.js (ya estaba bien)
-      filename: 'sw.js',            // 3. Nombre de tu archivo fuente (ya estaba bien)
-      // === FIN CAMBIOS CLAVE ===
-
-      // Opcional: Habilita el SW en desarrollo (importante para probar)
-      devOptions: {
-        enabled: true,
-        type: 'module', // Necesario para importaciones ES Module en sw.js
+      registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      
+      // ✅ AGREGAR ESTA CONFIGURACIÓN
+      injectManifest: {
+        // Patrones de archivos a incluir en el precache
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg,json,woff,woff2,ttf,eot}'
+        ],
+        // Archivos grandes que quieres incluir (opcional)
+        maximumFileSizeToCacheInBytes: 3000000, // 3MB
+        // Directorio de salida (por defecto es 'dist')
+        globDirectory: 'dist',
       },
 
-      // El manifest se queda igual
+      // Opciones de desarrollo
+      devOptions: {
+        enabled: true,
+        type: 'module',
+        navigateFallback: 'index.html',
+      },
+
+      // ✅ Agregar workbox para sourcemaps (opcional, útil para debugging)
+      workbox: {
+        sourcemap: true,
+      },
+
+      // Manifest PWA
       manifest: {
         name: 'Entre Alas',
         short_name: 'EntreAlas',
