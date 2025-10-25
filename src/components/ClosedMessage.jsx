@@ -1,5 +1,3 @@
-// src/components/ClosedMessage.jsx (MODIFICADO)
-
 import React, { useState, useEffect } from 'react'; // <-- Import useState and useEffect
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import LoadingSpinner from './LoadingSpinner';
@@ -7,49 +5,50 @@ import FueraHorarioIcon from '../assets/icons/fuera-horario.svg?react';
 import styles from './ClosedMessage.module.css';
 
 const ClosedMessage = () => {
-    const { isOpen, message, loading } = useBusinessHours();
+    const { isOpen, message, loading } = useBusinessHours(); // Obtiene el estado y el mensaje del contexto
     // --- NUEVO ESTADO ---
-    // Controls if the user has dismissed the message for the current session
+    // Controla si el usuario ha descartado el mensaje en la sesión actual
     const [isVisible, setIsVisible] = useState(true);
 
     // --- NUEVO EFECTO ---
-    // Reset visibility if the business status changes (e.g., opens while user is browsing)
+    // Resetea la visibilidad si el estado del negocio cambia (ej. abre mientras el usuario navega)
     useEffect(() => {
         if (isOpen) {
-            setIsVisible(false); // Hide if business opens
+            setIsVisible(false); // Oculta si el negocio abre
         } else {
-            setIsVisible(true); // Show again if business closes (or on initial load closed)
+            setIsVisible(true); // Muestra de nuevo si cierra (o en carga inicial si está cerrado)
         }
-    }, [isOpen]); // Depend on isOpen
+    }, [isOpen]); // Depende de isOpen
 
     const handleCloseOverlay = () => {
-        setIsVisible(false); // User dismisses the message
+        setIsVisible(false); // El usuario descarta el mensaje
     };
 
-    // Still return null if loading
+    // Aún retorna null si está cargando
     if (loading) {
         return null;
     }
 
     // --- CONDICIÓN MODIFICADA ---
-    // Only render the overlay if the business is CLOSED *and* the user hasn't dismissed it
+    // Solo renderiza el overlay si el negocio está CERRADO *y* el usuario no lo ha descartado
     if (isOpen || !isVisible) {
         return null;
     }
 
-    // Overlay is shown
+    // Se muestra el overlay
     return (
-        // Remove the onClick from the overlay itself if you only want the button to close it
+        // Se puede quitar el onClick del overlay si solo quieres que el botón cierre
         <div className={styles.overlay}>
             <div className={styles.content}>
                 {/* --- BOTÓN AÑADIDO --- */}
                 <button onClick={handleCloseOverlay} className={styles.closeButton} aria-label="Cerrar mensaje">
-                    &times; {/* Simple 'x' icon */}
+                    &times; {/* Icono simple 'x' */}
                 </button>
                 <FueraHorarioIcon className={styles.icon} aria-label="Negocio cerrado" />
                 <h2>¡Estamos Cerrados!</h2>
+                {/* Muestra el mensaje detallado obtenido del contexto (que viene del backend) */}
                 <p>{message || 'Consulta nuestros horarios para más detalles.'}</p>
-                {/* Optional reminder */}
+                {/* Recordatorio opcional */}
                 <p className={styles.reminder}>Puedes explorar el menú, pero no podrás realizar pedidos hasta que abramos.</p>
             </div>
         </div>

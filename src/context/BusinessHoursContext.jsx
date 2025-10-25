@@ -8,21 +8,22 @@ const BusinessHoursContext = createContext();
 export const useBusinessHours = () => useContext(BusinessHoursContext);
 
 export const BusinessHoursProvider = ({ children }) => {
-    const [businessStatus, setBusinessStatus] = useState({ 
-        isOpen: false, 
-        message: 'Verificando horario...', 
-        loading: true 
+    const [businessStatus, setBusinessStatus] = useState({
+        isOpen: false,
+        message: 'Verificando horario...',
+        loading: true
     });
 
     // --- 👇 MEJORA: Envolvemos en useCallback para consistencia y estabilidad ---
     const checkBusinessHours = useCallback(async () => {
         try {
+            // Llama a la función de Supabase (aquí es donde se genera el mensaje mejorado)
             const { data, error } = await supabase.rpc('get_business_status');
             if (error) throw error;
-            
+
             const newStatus = {
                 isOpen: data.is_open,
-                message: data.message,
+                message: data.message, // Este mensaje viene del backend con la lógica mejorada
                 loading: false,
             };
 
@@ -40,24 +41,28 @@ export const BusinessHoursProvider = ({ children }) => {
     }, []); // <-- Array vacío para una función estable
 
     useEffect(() => {
+        // Carga desde caché si existe y no está expirado
         const { data: cachedStatus, isStale } = getCache(CACHE_KEYS.BUSINESS_STATUS, CACHE_TTL.BUSINESS_STATUS);
 
         if (cachedStatus) {
             setBusinessStatus({ ...cachedStatus, loading: false });
         }
 
+        // Si el caché está expirado o no existe, busca datos frescos
         if (isStale) {
             checkBusinessHours();
         }
 
-        const interval = setInterval(checkBusinessHours, 60000); 
+        // Verifica periódicamente (cada minuto)
+        const interval = setInterval(checkBusinessHours, 60000);
         return () => clearInterval(interval);
     }, [checkBusinessHours]);
 
     useEffect(() => {
+        // Escucha cambios en tiempo real en las tablas de horarios y excepciones
         const handleChanges = () => {
             console.log('Cambio detectado en los horarios, actualizando instantáneamente...');
-            checkBusinessHours();
+            checkBusinessHours(); // Vuelve a verificar inmediatamente si hay cambios
         };
 
         const channel = supabase.channel('public:business_hours_changes')
