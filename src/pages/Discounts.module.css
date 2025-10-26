@@ -1,120 +1,328 @@
 .container {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ===== FORM CARD ===== */
+.formCard {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.formCard h2 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    color: var(--text-primary);
 }
 
 .formGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    align-items: flex-end;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
 }
 
 .formGroup label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.addButton {
-    grid-column: -1 / -2; 
-    padding: 0.8rem 1.5rem;
     font-weight: 600;
-    font-size: 0.9rem;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: var(--color-primary);
-    color: white;
-}
-.addButton:hover {
-    background-color: var(--color-primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
 }
 
-
-.toggleButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: var(--bg-secondary);
-    color: var(--text-secondary);
+.formGroup input,
+.formGroup select {
+    padding: 10px 12px;
     border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all var(--transition-speed) ease;
 }
-.toggleButton:hover {
+
+.formGroup input:focus,
+.formGroup select:focus {
+    outline: none;
     border-color: var(--color-primary);
-    color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.1);
 }
 
-
-.toggleButton.active {
-    background-color: var(--color-success);
-    color: white;
-    border-color: var(--color-success);
+.formGroup small {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
 }
 
-.toggleButton.inactive {
-    background-color: var(--color-error);
-    color: white;
-    border-color: var(--color-error);
+.checkboxGroup {
+    display: flex;
+    align-items: center;
 }
 
-.statusBadge {
-    padding: 0.3rem 0.8rem;
-    border-radius: 50px;
-    font-size: 0.8rem;
+.checkboxGroup label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: normal;
+    color: var(--text-primary);
+}
+
+.checkboxGroup input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+}
+
+.submitButton {
+    padding: 12px 32px;
+    background: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
     font-weight: 600;
-    text-transform: capitalize;
-    color: white;
-    text-align: center;
-    display: inline-block;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
 }
 
-.statusActive {
-    background-color: var(--color-success);
+.submitButton:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-color);
 }
 
-.statusInactive {
-    background-color: var(--text-secondary);
+.submitButton:disabled {
+    background: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* ===== TABLE CARD ===== */
+.tableCard {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 24px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.tableCard h2 {
+    margin: 0 0 16px 0;
+    font-size: 20px;
+    color: var(--text-primary);
+}
+
+.tableWrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+}
+
+.discountsTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    background: var(--bg-secondary);
+}
+
+.discountsTable thead {
+    background: var(--bg-primary);
+}
+
+.discountsTable th {
+    padding: 14px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.discountsTable td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.discountsTable tbody tr {
+    background: var(--bg-secondary);
+    transition: background-color var(--transition-speed) ease;
+}
+
+.discountsTable tbody tr:hover {
+    background: var(--bg-primary);
+}
+
+/* ===== TABLE CELLS ===== */
+.codeCell code {
+    background: var(--bg-primary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: var(--color-primary);
+    font-weight: 600;
 }
 
 .typeBadge {
-     background-color: var(--color-primary-light);
-     color: var(--color-primary-dark);
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--color-accent);
+    color: var(--text-light);
 }
 
-@media (max-width: 600px) {
-    .addButton {
-        grid-column: 1 / -1;
-        margin-top: 1rem;
+.usageBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.statusBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.statusBadge.active {
+    background: var(--color-success);
+    color: var(--text-light);
+}
+
+.statusBadge.inactive {
+    background: var(--color-error);
+    color: var(--text-light);
+}
+
+.emptyMessage {
+    text-align: center !important;
+    padding: 40px 20px !important;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* ===== ACTIONS ===== */
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.toggleButton {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-speed) ease;
+}
+
+.toggleButton:hover {
+    background: var(--color-primary);
+    color: var(--text-light);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .discountsTable {
+        font-size: 12px;
+    }
+
+    .discountsTable th,
+    .discountsTable td {
+        padding: 10px 8px;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .toggleButton {
+        width: 100%;
     }
 }
 
-/* src/pages/Discounts.module.css (AÑADIR AL FINAL) */
-.fullWidth {
-    grid-column: 1 / -1;
+/* ===== DARK MODE OVERRIDES ===== */
+[data-theme="dark"] .discountsTable tbody tr:hover {
+    background: rgba(77, 182, 172, 0.08);
 }
-.checkboxLabel {
+
+[data-theme="dark"] .codeCell code {
+    background: rgba(77, 182, 172, 0.1);
+}
+
+/* ===== LAYOUT HORIZONTAL DE CHECKBOXES ===== */
+.checkboxesRow {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.8rem;
-    font-weight: 500;
-    color: var(--text-primary);
+    flex-wrap: wrap;
+    gap: 20px; /* Espacio entre checkboxes */
+    grid-column: 1 / -1; /* Ocupa todo el ancho del grid */
+    padding: 10px 0;
 }
-.checkboxLabel input {
-    width: auto;
+
+.checkboxesRow .checkboxGroup {
+    flex: 0 1 auto; /* No crece, se ajusta al contenido */
+    min-width: max-content;
+    padding: 0;
+}
+
+.checkboxesRow .checkboxGroup label {
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* En móvil, permite que ocupen ancho completo */
+@media (max-width: 768px) {
+    .checkboxesRow {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .checkboxesRow .checkboxGroup label {
+        font-size: 13px;
+        white-space: normal;
+    }
 }

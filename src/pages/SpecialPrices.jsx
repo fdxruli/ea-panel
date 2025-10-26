@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import SpecialPriceForm from '../components/SpecialPriceForm';
 import styles from './SpecialPrices.module.css';
@@ -7,9 +7,70 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
+// ==================== COMPONENTES MEMOIZADOS ====================
+
+// Componente de fila de tabla memoizado
+const PriceTableRow = memo(({
+  price,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  getTargetName,
+  getAudience
+}) => {
+  return (
+    <tr>
+      <td>{getTargetName(price)}</td>
+      <td>${parseFloat(price.override_price).toFixed(2)}</td>
+      <td>
+        {price.start_date} al {price.end_date}
+      </td>
+      <td>{getAudience(price)}</td>
+      <td>{price.reason || '-'}</td>
+      {(canEdit || canDelete) && (
+        <td className={styles.actions}>
+          {canEdit && (
+            <button
+              onClick={() => onEdit(price)}
+              className={styles.editButton}
+              aria-label="Editar promoción"
+            >
+              ✏️ Editar
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => onDelete(price)}
+              className={styles.deleteButton}
+              aria-label="Eliminar promoción"
+            >
+              🗑️ Eliminar
+            </button>
+          )}
+        </td>
+      )}
+    </tr>
+  );
+}, (prevProps, nextProps) => {
+  // Comparación personalizada para evitar re-renders innecesarios
+  return (
+    prevProps.price.id === nextProps.price.id &&
+    prevProps.price.override_price === nextProps.price.override_price &&
+    prevProps.price.start_date === nextProps.price.start_date &&
+    prevProps.price.end_date === nextProps.price.end_date &&
+    prevProps.canEdit === nextProps.canEdit &&
+    prevProps.canDelete === nextProps.canDelete
+  );
+});
+PriceTableRow.displayName = 'PriceTableRow';
+
+// ==================== COMPONENTE PRINCIPAL ====================
+
 const SpecialPrices = () => {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
+
   const [specialPrices, setSpecialPrices] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -21,33 +82,44 @@ const SpecialPrices = () => {
   const canEdit = hasPermission('special-prices.edit');
   const canDelete = hasPermission('special-prices.delete');
 
+  // ✅ OPTIMIZACIÓN: Fetch con filtrado en el servidor
   const fetchData = useCallback(async () => {
-    setLoading(true); // Asegurar que el estado de carga se active
+    setLoading(true);
     try {
-      // Pedir todos los datos necesarios en paralelo
       const [pricesRes, productsRes, categoriesRes] = await Promise.all([
+        // Usar RPC optimizada
+        supabase.rpc('get_special_prices_with_details'),
+
         supabase
-          .from('special_prices')
-          .select(`*, products (name), categories (name)`) // Incluir nombres relacionados
-          .order('end_date', { ascending: false }),
-        supabase.from('products').select('id, name').order('name'), // Ordenar productos
-        supabase.from('categories').select('id, name').order('name') // Ordenar categorías
+          .from('products')
+          .select('id, name')
+          .eq('is_active', true)
+          .order('name'),
+
+        supabase
+          .from('categories')
+          .select('id, name')
+          .order('name')
       ]);
 
       if (pricesRes.error) throw pricesRes.error;
       if (productsRes.error) throw productsRes.error;
       if (categoriesRes.error) throw categoriesRes.error;
 
-      setSpecialPrices(pricesRes.data || []);
+      // Adaptar datos de RPC
+      const adaptedPrices = pricesRes.data.map(price => ({
+        ...price,
+        products: price.product_name ? { name: price.product_name } : null,
+        categories: price.category_name ? { name: price.category_name } : null
+      }));
+
+      setSpecialPrices(adaptedPrices);
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
 
     } catch (error) {
+      console.error('Fetch error:', error);
       showAlert(`Error al cargar datos: ${error.message}`);
-      // Considerar resetear estados en caso de error
-      setSpecialPrices([]);
-      setProducts([]);
-      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -55,75 +127,143 @@ const SpecialPrices = () => {
 
   useEffect(() => {
     fetchData();
-    // Suscripción a cambios en tiempo real
-    const channel = supabase.channel('public:special_prices')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, (payload) => {
-        console.log('Change detected in special prices!', payload);
-        fetchData(); // Volver a cargar los datos cuando hay cambios
-      })
+  }, [fetchData]);
+
+  // ✅ OPTIMIZACIÓN: Realtime selectivo sin refetch completo
+  useEffect(() => {
+    const channel = supabase
+      .channel('special-prices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'special_prices',
+          select: 'id, product_id, category_id, override_price, start_date, end_date, reason, target_customer_ids'
+        },
+        (payload) => {
+          console.log('Special price change detected:', payload);
+
+          if (payload.eventType === 'INSERT') {
+            // Agregar nuevo precio a la lista
+            fetchData(); // Necesita refetch para traer relaciones
+          } else if (payload.eventType === 'UPDATE') {
+            // Actualizar precio existente
+            setSpecialPrices(prev => prev.map(price =>
+              price.id === payload.new.id
+                ? { ...price, ...payload.new }
+                : price
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            // Eliminar de la lista
+            setSpecialPrices(prev => prev.filter(price => price.id !== payload.old.id));
+          }
+        }
+      )
       .subscribe();
 
-    // Limpieza al desmontar el componente
     return () => {
-        supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
-  }, [fetchData]); // fetchData ahora es una dependencia estable
+  }, [fetchData]);
 
-  const handleFormSubmit = () => {
-    fetchData(); // Recargar datos después de enviar el formulario
+  // Handlers memoizados
+  const handleFormSubmit = useCallback(() => {
+    fetchData();
     setIsFormVisible(false);
-    setEditingPrice(null); // Limpiar el estado de edición
-  };
+    setEditingPrice(null);
+  }, [fetchData]);
 
-  const handleEdit = (price) => {
+  const handleEdit = useCallback((price) => {
     if (!canEdit) return;
     setEditingPrice(price);
     setIsFormVisible(true);
-  };
+  }, [canEdit]);
 
-  const handleDelete = (price) => {
+  const handleDelete = useCallback((price) => {
     if (!canDelete) return;
-    setPriceToDelete(price); // Establecer el precio a eliminar para el modal de confirmación
-  };
+    setPriceToDelete(price);
+  }, [canDelete]);
 
-  const confirmDelete = async () => {
-    if (!priceToDelete || !canDelete) return; // Doble verificación
+  const confirmDelete = useCallback(async () => {
+    if (!priceToDelete || !canDelete) return;
 
     try {
-      const { error } = await supabase.from('special_prices').delete().eq('id', priceToDelete.id);
+      const { error } = await supabase
+        .from('special_prices')
+        .delete()
+        .eq('id', priceToDelete.id);
+
       if (error) throw error;
-      showAlert('Promoción eliminada con éxito.');
-      fetchData(); // Recargar datos después de eliminar
+
+      showAlert('Promoción eliminada con éxito.', 'success');
+
+      // Actualización optimista
+      setSpecialPrices(prev => prev.filter(p => p.id !== priceToDelete.id));
+
     } catch (error) {
+      console.error('Delete error:', error);
       showAlert(`Error al eliminar: ${error.message}`);
     } finally {
-      setPriceToDelete(null); // Cerrar el modal de confirmación
+      setPriceToDelete(null);
     }
-  };
+  }, [priceToDelete, canDelete, showAlert]);
 
-  // Función auxiliar para obtener el nombre del objetivo (Producto o Categoría)
-  const getTargetName = (price) => {
-    if (price.product_id && price.products) return `Producto: ${price.products.name}`;
-    if (price.category_id && price.categories) return `Categoría: ${price.categories.name}`;
-    if (price.product_id) return `Producto (ID: ${price.product_id.substring(0,6)}...)`; // Fallback si el producto no se cargó
-    if (price.category_id) return `Categoría (ID: ${price.category_id.substring(0,6)}...)`; // Fallback
+  // ✅ Funciones auxiliares memoizadas
+  const getTargetName = useCallback((price) => {
+    if (price.product_id && price.products) {
+      return `Producto: ${price.products.name}`;
+    }
+    if (price.category_id && price.categories) {
+      return `Categoría: ${price.categories.name}`;
+    }
+    if (price.product_id) {
+      return `Producto (ID: ${price.product_id.substring(0, 6)}...)`;
+    }
+    if (price.category_id) {
+      return `Categoría (ID: ${price.category_id.substring(0, 6)}...)`;
+    }
     return 'N/A';
-  };
+  }, []);
 
-   // Función auxiliar para mostrar a quién aplica el precio
-  const getAudience = (price) => {
+  const getAudience = useCallback((price) => {
     if (price.target_customer_ids === null || price.target_customer_ids?.length === 0) {
       return "Todos";
     }
     const count = price.target_customer_ids.length;
     return `Específicos (${count})`;
-  };
+  }, []);
 
+  // ✅ OPTIMIZACIÓN: Separación de listas con useMemo
+  const { activeAndUpcomingPrices, pastPrices } = useMemo(() => {
+    const now = new Date().toISOString().split('T')[0];
 
-  // Separar precios activos/futuros y pasados
-  const now = new Date().toISOString().split('T')[0];
-  const activeAndUpcomingPrices = specialPrices.filter(p => !p.end_date || p.end_date >= now);
-  const pastPrices = specialPrices.filter(p => p.end_date && p.end_date < now);
+    const active = specialPrices.filter(p =>
+      !p.end_date || p.end_date >= now
+    );
+
+    const past = specialPrices.filter(p =>
+      p.end_date && p.end_date < now
+    );
+
+    return {
+      activeAndUpcomingPrices: active,
+      pastPrices: past
+    };
+  }, [specialPrices]);
+
+  // ✅ Estadísticas memoizadas
+  const stats = useMemo(() => {
+    const now = new Date().toISOString().split('T')[0];
+    return {
+      total: specialPrices.length,
+      active: activeAndUpcomingPrices.length,
+      past: pastPrices.length,
+      forAll: specialPrices.filter(p =>
+        !p.target_customer_ids || p.target_customer_ids.length === 0
+      ).length
+    };
+  }, [specialPrices, activeAndUpcomingPrices, pastPrices]);
 
   if (loading) {
     return <LoadingSpinner />;
@@ -131,119 +271,122 @@ const SpecialPrices = () => {
 
   return (
     <div className={styles.container}>
-      <h1>Gestión de Precios Especiales</h1>
+      {/* Header */}
+      <div className={styles.header}>
+        <div>
+          <h1>Precios Especiales</h1>
+          <p className={styles.subtitle}>
+            {stats.total} promociones totales • {stats.active} activas • {stats.forAll} para todos
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setIsFormVisible(true)}
+            className={styles.addButton}
+          >
+            + Nueva Promoción
+          </button>
+        )}
+      </div>
 
-      {/* Sección del Formulario (Crear/Editar) */}
-      {canEdit && (
-          <div className="form-container"> {/* Reutilizar estilo si existe */}
-              <h3>{isFormVisible ? (editingPrice ? 'Editando Promoción' : 'Crear Nueva Promoción') : 'Crear Nueva Promoción'}</h3>
-              {!isFormVisible &&
-                <button className="admin-button-primary" onClick={() => { setEditingPrice(null); setIsFormVisible(true); }}>
-                  + Añadir Promoción
-                </button>
-              }
-              {isFormVisible && (
-                <>
-                  <SpecialPriceForm
-                    products={products}
-                    categories={categories}
-                    onSubmit={handleFormSubmit}
-                    initialData={editingPrice} // Pasar datos iniciales si se está editando
-                  />
-                   <button className="admin-button-secondary" style={{marginTop: '1rem'}} onClick={() => { setIsFormVisible(false); setEditingPrice(null); }}>
-                    Cancelar
-                  </button>
-                </>
-              )}
-          </div>
-      )}
-
-      {/* Tabla de Promociones Activas y Próximas */}
-      <div className={styles.table}>
-        <h3>Promociones Activas y Próximas ({activeAndUpcomingPrices.length})</h3>
-        <div className="table-wrapper"> {/* Reutilizar estilo si existe */}
-          <table className="products-table"> {/* Reutilizar estilo si existe */}
+      {/* Tabla de Promociones Activas/Futuras */}
+      <section className={styles.section}>
+        <h2>Promociones Activas y Futuras</h2>
+        <div className={styles.tableWrapper}>
+          <table className={styles.pricesTable}>
             <thead>
               <tr>
                 <th>Objetivo</th>
                 <th>Precio Especial</th>
                 <th>Vigencia</th>
-                <th>Visible Para</th> {/* Nueva Columna */}
+                <th>Visible Para</th>
                 <th>Motivo</th>
                 {(canEdit || canDelete) && <th>Acciones</th>}
               </tr>
             </thead>
             <tbody>
               {activeAndUpcomingPrices.length === 0 ? (
-                <tr><td colSpan={(canEdit || canDelete) ? 6 : 5}>No hay promociones activas o futuras.</td></tr>
+                <tr>
+                  <td
+                    colSpan={(canEdit || canDelete) ? 6 : 5}
+                    className={styles.emptyMessage}
+                  >
+                    No hay promociones activas o futuras.
+                  </td>
+                </tr>
               ) : (
                 activeAndUpcomingPrices.map(price => (
-                  <tr key={price.id}>
-                    <td>{getTargetName(price)}</td>
-                    <td>${parseFloat(price.override_price).toFixed(2)}</td> {/* Asegurar formato */}
-                    <td>{price.start_date} al {price.end_date}</td>
-                    <td>{getAudience(price)}</td> {/* Mostrar audiencia */}
-                    <td>{price.reason || '-'}</td>
-                    {(canEdit || canDelete) && (
-                        <td>
-                          <div className={styles.actionsContainer}>
-                              {canEdit && <button onClick={() => handleEdit(price)} className="admin-button-secondary">Editar</button>}
-                              {canDelete && <button onClick={() => handleDelete(price)} className="admin-button-danger">Eliminar</button>}
-                          </div>
-                        </td>
-                    )}
-                  </tr>
+                  <PriceTableRow
+                    key={price.id}
+                    price={price}
+                    canEdit={canEdit}
+                    canDelete={canDelete}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    getTargetName={getTargetName}
+                    getAudience={getAudience}
+                  />
                 ))
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
 
       {/* Tabla de Promociones Pasadas */}
-      <div className={styles.table}>
-        <h3>Promociones Pasadas ({pastPrices.length})</h3>
-         <div className="table-wrapper">
-           <table className="products-table">
-            <thead>
-              <tr>
-                <th>Objetivo</th>
-                <th>Precio Especial</th>
-                <th>Vigencia</th>
-                <th>Visible Para</th> {/* Nueva Columna */}
-                <th>Motivo</th>
-                {/* No hay acciones para precios pasados */}
-              </tr>
-            </thead>
-            <tbody>
-              {pastPrices.length === 0 ? (
-                 <tr><td colSpan="5">No hay promociones pasadas.</td></tr>
-              ) : (
-                  pastPrices.map(price => (
-                    <tr key={price.id}>
-                      <td>{getTargetName(price)}</td>
-                      <td>${parseFloat(price.override_price).toFixed(2)}</td>
-                      <td>{price.start_date} al {price.end_date}</td>
-                      <td>{getAudience(price)}</td> {/* Mostrar audiencia */}
-                      <td>{price.reason || '-'}</td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {pastPrices.length > 0 && (
+        <section className={styles.section}>
+          <h2>Promociones Pasadas</h2>
+          <div className={styles.tableWrapper}>
+            <table className={styles.pricesTable}>
+              <thead>
+                <tr>
+                  <th>Objetivo</th>
+                  <th>Precio Especial</th>
+                  <th>Vigencia</th>
+                  <th>Visible Para</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pastPrices.map(price => (
+                  <tr key={price.id}>
+                    <td>{getTargetName(price)}</td>
+                    <td>${parseFloat(price.override_price).toFixed(2)}</td>
+                    <td>{price.start_date} al {price.end_date}</td>
+                    <td>{getAudience(price)}</td>
+                    <td>{price.reason || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
-      {/* Modal de Confirmación para Eliminar */}
+      {/* Modal de Formulario */}
+      {isFormVisible && (
+        <SpecialPriceForm
+          isOpen={isFormVisible}
+          onClose={() => {
+            setIsFormVisible(false);
+            setEditingPrice(null);
+          }}
+          onSubmit={handleFormSubmit}
+          products={products}
+          categories={categories}
+          editingPrice={editingPrice}
+        />
+      )}
+
+      {/* Modal de Confirmación */}
       <ConfirmModal
-          isOpen={!!priceToDelete}
-          onClose={() => setPriceToDelete(null)}
-          onConfirm={confirmDelete}
-          title="¿Confirmar Eliminación?"
-        >
-          ¿Estás seguro de que deseas eliminar la promoción para "{priceToDelete && getTargetName(priceToDelete)}"? Esta acción no se puede deshacer.
-      </ConfirmModal>
-
+        isOpen={!!priceToDelete}
+        onClose={() => setPriceToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Eliminar Promoción"
+        message={`¿Estás seguro de que deseas eliminar esta promoción? Esta acción no se puede deshacer.`}
+      />
     </div>
   );
 };

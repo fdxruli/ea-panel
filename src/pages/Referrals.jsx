@@ -1,35 +1,86 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import styles from './Referrals.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ManageReferralLevelsModal from '../components/ManageReferralLevelsModal';
 import EditReferralCountModal from '../components/EditReferralCountModal';
-import { useAdminAuth } from '../context/AdminAuthContext'; // Importar hook
+import { useAdminAuth } from '../context/AdminAuthContext';
 
-const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3"/></svg>;
-const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>;
-const GiftIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>;
+// ==================== ICONOS MEMOIZADOS ====================
 
-const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
+const TrophyIcon = memo(() => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+        <path d="M4 22h16"></path>
+        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+    </svg>
+));
+TrophyIcon.displayName = 'TrophyIcon';
+
+const UserPlusIcon = memo(() => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <line x1="19" y1="8" x2="19" y2="14"></line>
+        <line x1="22" y1="11" x2="16" y2="11"></line>
+    </svg>
+));
+UserPlusIcon.displayName = 'UserPlusIcon';
+
+const GiftIcon = memo(() => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="20 12 20 22 4 22 4 12"></polyline>
+        <rect x="2" y="7" width="20" height="5"></rect>
+        <line x1="12" y1="22" x2="12" y2="7"></line>
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+    </svg>
+));
+GiftIcon.displayName = 'GiftIcon';
+
+// ==================== COMPONENTE: WELCOME REWARD EDITOR ====================
+
+const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
     const { hasPermission } = useAdminAuth();
     const canEdit = hasPermission('referidos.edit');
-    const [reward, setReward] = useState({ enabled: true, message: '', discount_code: '' });
+
+    const [reward, setReward] = useState({
+        enabled: true,
+        message: '',
+        discount_code: ''
+    });
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         const fetchReward = async () => {
-            const { data, error } = await supabase.from('settings').select('value').eq('key', 'welcome_reward').single();
-            if (data) {
-                setReward(data.value);
+            try {
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('value')
+                    .eq('key', 'welcome_reward')
+                    .single();
+
+                if (error) throw error;
+                if (data) setReward(data.value);
+            } catch (error) {
+                console.error('Error fetching reward:', error);
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
         };
+
         fetchReward();
     }, []);
 
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (!canEdit) return;
+
+        setSaving(true);
         try {
             const { data: discount, error: findError } = await supabase
                 .from('discounts')
@@ -38,166 +89,434 @@ const WelcomeRewardEditor = ({ showAlert, onUpdate }) => {
                 .single();
 
             if (findError) {
-                showAlert(`Error: El código de descuento "${reward.discount_code}" no existe. Por favor, créalo primero en la sección de Descuentos.`);
+                showAlert(`Error: El código "${reward.discount_code}" no existe. Créalo primero en Descuentos.`);
                 return;
             }
 
             const { error: updateError } = await supabase
                 .from('discounts')
-                .update({ requires_referred_status: true, is_single_use: true })
+                .update({
+                    requires_referred_status: true,
+                    is_single_use: true
+                })
                 .eq('id', discount.id);
-            
+
             if (updateError) throw updateError;
 
-            const { error: settingsError } = await supabase.from('settings').update({ value: reward }).eq('key', 'welcome_reward');
+            const { error: settingsError } = await supabase
+                .from('settings')
+                .update({ value: reward })
+                .eq('key', 'welcome_reward');
+
             if (settingsError) throw settingsError;
 
-            showAlert('Recompensa de bienvenida actualizada. El código ahora es de un solo uso y solo para referidos.');
+            showAlert('Recompensa actualizada con éxito.', 'success');
             onUpdate();
-
         } catch (error) {
-            showAlert(`Error al guardar: ${error.message}`);
+            showAlert(`Error: ${error.message}`);
+        } finally {
+            setSaving(false);
         }
-    };
+    }, [canEdit, reward, showAlert, onUpdate]);
 
-    if (loading) return <p>Cargando editor...</p>;
+    if (loading) return <div className={styles.loadingEditor}>Cargando editor...</div>;
 
     return (
-        <div className={styles.editorContainer}>
+        <div className={styles.rewardEditor}>
+            <h3><GiftIcon /> Recompensa de Bienvenida para Referidos</h3>
+
             <div className={styles.formGroup}>
-                <label>Mensaje para el nuevo invitado:</label>
-                <textarea
-                    rows="4"
-                    value={reward.message}
-                    onChange={e => setReward({ ...reward, message: e.target.value })}
-                    placeholder="Ej: ¡Bienvenido! Usa el código {CODE} para un descuento."
-                    disabled={!canEdit}
-                />
-                <small>Usa `&#123;CODE&#125;` donde quieras que aparezca el código.</small>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={reward.enabled}
+                        onChange={(e) => setReward(prev => ({ ...prev, enabled: e.target.checked }))}
+                        disabled={!canEdit}
+                    />
+                    <span>Habilitar recompensa de bienvenida</span>
+                </label>
             </div>
-            <div className={styles.formGroup}>
-                <label>Código de descuento a aplicar:</label>
-                <input
-                    type="text"
-                    value={reward.discount_code}
-                    onChange={e => setReward({ ...reward, discount_code: e.target.value.toUpperCase() })}
-                    disabled={!canEdit}
-                />
-                <small>Este código debe existir en la sección "Descuentos" y será de un solo uso.</small>
-            </div>
-            {canEdit && <button onClick={handleSave} className="admin-button-primary">Guardar y Aplicar Reglas</button>}
+
+            {reward.enabled && (
+                <>
+                    <div className={styles.formGroup}>
+                    <small>Usa " &#123;CODE&#125; " donde quieras que aparezca el código.</small>
+                        <label htmlFor="message">Mensaje de Bienvenida</label>
+                        <textarea
+                            id="message"
+                            rows="3"
+                            value={reward.message}
+                            onChange={(e) => setReward(prev => ({ ...prev, message: e.target.value }))}
+                            placeholder="¡Gracias por unirte! Aquí está tu recompensa..."
+                            disabled={!canEdit}
+                        />
+                    </div>
+                    
+                    <div className={styles.formGroup}>
+                        <label htmlFor="discount_code">Código de Descuento</label>
+                        <input
+                            id="discount_code"
+                            type="text"
+                            value={reward.discount_code}
+                            onChange={(e) => setReward(prev => ({ ...prev, discount_code: e.target.value.toUpperCase() }))}
+                            placeholder="BIENVENIDA10"
+                            disabled={!canEdit}
+                        />
+                        <small>Este código debe existir en la sección de Descuentos</small>
+                    </div>
+
+                    {canEdit && (
+                        <button
+                            onClick={handleSave}
+                            className={styles.saveButton}
+                            disabled={saving}
+                        >
+                            {saving ? 'Guardando...' : 'Guardar Cambios'}
+                        </button>
+                    )}
+                </>
+            )}
         </div>
     );
-};
+});
+WelcomeRewardEditor.displayName = 'WelcomeRewardEditor';
 
+// ==================== COMPONENTE: REFERRAL ROW ====================
+
+const ReferralRow = memo(({ customer, onEdit, canEdit }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <>
+            <tr onClick={() => setIsExpanded(!isExpanded)} className={styles.clickableRow}>
+                <td>{customer.customer_name}</td>
+                <td>
+                    <code className={styles.referralCode}>{customer.referral_code}</code>
+                </td>
+                <td>
+                    <span className={styles.countBadge}>{customer.referral_count}</span>
+                </td>
+                <td>
+                    <span className={styles.levelBadge}>{customer.level_name || 'Novato'}</span>
+                </td>
+                {canEdit && (
+                    <td>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(customer);
+                            }}
+                            className={styles.editButton}
+                        >
+                            ✏️ Editar
+                        </button>
+                    </td>
+                )}
+            </tr>
+
+            {isExpanded && (
+                <tr className={styles.expandedRow}>
+                    <td colSpan={canEdit ? 5 : 4}>
+                        <div className={styles.referredList}>
+                            <h4>Clientes referidos por {customer.customer_name}:</h4>
+                            {customer.referred_customers?.length > 0 ? (
+                                <ul>
+                                    {customer.referred_customers.map((referred, idx) => (
+                                        <li key={idx}>
+                                            {referred.name} ({referred.phone})
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className={styles.emptyState}>Sin referidos aún.</p>
+                            )}
+                        </div>
+                    </td>
+                </tr>
+            )}
+        </>
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.customer.id === nextProps.customer.id &&
+        prevProps.customer.referral_count === nextProps.customer.referral_count &&
+        prevProps.customer.level_name === nextProps.customer.level_name &&
+        prevProps.canEdit === nextProps.canEdit
+    );
+});
+ReferralRow.displayName = 'ReferralRow';
+
+// ==================== COMPONENTE PRINCIPAL ====================
 
 export default function Referrals() {
     const { showAlert } = useAlert();
-    const { hasPermission } = useAdminAuth(); // Usar hook
+    const { hasPermission } = useAdminAuth();
+
+    const [customersWithReferrals, setCustomersWithReferrals] = useState([]);
+    const [referralLevels, setReferralLevels] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [referralData, setReferralData] = useState([]);
-    const [levels, setLevels] = useState([]);
-    const [rewards, setRewards] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [expandedCustomerId, setExpandedCustomerId] = useState(null);
     const [isLevelsModalOpen, setIsLevelsModalOpen] = useState(false);
-    const [customerToEdit, setCustomerToEdit] = useState(null);
-    
+    const [editingCustomer, setEditingCustomer] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const canView = hasPermission('referidos.view');
     const canEdit = hasPermission('referidos.edit');
 
     const fetchData = useCallback(async () => {
+        if (!canView) return;
+
+        setLoading(true);
         try {
-            const { data: refData, error: refError } = await supabase.rpc('get_detailed_referral_info');
-            if (refError) throw refError;
-            const { data: levelsData, error: levelsError } = await supabase.from('referral_levels').select('*').order('min_referrals');
-            if (levelsError) throw levelsError;
-            const { data: rewardsData, error: rewardsError } = await supabase.from('rewards').select('*');
-            if (rewardsError) throw rewardsError;
-            setReferralData(refData);
-            setLevels(levelsData);
-            setRewards(rewardsData);
+            const [customersRes, levelsRes] = await Promise.all([
+                supabase
+                    .from('customers')
+                    .select(`
+                    id,
+                    name,
+                    phone,
+                    referral_code,
+                    referral_count,
+                    referrer_id
+                `)
+                    .not('referral_code', 'is', null)
+                    .order('referral_count', { ascending: false }),
+
+                supabase
+                    .from('referral_levels')
+                    .select('*')
+                    .order('min_referrals', { ascending: true })  // ✅ CAMBIADO de required_referrals a min_referrals
+            ]);
+
+            if (customersRes.error) throw customersRes.error;
+            if (levelsRes.error) throw levelsRes.error;
+
+            const customers = customersRes.data || [];
+            const levels = levelsRes.data || [];
+
+            // Fetch referidos para cada cliente
+            const customersWithDetails = await Promise.all(
+                customers.map(async (customer) => {
+                    const { data: referred } = await supabase
+                        .from('customers')
+                        .select('name, phone')
+                        .eq('referrer_id', customer.id);  // ✅ CORRECTO
+
+                    // ✅ Buscar nivel según min_referrals
+                    const level = levels
+                        .filter(l => customer.referral_count >= l.min_referrals)
+                        .sort((a, b) => b.min_referrals - a.min_referrals)[0] || { name: 'Novato' };
+
+                    return {
+                        ...customer,
+                        customer_name: customer.name,
+                        level_name: level.name,
+                        referred_customers: referred || []
+                    };
+                })
+            );
+
+            setCustomersWithReferrals(customersWithDetails);
+            setReferralLevels(levels);
+
         } catch (error) {
-            showAlert(`Error al cargar los datos: ${error.message}`);
+            console.error('Fetch error:', error);
+            showAlert(`Error: ${error.message}`);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    }, [showAlert]);
+    }, [canView, showAlert]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    const topReferrers = useMemo(() => referralData.filter(c => c.referral_count > 0).slice(0, 5), [referralData]);
-    const filteredCustomers = useMemo(() => {
-        if (!searchTerm) return referralData;
-        return referralData.filter(c => 
-            c.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.referral_code.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [referralData, searchTerm]);
+    // ✅ Realtime selectivo
+    useEffect(() => {
+        if (!canView) return;
 
-    const toggleDetails = (customerId) => setExpandedCustomerId(prev => prev === customerId ? null : customerId);
+        const channel = supabase
+            .channel('referrals-changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'customers'
+            }, () => fetchData())
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'referral_levels'
+            }, () => fetchData())
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    }, [canView, fetchData]);
+
+    // ✅ Filtrado memoizado
+    const filteredCustomers = useMemo(() => {
+        if (!searchTerm) return customersWithReferrals;
+
+        const lowerSearch = searchTerm.toLowerCase();
+        return customersWithReferrals.filter(c =>
+            c.customer_name.toLowerCase().includes(lowerSearch) ||
+            c.referral_code.toLowerCase().includes(lowerSearch) ||
+            c.phone.includes(searchTerm)
+        );
+    }, [customersWithReferrals, searchTerm]);
+
+    // ✅ Estadísticas memoizadas
+    const stats = useMemo(() => {
+        const totalReferrers = customersWithReferrals.length;
+        const totalReferrals = customersWithReferrals.reduce((sum, c) => sum + c.referral_count, 0);
+        const avgReferralsPerCustomer = totalReferrers > 0
+            ? (totalReferrals / totalReferrers).toFixed(1)
+            : 0;
+
+        return { totalReferrers, totalReferrals, avgReferralsPerCustomer };
+    }, [customersWithReferrals]);
+
+    const handleEditCustomer = useCallback((customer) => {
+        setEditingCustomer(customer);
+    }, []);
+
+    const handleCloseEditModal = useCallback(() => {
+        setEditingCustomer(null);
+        fetchData();
+    }, [fetchData]);
 
     if (loading) return <LoadingSpinner />;
 
-    return (
-        <>
+    if (!canView) {
+        return (
             <div className={styles.container}>
-                <h1><UserPlusIcon /> Sistema de Referidos</h1>
-                <div className={styles.mainGrid}>
-                    <div className={styles.sideColumn}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3><TrophyIcon /> Niveles y Recompensas</h3>
-                                {canEdit && <button onClick={() => setIsLevelsModalOpen(true)} className="admin-button-secondary">Gestionar</button>}
-                            </div>
-                            <div className={styles.levelsContainer}>
-                                {levels.length > 0 ? levels.map(level => (
-                                     <div key={level.id} className={styles.levelCard}><h4>{level.name} ({level.min_referrals}+ refs)</h4></div>
-                                )) : <p>Crea tu primer nivel.</p>}
-                            </div>
-                        </div>
-
-                        <div className={styles.card}>
-                            <h3><GiftIcon /> Recompensa de Bienvenida</h3>
-                            <WelcomeRewardEditor showAlert={showAlert} onUpdate={fetchData} />
-                        </div>
-                        
-                        <div className={styles.card}>
-                            <h3>⭐ Top 5 Referidores</h3>
-                            <ul className={styles.topList}>
-                                {topReferrers.length > 0 ? topReferrers.map((customer, index) => (
-                                    <li key={customer.customer_id}><span className={styles.rank}>{index + 1}</span><div className={styles.customerInfo}><span>{customer.customer_name}</span><small>{customer.level_name || 'Novato'}</small></div><span className={styles.refCount}>{customer.referral_count} refs</span></li>
-                                )) : <p>Nadie ha referido aún.</p>}
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className={styles.mainColumn}>
-                        <div className={styles.card}>
-                            <h3>Todos los Clientes</h3>
-                            <input type="text" placeholder="Buscar por nombre o código..." className={styles.searchInput} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                            <div className="table-wrapper">
-                                <table className={`products-table ${styles.customerTable}`}>
-                                    <thead><tr><th>Cliente</th><th>Código</th><th>Referidos</th><th>Nivel</th><th>Acciones</th></tr></thead>
-                                    <tbody>
-                                        {filteredCustomers.map(customer => (
-                                            <React.Fragment key={customer.customer_id}>
-                                                <tr><td>{customer.customer_name}</td><td>{customer.referral_code}</td><td>{customer.referral_count}</td><td>{customer.level_name || 'Novato'}</td><td><div className={styles.actionsCell}>{canEdit && <button onClick={() => setCustomerToEdit(customer)} className={styles.editButton}>Editar</button>}<button onClick={() => toggleDetails(customer.customer_id)} disabled={!customer.referred_customers} className={styles.viewButton}>{expandedCustomerId === customer.customer_id ? 'Ocultar' : 'Ver'}</button></div></td></tr>
-                                                {expandedCustomerId === customer.customer_id && (
-                                                    <tr className={styles.detailsRow}><td colSpan="5"><div className={styles.detailsContent}><h4>Clientes referidos por {customer.customer_name}:</h4>{customer.referred_customers?.length > 0 ? (<ul>{customer.referred_customers.map(ref => (<li key={ref.phone}><span>{ref.name} ({ref.phone})</span><small>Registrado: {new Date(ref.registered_at).toLocaleDateString()}</small></li>))}</ul>) : <p>Sin referidos aún.</p>}</div></td></tr>
-                                                )}
-                                            </React.Fragment>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
+                <div className={styles.noPermission}>
+                    <p>No tienes permisos para ver esta sección.</p>
                 </div>
             </div>
+        );
+    }
 
-            <ManageReferralLevelsModal isOpen={isLevelsModalOpen} onClose={() => setIsLevelsModalOpen(false)} onUpdate={fetchData} levels={levels} rewards={rewards} />
-            <EditReferralCountModal isOpen={!!customerToEdit} onClose={() => setCustomerToEdit(null)} onUpdate={fetchData} customer={customerToEdit} />
-        </>
+    return (
+        <div className={styles.container}>
+            {/* Header */}
+            <div className={styles.header}>
+                <div>
+                    <h1><TrophyIcon /> Sistema de Referidos</h1>
+                    <p className={styles.subtitle}>
+                        {stats.totalReferrers} clientes refiriendo • {stats.totalReferrals} referidos totales •
+                        Promedio {stats.avgReferralsPerCustomer} referidos/cliente
+                    </p>
+                </div>
+                {canEdit && (
+                    <button
+                        className={styles.manageLevelsButton}
+                        onClick={() => setIsLevelsModalOpen(true)}
+                    >
+                        <TrophyIcon /> Gestionar Niveles
+                    </button>
+                )}
+            </div>
+
+            {/* Welcome Reward Editor */}
+            <WelcomeRewardEditor showAlert={showAlert} onUpdate={fetchData} />
+
+            {/* Niveles de Referido */}
+            <div className={styles.levelsSection}>
+                <h2>Niveles de Referido</h2>
+                {referralLevels.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <p>No hay niveles configurados.</p>
+                        {canEdit && (
+                            <button
+                                onClick={() => setIsLevelsModalOpen(true)}
+                                className={styles.createFirstButton}
+                            >
+                                Crea tu primer nivel
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <div className={styles.levelsGrid}>
+                        {referralLevels.map(level => (
+                            <div key={level.id} className={styles.levelCard}>
+                                <h3>{level.name}</h3>
+                                <p className={styles.levelRequirement}>
+                                    {level.min_referrals} referidos requeridos
+                                </p>
+                                {level.reward_description && (
+                                    <p className={styles.levelReward}>
+                                        🎁 {level.reward_description}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Búsqueda */}
+            <div className={styles.searchBar}>
+                <input
+                    type="text"
+                    placeholder="Buscar por nombre, código o teléfono..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={styles.searchInput}
+                />
+            </div>
+
+            {/* Tabla de Clientes con Referidos */}
+            <div className={styles.tableSection}>
+                <h2><UserPlusIcon /> Clientes con Referidos</h2>
+
+                {filteredCustomers.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <p>Nadie ha referido aún.</p>
+                    </div>
+                ) : (
+                    <div className={styles.tableWrapper}>
+                        <table className={styles.referralsTable}>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Código</th>
+                                    <th>Referidos</th>
+                                    <th>Nivel</th>
+                                    {canEdit && <th>Acciones</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredCustomers.map(customer => (
+                                    <ReferralRow
+                                        key={customer.id}
+                                        customer={customer}
+                                        onEdit={handleEditCustomer}
+                                        canEdit={canEdit}
+                                    />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+
+            {/* Modales */}
+            {isLevelsModalOpen && (
+                <ManageReferralLevelsModal
+                    isOpen={isLevelsModalOpen}
+                    onClose={() => {
+                        setIsLevelsModalOpen(false);
+                        fetchData();
+                    }}
+                />
+            )}
+
+            {editingCustomer && (
+                <EditReferralCountModal
+                    isOpen={!!editingCustomer}
+                    onClose={handleCloseEditModal}
+                    customer={editingCustomer}
+                />
+            )}
+        </div>
     );
 }

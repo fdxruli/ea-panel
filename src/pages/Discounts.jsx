@@ -1,13 +1,74 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useAlert } from "../context/AlertContext";
 import styles from "./Discounts.module.css";
 import { useAdminAuth } from '../context/AdminAuthContext';
 
+// ==================== COMPONENTES MEMOIZADOS ====================
+
+// Componente de fila de tabla memoizado
+const DiscountTableRow = memo(({
+    discount,
+    canEdit,
+    onToggle,
+    getTargetName
+}) => {
+    return (
+        <tr>
+            <td className={styles.codeCell}>
+                <code>{discount.code}</code>
+            </td>
+            <td>{discount.value}%</td>
+            <td>
+                <span className={styles.typeBadge}>
+                    {discount.type}
+                </span>
+            </td>
+            <td>{getTargetName(discount)}</td>
+            <td>
+                {discount.start_date || "N/A"} - {discount.end_date || "N/A"}
+            </td>
+            <td>
+                <span className={styles.usageBadge}>
+                    {discount.is_single_use ? 'Único' : 'Múltiple'}
+                </span>
+            </td>
+            <td>
+                <span className={`${styles.statusBadge} ${discount.is_active ? styles.active : styles.inactive}`}>
+                    {discount.is_active ? "Activo" : "Inactivo"}
+                </span>
+            </td>
+            {canEdit && (
+                <td className={styles.actions}>
+                    <button
+                        onClick={() => onToggle(discount.id, discount.is_active)}
+                        className={styles.toggleButton}
+                        aria-label={discount.is_active ? "Desactivar" : "Activar"}
+                    >
+                        {discount.is_active ? "🔴 Desactivar" : "🟢 Activar"}
+                    </button>
+                </td>
+            )}
+        </tr>
+    );
+}, (prevProps, nextProps) => {
+    // Comparación personalizada para evitar re-renders innecesarios
+    return (
+        prevProps.discount.id === nextProps.discount.id &&
+        prevProps.discount.is_active === nextProps.discount.is_active &&
+        prevProps.discount.code === nextProps.discount.code &&
+        prevProps.canEdit === nextProps.canEdit
+    );
+});
+DiscountTableRow.displayName = 'DiscountTableRow';
+
+// ==================== COMPONENTE PRINCIPAL ====================
+
 export default function Discounts() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
+
     const [discounts, setDiscounts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [products, setProducts] = useState([]);
@@ -22,28 +83,43 @@ export default function Discounts() {
         is_active: true,
         is_single_use: false
     });
-    
+
     const canEdit = hasPermission('descuentos.edit');
 
+    // ✅ OPTIMIZACIÓN: Fetch con selección específica de columnas
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const discountsPromise = supabase.from("discounts").select("*").order("created_at", { ascending: false });
-            const categoriesPromise = supabase.from("categories").select("*");
-            const productsPromise = supabase.from("products").select("id, name");
-
-            const [discountsRes, categoriesRes, productsRes] = await Promise.all([discountsPromise, categoriesPromise, productsPromise]);
+            const [discountsRes, categoriesRes, productsRes] = await Promise.all([
+                supabase
+                    .from("discounts")
+                    .select("id, code, type, value, target_id, start_date, end_date, is_active, is_single_use, created_at")
+                    .order("created_at", { ascending: false }),
+                supabase
+                    .from("categories")
+                    .select("id, name")
+                    .order("name"),
+                supabase
+                    .from("products")
+                    .select("id, name")
+                    .eq("is_active", true)
+                    .order("name")
+            ]);
 
             if (discountsRes.error) throw discountsRes.error;
             if (categoriesRes.error) throw categoriesRes.error;
             if (productsRes.error) throw productsRes.error;
-            
-            setDiscounts(discountsRes.data);
-            setCategories(categoriesRes.data);
-            setProducts(productsRes.data);
+
+            setDiscounts(discountsRes.data || []);
+            setCategories(categoriesRes.data || []);
+            setProducts(productsRes.data || []);
 
         } catch (error) {
+            console.error('Fetch error:', error);
             showAlert(`Error al cargar datos: ${error.message}`);
+            setDiscounts([]);
+            setCategories([]);
+            setProducts([]);
         } finally {
             setLoading(false);
         }
@@ -51,184 +127,387 @@ export default function Discounts() {
 
     useEffect(() => {
         fetchData();
-        const channel = supabase.channel('public:discounts')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'discounts' }, (payload) => {
-            console.log('Change detected in discounts!', payload);
-            fetchData();
-          })
-          .subscribe();
+    }, [fetchData]);
+
+    // ✅ OPTIMIZACIÓN: Realtime selectivo sin refetch completo
+    useEffect(() => {
+        const channel = supabase
+            .channel('discounts-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'discounts',
+                    select: 'id, code, type, value, target_id, start_date, end_date, is_active, is_single_use'
+                },
+                (payload) => {
+                    console.log('Discount change detected:', payload);
+
+                    if (payload.eventType === 'INSERT') {
+                        // Agregar nuevo descuento
+                        setDiscounts(prev => [payload.new, ...prev]);
+                    } else if (payload.eventType === 'UPDATE') {
+                        // Actualizar descuento existente
+                        setDiscounts(prev => prev.map(d =>
+                            d.id === payload.new.id ? { ...d, ...payload.new } : d
+                        ));
+                    } else if (payload.eventType === 'DELETE') {
+                        // Eliminar de la lista
+                        setDiscounts(prev => prev.filter(d => d.id !== payload.old.id));
+                    }
+                }
+            )
+            .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [fetchData]);
+    }, []);
 
-    const validateDiscount = () => {
-        if (!newDiscount.code || !newDiscount.value) {
-            showAlert("El código y el valor en % son obligatorios.");
+    // ✅ OPTIMIZACIÓN: Validación memoizada
+    const validateDiscount = useCallback(() => {
+        // Validar código (solo letras, números, guiones)
+        if (!newDiscount.code || !/^[A-Z0-9-]+$/.test(newDiscount.code)) {
+            showAlert("El código es obligatorio y solo puede contener letras mayúsculas, números y guiones.");
             return false;
         }
+
+        // Validar valor
+        const value = parseFloat(newDiscount.value);
+        if (!newDiscount.value || isNaN(value) || value <= 0 || value > 100) {
+            showAlert("El valor debe ser un número entre 1 y 100.");
+            return false;
+        }
+
+        // Validar target para tipos específicos
         if (newDiscount.type !== "global" && !newDiscount.target_id) {
             showAlert("Debe seleccionar un producto o categoría para este tipo de descuento.");
             return false;
         }
-        if (newDiscount.start_date && newDiscount.end_date && newDiscount.end_date < newDiscount.start_date) {
-            showAlert("La fecha final no puede ser anterior a la inicial.");
+
+        // Validar fechas
+        if (newDiscount.start_date && newDiscount.end_date) {
+            if (newDiscount.end_date < newDiscount.start_date) {
+                showAlert("La fecha final no puede ser anterior a la inicial.");
+                return false;
+            }
+        }
+
+        // Validar código único
+        const codeExists = discounts.some(d =>
+            d.code.toLowerCase() === newDiscount.code.toLowerCase()
+        );
+        if (codeExists) {
+            showAlert("Ya existe un descuento con este código.");
             return false;
         }
-        return true;
-    };
 
-    const addDiscount = async () => {
+        return true;
+    }, [newDiscount, discounts, showAlert]);
+
+    // Handler para añadir descuento
+    const addDiscount = useCallback(async () => {
         if (!canEdit) return;
         if (!validateDiscount()) return;
-        
-        // Convertimos las fechas vacías a null antes de insertar
-        const dataToInsert = {
-            ...newDiscount,
-            target_id: newDiscount.target_id || null,
-            start_date: newDiscount.start_date || null,
-            end_date: newDiscount.end_date || null
-        };
-        
-        const { error } = await supabase.from("discounts").insert([dataToInsert]);
-        if (error) {
-            showAlert(`Error al crear el descuento: ${error.message}`);
-        } else {
-            showAlert("¡Descuento creado con éxito!");
-            // Reseteamos el formulario al estado inicial
+
+        try {
+            const dataToInsert = {
+                code: newDiscount.code.toUpperCase().trim(),
+                type: newDiscount.type,
+                value: parseFloat(newDiscount.value),
+                target_id: newDiscount.target_id || null,
+                start_date: newDiscount.start_date || null,
+                end_date: newDiscount.end_date || null,
+                is_active: newDiscount.is_active,
+                is_single_use: newDiscount.is_single_use
+            };
+
+            const { error } = await supabase
+                .from("discounts")
+                .insert([dataToInsert]);
+
+            if (error) throw error;
+
+            showAlert("¡Descuento creado con éxito!", 'success');
+
+            // Reset formulario
             setNewDiscount({
-                code: "", type: "global", value: "", target_id: null,
-                start_date: "", end_date: "", is_active: true, is_single_use: false
+                code: "",
+                type: "global",
+                value: "",
+                target_id: null,
+                start_date: "",
+                end_date: "",
+                is_active: true,
+                is_single_use: false
             });
-            fetchData();
-        }
-    };
 
-    const toggleActive = async (id, isActive) => {
+        } catch (error) {
+            console.error('Add error:', error);
+            showAlert(`Error al crear el descuento: ${error.message}`);
+        }
+    }, [canEdit, validateDiscount, newDiscount, showAlert]);
+
+    // Handler para toggle de estado
+    const toggleActive = useCallback(async (id, isActive) => {
         if (!canEdit) return;
-        const { error } = await supabase.from("discounts").update({ is_active: !isActive }).eq("id", id);
-        if (error) {
-            showAlert(`Error al actualizar: ${error.message}`);
-        } else {
-            showAlert("Estado del descuento actualizado.");
-            fetchData();
-        }
-    };
-    
-    const getTargetName = (d) => {
-        if (d.type === "global") return "Toda la tienda";
-        if (d.type === "category") return categories.find(c => c.id === d.target_id)?.name || "Categoría no encontrada";
-        if (d.type === "product") return products.find(p => p.id === d.target_id)?.name || "Producto no encontrado";
-        return "N/A";
-    }
 
-    if (loading) return <LoadingSpinner />;
+        try {
+            const { error } = await supabase
+                .from("discounts")
+                .update({ is_active: !isActive })
+                .eq("id", id);
+
+            if (error) throw error;
+
+            showAlert("Estado del descuento actualizado.", 'success');
+
+            // Actualización optimista
+            setDiscounts(prev => prev.map(d =>
+                d.id === id ? { ...d, is_active: !isActive } : d
+            ));
+
+        } catch (error) {
+            console.error('Toggle error:', error);
+            showAlert(`Error al actualizar: ${error.message}`);
+        }
+    }, [canEdit, showAlert]);
+
+    // ✅ OPTIMIZACIÓN: Función getTargetName memoizada
+    const getTargetName = useCallback((discount) => {
+        if (discount.type === "global") return "Toda la tienda";
+        if (discount.type === "category") {
+            const category = categories.find(c => c.id === discount.target_id);
+            return category ? category.name : "Categoría no encontrada";
+        }
+        if (discount.type === "product") {
+            const product = products.find(p => p.id === discount.target_id);
+            return product ? product.name : "Producto no encontrado";
+        }
+        return "N/A";
+    }, [categories, products]);
+
+    // ✅ OPTIMIZACIÓN: Filtrado de opciones según tipo
+    const targetOptions = useMemo(() => {
+        if (newDiscount.type === "category") {
+            return categories;
+        } else if (newDiscount.type === "product") {
+            return products;
+        }
+        return [];
+    }, [newDiscount.type, categories, products]);
+
+    // ✅ Estadísticas memoizadas
+    const stats = useMemo(() => {
+        const active = discounts.filter(d => d.is_active).length;
+        const singleUse = discounts.filter(d => d.is_single_use).length;
+        const global = discounts.filter(d => d.type === 'global').length;
+
+        return {
+            total: discounts.length,
+            active,
+            inactive: discounts.length - active,
+            singleUse,
+            global
+        };
+    }, [discounts]);
+
+    // Handler para cambios de formulario
+    const handleFormChange = useCallback((field, value) => {
+        setNewDiscount(prev => {
+            const updated = { ...prev, [field]: value };
+
+            // Limpiar target_id si el tipo cambia a global
+            if (field === 'type' && value === 'global') {
+                updated.target_id = null;
+            }
+
+            return updated;
+        });
+    }, []);
+
+    if (loading) {
+        return <LoadingSpinner />;
+    }
 
     return (
         <div className={styles.container}>
-            <h1>Gestión de Descuentos</h1>
-            
+            {/* Header con estadísticas */}
+            <div className={styles.header}>
+                <div>
+                    <h1>Gestión de Descuentos</h1>
+                    <p className={styles.subtitle}>
+                        {stats.total} descuentos • {stats.active} activos • {stats.singleUse} uso único • {stats.global} globales
+                    </p>
+                </div>
+            </div>
+
+            {/* Formulario de creación */}
             {canEdit && (
-                <div className="form-container">
-                    <h3>Crear Nuevo Descuento</h3>
+                <div className={styles.formCard}>
+                    <h2>Crear Nuevo Descuento</h2>
                     <div className={styles.formGrid}>
                         <div className={styles.formGroup}>
-                            <label htmlFor="code">Código</label>
-                            <input id="code" type="text" placeholder="Ej: BIENVENIDO10" value={newDiscount.code} onChange={(e) => setNewDiscount({ ...newDiscount, code: e.target.value.toUpperCase() })} />
+                            <label htmlFor="code">Código *</label>
+                            <input
+                                id="code"
+                                type="text"
+                                placeholder="VERANO2025"
+                                value={newDiscount.code}
+                                onChange={(e) => handleFormChange('code', e.target.value.toUpperCase())}
+                                maxLength={20}
+                                required
+                            />
+                            <small>Solo letras mayúsculas, números y guiones</small>
                         </div>
-                         <div className={styles.formGroup}>
-                            <label htmlFor="value">Valor (%)</label>
-                            <input id="value" type="number" placeholder="Ej: 15" value={newDiscount.value} onChange={(e) => setNewDiscount({ ...newDiscount, value: e.target.value })} />
-                        </div>
+
                         <div className={styles.formGroup}>
-                            <label htmlFor="type">Tipo de Descuento</label>
-                            <select id="type" value={newDiscount.type} onChange={(e) => setNewDiscount({ ...newDiscount, type: e.target.value, target_id: "" })}>
-                                <option value="global">Global</option>
+                            <label htmlFor="value">Descuento (%) *</label>
+                            <input
+                                id="value"
+                                type="number"
+                                placeholder="10"
+                                min="1"
+                                max="100"
+                                value={newDiscount.value}
+                                onChange={(e) => handleFormChange('value', e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label htmlFor="type">Tipo *</label>
+                            <select
+                                id="type"
+                                value={newDiscount.type}
+                                onChange={(e) => handleFormChange('type', e.target.value)}
+                            >
+                                <option value="global">Global (Toda la tienda)</option>
                                 <option value="category">Por Categoría</option>
                                 <option value="product">Por Producto</option>
                             </select>
                         </div>
+
                         {newDiscount.type !== "global" && (
                             <div className={styles.formGroup}>
-                               <label htmlFor="target_id">{newDiscount.type === 'category' ? 'Categoría' : 'Producto'}</label>
-                               <select id="target_id" value={newDiscount.target_id} onChange={(e) => setNewDiscount({ ...newDiscount, target_id: e.target.value })}>
-                                   <option value="">Selecciona una opción</option>
-                                   {(newDiscount.type === 'category' ? categories : products).map(item => (
-                                       <option key={item.id} value={item.id}>{item.name}</option>
-                                   ))}
-                               </select>
+                                <label htmlFor="target">
+                                    {newDiscount.type === "category" ? "Categoría *" : "Producto *"}
+                                </label>
+                                <select
+                                    id="target"
+                                    value={newDiscount.target_id || ""}
+                                    onChange={(e) => handleFormChange('target_id', e.target.value)}
+                                    required
+                                >
+                                    <option value="">Seleccionar...</option>
+                                    {targetOptions.map(option => (
+                                        <option key={option.id} value={option.id}>
+                                            {option.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         )}
-                         <div className={styles.formGroup}>
-                            <label htmlFor="start_date">Fecha de Inicio (Opcional)</label>
-                            <input id="start_date" type="date" value={newDiscount.start_date} onChange={(e) => setNewDiscount({ ...newDiscount, start_date: e.target.value })} />
-                        </div>
+
                         <div className={styles.formGroup}>
-                            <label htmlFor="end_date">Fecha de Fin (Opcional)</label>
-                            <input id="end_date" type="date" value={newDiscount.end_date} onChange={(e) => setNewDiscount({ ...newDiscount, end_date: e.target.value })} />
-                        </div>
-                        <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                            <label className={styles.checkboxLabel}>
-                                <input
-                                    type="checkbox"
-                                    checked={newDiscount.is_single_use}
-                                    onChange={(e) => setNewDiscount({ ...newDiscount, is_single_use: e.target.checked })}
-                                />
-                                Es un código de un solo uso por cliente
-                            </label>
+                            <label htmlFor="start_date">Fecha Inicio</label>
+                            <input
+                                id="start_date"
+                                type="date"
+                                value={newDiscount.start_date}
+                                onChange={(e) => handleFormChange('start_date', e.target.value)}
+                            />
                         </div>
 
+                        <div className={styles.formGroup}>
+                            <label htmlFor="end_date">Fecha Fin</label>
+                            <input
+                                id="end_date"
+                                type="date"
+                                value={newDiscount.end_date}
+                                onChange={(e) => handleFormChange('end_date', e.target.value)}
+                                min={newDiscount.start_date || undefined}
+                            />
+                        </div>
 
-                        <button onClick={addDiscount} className={styles.addButton}>Crear Descuento</button>
+                        <div className={styles.checkboxesRow}>
+                            <div className={styles.checkboxGroup}>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={newDiscount.is_single_use}
+                                        onChange={(e) => handleFormChange('is_single_use', e.target.checked)}
+                                    />
+                                    <span>Uso único</span> {/* ✅ Texto más corto */}
+                                </label>
+                            </div>
+
+                            <div className={styles.checkboxGroup}>
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={newDiscount.is_active}
+                                        onChange={(e) => handleFormChange('is_active', e.target.checked)}
+                                    />
+                                    <span>Activo al crear</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
+
+                    <button
+                        onClick={addDiscount}
+                        className={styles.submitButton}
+                        disabled={!newDiscount.code || !newDiscount.value}
+                    >
+                        ➕ Crear Descuento
+                    </button>
                 </div>
             )}
-            
-            <div className="table-wrapper">
-                <table className="products-table">
-                    <thead>
-                        <tr>
-                            <th>Código</th>
-                            <th>Valor</th>
-                            <th>Tipo</th>
-                            <th>Objetivo</th>
-                            <th>Fechas de validez</th>
-                            <th>Estado</th>
-                            {canEdit && <th>Acciones</th>}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {discounts.map(d => (
-                            <tr key={d.id}>
-                                <td><strong>{d.code}</strong></td>
-                                <td>{d.value}%</td>
-                                <td>
-                                    <span className={`${styles.statusBadge} ${styles.typeBadge}`}>
-                                        {d.type}
-                                    </span>
-                                </td>
-                                <td>{getTargetName(d)}</td>
-                                <td>{d.start_date || "N/A"} - {d.end_date || "N/A"}</td>
-                                <td>{d.is_single_use ? 'Único' : 'Múltiple'}</td>
-                                <td>
-                                    <span className={`${styles.statusBadge} ${d.is_active ? styles.statusActive : styles.statusInactive}`}>
-                                        {d.is_active ? "Activo" : "Inactivo"}
-                                    </span>
-                                </td>
-                                {canEdit && (
-                                    <td>
-                                        <button onClick={() => toggleActive(d.id, d.is_active)} className={`${styles.toggleButton} ${d.is_active ? styles.inactive : styles.active}`}>
-                                            {d.is_active ? "Desactivar" : "Activar"}
-                                        </button>
-                                    </td>
-                                )}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
 
+            {/* Tabla de descuentos */}
+            <div className={styles.tableCard}>
+                <h2>Descuentos Existentes</h2>
+                <div className={styles.tableWrapper}>
+                    <table className={styles.discountsTable}>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Valor</th>
+                                <th>Tipo</th>
+                                <th>Objetivo</th>
+                                <th>Fechas de validez</th>
+                                <th>Uso</th>
+                                <th>Estado</th>
+                                {canEdit && <th>Acciones</th>}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {discounts.length === 0 ? (
+                                <tr>
+                                    <td
+                                        colSpan={canEdit ? 8 : 7}
+                                        className={styles.emptyMessage}
+                                    >
+                                        No hay descuentos creados. ¡Crea el primero!
+                                    </td>
+                                </tr>
+                            ) : (
+                                discounts.map(discount => (
+                                    <DiscountTableRow
+                                        key={discount.id}
+                                        discount={discount}
+                                        canEdit={canEdit}
+                                        onToggle={toggleActive}
+                                        getTargetName={getTargetName}
+                                    />
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 }
