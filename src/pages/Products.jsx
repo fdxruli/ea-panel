@@ -74,16 +74,25 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
     const { showAlert } = useAlert();
     const [formData, setFormData] = useState({ name: "", description: "", price: "", cost: "", category_id: "" });
     const [imageFile, setImageFile] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (initialProduct) {
-            const { product_images, ...productData } = initialProduct;
+            const { productimages, ...productData } = initialProduct;
             setFormData(productData);
         } else {
-            setFormData({ name: "", description: "", price: "", cost: "", category_id: "", image_url: "" });
+            setFormData({
+                name: "",
+                description: "",
+                price: "",
+                cost: "",
+                categoryid: "",
+                imageurl: ""
+            });
+            setImageFile(null);
+            setPreviewImage(null); // ⬅️ AGREGA ESTA LÍNEA
         }
-        setImageFile(null);
     }, [initialProduct, isOpen]);
 
     if (!isOpen) return null;
@@ -106,14 +115,23 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
         };
 
         try {
-            showAlert('Comprimiendo imagen, por favor espera...');
+            showAlert("Comprimiendo imagen, por favor espera...");
             const compressedFile = await imageCompression(file, options);
             setImageFile(compressedFile);
-            showAlert('¡Imagen lista para subir!');
+
+            // ⬅️ AGREGA ESTAS LÍNEAS PARA LA VISTA PREVIA
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewImage(reader.result);
+            };
+            reader.readAsDataURL(compressedFile);
+
+            showAlert("Imagen lista para subir!");
         } catch (error) {
             console.error(error);
-            showAlert('Hubo un error al comprimir la imagen. Intenta con otra.');
+            showAlert("Hubo un error al comprimir la imagen. Intenta con otra.");
             setImageFile(null);
+            setPreviewImage(null); // ⬅️ TAMBIÉN LIMPIA LA VISTA PREVIA
         }
     };
 
@@ -167,11 +185,11 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
                 <form onSubmit={handleSubmit} className={styles.productForm}>
                     <div className={styles.formGroup}>
                         <label htmlFor="name">Nombre del Producto</label>
-                        <input id="name" name="name" value={formData.name} onChange={handleChange} required />
+                        <input id="name" name="name" className={styles.formInput} value={formData.name} onChange={handleChange} required />
                     </div>
                     <div className={styles.formGroup}>
                         <label htmlFor="description">Descripción</label>
-                        <textarea id="description" name="description" value={formData.description} onChange={handleChange} />
+                        <textarea id="description" name="description" value={formData.description} onChange={handleChange} required />
                     </div>
                     <div className={styles.formGrid}>
                         <div className={styles.formGroup}>
@@ -191,15 +209,39 @@ const ProductFormModal = ({ isOpen, onClose, onSave, categories, product: initia
                         </select>
                     </div>
                     <div className={styles.formGroup}>
-                        <label htmlFor="imageFile">Imagen Principal</label>
-                        <input id="imageFile" name="imageFile" type="file" onChange={handleFileChange} accept="image/*" />
-                        {formData.image_url && !imageFile &&
-                            <ImageWithFallback
-                                src={formData.image_url}
-                                alt="preview"
+                        <label>Imagen Principal</label>
+                        <div className={styles.fileInputWrapper}>
+                            <input
+                                id="mainImage"
+                                name="mainImage"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className={styles.fileInput}
+                            />
+                            <label htmlFor="mainImage" className={styles.fileInputLabel}>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                {formData.mainImage ? 'Cambiar imagen' : 'Seleccionar imagen'}
+                            </label>
+                            {formData.mainImage && (
+                                <div className={styles.fileName}>
+                                    {typeof formData.mainImage === 'string'
+                                        ? 'Imagen actual'
+                                        : formData.mainImage.name}
+                                </div>
+                            )}
+                        </div>
+                        {previewImage && (
+                            <img
+                                src={previewImage}
+                                alt="Vista previa"
                                 className={styles.imagePreview}
                             />
-                        }
+                        )}
                     </div>
                     <div className={styles.modalActions}>
                         <button type="button" onClick={onClose} className={styles.cancelButton}>Cancelar</button>
