@@ -1,22 +1,30 @@
-<!doctype html>
-<html lang="es-MX">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/logo-entrealas-512x512.png" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <title>Entre Alas - Alitas y Boneless</title>
-  <meta name="description" content="Pide las mejores alitas, boneless, hamburguesas y papas a domicilio. Consulta nuestro menú y ordena en línea fácilmente." />
-</head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
-</body>
-
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entre Alas</title>
+    
+    <link rel="manifest" id="app-manifest" href="/manifest-client.json" />
+    <meta name="theme-color" id="theme-color" content="#E57373" />
+    <link rel="apple-touch-icon" href="/pwa-192x192.png" />
+    
+    <script>
+      (function() {
+        const isAdmin = window.location.pathname.startsWith('/admin');
+        const manifestLink = document.getElementById('app-manifest');
+        const themeColor = document.getElementById('theme-color');
+        
+        if (isAdmin) {
+          manifestLink.setAttribute('href', '/manifest-admin.json');
+          themeColor.setAttribute('content', '#1976D2');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

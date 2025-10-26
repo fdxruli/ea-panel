@@ -1,0 +1,30 @@
+{
+  "name": "Entre Alas - Administración",
+  "short_name": "Admin",
+  "description": "Panel administrativo Entre Alas",
+  "theme_color": "#1976D2",
+  "background_color": "#FFFFFF",
+  "display": "standalone",
+  "scope": "/admin/",
+  "start_url": "/admin?source=pwa-admin",
+  "id": "/admin-app",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "pwa-admin-64x64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-admin-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-admin-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
