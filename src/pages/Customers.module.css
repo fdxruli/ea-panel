@@ -1,477 +1,639 @@
+/* ==================== CUSTOMERS MODULE CSS ==================== */
+/* Mobile First Approach */
+
+/* ===== CONTAINER ===== */
 .container {
-    padding: 16px;
-    max-width: 1400px;
-    margin: 0 auto;
+  padding: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 /* ===== HEADER ===== */
 .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .header h1 {
-    margin: 0 0 8px 0;
-    font-size: 28px;
-    color: var(--text-primary);
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  color: var(--text-primary);
 }
 
 .subtitle {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 .addButton {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-    white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  white-space: nowrap;
+  width: 100%;
 }
 
 .addButton:hover {
-    background: var(--color-primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px var(--shadow-color);
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 /* ===== SEARCH ===== */
 .searchBar {
-    margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .searchInput {
-    width: 100%;
-    max-width: 500px;
-    padding: 12px 16px;
-    font-size: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    transition: all var(--transition-speed) ease;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: all var(--transition-speed) ease;
 }
 
 .searchInput:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.1);
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.1);
 }
 
 /* ===== GRID ===== */
 .customersGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .customerCard {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-    box-shadow: 0 2px 4px var(--shadow-color);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .customerCard:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 20px var(--shadow-color);
-    border-color: var(--color-primary);
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px var(--shadow-color);
+  border-color: var(--color-primary);
 }
 
 .cardHeader {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .customerIcon {
-    width: 40px;
-    height: 40px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .customerInfo h3 {
-    margin: 0;
-    font-size: 16px;
-    color: var(--text-primary);
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
 }
 
 .customerInfo p {
-    margin: 4px 0 0 0;
-    font-size: 13px;
-    color: var(--text-secondary);
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .cardStats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
 }
 
 .statItem {
-    text-align: center;
+  text-align: center;
 }
 
 .statValue {
-    display: block;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--color-primary);
-    margin-bottom: 2px;
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 2px;
 }
 
 .statLabel {
-    display: block;
-    font-size: 11px;
-    color: var(--text-secondary);
+  display: block;
+  font-size: 10px;
+  color: var(--text-secondary);
 }
 
 .referralBadge {
-    margin-top: 12px;
-    padding: 8px;
-    background: var(--bg-primary);
-    border-radius: 6px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-primary);
+  margin-top: 12px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
 /* ===== EMPTY STATE ===== */
 .emptyState {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-secondary);
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
 }
 
 .emptyMessage {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-secondary);
-    font-style: italic;
+  text-align: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 /* ===== LOAD MORE ===== */
 .loadMoreContainer {
-    display: flex;
-    justify-content: center;
-    padding: 20px;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
 }
 
 .loadMoreButton {
-    padding: 12px 32px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
+  padding: 12px 32px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
 }
 
 .loadMoreButton:hover:not(:disabled) {
-    background: var(--color-primary-dark);
-    transform: translateY(-2px);
+  background: var(--color-primary-dark);
+  transform: translateY(-2px);
 }
 
 .loadMoreButton:disabled {
-    background: var(--text-secondary);
-    cursor: not-allowed;
-    opacity: 0.5;
+  background: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* ===== MODAL BASE ===== */
 .modalOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-    overflow-y: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px 12px;
+  overflow-y: auto;
 }
 
 .modalContent {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    max-width: 700px;
-    width: 100%;
-    margin: auto;
-    position: relative;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  max-width: 100%;
+  width: 100%;
+  margin: auto 0;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .closeButton {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition-speed) ease;
-    z-index: 10;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-speed) ease;
+  z-index: 10;
 }
 
 .closeButton:hover {
-    background: var(--color-error);
-    color: var(--text-light);
-    border-color: var(--color-error);
+  background: var(--color-error);
+  color: var(--text-light);
+  border-color: var(--color-error);
 }
 
 .modalHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 24px 24px 16px 24px;
-    border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 16px 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .modalHeaderLeft {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .modalIcon {
-    width: 48px;
-    height: 48px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .modalHeader h2 {
-    margin: 0;
-    font-size: 20px;
-    color: var(--text-primary);
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
 .modalHeader p {
-    margin: 4px 0 0 0;
-    font-size: 14px;
-    color: var(--text-secondary);
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .editButtonTop {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: var(--color-accent);
-    color: var(--text-light);
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--color-accent);
+  color: var(--text-light);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  width: 100%;
 }
 
 .editButtonTop:hover {
-    background: var(--color-primary);
+  background: var(--color-primary);
 }
 
 .modalBody {
-    padding: 20px 24px 24px 24px;
-    max-height: 60vh;
-    overflow-y: auto;
+  padding: 12px 16px 16px 16px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* ===== SECTIONS ===== */
 .section {
-    margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .section:last-child {
-    margin-bottom: 0;
+  margin-bottom: 0;
 }
 
 .section h3 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    margin: 0 0 12px 0;
-    color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+}
+
+/* ===== SECTION HEADER WITH BUTTON ===== */
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sectionHeader h3 {
+  margin: 0;
+}
+
+.addSmallButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  width: 100%;
+}
+
+.addSmallButton:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.addSmallButton svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* ===== ADDRESSES ===== */
 .addressesList {
-    display: grid;
-    gap: 10px;
+  display: grid;
+  gap: 10px;
 }
 
 .addressItem {
-    padding: 12px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
 }
 
 .addressHeader {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .addressItem strong {
-    color: var(--text-primary);
-    font-size: 14px;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
 .addressItem p {
-    margin: 6px 0;
-    color: var(--text-secondary);
-    font-size: 13px;
+  margin: 6px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .addressItem small {
-    color: var(--text-secondary);
-    font-size: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .defaultBadge {
-    background: var(--color-success);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: 600;
+  background: var(--color-success);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.addressBadges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.addressActions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.setDefaultButton,
+.editAddressButton,
+.deleteAddressButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  width: 100%;
+}
+
+.setDefaultButton {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.setDefaultButton:hover {
+  background: var(--color-accent);
+  color: var(--text-light);
+  border-color: var(--color-accent);
+}
+
+.editAddressButton {
+  background: var(--color-accent);
+  color: var(--text-light);
+}
+
+.editAddressButton:hover {
+  background: var(--color-primary);
+}
+
+.editAddressButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.deleteAddressButton {
+  background: var(--bg-secondary);
+  color: var(--color-error);
+  border: 1px solid var(--border-color);
+}
+
+.deleteAddressButton:hover {
+  background: var(--color-error);
+  color: var(--text-light);
+  border-color: var(--color-error);
+}
+
+/* ===== EMPTY ADDRESSES ===== */
+.emptyAddresses {
+  text-align: center;
+  padding: 30px 20px;
+  background: var(--bg-primary);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}
+
+.emptyAddresses p {
+  margin: 0 0 16px 0;
+  color: var(--text-secondary);
+}
+
+.addFirstButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.addFirstButton:hover {
+  background: var(--color-primary-dark);
+}
+
+.addFirstButton svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* ===== ORDER HISTORY ===== */
 .orderHistory {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
 }
 
 .orderFilters {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .orderFilters button {
-    padding: 6px 12px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all var(--transition-speed) ease;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all var(--transition-speed) ease;
+  width: 100%;
 }
 
 .orderFilters button:hover {
-    background: var(--color-primary);
-    color: var(--text-light);
-    border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--text-light);
+  border-color: var(--color-primary);
 }
 
 .orderFilters .activeFilter {
-    background: var(--color-primary);
-    color: var(--text-light);
-    border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--text-light);
+  border-color: var(--color-primary);
 }
 
 .ordersList {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .orderItem {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .orderHeader {
-    padding: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    transition: background var(--transition-speed) ease;
-    gap: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: background var(--transition-speed) ease;
+  gap: 8px;
 }
 
 .orderHeader:hover {
-    background: var(--bg-primary);
+  background: var(--bg-primary);
 }
 
 .orderHeaderLeft {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .orderHeaderLeft strong {
-    color: var(--text-primary);
-    font-size: 14px;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
 .orderHeaderRight {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .statusBadge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: capitalize;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: capitalize;
 }
 
 .statusBadge.pendiente { background: #f0ad4e; color: white; }
@@ -481,641 +643,522 @@
 .statusBadge.cancelado { background: var(--color-error); color: white; }
 
 .orderAmount {
-    font-weight: 700;
-    color: var(--color-primary);
-    font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 14px;
 }
 
 .orderDate {
-    font-size: 11px;
-    color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 .orderDetails {
-    padding: 12px;
-    background: var(--bg-primary);
-    border-top: 1px solid var(--border-color);
+  padding: 12px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
 }
 
 .orderDetails h4 {
-    margin: 0 0 8px 0;
-    font-size: 13px;
-    color: var(--text-primary);
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text-primary);
 }
 
 .orderDetails ul {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 12px 0;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
 }
 
 .orderDetails li {
-    padding: 6px 0;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .orderDetails li:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
 
 .cancellationReason {
-    margin-top: 12px;
-    padding: 10px;
-    background: var(--bg-secondary);
-    border-left: 4px solid var(--color-error);
-    border-radius: 4px;
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--bg-secondary);
+  border-left: 4px solid var(--color-error);
+  border-radius: 4px;
 }
 
 .cancellationReason strong {
-    display: block;
-    color: var(--color-error);
-    margin-bottom: 6px;
-    font-size: 12px;
+  display: block;
+  color: var(--color-error);
+  margin-bottom: 6px;
+  font-size: 12px;
 }
 
 .cancellationReason p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 12px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 /* ===== FORM MODAL ===== */
 .formModal {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    max-width: 500px;
-    width: 100%;
-    padding: 24px;
-    position: relative;
-    margin: auto;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  max-width: 100%;
+  width: 100%;
+  padding: 20px;
+  position: relative;
+  margin: auto 0;
+  max-height: 95vh;
+  overflow-y: auto;
 }
 
 .formModal h2 {
-    margin: 0 0 20px 0;
-    font-size: 20px;
-    color: var(--text-primary);
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
 .formGroup {
-    margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 
 .formGroup label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--text-primary);
-    font-size: 14px;
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
-.formGroup input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
 }
 
-.formGroup input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.1);
+.formGroup textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.1);
+}
+
+.reference {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .modalActions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
 }
 
 .cancelButton,
-.submitButton {
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
+.submitButton,
+.deleteButton {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
 }
 
 .cancelButton {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .cancelButton:hover {
-    background: var(--bg-secondary);
+  background: var(--bg-secondary);
 }
 
 .submitButton {
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border: none;
 }
 
 .submitButton:hover:not(:disabled) {
-    background: var(--color-primary-dark);
+  background: var(--color-primary-dark);
 }
 
 .submitButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.noPermission {
-    text-align: center;
-    padding: 60px 20px;
+.deleteButton {
+  background: var(--color-error);
+  color: var(--text-light);
+  border: none;
 }
 
-.noPermission p {
-    font-size: 16px;
-    color: var(--text-secondary);
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .container {
-        padding: 12px;
-    }
-
-    .header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .addButton {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .customersGrid {
-        grid-template-columns: 1fr;
-    }
-
-    .modalContent,
-    .formModal {
-        max-width: 100%;
-        margin: 0;
-        border-radius: 0;
-        max-height: 100vh;
-    }
-
-    .modalOverlay {
-        padding: 0;
-        align-items: stretch;
-    }
-
-    .modalBody {
-        max-height: calc(100vh - 160px);
-    }
-
-    .orderFilters {
-        flex-direction: column;
-    }
-
-    .orderFilters button {
-        width: 100%;
-    }
-
-    .orderHeader {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .orderHeaderRight {
-        width: 100%;
-        justify-content: space-between;
-    }
-
-    .editButtonTop {
-        font-size: 12px;
-        padding: 6px 12px;
-    }
-}
-
-@media (max-width: 480px) {
-    .cardStats {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-    }
-
-    .statValue {
-        font-size: 16px;
-    }
-
-    .statLabel {
-        font-size: 10px;
-    }
-}
-
-/* ===== DARK MODE ===== */
-[data-theme="dark"] .customerCard:hover {
-    box-shadow: 0 6px 20px rgba(77, 182, 172, 0.2);
-}
-
-[data-theme="dark"] .orderHeader:hover {
-    background: rgba(77, 182, 172, 0.05);
-}
-
-/* ===== SECCIÓN HEADER CON BOTÓN ===== */
-.sectionHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
-
-.sectionHeader h3 {
-    margin: 0;
-}
-
-.addSmallButton {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-}
-
-.addSmallButton:hover {
-    background: var(--color-primary-dark);
-    transform: translateY(-1px);
-}
-
-.addSmallButton svg {
-    width: 14px;
-    height: 14px;
-}
-
-/* ===== EMPTY ADDRESSES ===== */
-.emptyAddresses {
-    text-align: center;
-    padding: 30px 20px;
-    background: var(--bg-primary);
-    border: 1px dashed var(--border-color);
-    border-radius: 8px;
-}
-
-.emptyAddresses p {
-    margin: 0 0 16px 0;
-    color: var(--text-secondary);
-}
-
-.addFirstButton {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-}
-
-.addFirstButton:hover {
-    background: var(--color-primary-dark);
-}
-
-.addFirstButton svg {
-    width: 16px;
-    height: 16px;
-}
-
-/* ===== ADDRESS ITEM MEJORADO ===== */
-.addressBadges {
-    display: flex;
-    gap: 6px;
-}
-
-.addressActions {
-    display: flex;
-    gap: 6px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border-color);
-    flex-wrap: wrap;
-}
-
-.setDefaultButton,
-.editAddressButton,
-.deleteAddressButton {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 10px;
-    border: none;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-}
-
-.setDefaultButton {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.setDefaultButton:hover {
-    background: var(--color-accent);
-    color: var(--text-light);
-    border-color: var(--color-accent);
-}
-
-.editAddressButton {
-    background: var(--color-accent);
-    color: var(--text-light);
-}
-
-.editAddressButton:hover {
-    background: var(--color-primary);
-}
-
-.editAddressButton svg {
-    width: 12px;
-    height: 12px;
-}
-
-.deleteAddressButton {
-    background: var(--bg-secondary);
-    color: var(--color-error);
-    border: 1px solid var(--border-color);
-}
-
-.deleteAddressButton:hover {
-    background: var(--color-error);
-    color: var(--text-light);
-    border-color: var(--color-error);
-}
-
-/* ===== FORM MODAL TEXTAREA ===== */
-.formGroup textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: inherit;
-    resize: vertical;
-}
-
-.formGroup textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.1);
+.deleteButton:hover {
+  background: var(--color-primary-dark);
 }
 
 /* ===== CHECKBOX GROUP ===== */
 .checkboxGroup {
-    margin: 16px 0;
+  margin: 16px 0;
 }
 
 .checkboxGroup label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
 .checkboxGroup input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--color-primary);
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
 }
 
 /* ===== CONFIRM MODAL ===== */
 .confirmModal {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    max-width: 400px;
-    width: 100%;
-    padding: 24px;
-    margin: auto;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  max-width: 100%;
+  width: 100%;
+  padding: 24px;
+  margin: auto 0;
 }
 
 .confirmModal h3 {
-    margin: 0 0 12px 0;
-    font-size: 18px;
-    color: var(--text-primary);
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
 .confirmModal p {
-    margin: 0 0 20px 0;
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-}
-
-.deleteButton {
-    padding: 10px 20px;
-    background: var(--color-error);
-    color: var(--text-light);
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-}
-
-.deleteButton:hover {
-    background: var(--color-primary-dark);
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .addressActions {
-        flex-direction: column;
-    }
-
-    .setDefaultButton,
-    .editAddressButton,
-    .deleteAddressButton {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .sectionHeader {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .addSmallButton {
-        width: 100%;
-        justify-content: center;
-    }
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 /* ===== ADDRESS FORM MODAL ===== */
 .addressFormModal {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    max-width: 600px;
-    width: 100%;
-    padding: 24px;
-    position: relative;
-    margin: auto;
-    max-height: 90vh;
-    overflow-y: auto;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  max-width: 100%;
+  width: 100%;
+  padding: 16px;
+  position: relative;
+  margin: auto 0;
+  max-height: 95vh;
+  overflow-y: auto;
 }
 
 .addressFormModal h2 {
-    margin: 0 0 20px 0;
-    font-size: 20px;
-    color: var(--text-primary);
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: var(--text-primary);
 }
 
 /* ===== MAP SECTION ===== */
 .mapSection {
-    margin: 20px 0;
+  margin: 20px 0;
 }
 
 .mapHeader {
-    margin-bottom: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .mapHeader label {
-    display: block;
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 14px;
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
 .autoLocationButton {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: var(--color-accent);
-    color: var(--text-light);
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-accent);
+  color: var(--text-light);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  width: 100%;
 }
 
 .autoLocationButton:hover {
-    background: var(--color-primary);
-    transform: translateY(-1px);
+  background: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .mapContainer {
-    width: 100%;
-    height: 400px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
+  width: 100%;
+  height: 250px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  background: var(--bg-primary);
 }
 
 .mapLoading {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    font-size: 14px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 
-.coordsInfo {
-    margin-top: 8px;
-    padding: 8px 12px;
-    background: var(--bg-primary);
-    border-left: 3px solid var(--color-success);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--text-primary);
-}
-
-/* ===== COORDS DISPLAY ===== */
+.coordsInfo,
 .coordsDisplay {
-    margin: 8px 0;
-    padding: 8px;
-    background: var(--bg-primary);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    font-family: 'Courier New', monospace;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border-left: 3px solid var(--color-success);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
-.reference {
-    display: block;
-    margin-top: 6px;
-    color: var(--text-secondary);
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-/* ===== RESPONSIVE MAP MODAL ===== */
-@media (max-width: 768px) {
-    .addressFormModal {
-        max-width: 100%;
-        margin: 0;
-        border-radius: 0;
-        max-height: 100vh;
-        padding: 16px;
-    }
-
-    .mapContainer {
-        height: 300px;
-    }
-
-    .mapHeader {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-
-    .autoLocationButton {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .mapContainer {
-        height: 250px;
-    }
+.coordsDisplay {
+  font-family: 'Courier New', monospace;
+  color: var(--text-secondary);
 }
 
 /* ===== INFO NOTE ===== */
 .infoNote {
-    padding: 12px 16px;
-    background: rgba(77, 182, 172, 0.1);
-    border-left: 3px solid var(--color-accent);
-    border-radius: 6px;
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    margin: 16px 0;
+  padding: 12px 16px;
+  background: rgba(77, 182, 172, 0.1);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 16px 0;
 }
 
-/* Dark mode override */
+/* ===== NO PERMISSION ===== */
+.noPermission {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.noPermission p {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+/* ==================== TABLET (min-width: 600px) ==================== */
+@media (min-width: 600px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header h1 {
+    font-size: 26px;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .addButton {
+    width: auto;
+  }
+
+  .customersGrid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .cardStats {
+    gap: 12px;
+  }
+
+  .statValue {
+    font-size: 18px;
+  }
+
+  .statLabel {
+    font-size: 11px;
+  }
+
+  .modalOverlay {
+    padding: 30px 20px;
+  }
+
+  .modalContent {
+    max-width: 700px;
+    max-height: 90vh;
+  }
+
+  .modalHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 12px 24px;
+  }
+
+  .modalIcon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .modalHeader h2 {
+    font-size: 20px;
+  }
+
+  .editButtonTop {
+    width: auto;
+    font-size: 14px;
+  }
+
+  .modalBody {
+    padding: 16px 24px 20px 24px;
+  }
+
+  .section h3 {
+    font-size: 16px;
+  }
+
+  .sectionHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .addSmallButton {
+    width: auto;
+  }
+
+  .addressActions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .setDefaultButton,
+  .editAddressButton,
+  .deleteAddressButton {
+    width: auto;
+  }
+
+  .orderFilters {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .orderFilters button {
+    width: auto;
+  }
+
+  .orderHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .orderHeaderLeft,
+  .orderHeaderRight {
+    width: auto;
+  }
+
+  .formModal,
+  .confirmModal {
+    max-width: 500px;
+    padding: 24px;
+  }
+
+  .formModal h2 {
+    font-size: 20px;
+  }
+
+  .addressFormModal {
+    max-width: 600px;
+    padding: 24px;
+  }
+
+  .addressFormModal h2 {
+    font-size: 20px;
+  }
+
+  .mapHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .autoLocationButton {
+    width: auto;
+  }
+
+  .mapContainer {
+    height: 300px;
+  }
+}
+
+/* ==================== DESKTOP (min-width: 1024px) ==================== */
+@media (min-width: 1024px) {
+  .header h1 {
+    font-size: 28px;
+  }
+
+  .emptyState {
+    padding: 60px 20px;
+  }
+
+  .mapContainer {
+    height: 400px;
+  }
+}
+
+/* ===== DARK MODE ===== */
+[data-theme="dark"] .customerCard:hover {
+  box-shadow: 0 6px 20px rgba(77, 182, 172, 0.2);
+}
+
+[data-theme="dark"] .orderHeader:hover {
+  background: rgba(77, 182, 172, 0.05);
+}
+
 [data-theme="dark"] .infoNote {
-    background: rgba(77, 182, 172, 0.15);
+  background: rgba(77, 182, 172, 0.15);
 }
