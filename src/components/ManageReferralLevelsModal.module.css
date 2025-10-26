@@ -1,49 +1,324 @@
-.overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.6); display: flex;
-  justify-content: center; align-items: center; z-index: 2000; padding: 1rem;
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
 }
+
 .modalContent {
-  background: var(--bg-secondary); padding: 2rem; border-radius: 12px;
-  width: 90%; max-width: 700px; color: var(--text-primary);
-  display: flex; flex-direction: column; max-height: 90vh; position: relative;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 30px;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
+
 .closeButton {
-  position: absolute; top: 10px; right: 15px; background: none;
-  border: none; font-size: 2rem; cursor: pointer; color: var(--text-secondary);
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-speed) ease;
 }
-.modalContent h2 { border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
-.modalContent h2, .modalContent h3 { margin-top: 0; }
-.formSection { margin-bottom: 2rem; }
-.formGrid { display: grid; grid-template-columns: 2fr 1fr auto; gap: 1rem; align-items: center; }
-.listSection { overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; }
 
-.levelItem { background: var(--bg-primary); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); }
-.levelHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-.rewardsList { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
-.rewardItem { display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); padding: 0.5rem 1rem; border-radius: 6px; }
+.closeButton:hover {
+    background: var(--color-error);
+    color: var(--text-light);
+    border-color: var(--color-error);
+}
 
-.addRewardForm { display: flex; gap: 0.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
-.addRewardForm input { flex-grow: 1; }
-.addRewardForm button { background-color: var(--color-accent); color: white; white-space: nowrap; }
+.modalContent h2 {
+    margin: 0 0 24px 0;
+    font-size: 24px;
+    color: var(--text-primary);
+}
 
-.addButton { background-color: var(--color-primary); color: white; padding: 0.7rem; }
-.deleteButton { background-color: transparent; border: 1px solid var(--color-error); color: var(--color-error); padding: 0.5rem 0.8rem; font-size: 0.8rem; border-radius: 6px; }
-.deleteRewardButton { background: none; border: none; color: var(--color-error); font-size: 1.2rem; cursor: pointer; }
+.modalContent h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
 
-/* src/components/ManageReferralLevelsModal.module.css (AÑADIR ESTILOS) */
-.rewardInfo {
+/* ===== CREATE SECTION ===== */
+.createSection {
+    background: var(--bg-primary);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border: 2px solid var(--color-primary);
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 150px auto;
+    gap: 12px;
+}
+
+.formRow input {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.formRow input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.formRow input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.createButton {
+    padding: 10px 20px;
+    background: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition-speed) ease;
+}
+
+.createButton:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+}
+
+.createButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===== LEVELS SECTION ===== */
+.levelsSection {
+    margin-bottom: 20px;
+}
+
+.levelsList {
     display: flex;
     flex-direction: column;
+    gap: 12px;
 }
-.rewardInfo small {
-    font-size: 0.8rem;
+
+.levelCard {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all var(--transition-speed) ease;
+}
+
+.levelCard:hover {
+    border-color: var(--color-primary);
+}
+
+/* ===== VIEW MODE ===== */
+.viewMode {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.levelInfo h4 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    color: var(--color-primary);
+}
+
+.levelInfo p {
+    margin: 0;
+    font-size: 13px;
     color: var(--text-secondary);
 }
-.addRewardForm {
-    display: grid; /* Cambiamos a grid */
-    grid-template-columns: 2fr 1fr auto; /* Distribuimos el espacio */
-    gap: 0.8rem;
+
+.levelActions {
+    display: flex;
+    gap: 8px;
+}
+
+.editButton,
+.deleteButton {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.editButton {
+    background: var(--color-accent);
+    color: var(--text-light);
+}
+
+.editButton:hover {
+    background: var(--color-primary);
+}
+
+.deleteButton {
+    background: var(--bg-secondary);
+    color: var(--color-error);
+    border: 1px solid var(--border-color);
+}
+
+.deleteButton:hover {
+    background: var(--color-error);
+    color: var(--text-light);
+    border-color: var(--color-error);
+}
+
+/* ===== EDIT MODE ===== */
+.editMode {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.editMode input {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.editMode input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.editActions {
+    display: flex;
+    gap: 8px;
+}
+
+.saveButton,
+.cancelButton {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.saveButton {
+    background: var(--color-success);
+    color: var(--text-light);
+}
+
+.saveButton:hover {
+    background: var(--color-primary);
+}
+
+.cancelButton {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.cancelButton:hover {
+    background: var(--bg-primary);
+}
+
+/* ===== EMPTY STATE ===== */
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+}
+
+.emptyState p {
+    margin: 0 0 8px 0;
+    color: var(--text-secondary);
+}
+
+.hint {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* ===== MODAL FOOTER ===== */
+.modalFooter {
+    padding-top: 20px;
     border-top: 1px solid var(--border-color);
-    padding-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.closeFooterButton {
+    padding: 10px 24px;
+    background: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.closeFooterButton:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .modalContent {
+        padding: 20px;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .formRow {
+        grid-template-columns: 1fr;
+    }
+
+    .viewMode {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .levelActions {
+        width: 100%;
+    }
+
+    .editButton,
+    .deleteButton {
+        flex: 1;
+    }
 }
