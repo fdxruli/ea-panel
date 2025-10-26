@@ -7,13 +7,12 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import DOMPurify from 'dompurify';
 
-// --- Iconos (sin cambios) ---
+// --- Iconos ---
 const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
 const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
 );
-// --- NUEVO ÍCONO ---
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
 
 
@@ -38,14 +37,13 @@ export default function CreateOrder() {
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- NUEVO ESTADO PARA PROGRAMACIÓN ---
+    // Estado para programación
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
-    // --- FIN NUEVO ESTADO ---
 
-    const canEdit = hasPermission('crear-pedido.edit');
+    const canEdit = hasPermission('crear-pedido.edit'); // Assuming edit permission covers creation
 
-    // --- OBTENER CLIENTES Y CATEGORÍAS INICIALMENTE (sin cambios) ---
+    // Obtener clientes y categorías inicialmente
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoadingCustomers(true);
@@ -73,16 +71,17 @@ export default function CreateOrder() {
         fetchInitialData();
     }, [showAlert]);
 
-    // --- FUNCIÓN PARA OBTENER PRECIOS ESPECIALES (sin cambios) ---
+    // Función para obtener precios especiales según el cliente
     const fetchProductsWithSpecialPrices = useCallback(async (customerId) => {
         if (!customerId) {
-            setProductsWithPrices(allProducts);
+            setProductsWithPrices(allProducts); // Usa todos los productos si no hay cliente (o manejar diferente)
             setLoadingProducts(false);
             return;
         }
         setLoadingProducts(true);
         try {
             const today = new Date().toISOString().split('T')[0];
+            // Obtiene precios especiales activos para todos o para este cliente específico
             const { data: specialPrices, error: specialPricesError } = await supabase
                 .from('special_prices')
                 .select('*')
@@ -92,60 +91,64 @@ export default function CreateOrder() {
 
             if (specialPricesError) throw specialPricesError;
 
+            // Mapea los productos para aplicar precios especiales encontrados
             const customerSpecificProducts = allProducts.map(product => {
                 const productPrice = specialPrices.find(p => p.product_id === product.id);
                 const categoryPrice = specialPrices.find(p => p.category_id === product.category_id && !p.product_id);
-                let specialPriceInfo = productPrice || categoryPrice;
+                let specialPriceInfo = productPrice || categoryPrice; // Prioridad al precio de producto
 
+                // Verifica que el precio encontrado sea aplicable
                 if (specialPriceInfo && (specialPriceInfo.target_customer_ids === null || specialPriceInfo.target_customer_ids.includes(customerId))) {
                     return { ...product, original_price: product.price, price: parseFloat(specialPriceInfo.override_price) };
                 }
-                return product;
+                return product; // Devuelve el producto con precio original si no hay especial aplicable
             });
             setProductsWithPrices(customerSpecificProducts);
         } catch (error) {
             showAlert(`Error al cargar precios especiales: ${error.message}`);
-            setProductsWithPrices(allProducts);
+            setProductsWithPrices(allProducts); // Fallback a precios normales si hay error
         } finally {
             setLoadingProducts(false);
         }
     }, [allProducts, showAlert]);
 
-    // --- EFECTO PARA CARGAR PRODUCTOS AL CAMBIAR CLIENTE (sin cambios) ---
+    // Efecto para cargar productos con precios cuando cambia el cliente seleccionado
     useEffect(() => {
         if (selectedCustomer) {
             fetchProductsWithSpecialPrices(selectedCustomer.id);
         } else {
+            // Limpia la lista de productos si no hay cliente seleccionado
             setProductsWithPrices([]);
         }
     }, [selectedCustomer, fetchProductsWithSpecialPrices]);
 
-    // --- FILTROS (sin cambios) ---
+    // --- Filtros ---
+    // Filtra clientes para la búsqueda
     const filteredCustomers = useMemo(() => {
-        // ... (lógica existente)
-         if (!customerSearch) return [];
+        if (!customerSearch) return [];
         const lowerSearch = customerSearch.toLowerCase();
         return customers.filter(c =>
             c.name.toLowerCase().includes(lowerSearch) ||
             (c.phone && c.phone.includes(customerSearch))
-        ).slice(0, 5);
+        ).slice(0, 5); // Limita a 5 resultados
     }, [customers, customerSearch]);
 
+    // Filtra productos según categoría y término de búsqueda
     const filteredProducts = useMemo(() => {
-        // ... (lógica existente usando productsWithPrices)
-         return productsWithPrices.filter(p => {
+        return productsWithPrices.filter(p => {
             const matchesCategory = categoryFilter === 'all' || p.category_id === categoryFilter;
             const matchesSearch = p.name.toLowerCase().includes(productSearch.toLowerCase());
             return matchesCategory && matchesSearch;
         });
     }, [productsWithPrices, productSearch, categoryFilter]);
 
-    // --- MANEJO DE CLIENTE (sin cambios significativos) ---
+    // --- Manejo de Cliente ---
+    // Función para crear un nuevo cliente
     const handleCreateCustomer = async () => {
-        // ... (lógica existente)
-        if (!canEdit) return;
+        if (!canEdit) return; // Verifica permiso
+        // Sanitiza y valida datos
         const cleanName = DOMPurify.sanitize(newCustomer.name.trim());
-        const cleanPhone = DOMPurify.sanitize(newCustomer.phone.trim().replace(/\D/g, ''));
+        const cleanPhone = DOMPurify.sanitize(newCustomer.phone.trim().replace(/\D/g, '')); // Solo números
 
         if (!cleanName || !cleanPhone) {
             showAlert('El nombre y el teléfono son obligatorios.');
@@ -158,6 +161,7 @@ export default function CreateOrder() {
 
         setIsSubmitting(true);
         try {
+            // Verifica si ya existe un cliente con ese teléfono
             const { data: existingCustomer, error: checkError } = await supabase
                 .from('customers')
                 .select('id')
@@ -171,19 +175,21 @@ export default function CreateOrder() {
                 return;
             }
 
+            // Inserta el nuevo cliente
             const { data, error } = await supabase
                 .from('customers')
-                .insert({ name: cleanName, phone: cleanPhone })
+                .insert({ name: cleanName, phone: cleanPhone }) // Aquí podrías añadir referral_code si lo gestionas
                 .select()
                 .single();
             if (error) throw error;
 
             showAlert('Cliente creado con éxito.');
+            // Actualiza la lista de clientes localmente y ordena
             setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-            setSelectedCustomer(data);
-            setStep(2);
-            setIsCreatingCustomer(false);
-            setNewCustomer({ name: '', phone: '' });
+            setSelectedCustomer(data); // Selecciona al nuevo cliente
+            setStep(2); // Avanza al siguiente paso
+            setIsCreatingCustomer(false); // Cierra el modal de creación
+            setNewCustomer({ name: '', phone: '' }); // Limpia el formulario
         } catch (error) {
              showAlert(`Error al crear cliente: ${error.message}`);
         } finally {
@@ -191,40 +197,44 @@ export default function CreateOrder() {
         }
     };
 
-    // --- MANEJO DEL CARRITO (sin cambios significativos) ---
+    // --- Manejo del Carrito ---
+    // Añade un producto al carrito o incrementa su cantidad
     const addToCart = (product) => {
-        // ... (lógica existente)
-        if (!canEdit || !selectedCustomer) return;
+        if (!canEdit || !selectedCustomer) return; // Verifica permiso y cliente
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
+                // Si ya existe, incrementa cantidad
                 return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
             }
+            // Si es nuevo, lo añade con cantidad 1
             return [...prev, { ...product, quantity: 1 }];
         });
     };
+    // Actualiza la cantidad de un producto en el carrito
     const updateQuantity = (productId, newQuantityStr) => {
-        // ... (lógica existente)
         if (!canEdit) return;
         const newQuantity = parseInt(newQuantityStr, 10);
 
         if (isNaN(newQuantity) || newQuantity <= 0) {
+            // Si la cantidad no es válida o es 0 o menos, elimina el item
             removeFromCart(productId);
         } else {
+            // Actualiza la cantidad del item específico
             setCart(prev => prev.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item));
         }
     };
+    // Elimina un producto del carrito
     const removeFromCart = (productId) => {
-        // ... (lógica existente)
-         if (!canEdit) return;
+        if (!canEdit) return;
         setCart(prev => prev.filter(item => item.id !== productId));
     };
+    // Calcula el total del carrito
     const cartTotal = useMemo(() => {
-        // ... (lógica existente)
-         return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }, [cart]);
 
-    // --- FUNCIÓN PARA CREAR PEDIDO (MODIFICADA) ---
+    // --- Función para Crear Pedido ---
     const handlePlaceOrder = async () => {
         if (!canEdit) return;
         if (!selectedCustomer || cart.length === 0) {
@@ -232,23 +242,21 @@ export default function CreateOrder() {
             return;
         }
 
-        // --- VALIDACIÓN Y FORMATO DE FECHA/HORA ---
+        // --- Validación y Formato de Fecha/Hora Programada ---
         let scheduledTimestamp = null;
         if (scheduleDate || scheduleTime) {
-            const datePart = scheduleDate || new Date().toISOString().split('T')[0]; // Usa hoy si no hay fecha
-            const timePart = scheduleTime || '00:00'; // Usa medianoche si no hay hora
-
-            // Combinar y validar
+            const datePart = scheduleDate || new Date().toISOString().split('T')[0];
+            const timePart = scheduleTime || '00:00';
             const dateTimeString = `${datePart}T${timePart}:00`;
             const scheduledDateObj = new Date(dateTimeString);
 
-            // Validar si la fecha/hora combinada es válida y no está en el pasado
             if (isNaN(scheduledDateObj.getTime())) {
                 showAlert('La fecha u hora de programación no es válida.');
                 return;
             }
-            // Opcional: Impedir programar en el pasado (descomentar si es necesario)
+            // Opcional: Impedir programar en el pasado
             // const now = new Date();
+            // now.setMinutes(now.getMinutes() - 5); // Dar un margen de 5 minutos
             // if (scheduledDateObj < now) {
             //     showAlert('No puedes programar un pedido para una fecha/hora pasada.');
             //     return;
@@ -256,45 +264,45 @@ export default function CreateOrder() {
 
             scheduledTimestamp = scheduledDateObj.toISOString();
         }
-        // --- FIN VALIDACIÓN Y FORMATO ---
-
+        // --- Fin Validación ---
 
         setIsSubmitting(true);
         try {
-            // Crear la orden con el campo scheduled_for
+            // 1. Insertar la orden principal
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert({
                     customer_id: selectedCustomer.id,
                     total_amount: cartTotal,
-                    status: 'pendiente',
-                    scheduled_for: scheduledTimestamp // <-- AÑADIDO AQUÍ (será null si no se especificó)
+                    status: 'pendiente', // Estado inicial
+                    scheduled_for: scheduledTimestamp // Guardar timestamp ISO o null
                 })
-                .select()
-                .single();
+                .select() // Pide que devuelva los datos insertados
+                .single(); // Espera un solo resultado
             if (orderError) throw orderError;
 
-            // Crear los items (sin cambios)
+            // 2. Insertar los items del pedido
             const orderItems = cart.map(item => ({
-                order_id: orderData.id,
+                order_id: orderData.id, // ID de la orden recién creada
                 product_id: item.id,
                 quantity: item.quantity,
-                price: item.price
+                price: item.price // Precio al momento de la compra
             }));
             const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+            // Si falla la inserción de items, borra la orden principal (rollback manual básico)
             if (itemsError) {
                  await supabase.from('orders').delete().eq('id', orderData.id);
                  throw itemsError;
             }
 
-            // --- MENSAJE WHATSAPP (MODIFICADO) ---
-            let message = `¡Hola, ${selectedCustomer.name}! 👋 Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
+            // --- Construcción del Mensaje WhatsApp ---
+            let message = `Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
             cart.forEach(item => {
                 message += `• ${item.quantity}x ${item.name}\n`;
             });
             message += `\n*Total a pagar: $${cartTotal.toFixed(2)}*`;
 
-            // Añadir información de programación al mensaje si existe
+            // Añadir info de programación si existe
             if (scheduledTimestamp) {
                 const scheduledDateObj = new Date(scheduledTimestamp);
                 const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -302,16 +310,24 @@ export default function CreateOrder() {
                 const formattedDate = `${scheduledDateObj.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDateObj.toLocaleTimeString('es-MX', timeOptions)}`;
                 message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
             }
-            // --- FIN MENSAJE WHATSAPP ---
 
+            // ---- MODIFICACIÓN DEL ENLACE ----
+            // Construye la URL específica usando el order_code obtenido de orderData
+            const clientSpecificOrderUrl = `https://ea-panel.vercel.app/mis-pedidos/${orderData.order_code}`;
+            message += `\n\nPuedes ver el estado de tu pedido aquí:\n${clientSpecificOrderUrl}`;
+            // ---- FIN MODIFICACIÓN DEL ENLACE ----
+
+            // Construye la URL de WhatsApp para enviar el mensaje AL CLIENTE
+            // Usamos el número del cliente como destino
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${selectedCustomer.phone}&text=${encodeURIComponent(message)}`;
 
+            // Muestra alerta y abre WhatsApp en nueva pestaña al confirmar
             showAlert(
                 `¡Pedido #${orderData.order_code} creado! Serás redirigido a WhatsApp para notificar al cliente.`,
                 'info',
                 () => {
                     window.open(whatsappUrl, '_blank');
-                    // Resetear estado completo
+                    // Resetea el estado para un nuevo pedido
                     setStep(1);
                     setSelectedCustomer(null);
                     setCart([]);
@@ -319,8 +335,8 @@ export default function CreateOrder() {
                     setProductSearch('');
                     setCategoryFilter('all');
                     setProductsWithPrices([]);
-                    setScheduleDate(''); // <-- Resetear fecha
-                    setScheduleTime(''); // <-- Resetear hora
+                    setScheduleDate('');
+                    setScheduleTime('');
                 }
             );
 
@@ -330,30 +346,39 @@ export default function CreateOrder() {
             setIsSubmitting(false);
         }
     };
-    // --- FIN FUNCIÓN CREAR PEDIDO ---
+    // --- Fin handlePlaceOrder ---
 
     if (loadingCustomers) return <LoadingSpinner />;
 
+    // --- Renderizado del Componente ---
     return (
         <div className={styles.container}>
             <h1>Crear Nuevo Pedido</h1>
 
             <div className={styles.mainGrid}>
+                {/* Columna Izquierda: Pasos de Selección */}
                 <div className={styles.workflowColumn}>
                     {/* PASO 1: SELECCIONAR CLIENTE */}
                     <div className={`${styles.stepCard} ${step >= 1 ? styles.active : ''}`}>
-                       {/* ... (contenido paso 1 sin cambios) ... */}
                         <div className={styles.stepHeader}>
                             <span className={styles.stepNumber}>1</span>
                             <h2>Seleccionar Cliente</h2>
                         </div>
                         {selectedCustomer ? (
+                            // Muestra info del cliente seleccionado y botón para cambiar
                             <div className={styles.selectedCustomer}>
                                 <p><strong>Cliente:</strong> {selectedCustomer.name}</p>
                                 <p><strong>Teléfono:</strong> {selectedCustomer.phone}</p>
-                                <button onClick={() => { if(canEdit) {setSelectedCustomer(null); setStep(1); setCart([]); setProductsWithPrices([]); setScheduleDate(''); setScheduleTime('');}}} className={styles.changeButton} disabled={!canEdit}>Cambiar Cliente</button>
+                                <button
+                                    onClick={() => { if(canEdit) {setSelectedCustomer(null); setStep(1); setCart([]); setProductsWithPrices([]); setScheduleDate(''); setScheduleTime('');}}}
+                                    className={styles.changeButton}
+                                    disabled={!canEdit}
+                                >
+                                    Cambiar Cliente
+                                </button>
                             </div>
                         ) : (
+                            // Muestra buscador y opción de crear nuevo cliente
                             <div className={styles.customerSearch}>
                                 <div className={styles.searchInput}>
                                     <SearchIcon />
@@ -365,6 +390,7 @@ export default function CreateOrder() {
                                         disabled={!canEdit}
                                     />
                                 </div>
+                                {/* Muestra resultados de búsqueda */}
                                 {customerSearch && filteredCustomers.length > 0 && (
                                     <ul className={styles.customerResults}>
                                         {filteredCustomers.map(c => (
@@ -376,6 +402,7 @@ export default function CreateOrder() {
                                 )}
                                  {customerSearch && !filteredCustomers.length && <p className={styles.noResults}>No se encontraron clientes.</p>}
                                 <p className={styles.orText}>o</p>
+                                {/* Botón para abrir modal de creación */}
                                 <button onClick={() => setIsCreatingCustomer(true)} className={styles.createCustomerButton} disabled={!canEdit}>
                                     <UserPlusIcon /> Crear Nuevo Cliente
                                 </button>
@@ -385,11 +412,11 @@ export default function CreateOrder() {
 
                     {/* PASO 2: AÑADIR PRODUCTOS */}
                     <div className={`${styles.stepCard} ${step === 2 ? styles.active : ''}`}>
-                        {/* ... (contenido paso 2 con precios especiales) ... */}
                         <div className={styles.stepHeader}>
                             <span className={styles.stepNumber}>2</span>
                             <h2>Añadir Productos</h2>
                         </div>
+                        {/* Filtros de productos */}
                         <div className={styles.productFilters}>
                              <div className={styles.searchInput}>
                                 <SearchIcon />
@@ -398,7 +425,7 @@ export default function CreateOrder() {
                                     placeholder="Buscar producto..."
                                     value={productSearch}
                                     onChange={(e) => setProductSearch(e.target.value)}
-                                    disabled={!selectedCustomer || !canEdit}
+                                    disabled={!selectedCustomer || !canEdit} // Deshabilitado si no hay cliente o permiso
                                 />
                              </div>
                             <select onChange={(e) => setCategoryFilter(e.target.value)} disabled={!selectedCustomer || !canEdit} value={categoryFilter}>
@@ -406,6 +433,7 @@ export default function CreateOrder() {
                                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
+                        {/* Lista de productos disponibles */}
                         <div className={styles.productList}>
                             {!selectedCustomer ? (
                                  <p className={styles.disabledText}>Selecciona un cliente para ver los productos.</p>
@@ -414,11 +442,13 @@ export default function CreateOrder() {
                             ) : filteredProducts.length === 0 ? (
                                 <p className={styles.disabledText}>No se encontraron productos con los filtros actuales.</p>
                             ) : (
+                                // Mapea y muestra cada producto filtrado
                                 filteredProducts.map(p => (
                                 <div key={p.id} className={styles.productItem} onClick={() => addToCart(p)} role="button">
                                     <ImageWithFallback src={p.image_url || 'https://placehold.co/100'} alt={p.name} />
                                     <div className={styles.productInfo}>
                                         <strong>{p.name}</strong>
+                                        {/* Muestra precio especial si existe */}
                                         {p.original_price && p.original_price !== p.price ? (
                                             <>
                                                 <span className={styles.originalPrice}>${p.original_price.toFixed(2)}</span>
@@ -435,13 +465,14 @@ export default function CreateOrder() {
                     </div>
                 </div>
 
-                {/* COLUMNA RESUMEN */}
+                {/* Columna Derecha: Resumen del Pedido */}
                 <div className={styles.summaryColumn}>
                     <div className={styles.summaryCard}>
                         <h3>Resumen del Pedido</h3>
                         {cart.length === 0 ? (
                             <p className={styles.emptyCart}>Añade productos al carrito.</p>
                         ) : (
+                            // Muestra items del carrito si no está vacío
                             <>
                                 <ul className={styles.cartList}>
                                     {cart.map(item => (
@@ -450,6 +481,7 @@ export default function CreateOrder() {
                                             <div className={styles.cartItemInfo}>
                                                 <span>{item.name}</span>
                                                 <small>
+                                                     {/* Muestra precio original tachado si hay especial */}
                                                      {item.original_price && item.original_price !== item.price
                                                         ? <>
                                                             <span className={styles.originalPriceSmall}>${item.original_price.toFixed(2)}</span> ${item.price.toFixed(2)}
@@ -458,6 +490,7 @@ export default function CreateOrder() {
                                                      } c/u
                                                 </small>
                                             </div>
+                                            {/* Controles de cantidad */}
                                             <div className={styles.quantityControl}>
                                                 <button onClick={() => updateQuantity(item.id, item.quantity - 1)} disabled={!canEdit}>-</button>
                                                 <input
@@ -469,14 +502,17 @@ export default function CreateOrder() {
                                                     aria-label={`Cantidad de ${item.name}`}
                                                  />
                                                 <button onClick={() => updateQuantity(item.id, item.quantity + 1)} disabled={!canEdit}>+</button>
+                                                {/* Botón para eliminar item */}
                                                 <button onClick={() => removeFromCart(item.id)} className={styles.removeButton} disabled={!canEdit} aria-label={`Quitar ${item.name}`}>
                                                     <TrashIcon />
                                                 </button>
                                             </div>
+                                            {/* Precio total del item */}
                                             <strong>${(item.price * item.quantity).toFixed(2)}</strong>
                                         </li>
                                     ))}
                                 </ul>
+                                {/* Muestra el total del carrito */}
                                 <div className={styles.total}>
                                     <span>Total</span>
                                     <strong>${cartTotal.toFixed(2)}</strong>
@@ -509,6 +545,7 @@ export default function CreateOrder() {
                                         />
                                     </div>
                                 </div>
+                                {/* Botón para limpiar fecha/hora */}
                                 {(scheduleDate || scheduleTime) && (
                                     <button
                                         type="button"
@@ -522,6 +559,7 @@ export default function CreateOrder() {
                         )}
                         {/* --- FIN SECCIÓN PROGRAMACIÓN --- */}
 
+                        {/* Botón para crear el pedido */}
                         <button
                             className={styles.placeOrderButton}
                             onClick={handlePlaceOrder}
@@ -533,13 +571,13 @@ export default function CreateOrder() {
                 </div>
             </div>
 
-            {/* MODAL CREAR CLIENTE */}
+            {/* MODAL PARA CREAR CLIENTE */}
             {isCreatingCustomer && (
                  <div className={styles.modalOverlay}>
-                    {/* ... (contenido del modal sin cambios) ... */}
                      <div className={styles.modalContent}>
                         <h2>Crear Nuevo Cliente</h2>
                         <form onSubmit={(e) => { e.preventDefault(); handleCreateCustomer(); }}>
+                            {/* Campos del formulario */}
                             <div className={styles.formGroup}>
                                 <label htmlFor="new-customer-name">Nombre Completo</label>
                                 <input
@@ -556,13 +594,14 @@ export default function CreateOrder() {
                                     id="new-customer-phone"
                                     type="tel"
                                     maxLength="10"
-                                    pattern="\d{10}"
+                                    pattern="\d{10}" // Valida 10 dígitos
                                     title="Ingresa 10 dígitos numéricos"
                                     value={newCustomer.phone}
-                                    onChange={e => setNewCustomer({...newCustomer, phone: e.target.value.replace(/\D/g, '')})} // Permitir solo números
+                                    onChange={e => setNewCustomer({...newCustomer, phone: e.target.value.replace(/\D/g, '')})}
                                     required
                                 />
                             </div>
+                            {/* Botones de acción del modal */}
                             <div className={styles.modalActions}>
                                 <button type="button" onClick={() => { setIsCreatingCustomer(false); setNewCustomer({ name: '', phone: '' }); }} className="admin-button-secondary">Cancelar</button>
                                 <button type="submit" className="admin-button-primary" disabled={isSubmitting}>

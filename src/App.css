@@ -1,14 +1,19 @@
+/* === ESTILOS BASE (MOBILE-FIRST) === */
+
 .container {
-  display: flex;
-  height: calc(100vh - 60px);
+  /* Por defecto (móvil), el contenedor es un bloque normal */
+  display: block;
+  height: auto; /* La altura se ajusta al contenido */
 }
 
 .main-content {
-  flex: 1;
-  padding: 1.5rem;
-  overflow-y: auto;
+  flex: 1; /* Necesario para que crezca en escritorio */
+  padding: 1.5rem; /* Padding general */
+  overflow-y: auto; /* Permitir scroll vertical si es necesario */
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  /* Padding inferior para dejar espacio a la barra inferior FIJA en móvil */
+  padding-bottom: 75px; /* Ajusta este valor si la altura de AdminBottomNav cambia */
 }
 
 .navbar {
@@ -21,51 +26,19 @@
   padding: 0 1.5rem;
   border-bottom: 1px solid var(--border-color);
   box-shadow: 0 2px 4px var(--shadow-color);
-  position: sticky;
+  position: sticky; /* Mantiene la navbar arriba al hacer scroll */
   top: 0;
-  z-index: 1050;
+  z-index: 1050; /* Debe estar sobre el contenido pero debajo de modales */
 }
 
-.menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 24px;
-  cursor: pointer;
-}
-
+/* El Sidebar está oculto por defecto en móvil */
 .sidebar {
-  width: 220px;
-  background-color: var(--bg-secondary);
-  padding: 1rem;
-  transition: transform 0.3s ease-in-out;
-  border-right: 1px solid var(--border-color);
-  overflow-y: auto;
-}
-
-.sidebar a {
-  display: block;
-  width: 100%;
-  margin-bottom: 0.5rem;
-  padding: 0.8rem 1rem;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  text-align: left;
-  cursor: pointer;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.sidebar a:hover {
-  background-color: var(--bg-primary);
-  color: var(--color-primary);
+  display: none;
 }
 
 .main-content h1 {
-  font-size: 2.2rem;
+  /* Estilo móvil para h1 */
+  font-size: 1.8rem;
   margin-bottom: 0.5rem;
   color: var(--text-primary);
 }
@@ -73,6 +46,7 @@
     color: var(--text-primary);
 }
 
+/* === (Estilos de botones, formularios, tablas - sin cambios necesarios) === */
 .admin-button, .admin-button-primary, .admin-button-secondary, .admin-button-danger {
     padding: 0.8rem 1.5rem;
     font-weight: 600;
@@ -163,34 +137,176 @@
     background-color: var(--bg-primary);
 }
 
-
-@media (max-width: 768px) {
+/* === ESTILOS PARA ESCRITORIO (>= 768px) === */
+@media (min-width: 768px) {
   .container {
-    flex-direction: column;
-    height: auto;
+    /* Vuelve a ser flex container en escritorio */
+    display: flex;
+    /* Altura fija restando la navbar */
+    height: calc(100vh - 60px);
   }
 
+  /* Muestra el Sidebar en escritorio */
   .sidebar {
-    position: fixed;
-    left: 0;
-    top: 60px;
-    height: calc(100% - 60px);
-    transform: translateX(-100%);
-    z-index: 1000;
+    display: block; /* O flex si lo necesitas internamente */
+    width: 220px; /* Ancho fijo */
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    /* Asegura que no tenga position fixed ni transform */
+    position: static;
+    transform: none;
+    transition: none; /* No necesita transición en escritorio */
+    z-index: auto; /* Z-index normal */
   }
 
-  .sidebar.open {
-    transform: translateX(0);
-  }
-
-  .menu-toggle {
+  /* Estilos de los enlaces del Sidebar (asegúrate de que estén) */
+  .sidebar a {
     display: block;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.8rem 1rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    text-align: left;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  .sidebar a:hover {
+    background-color: var(--bg-primary);
+    color: var(--color-primary);
   }
 
   .main-content {
-    padding: 1rem;
+    /* Quita el padding inferior extra necesario en móvil */
+    padding-bottom: 1.5rem;
+    /* Tamaño de H1 para escritorio */
+    font-size: 2.2rem;
   }
-   .main-content h1 {
-    font-size: 1.8rem;
+
+  .main-content h1 {
+     font-size: 2.2rem;
+  }
+}
+
+.sidebar-logout-button {
+  display: block;
+  width: 100%;
+  margin-top: auto; /* Empuja el botón hacia abajo */
+  padding: 0.8rem 1rem;
+  background: var(--color-error); /* Color rojo */
+  color: white;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  border: none;
+  margin-top: 2rem; /* Espacio arriba */
+}
+
+.sidebar-logout-button:hover {
+  background-color: #c0392b; /* Rojo más oscuro al pasar el mouse */
+}
+
+/* Ajuste para que el sidebar use flex y el botón se vaya al fondo */
+.sidebar {
+  /* ... tus estilos existentes de .sidebar ... */
+  display: flex;
+  flex-direction: column;
+  /* Asegúrate de que tenga height: calc(100% - 60px); o similar si es fijo en móvil */
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        height: calc(100% - 60px); /* Ejemplo si tu navbar mide 60px */
+    }
+}
+
+/* === ESTILOS PARA ESCRITORIO (>= 768px) === */
+@media (min-width: 768px) {
+  .container {
+    display: flex;
+    height: calc(100vh - 60px);
+    transition: padding-left 0.3s ease-in-out;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    position: static;
+    transform: none;
+    transition: width 0.3s ease-in-out, padding 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    flex-shrink: 0;
+    opacity: 1;
+  }
+
+  .container.sidebar-closed .sidebar {
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+    border-right: none;
+    opacity: 0;
+  }
+
+  .main-content {
+    padding-bottom: 1.5rem;
+    font-size: 2.2rem;
+    transition: margin-left 0.3s ease-in-out;
+    margin-left: 0;
+  }
+
+  .sidebar a {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.8rem 1rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    text-align: left;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .sidebar a:hover {
+    background-color: var(--bg-primary);
+    color: var(--color-primary);
+  }
+
+  .sidebar-logout-button {
+    white-space: nowrap;
+    overflow: hidden;
+    display: block;
+    width: 100%;
+    margin-top: auto;
+    padding: 0.8rem 1rem;
+    background: var(--color-error);
+    color: white;
+    text-align: left;
+    cursor: pointer;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    border: none;
+    margin-top: 2rem;
+  }
+
+  .sidebar-logout-button:hover {
+    background-color: #c0392b;
   }
 }

@@ -30,7 +30,7 @@ const OrderStatusChart = ({ orders }) => {
         labels: Object.keys(statusCounts),
         datasets: [{
             data: Object.values(statusCounts),
-            backgroundColor: ['#f1c40f', '#3498db', '#2ecc71', '#e74c3c'],
+            backgroundColor: ['#f1c401', '#81c784', '#e91515ff', '#3498db'],
             borderColor: 'var(--bg-secondary)',
             borderWidth: 4,
         }],

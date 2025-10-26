@@ -19,23 +19,26 @@
     display: flex;
     overflow-x: auto;
     gap: 1.5rem;
-    padding: 0.5rem;
+    padding: 0.5rem; /* Add some padding so cards don't touch edges */
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    align-items: flex-start;
+    align-items: flex-start; /* <--- FIX HERE */
 }
+
 /* Ocultar la barra de scroll */
 .ordersContainer::-webkit-scrollbar { display: none; }
 .ordersContainer { -ms-overflow-style: none; scrollbar-width: none; }
 
 .orderCard {
-    flex: 0 0 320px;
+    flex: 0 0 320px; /* Base width for cards */
     scroll-snap-align: start;
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
-    overflow: hidden;
-    transition: all 0.3s ease;
+    overflow: hidden; /* Keep hidden on the main card */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Transition only border and shadow */
+    display: flex; /* Use flexbox for vertical layout */
+    flex-direction: column; /* Stack header, details, footer */
 }
 
 .orderCard.open {
@@ -55,37 +58,94 @@
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color); /* Keep border here */
+    flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .headerInfo {
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-shrink: 0; /* Prevent status/icon shrinking */
 }
 
 .toggleIcon {
     font-size: 1.5rem;
     color: var(--text-secondary);
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, color 0.3s ease; /* Added color transition */
 }
 
 .orderCard.open .toggleIcon {
-    transform: rotate(45deg);
-    color: var(--color-primary);
+    transform: rotate(45deg); /* Keep rotation */
+    color: var(--color-error); /* Keep error color for 'x' */
 }
 
 .orderDetails {
     max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-out, padding 0.4s ease;
+    overflow: hidden; /* Keep overflow hidden */
+    /* Define transition primarily on max-height */
+    transition: max-height 0.4s ease-out;
+    /* Padding will appear instantly when open */
+    padding: 0 1.5rem;
+    flex-grow: 1; /* Allow details to take available space */
+    min-height: 0; /* Needed for flex-grow */
 }
 
 .orderCard.open .orderDetails {
-    max-height: 1000px;
-    padding: 0 1.5rem 1.5rem;
-    border-top: 1px solid var(--border-color);
-    transition: max-height 0.5s ease-in;
+    max-height: 1500px; /* Increased max-height */
+    padding: 1.5rem; /* Apply padding only when open */
+    overflow-y: auto; /* Allow internal scroll if content is VERY tall */
+    border-top: 1px solid var(--border-color); /* Add border only when open */
+    /* Transition for max-height happens from definition above */
 }
+
+/* Style paragraphs inside details for better wrapping */
+.orderDetails p {
+    margin: 0.5rem 0;
+    line-height: 1.5; /* Improve readability */
+    word-break: break-word; /* Allow long words/dates to break */
+}
+.orderDetails p strong {
+    color: var(--text-primary); /* Ensure labels are clearly visible */
+    margin-right: 0.5em;
+}
+
+/* Styling for the scheduled time specifically */
+.scheduledTime {
+    color: var(--color-primary); /* Make it stand out */
+    font-weight: 500;
+}
+
+
+/* Product list inside details */
+.orderDetails ul {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.orderDetails li {
+    padding: 0.6rem 0; /* Slightly reduced padding */
+    border-bottom: 1px solid var(--border-color);
+    display: flex; /* Use flexbox for alignment */
+    justify-content: space-between; /* Space out name and price */
+    align-items: center; /* Vertically align */
+    gap: 1rem; /* Space between elements */
+}
+.orderDetails li:last-child {
+    border-bottom: none;
+}
+
+.orderDetails li span:first-child { /* Product name part */
+    flex-grow: 1; /* Allow name to take space */
+    word-break: break-word; /* Allow name to wrap */
+}
+.orderDetails li span:last-child { /* Price part */
+    flex-shrink: 0; /* Prevent price from shrinking */
+    font-weight: 500;
+    white-space: nowrap; /* Keep price on one line */
+}
+
 
 .activeOrdersContainer,
 .historyContainer {
@@ -107,19 +167,6 @@
 .completado { background-color: var(--color-success); }
 .cancelado { background-color: var(--color-error); }
 
-.orderDetails ul {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0;
-}
-
-.orderDetails li {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.orderDetails li:last-child {
-    border-bottom: none;
-}
 
 .orderFooter {
     display: flex;
@@ -128,6 +175,12 @@
     gap: 1rem;
     margin-top: 1.5rem;
     font-size: 1.2rem;
+    flex-shrink: 0; /* Prevent footer from shrinking */
+    border-top: 1px solid var(--border-color); /* Add separator */
+    padding-top: 1.5rem; /* Space above total */
+}
+.orderFooter strong {
+    align-self: flex-end; /* Align total to the right */
 }
 
 .actionsContainer {
@@ -173,11 +226,13 @@
 }
 
 .scrollButton {
-    display: none;
+    display: none; /* Keep hidden by default */
 }
 
+/* --- Media Queries remain the same --- */
 @media (min-width: 768px) {
-    .scrollButton {
+    /* ... (existing desktop scroll button styles) ... */
+     .scrollButton {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -218,25 +273,23 @@
     }
 }
 
-.orderCard.open .toggleIcon {
-    transform: none;
-    color: var(--color-error);
-}
 
 @media (min-width: 1024px) {
     .ordersContainer {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        overflow-x: visible;
+        overflow-x: visible; /* Disable horizontal scroll on large screens */
         padding-left: 0;
         padding-right: 0;
     }
 
     .orderCard {
-        flex: 1 1 350px;
+        flex: 1 1 auto; /* Let grid control the sizing */
+        min-width: 350px; /* Ensure a minimum width */
     }
 
     .scrollButton {
-        display: none;
+        display: none; /* Hide scroll buttons on grid layout */
     }
 }
+

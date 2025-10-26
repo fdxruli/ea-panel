@@ -72,16 +72,6 @@ const formatScheduledTime = (isoString) => {
       <div className={styles.cardFooter}>
         <span className={styles.totalAmount}>${order.total_amount.toFixed(2)}</span>
         <div className={styles.actionButtons}>
-          <button onClick={() => onShowDeliveryInfo(order)} className={styles.deliveryButton}>
-            Ver Envío
-          </button>
-          
-          {canEdit && (order.status === 'pendiente' || order.status === 'en_proceso') && (
-            <button onClick={() => onEditOrder(order)} className={styles.editButton}>
-              Editar
-            </button>
-          )}
-
           {canEdit && order.status === 'pendiente' && (
             <button onClick={() => onUpdateStatus(order.id, "en_proceso")} className={styles.processButton}>
               Procesar
@@ -102,6 +92,15 @@ const formatScheduledTime = (isoString) => {
               Cancelar
             </button>
           )}
+          {canEdit && (order.status === 'pendiente' || order.status === 'en_proceso') && (
+            <button onClick={() => onEditOrder(order)} className={styles.editButton}>
+              Editar
+            </button>
+          )}
+
+          <button onClick={() => onShowDeliveryInfo(order)} className={styles.deliveryButton}>
+            Ver Envío
+          </button>
       </div>
       </div>
     </div>
