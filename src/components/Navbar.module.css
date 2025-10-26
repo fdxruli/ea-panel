@@ -1,0 +1,47 @@
+/* src/components/Navbar.module.css */
+.navbar {
+  /* Estilos existentes de la navbar... */
+  display: flex;
+  align-items: center;
+  padding: 0 1.5rem;
+  height: 60px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  position: sticky;
+  top: 0;
+  z-index: 1050;
+}
+
+.navbar h2 {
+  margin: 0; /* Centrar título si no hay botón */
+  flex-grow: 1; /* Ocupa espacio */
+  text-align: center; /* Centrar texto */
+}
+
+/* Botón de hamburguesa */
+.desktopMenuToggle {
+  display: none; /* Oculto en móvil por defecto */
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-right: 1rem; /* Espacio entre botón y título */
+}
+
+.desktopMenuToggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+@media (min-width: 768px) {
+  .desktopMenuToggle {
+    display: block; /* Visible en desktop */
+  }
+  .navbar h2 {
+    text-align: left; /* Título a la izquierda en desktop */
+    margin-left: 0; /* Resetear margen si lo había */
+  }
+}

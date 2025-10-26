@@ -1,36 +1,16 @@
 import React from "react";
-import { supabase } from '../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
+import styles from './Navbar.module.css';
 
-export default function Navbar({ toggleSidebar }) {
-  const navigate = useNavigate();
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error al cerrar sesión:", error);
-    } else {
-      navigate('/login');
-    }
-  };
+const MenuIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>;
+
+export default function Navbar({ isSidebarOpen, toggleSidebar }) {
   return (
-    <div className="navbar">
-      <button className="menu-toggle" onClick={toggleSidebar}>
-        ☰
+    <div className={styles.navbar}>
+      {/* Botón visible solo en desktop */}
+      <button onClick={toggleSidebar} className={styles.desktopMenuToggle}>
+        <MenuIcon />
       </button>
       <h2>Panel de Administración</h2>
-      <button
-        onClick={handleLogout}
-        style={{
-          background: '#e74c3c',
-          color: 'white',
-          border: 'none',
-          padding: '10px 15px',
-          borderRadius: '5px',
-          cursor: 'pointer'
-        }}
-      >
-        Cerrar Sesión
-      </button>
     </div>
   );
 }

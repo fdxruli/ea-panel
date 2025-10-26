@@ -1,6 +1,6 @@
 // src/components/NotFoundPage.jsx
 import React from 'react';
-import ServiceIcon from '../assets/icons/service.svg?react'; // Importa el SVG como componente React
+import ServiceIcon from '../assets/icons/fuera-horario.svg?react'; // Importa el SVG como componente React
 import styles from './NotFoundPage.module.css'; // Crearemos este archivo CSS
 import { Link } from 'react-router-dom'; // Para añadir un enlace de regreso
 

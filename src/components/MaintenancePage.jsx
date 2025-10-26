@@ -1,6 +1,6 @@
 // src/components/MaintenancePage.jsx
 import React from 'react';
-import ServiceDownIcon from '../assets/icons/coming-soon1.svg?react';
+import ServiceDownIcon from '../assets/icons/service.svg?react';
 import styles from './MaintenancePage.module.css'; // Asegúrate de tener este archivo CSS
 
 const MaintenancePage = ({ message }) => {

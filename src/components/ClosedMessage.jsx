@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'; // <-- Import useState and useEffect
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import LoadingSpinner from './LoadingSpinner';
-import FueraHorarioIcon from '../assets/icons/fuera-horario.svg?react';
+import FueraHorarioIcon from '../assets/icons/coming-soon1.svg?react';
 import styles from './ClosedMessage.module.css';
 
 const ClosedMessage = () => {
