@@ -1,10 +1,11 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
 import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
+// Eventos de lifecycle
 self.addEventListener('activate', (event) => {
   console.log('[SW] Service Worker activado');
   cleanupOutdatedCaches();
@@ -13,20 +14,26 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Service Worker instalando...');
+  self.skipWaiting(); // Activar inmediatamente
 });
 
+// Manejo de clicks en notificaciones
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Click en notificación');
   event.notification.close();
+  
   const urlToOpen = event.notification.data?.url || '/';
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // Buscar si ya hay una ventana abierta con esa URL
         for (const client of clientList) {
           if (client.url.includes(urlToOpen) && 'focus' in client) {
             return client.focus();
           }
         }
+        // Si no hay ventana abierta, abrir una nueva
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }
@@ -34,8 +41,10 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Precache de recursos
 precacheAndRoute(self.__WB_MANIFEST || []);
 
+// Configuración de Firebase
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -44,23 +53,30 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
+
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
+// Manejo de notificaciones en background
 onBackgroundMessage(messaging, (payload) => {
   console.log('[SW] Mensaje FCM recibido:', payload);
+  
   const notificationTitle = payload.notification?.title || 'Nueva Notificación';
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: '/pwa-192x192.png', // Asegúrate que estos íconos existan en tu carpeta public
+    icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     data: { url: payload.data?.url || '/' },
     tag: 'notification-' + Date.now(),
     requireInteraction: false
   };
+  
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// ===== ESTRATEGIAS DE CACHE DIFERENCIADAS =====
+
+// Rutas de API - NetworkFirst
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/'),
   new NetworkFirst({
@@ -68,6 +84,8 @@ registerRoute(
     networkTimeoutSeconds: 10,
   })
 );
+
+// Imágenes - StaleWhileRevalidate
 registerRoute(
   ({ request }) => request.destination === 'image',
   new StaleWhileRevalidate({
@@ -75,4 +93,54 @@ registerRoute(
   })
 );
 
-self.skipWaiting(); // Opcional: activa el nuevo SW inmediatamente
+// Manifiestos - NetworkFirst (para que siempre estén actualizados)
+registerRoute(
+  ({ url }) => url.pathname.endsWith('manifest-client.json') || 
+               url.pathname.endsWith('manifest-admin.json'),
+  new NetworkFirst({
+    cacheName: 'manifest-cache',
+  })
+);
+
+// Estrategia para rutas de admin - NetworkFirst más agresivo
+registerRoute(
+  ({ url }) => url.pathname.startsWith('/admin'),
+  new NetworkFirst({
+    cacheName: 'admin-cache',
+    networkTimeoutSeconds: 5,
+    plugins: [
+      {
+        cacheWillUpdate: async ({ response }) => {
+          // Solo cachear respuestas exitosas
+          if (response && response.status === 200) {
+            return response;
+          }
+          return null;
+        },
+      },
+    ],
+  })
+);
+
+// Estrategia para rutas de cliente - CacheFirst para mejor performance
+registerRoute(
+  ({ url, request }) => {
+    // Excluir admin y API
+    return request.mode === 'navigate' && 
+           !url.pathname.startsWith('/admin') &&
+           !url.pathname.startsWith('/api/');
+  },
+  new CacheFirst({
+    cacheName: 'client-pages-cache',
+    plugins: [
+      {
+        cacheWillUpdate: async ({ response }) => {
+          if (response && response.status === 200) {
+            return response;
+          }
+          return null;
+        },
+      },
+    ],
+  })
+);
