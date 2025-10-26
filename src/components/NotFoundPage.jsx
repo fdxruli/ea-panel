@@ -10,7 +10,7 @@ const NotFoundPage = () => {
       <ServiceIcon className={styles.icon} aria-label="Página no encontrada" />
       <h1>¡Oops! Página No Encontrada</h1>
       <p>
-        Parece que te has perdido. La página que buscas no existe o fue movida.
+        Parece que te has perdido. La página que buscas no existe o fue movida. Asegurate de revisar el link
       </p>
       <Link to="/" className={styles.homeLink}>
         Volver al Inicio
