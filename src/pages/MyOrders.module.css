@@ -207,9 +207,65 @@
 
 .prompt {
     text-align: center;
-    padding: 2rem;
-    margin: 0 1rem;
+    padding: 3rem 1.5rem; /* Aumentar padding vertical */
+    margin: 2rem auto; /* Añadir margen superior/inferior y centrar horizontalmente */
+    max-width: 500px; /* Limitar ancho máximo */
 }
+
+.prompt h2 {
+    margin-bottom: 1rem; /* Más espacio bajo el título */
+    color: var(--color-error); /* Color rojo para el título del error */
+}
+
+.prompt p {
+    color: var(--text-secondary); /* Color secundario para el mensaje */
+    line-height: 1.6; /* Mejorar legibilidad */
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.errorTitle {
+  color: var(--color-error);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+}
+
+.errorMessage {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+}
+
+.errorButton {
+  display: inline-block;
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0.9rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.errorButton:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 
 .cancellationReason {
     margin-top: 1rem;
