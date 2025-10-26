@@ -21,16 +21,39 @@ const StatCard = ({ title, value, icon, color, evolution }) => (
 );
 
 const OrderStatusChart = ({ orders }) => {
+    // Definir el orden de estados y sus colores correspondientes
+    const statusConfig = {
+        'pendiente': { label: 'Pendiente', color: '#f0ad4e' },      // Amarillo
+        'en_proceso': { label: 'En Proceso', color: '#3498db' },    // Azul
+        'en_envio': { label: 'En Envío', color: '#5dade2' },        // Azul claro
+        'completado': { label: 'Completado', color: '#81C784' },    // Verde
+        'cancelado': { label: 'Cancelado', color: '#F44336' }       // Rojo
+    };
+
+    // Contar pedidos por estado
     const statusCounts = orders.reduce((acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
         return acc;
     }, {});
 
+    // Filtrar solo los estados que tienen datos y mantener el orden definido
+    const orderedLabels = [];
+    const orderedData = [];
+    const orderedColors = [];
+
+    Object.keys(statusConfig).forEach(status => {
+        if (statusCounts[status]) {
+            orderedLabels.push(statusConfig[status].label);
+            orderedData.push(statusCounts[status]);
+            orderedColors.push(statusConfig[status].color);
+        }
+    });
+
     const data = {
-        labels: Object.keys(statusCounts),
+        labels: orderedLabels,
         datasets: [{
-            data: Object.values(statusCounts),
-            backgroundColor: ['#f1c401', '#81c784', '#e91515ff', '#3498db'],
+            data: orderedData,
+            backgroundColor: orderedColors,
             borderColor: 'var(--bg-secondary)',
             borderWidth: 4,
         }],
@@ -48,6 +71,7 @@ const OrderStatusChart = ({ orders }) => {
 
     return <Doughnut data={data} options={options} />;
 };
+
 
 // --- 👇 COMPONENTE MODIFICADO ---
 const TopProductsChart = ({ items }) => {
