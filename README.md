@@ -1,4 +1,4 @@
-# Entre Alas - Panel de Pedidos y Administración 🍽️ wings 🍔
+# Entre Alas - Panel de Pedidos y Administración
 
 Este proyecto es una aplicación web PWA (Progressive Web App) completa construida con **React** y **Vite**, utilizando **Supabase** como backend. Sirve como un panel tanto para clientes como para administradores de un negocio de comida (presumiblemente "Entre Alas", especializado en alitas).
 
