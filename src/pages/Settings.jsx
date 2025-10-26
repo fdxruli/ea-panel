@@ -1,156 +1,304 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useSettings } from '../context/SettingsContext'; // Asegúrate que la ruta sea correcta
+import { useSettings } from '../context/SettingsContext';
 import { useAlert } from '../context/AlertContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import styles from './Settings.module.css'; // Crearemos este archivo
+import styles from './Settings.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
-// Componente reutilizable para los toggles
-const ToggleSwitch = ({ label, checked, onChange, disabled }) => (
-    <div className={styles.toggleControl}>
-        <label htmlFor={`toggle-${label.replace(/\s+/g, '-')}`}>{label}</label>
-        <label className={styles.switch}>
-            <input
-                id={`toggle-${label.replace(/\s+/g, '-')}`}
-                type="checkbox"
-                checked={checked}
-                onChange={onChange}
-                disabled={disabled}
-            />
-            <span className={styles.slider}></span>
-        </label>
+// Componente ToggleSwitch (sin cambios)
+const ToggleSwitch = memo(({ label, checked, onChange, disabled }) => (
+  <div className={styles.toggleItem}>
+    <span className={styles.toggleLabel}>{label}</span>
+    <label className={styles.switch}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        className={styles.switchInput}
+      />
+      <span className={styles.slider}></span>
+    </label>
+  </div>
+));
+
+ToggleSwitch.displayName = 'ToggleSwitch';
+
+// OPTIMIZACIÓN: Componente de visibilidad con su propio botón
+const ClientVisibilitySection = memo(({ visibility, onToggle, onSave, disabled, saving }) => {
+  const sections = useMemo(() => [
+    { key: 'my_orders_page', label: 'Página "Mis Pedidos"' },
+    { key: 'my_profile_page', label: 'Página "Mi Perfil"' },
+    { key: 'my_stuff_page', label: 'Página "Mis Cosas"' },
+    { key: 'profile_my_data', label: 'Sección "Mis Datos" (Perfil)' },
+    { key: 'profile_my_addresses', label: 'Sección "Mis Direcciones" (Perfil)' },
+    { key: 'stuff_referrals', label: 'Sección "Referidos" (Mis Cosas)' },
+    { key: 'stuff_rewards', label: 'Sección "Recompensas" (Mis Cosas)' },
+    { key: 'stuff_favorites', label: 'Sección "Favoritos" (Mis Cosas)' },
+    { key: 'stuff_reviews', label: 'Sección "Reseñas" (Mis Cosas)' }
+  ], []);
+
+  return (
+    <div className={styles.section}>
+      <h2>Visibilidad del Cliente</h2>
+      <p className={styles.sectionDescription}>
+        Controla qué secciones y componentes pueden ver los clientes.
+      </p>
+      <div className={styles.togglesGrid}>
+        {sections.map(section => (
+          <ToggleSwitch
+            key={section.key}
+            label={section.label}
+            checked={visibility[section.key] ?? true}
+            onChange={() => onToggle(section.key)}
+            disabled={disabled || saving}
+          />
+        ))}
+      </div>
+      
+      {/* Botón de guardado dentro de la sección */}
+      {!disabled && (
+        <div className={styles.sectionFooter}>
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className={styles.saveButton}
+          >
+            {saving ? 'Guardando...' : 'Guardar Cambios'}
+          </button>
+        </div>
+      )}
     </div>
-);
+  );
+});
+
+ClientVisibilitySection.displayName = 'ClientVisibilitySection';
+
+// OPTIMIZACIÓN: Componente de modo mantenimiento con su propio botón
+const MaintenanceModeSection = memo(({ 
+  maintenanceMode, 
+  onToggle, 
+  onMessageChange,
+  onSave,
+  disabled,
+  saving
+}) => (
+  <div className={styles.section}>
+    <h2>Modo Mantenimiento</h2>
+    <p className={styles.sectionDescription}>
+      Activa el modo mantenimiento para mostrar un mensaje a los clientes cuando
+      el sitio no esté disponible.
+    </p>
+    
+    <ToggleSwitch
+      label="Activar Modo Mantenimiento"
+      checked={maintenanceMode.enabled}
+      onChange={onToggle}
+      disabled={disabled || saving}
+    />
+
+    {maintenanceMode.enabled && (
+      <div className={styles.messageBox}>
+        <label htmlFor="maintenanceMessage" className={styles.messageLabel}>
+          Mensaje de Mantenimiento:
+        </label>
+        <textarea
+          id="maintenanceMessage"
+          value={maintenanceMode.message}
+          onChange={onMessageChange}
+          disabled={disabled || saving}
+          className={styles.messageTextarea}
+          rows={4}
+          placeholder="Escribe el mensaje que verán los clientes..."
+        />
+      </div>
+    )}
+    
+    {/* Botón de guardado dentro de la sección */}
+    {!disabled && (
+      <div className={styles.sectionFooter}>
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className={styles.saveButton}
+        >
+          {saving ? 'Guardando...' : 'Guardar Cambios'}
+        </button>
+      </div>
+    )}
+  </div>
+));
+
+MaintenanceModeSection.displayName = 'MaintenanceModeSection';
 
 export default function Settings() {
-    const { showAlert } = useAlert();
-    const { settings, loading: settingsLoading, refetch: refetchSettings } = useSettings(); // Usar el context existente
-    const { hasPermission } = useAdminAuth();
+  const { showAlert } = useAlert();
+  const { hasPermission } = useAdminAuth();
+  const { refreshSettings } = useSettings();
+  
+  const [loading, setLoading] = useState(true);
+  const [savingMaintenance, setSavingMaintenance] = useState(false);
+  const [savingVisibility, setSavingVisibility] = useState(false);
+  
+  const [maintenanceMode, setMaintenanceMode] = useState({
+    enabled: false,
+    message: 'Estamos realizando mejoras en el sitio. Volveremos pronto.'
+  });
+  
+  const [clientVisibility, setClientVisibility] = useState({
+    my_orders_page: true,
+    my_profile_page: true,
+    my_stuff_page: true,
+    profile_my_data: true,
+    profile_my_addresses: true,
+    stuff_referrals: true,
+    stuff_rewards: true,
+    stuff_favorites: true,
+    stuff_reviews: true
+  });
 
-    // Estados locales para los valores de configuración
-    const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
-    const [maintenanceMessage, setMaintenanceMessage] = useState('');
-    const [clientVisibility, setClientVisibility] = useState({});
+  const canEdit = useMemo(
+    () => hasPermission('configuracion.edit'),
+    [hasPermission]
+  );
 
-    const [loading, setLoading] = useState(true);
-    const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
-    const [isSavingVisibility, setIsSavingVisibility] = useState(false);
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [maintenanceResult, visibilityResult] = await Promise.all([
+        supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'maintenance_mode')
+          .single(),
+        supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'client_visibility')
+          .single()
+      ]);
 
-    const canEdit = hasPermission('configuracion.edit'); // Usaremos 'configuracion' como clave
+      if (maintenanceResult.error) throw maintenanceResult.error;
+      if (visibilityResult.error) throw visibilityResult.error;
 
-    // Cargar configuración inicial desde el contexto
-    useEffect(() => {
-        if (!settingsLoading) {
-            const maintenanceMode = settings['maintenance_mode'] || { enabled: false, message: '' };
-            const visibility = settings['client_visibility'] || {}; // Usar objeto vacío como fallback
+      setMaintenanceMode(maintenanceResult.data.value);
+      setClientVisibility(visibilityResult.data.value);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      showAlert(`Error al cargar configuración: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [showAlert]);
 
-            setMaintenanceEnabled(maintenanceMode.enabled);
-            setMaintenanceMessage(maintenanceMode.message);
-            setClientVisibility(visibility);
-            setLoading(false);
-        }
-    }, [settingsLoading, settings]);
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
-    // Guardar configuración de Modo Mantenimiento
-    const handleSaveMaintenance = async () => {
-        if (!canEdit) return;
-        setIsSavingMaintenance(true);
-        const newValue = { enabled: maintenanceEnabled, message: maintenanceMessage };
-        const { error } = await supabase
-            .from('settings')
-            .update({ value: newValue })
-            .eq('key', 'maintenance_mode');
+  const handleMaintenanceToggle = useCallback(() => {
+    setMaintenanceMode(prev => ({
+      ...prev,
+      enabled: !prev.enabled
+    }));
+  }, []);
 
-        setIsSavingMaintenance(false);
-        if (error) {
-            showAlert(`Error al guardar modo mantenimiento: ${error.message}`);
-        } else {
-            showAlert('Modo mantenimiento actualizado.');
-            refetchSettings(); // Refrescar el contexto global
-        }
-    };
+  const handleMessageChange = useCallback((e) => {
+    setMaintenanceMode(prev => ({
+      ...prev,
+      message: e.target.value
+    }));
+  }, []);
 
-    // Guardar configuración de Visibilidad
-    const handleVisibilityChange = (key, value) => {
-         if (!canEdit) return;
-        setClientVisibility(prev => ({ ...prev, [key]: value }));
-    };
+  const handleVisibilityToggle = useCallback((key) => {
+    setClientVisibility(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  }, []);
 
-    const handleSaveVisibility = async () => {
-        if (!canEdit) return;
-        setIsSavingVisibility(true);
-        const { error } = await supabase
-            .from('settings')
-            .update({ value: clientVisibility })
-            .eq('key', 'client_visibility');
+  // OPTIMIZACIÓN: Guardar solo modo mantenimiento
+  const handleSaveMaintenance = useCallback(async () => {
+    if (!canEdit) return;
 
-        setIsSavingVisibility(false);
-        if (error) {
-            showAlert(`Error al guardar la visibilidad: ${error.message}`);
-        } else {
-            showAlert('Configuración de visibilidad actualizada.');
-            refetchSettings(); // Refrescar el contexto global
-        }
-    };
+    setSavingMaintenance(true);
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .update({ value: maintenanceMode })
+        .eq('key', 'maintenance_mode');
 
+      if (error) throw error;
 
-    if (loading || settingsLoading) return <LoadingSpinner />;
+      showAlert('Modo mantenimiento guardado exitosamente.');
+      refreshSettings();
+    } catch (error) {
+      showAlert(`Error al guardar modo mantenimiento: ${error.message}`);
+    } finally {
+      setSavingMaintenance(false);
+    }
+  }, [maintenanceMode, canEdit, refreshSettings, showAlert]);
 
-    return (
-        <div className={styles.container}>
-            <h1>Configuración General</h1>
+  // OPTIMIZACIÓN: Guardar solo visibilidad del cliente
+  const handleSaveVisibility = useCallback(async () => {
+    if (!canEdit) return;
 
-            {/* Card para Modo Mantenimiento */}
-            <div className={styles.card}>
-                <h2>Modo Mantenimiento</h2>
-                <ToggleSwitch
-                    label={maintenanceEnabled ? 'Sitio CERRADO para clientes' : 'Sitio ABIERTO para clientes'}
-                    checked={maintenanceEnabled}
-                    onChange={(e) => canEdit && setMaintenanceEnabled(e.target.checked)}
-                    disabled={!canEdit || isSavingMaintenance}
-                />
-                <div className={styles.messageControl}>
-                    <label htmlFor="maintenance-message">Mensaje a mostrar:</label>
-                    <textarea
-                        id="maintenance-message"
-                        rows="3"
-                        value={maintenanceMessage}
-                        onChange={(e) => canEdit && setMaintenanceMessage(e.target.value)}
-                        disabled={!canEdit || isSavingMaintenance}
-                    />
-                </div>
-                 {canEdit && <button onClick={handleSaveMaintenance} disabled={isSavingMaintenance} className="admin-button-primary">
-                    {isSavingMaintenance ? 'Guardando...' : 'Guardar Modo Mantenimiento'}
-                </button>}
-            </div>
+    setSavingVisibility(true);
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .update({ value: clientVisibility })
+        .eq('key', 'client_visibility');
 
-            {/* Card para Visibilidad de Secciones Cliente */}
-            <div className={styles.card}>
-                <h2>Visibilidad App Cliente</h2>
-                <p>Controla qué secciones y componentes pueden ver los clientes.</p>
-                <div className={styles.visibilityGrid}>
-                    {/* Páginas Principales */}
-                    <ToggleSwitch label="Página: Mis Pedidos" checked={clientVisibility.my_orders_page ?? true} onChange={(e) => handleVisibilityChange('my_orders_page', e.target.checked)} disabled={!canEdit || isSavingVisibility} />
-                    <ToggleSwitch label="Página: Mi Perfil" checked={clientVisibility.my_profile_page ?? true} onChange={(e) => handleVisibilityChange('my_profile_page', e.target.checked)} disabled={!canEdit || isSavingVisibility} />
-                    <ToggleSwitch label="Página: Mi Actividad" checked={clientVisibility.my_stuff_page ?? true} onChange={(e) => handleVisibilityChange('my_stuff_page', e.target.checked)} disabled={!canEdit || isSavingVisibility}/>
+      if (error) throw error;
 
-                    {/* Componentes Dentro de Mi Perfil */}
-                    <h3 className={styles.subHeading}>Dentro de "Mi Perfil":</h3>
-                    <ToggleSwitch label="Sección: Mis Datos" checked={clientVisibility.profile_my_data ?? true} onChange={(e) => handleVisibilityChange('profile_my_data', e.target.checked)} disabled={!canEdit || isSavingVisibility || !clientVisibility.my_profile_page}/>
-                    <ToggleSwitch label="Sección: Mis Direcciones" checked={clientVisibility.profile_my_addresses ?? true} onChange={(e) => handleVisibilityChange('profile_my_addresses', e.target.checked)} disabled={!canEdit || isSavingVisibility || !clientVisibility.my_profile_page}/>
+      showAlert('Visibilidad del cliente guardada exitosamente.');
+      refreshSettings();
+    } catch (error) {
+      showAlert(`Error al guardar visibilidad: ${error.message}`);
+    } finally {
+      setSavingVisibility(false);
+    }
+  }, [clientVisibility, canEdit, refreshSettings, showAlert]);
 
-                    {/* Componentes Dentro de Mi Actividad */}
-                     <h3 className={styles.subHeading}>Dentro de "Mi Actividad":</h3>
-                    <ToggleSwitch label="Sección: Invita y Gana (Referidos)" checked={clientVisibility.stuff_referrals ?? true} onChange={(e) => handleVisibilityChange('stuff_referrals', e.target.checked)} disabled={!canEdit || isSavingVisibility || !clientVisibility.my_stuff_page}/>
-                    <ToggleSwitch label="Sección: Mis Recompensas" checked={clientVisibility.stuff_rewards ?? true} onChange={(e) => handleVisibilityChange('stuff_rewards', e.target.checked)} disabled={!canEdit || isSavingVisibility || !clientVisibility.my_stuff_page}/>
-                    <ToggleSwitch label="Sección: Mis Favoritos" checked={clientVisibility.stuff_favorites ?? true} onChange={(e) => handleVisibilityChange('stuff_favorites', e.target.checked)} disabled={!canEdit || isSavingVisibility || !clientVisibility.my_stuff_page}/>
-                    <ToggleSwitch label="Sección: Mis Reseñas" checked={clientVisibility.stuff_reviews ?? true} onChange={(e) => handleVisibilityChange('stuff_reviews', e.target.checked)} disabled={!canEdit || isSavingVisibility || !clientVisibility.my_stuff_page}/>
-                </div>
-                 {canEdit && <button onClick={handleSaveVisibility} disabled={isSavingVisibility} className="admin-button-primary">
-                     {isSavingVisibility ? 'Guardando...' : 'Guardar Configuración de Visibilidad'}
-                </button>}
-            </div>
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div>
+          <h1>Configuración General</h1>
+          <p className={styles.headerDescription}>
+            Administra la configuración global de la aplicación del cliente.
+          </p>
         </div>
-    );
+      </div>
+
+      {!canEdit && (
+        <div className={styles.alertBanner}>
+          <span className={styles.alertIcon}>ℹ️</span>
+          <span>Solo tienes permisos de lectura. No puedes modificar la configuración.</span>
+        </div>
+      )}
+
+      <div className={styles.sectionsContainer}>
+        <MaintenanceModeSection
+          maintenanceMode={maintenanceMode}
+          onToggle={handleMaintenanceToggle}
+          onMessageChange={handleMessageChange}
+          onSave={handleSaveMaintenance}
+          disabled={!canEdit}
+          saving={savingMaintenance}
+        />
+
+        <ClientVisibilitySection
+          visibility={clientVisibility}
+          onToggle={handleVisibilityToggle}
+          onSave={handleSaveVisibility}
+          disabled={!canEdit}
+          saving={savingVisibility}
+        />
+      </div>
+    </div>
+  );
 }

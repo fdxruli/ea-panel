@@ -1,61 +1,429 @@
+/* TermsAndConditions.module.css - Mobile First Design */
+
+/* ============================================
+   BASE STYLES - MOBILE (< 640px)
+   ============================================ */
+
 .container {
-  padding: 20px;
+  padding: 1rem;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-.addButton, .deleteButton {
-  margin-bottom: 20px;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: bold;
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.addButton {
-  background-color: #28a745;
-  color: white;
+.header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: var(--text-primary, #1a1a1a);
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  background-color: var(--bg-secondary, #ffffff);
+  border-radius: 12px;
+  border: 2px dashed var(--border-color, #e5e5e5);
+}
+
+.emptyState p {
+  color: var(--text-secondary, #666666);
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+/* ============================================
+   TERMS GRID - MOBILE STACKED
+   ============================================ */
+
+.termsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.termCard {
+  background-color: var(--bg-secondary, #ffffff);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #e5e5e5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.termCard:active {
+  transform: translateY(2px);
+}
+
+.termHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
+}
+
+.version {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-primary, #3b82f6);
+}
+
+.date {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666666);
+}
+
+.termContent {
+  margin-bottom: 1rem;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.termContent p {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-primary, #1a1a1a);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+.termActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ============================================
+   BUTTONS - MOBILE OPTIMIZED
+   ============================================ */
+
+.addButton,
+.editButton,
+.deleteButton,
+.saveButton,
+.cancelButton,
+.closeButton {
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 8px;
   border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  text-align: center;
+}
+
+.addButton,
+.saveButton {
+  background-color: var(--color-primary, #3b82f6);
+  color: white;
+  width: 100%;
+}
+
+.addButton:active,
+.saveButton:active {
+  background-color: var(--color-primary-dark, #2563eb);
+  transform: scale(0.98);
+}
+
+.editButton {
+  background-color: transparent;
+  color: var(--color-primary, #3b82f6);
+  border: 2px solid var(--color-primary, #3b82f6);
+  flex: 1;
+}
+
+.editButton:active {
+  background-color: rgba(59, 130, 246, 0.1);
 }
 
 .deleteButton {
-   background-color: #e74c3c;
-   color: white;
-   border: none;
-   margin-left: 10px;
+  background-color: var(--color-error, #ef4444);
+  color: white;
+  flex: 1;
 }
 
+.deleteButton:active {
+  background-color: #dc2626;
+  transform: scale(0.98);
+}
+
+.cancelButton {
+  background-color: transparent;
+  color: var(--text-secondary, #666666);
+  border: 2px solid var(--border-color, #e5e5e5);
+  flex: 1;
+}
+
+.cancelButton:active {
+  background-color: var(--bg-primary, #f9f9f9);
+}
+
+.closeButton {
+  background-color: transparent;
+  color: var(--text-secondary, #666666);
+  padding: 0.5rem;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  line-height: 1;
+  min-height: auto;
+}
+
+.closeButton:active {
+  background-color: var(--bg-primary, #f9f9f9);
+}
+
+/* ============================================
+   MODAL - MOBILE FULL SCREEN
+   ============================================ */
+
 .modalOverlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.6); display: flex;
-  justify-content: center; align-items: center; z-index: 2000;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modalContent {
-  background: white; padding: 2rem; border-radius: 12px;
-  width: 90%; max-width: 800px; color: #333;
-  display: flex; flex-direction: column; max-height: 90vh;
-}
-
-.modalContent label {
-  font-weight: bold;
-  margin-top: 1rem;
-}
-
-.modalContent input, .modalContent textarea {
+  background-color: var(--bg-secondary, #ffffff);
   width: 100%;
-  padding: 10px;
-  margin-top: 5px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-}
-
-.modalContent textarea {
-  resize: vertical;
-}
-
-.modalActions {
-  margin-top: 2rem;
+  height: 100%;
   display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color, #e5e5e5);
+  background-color: var(--bg-primary, #f9f9f9);
+}
+
+.modalHeader h2 {
+  font-size: 1.25rem;
+  margin: 0;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666666);
+}
+
+.versionInput {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 6px;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 150px;
+  background-color: var(--bg-secondary, #ffffff);
+}
+
+.versionInput:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.contentTextarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.6;
+  width: 100%;
+  min-height: 300px;
+  resize: vertical;
+  background-color: var(--bg-secondary, #ffffff);
+}
+
+.contentTextarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modalFooter {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border-color, #e5e5e5);
+  background-color: var(--bg-primary, #f9f9f9);
+}
+
+/* ============================================
+   MEDIA QUERIES - PROGRESSIVE ENHANCEMENT
+   ============================================ */
+
+/* Tablets: 640px+ */
+@media (min-width: 640px) {
+  .container {
+    padding: 1.5rem;
+  }
+
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header h1 {
+    font-size: 1.875rem;
+  }
+
+  .termsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .addButton,
+  .saveButton {
+    width: auto;
+    min-width: 150px;
+  }
+
+  .termCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* Desktop: 768px+ */
+@media (min-width: 768px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .modalContent {
+    width: 90%;
+    max-width: 700px;
+    height: auto;
+    max-height: 90vh;
+    border-radius: 16px;
+  }
+
+  .modalBody {
+    padding: 1.5rem;
+  }
+
+  .contentTextarea {
+    min-height: 400px;
+  }
+
+  /* Hover effects */
+  .addButton:hover,
+  .saveButton:hover {
+    background-color: var(--color-primary-dark, #2563eb);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .editButton:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+
+  .deleteButton:hover {
+    background-color: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  }
+
+  .cancelButton:hover {
+    background-color: var(--bg-primary, #f9f9f9);
+  }
+
+  .closeButton:hover {
+    background-color: var(--bg-primary, #f9f9f9);
+  }
+}
+
+/* Large Desktop: 1024px+ */
+@media (min-width: 1024px) {
+  .termsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .termContent {
+    max-height: 200px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .header h1,
+  .modalHeader h2 {
+    color: var(--text-primary-dark, #f5f5f5);
+  }
+
+  .termCard {
+    background-color: var(--bg-secondary-dark, #1f1f1f);
+    border-color: var(--border-color-dark, #333333);
+  }
+
+  .modalContent {
+    background-color: var(--bg-secondary-dark, #1f1f1f);
+  }
 }

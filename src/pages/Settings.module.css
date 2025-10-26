@@ -1,105 +1,377 @@
+/* Settings.module.css */
+
+/* ============================================
+   BASE STYLES - MOBILE (< 640px)
+   ============================================ */
+
 .container {
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+  padding: 1rem;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-.card {
-    background-color: var(--bg-secondary);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    box-shadow: 0 4px 15px var(--shadow-color);
-    border: 1px solid var(--border-color);
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-color, #e5e5e5);
 }
 
-.card h2 {
-    margin-top: 0;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
-    margin-bottom: 1.5rem;
-    font-size: 1.5rem;
+.header h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary, #1a1a1a);
 }
 
-.card p {
-    color: var(--text-secondary);
-    margin-top: -1rem;
-    margin-bottom: 1.5rem;
+.headerDescription {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666666);
+  margin: 0;
+  line-height: 1.5;
 }
 
-.toggleControl {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 0.8rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
- .toggleControl:last-of-type {
-    border-bottom: none;
-    margin-bottom: 1.5rem; /* Más espacio al final */
+/* ============================================
+   ALERT BANNER
+   ============================================ */
+
+.alertBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background-color: #dbeafe;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #1e40af;
 }
 
-.toggleControl label:first-child { /* El texto del label */
-    font-weight: 500;
-    flex-grow: 1; /* Ocupa espacio disponible */
+.alertIcon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
 }
 
-/* Estilos del switch (igual que en BusinessHours.module.css) */
+/* ============================================
+   SECTIONS CONTAINER
+   ============================================ */
+
+.sectionsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section {
+  background-color: var(--bg-secondary, #ffffff);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #e5e5e5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.sectionDescription {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666666);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+/* ============================================
+   SECTION FOOTER - NUEVO
+   ============================================ */
+
+.sectionFooter {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color, #e5e5e5);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ============================================
+   TOGGLE SWITCHES
+   ============================================ */
+
+.togglesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.toggleItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: var(--bg-primary, #f9f9f9);
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.toggleItem:active {
+  background-color: var(--bg-hover, #f3f4f6);
+}
+
+.toggleLabel {
+  font-size: 0.875rem;
+  color: var(--text-primary, #1a1a1a);
+  flex: 1;
+  margin-right: 1rem;
+  line-height: 1.4;
+}
+
 .switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 28px;
-    flex-shrink: 0; /* No se encoja */
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
 }
-.switch input { opacity: 0; width: 0; height: 0; }
+
+.switchInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
 .slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--border-color); transition: .4s; border-radius: 28px;
-}
-.slider:before {
-    position: absolute; content: ""; height: 20px; width: 20px; left: 4px;
-    bottom: 4px; background-color: white; transition: .4s; border-radius: 50%;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-input:checked + .slider { background-color: var(--color-success); }
-input:checked + .slider:before { transform: translateX(22px); }
-input:disabled + .slider { cursor: not-allowed; opacity: 0.6; }
-
-
-.messageControl {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin: 1.5rem 0;
-}
-.messageControl label { font-weight: 500; color: var(--text-secondary); }
-.messageControl textarea {
-    font-family: inherit; font-size: 0.9rem; padding: 0.8rem; border-radius: 8px;
-    border: 1px solid var(--border-color); background-color: var(--bg-primary);
-    color: var(--text-primary); resize: vertical; min-height: 80px;
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-disabled, #d1d5db);
+  transition: all 0.3s ease;
+  border-radius: 34px;
 }
 
-.visibilityGrid {
-    display: flex;
-    flex-direction: column;
-    gap: 0rem; /* Espacio manejado por el borde inferior del toggleControl */
-    margin-bottom: 1.5rem;
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: all 0.3s ease;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.subHeading {
-    margin-top: 2rem;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    font-size: 1.1rem;
-    color: var(--color-primary);
-    border-bottom: 1px solid var(--color-primary-light);
+.switchInput:checked + .slider {
+  background-color: var(--color-primary, #3b82f6);
 }
 
-/* Estilo para Toggles deshabilitados cuando la página padre está oculta */
-.toggleControl input:disabled + .slider + label {
-    opacity: 0.5;
-    text-decoration: line-through;
+.switchInput:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+.switchInput:disabled + .slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switchInput:focus + .slider {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ============================================
+   MAINTENANCE MESSAGE BOX
+   ============================================ */
+
+.messageBox {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color, #e5e5e5);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.messageLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary, #666666);
+  margin-bottom: 0.5rem;
+}
+
+.messageTextarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  background-color: var(--bg-secondary, #ffffff);
+  color: var(--text-primary, #1a1a1a);
+  transition: border-color 0.2s ease;
+}
+
+.messageTextarea:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.messageTextarea:disabled {
+  background-color: var(--bg-disabled, #f5f5f5);
+  color: var(--text-disabled, #999999);
+  cursor: not-allowed;
+}
+
+/* ============================================
+   SAVE BUTTON
+   ============================================ */
+
+.saveButton {
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+  background-color: var(--color-primary, #3b82f6);
+  color: white;
+  width: 100%;
+}
+
+.saveButton:active {
+  background-color: var(--color-primary-dark, #2563eb);
+  transform: scale(0.98);
+}
+
+.saveButton:disabled {
+  background-color: var(--bg-disabled, #d1d5db);
+  color: var(--text-disabled, #9ca3af);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ============================================
+   MEDIA QUERIES
+   ============================================ */
+
+/* Tablets: 640px+ */
+@media (min-width: 640px) {
+  .container {
+    padding: 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.875rem;
+  }
+
+  .togglesGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .section {
+    padding: 1.5rem;
+  }
+
+  .toggleItem:hover {
+    background-color: var(--bg-hover, #f3f4f6);
+  }
+
+  .saveButton {
+    width: auto;
+    min-width: 180px;
+  }
+}
+
+/* Desktop: 768px+ */
+@media (min-width: 768px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .section h2 {
+    font-size: 1.5rem;
+  }
+
+  .toggleLabel {
+    font-size: 0.9375rem;
+  }
+
+  .messageTextarea {
+    font-size: 0.9375rem;
+  }
+
+  .saveButton:hover {
+    background-color: var(--color-primary-dark, #2563eb);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .saveButton:disabled:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Large Desktop: 1024px+ */
+@media (min-width: 1024px) {
+  .togglesGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .section {
+    padding: 2rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .header h1,
+  .section h2 {
+    color: var(--text-primary-dark, #f5f5f5);
+  }
+
+  .section {
+    background-color: var(--bg-secondary-dark, #1f1f1f);
+    border-color: var(--border-color-dark, #333333);
+  }
+
+  .toggleItem {
+    background-color: var(--bg-primary-dark, #2a2a2a);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .slider,
+  .slider::before,
+  .messageBox,
+  .saveButton {
+    transition: none;
+    animation: none;
+  }
 }
