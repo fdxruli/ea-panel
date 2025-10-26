@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+// --- Añadido useNavigate y useCustomer ---
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useCustomer } from '../context/CustomerContext'; // Asegúrate que la ruta sea correcta
+// --- Fin añadidos ---
 import { supabase } from '../lib/supabaseClient'; // Asegúrate que la ruta sea correcta
 import LoadingSpinner from '../components/LoadingSpinner'; // Asegúrate que la ruta sea correcta
 import ImageWithFallback from '../components/ImageWithFallback'; // Asegúrate que la ruta sea correcta
@@ -13,9 +16,31 @@ export default function OrderDetailPage() {
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // --- Hooks para redirección y sesión ---
+    const navigate = useNavigate();
+    const { phone } = useCustomer(); // Obtiene el teléfono si el usuario tiene sesión
+    // --- Fin hooks ---
+
+    // --- Efecto para la Redirección Inteligente ---
+    useEffect(() => {
+        // Si hay un 'phone' (usuario logueado), redirige a la lista completa de pedidos
+        if (phone) {
+            console.log('Usuario logueado detectado, redirigiendo a /mis-pedidos...');
+            navigate('/mis-pedidos', { replace: true }); // replace: true evita que esta página quede en el historial
+        }
+    }, [phone, navigate]); // Se ejecuta si 'phone' o 'navigate' cambian
+    // --- Fin Efecto ---
+
 
     // Efecto para buscar los datos del pedido cuando el orderCode cambia
     useEffect(() => {
+        // --- Añadido: No buscar si estamos redirigiendo ---
+        if (phone) {
+            setLoading(false); // Detener carga si vamos a redirigir
+            return;
+        }
+        // --- Fin añadido ---
+
         const fetchOrderDetails = async () => {
             setLoading(true);
             setError(null);
@@ -71,51 +96,67 @@ export default function OrderDetailPage() {
             }
         };
 
-        // Solo ejecutar la búsqueda si hay un orderCode
-        if (orderCode) {
+        // Solo ejecutar la búsqueda si hay un orderCode y no hay usuario logueado
+        if (orderCode && !phone) {
             fetchOrderDetails();
-        } else {
-            // Si no hay orderCode en la URL
+        } else if (!orderCode) {
+            // Si no hay orderCode en la URL (y no hay usuario logueado)
             setError('No se proporcionó un código de pedido en el enlace.');
             setLoading(false);
         }
-    }, [orderCode]); // Este efecto se re-ejecuta si el orderCode cambia
+    }, [orderCode, phone, navigate]);
 
-    // --- Renderizado Condicional ---
+    if (phone) {
+        return null;
+    }
+
 
     if (loading) {
         return <LoadingSpinner />;
     }
 
     if (error) {
-        // Mostrar mensaje de error con un enlace para volver al inicio
         return (
-            <div className={styles.container}>
-                <div className={styles.prompt}>
-                    <h2>Error al Cargar Pedido</h2>
-                    <p>{error}</p>
-                    <Link to="/" className="admin-button-primary">Volver al Inicio</Link>
+            <>
+                <SEO
+                    title="Error al Cargar Pedido"
+                    description="No se pudo cargar la información del pedido"
+                />
+                <div className={styles.errorContainer}>
+                    <div className={styles.errorBox}>
+                        <h1 className={styles.errorTitle}>Error al Cargar Pedido</h1>
+                        <p className={styles.errorMessage}>{error}</p>
+                        <Link to="/" className={styles.errorButton}>
+                            Volver al Inicio
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
     if (!order) {
-        // Aunque teóricamente cubierto por el error, es buena práctica tenerlo
         return (
-            <div className={styles.container}>
-                 <div className={styles.prompt}>
-                    <h2>Pedido No Encontrado</h2>
-                    <p>No pudimos encontrar los detalles para el pedido {orderCode}.</p>
-                    <Link to="/" className="admin-button-primary">Volver al Inicio</Link>
+            <>
+                <SEO
+                    title="Pedido No Encontrado"
+                    description="El pedido solicitado no existe"
+                />
+                <div className={styles.errorContainer}>
+                    <div className={styles.errorBox}>
+                        <h1 className={styles.errorTitle}>Pedido No Encontrado</h1>
+                        <p className={styles.errorMessage}>
+                            No pudimos encontrar los detalles para el pedido {orderCode}.
+                        </p>
+                        <Link to="/" className={styles.errorButton}>
+                            Volver al Inicio
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
-    // --- Renderizado del Pedido Encontrado ---
-
-    // Función para formatear fecha programada (si existe)
     const formatScheduledTime = (isoString) => {
         if (!isoString) return null;
         try {
@@ -161,7 +202,7 @@ export default function OrderDetailPage() {
 
                         {/* Mostrar si está programado */}
                         {formattedScheduledTime && (
-                             <p style={{ fontWeight: 'bold', color: 'var(--color-primary)'}}>
+                            <p style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>
                                 <strong>Programado para:</strong> {formattedScheduledTime}
                             </p>
                         )}
@@ -174,7 +215,7 @@ export default function OrderDetailPage() {
                                 {order.order_items.map(item => (
                                     <li key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                                             <ImageWithFallback
+                                            <ImageWithFallback
                                                 src={item.products?.image_url || ''}
                                                 alt={item.products?.name || 'Producto'}
                                                 style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }}
