@@ -1,34 +1,65 @@
 // src/components/Sidebar.jsx
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react"; // <-- Añadido useEffect
+// --- MODIFICADO: Importar NavLink y useLocation ---
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+// --- FIN MODIFICADO ---
 import { supabase } from '../lib/supabaseClient';
 import { useAdminAuth } from "../context/AdminAuthContext";
 import ConfirmModal from './ConfirmModal';
-import styles from './Sidebar.module.css'; // Asegúrate que la importación sea correcta
+import styles from './Sidebar.module.css';
 
-// Icono para expandir/colapsar
 const ChevronDown = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
-// Recibe isSidebarOpen y closeSidebar
+// --- Definir mapeo de rutas a grupos ---
+const routeToGroupMap = {
+  '/admin': 'gestionPrincipal',
+  '/admin/crear-pedido': 'gestionPrincipal',
+  '/admin/pedidos': 'gestionPrincipal',
+  '/admin/productos': 'catalogo',
+  '/admin/special-prices': 'catalogo',
+  '/admin/descuentos': 'catalogo',
+  '/admin/clientes': 'clientes',
+  '/admin/referidos': 'clientes',
+  '/admin/horarios': 'configuracion',
+  '/admin/terminos': 'configuracion',
+  '/admin/registrar-admin': 'configuracion',
+  '/admin/configuracion': 'configuracion',
+};
+// --- Fin mapeo ---
+
 export default function Sidebar({ isSidebarOpen, closeSidebar }) {
   const { hasPermission } = useAdminAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // <-- Hook para obtener la ubicación
   const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
-  // Estado para controlar qué grupo está abierto
-  const [openGroup, setOpenGroup] = useState('gestionPrincipal'); // 'gestionPrincipal' abierto por defecto
+  // --- MODIFICADO: Estado inicial null para openGroup ---
+  const [openGroup, setOpenGroup] = useState(null);
+  // --- FIN MODIFICADO ---
+
+  // --- NUEVO: useEffect para abrir el grupo correcto ---
+  useEffect(() => {
+    const currentPath = location.pathname;
+    const activeGroup = routeToGroupMap[currentPath];
+    if (activeGroup) {
+      setOpenGroup(activeGroup);
+    } else {
+      // Opcional: si ninguna ruta coincide, cierra todos o abre uno por defecto
+      setOpenGroup('gestionPrincipal'); // Por ejemplo, abre el primero por defecto
+    }
+  }, [location.pathname]); // Se ejecuta cada vez que cambia la ruta
+  // --- FIN NUEVO ---
+
 
   const toggleGroup = (groupKey) => {
     setOpenGroup(prevOpenGroup => (prevOpenGroup === groupKey ? null : groupKey));
   };
 
-  // Componente interno para el grupo colapsable
   const SidebarGroup = ({ groupKey, title, children }) => {
     const isOpen = openGroup === groupKey;
-    // Filtra children para no renderizar el grupo si no tiene enlaces visibles
     const visibleChildren = React.Children.toArray(children).filter(child => child !== null && child !== false);
 
     if (visibleChildren.length === 0) {
-      return null; // No renderizar el grupo si no hay enlaces con permiso
+      return null;
     }
 
     return (
@@ -58,38 +89,43 @@ export default function Sidebar({ isSidebarOpen, closeSidebar }) {
     setLogoutModalOpen(true);
   };
 
+  // --- Helper para className de NavLink ---
+  const getNavLinkClass = ({ isActive }) => {
+    // isActive es provisto por NavLink
+    // Devolvemos la clase CSS Module 'activeLink' si está activo
+    return isActive ? styles.activeLink : undefined;
+  };
+  // --- Fin Helper ---
+
   return (
     <>
+      {/* --- MODIFICADO: Usar NavLink en lugar de Link y aplicar clase activa --- */}
       <div className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
-        {/* Grupo: Gestión Principal */}
         <SidebarGroup groupKey="gestionPrincipal" title="Gestión Principal">
-          {hasPermission('dashboard.view') && <Link to="/admin" onClick={closeSidebar}>Dashboard</Link>}
-          {hasPermission('crear-pedido.view') && <Link to="/admin/crear-pedido" onClick={closeSidebar}>Crear Pedido</Link>}
-          {hasPermission('pedidos.view') && <Link to="/admin/pedidos" onClick={closeSidebar}>Pedidos</Link>}
+          {hasPermission('dashboard.view') && <NavLink to="/admin" end className={getNavLinkClass} onClick={closeSidebar}>Dashboard</NavLink>}
+          {hasPermission('crear-pedido.view') && <NavLink to="/admin/crear-pedido" className={getNavLinkClass} onClick={closeSidebar}>Crear Pedido</NavLink>}
+          {hasPermission('pedidos.view') && <NavLink to="/admin/pedidos" className={getNavLinkClass} onClick={closeSidebar}>Pedidos</NavLink>}
         </SidebarGroup>
 
-        {/* Grupo: Catálogo */}
         <SidebarGroup groupKey="catalogo" title="Catálogo">
-          {hasPermission('productos.view') && <Link to="/admin/productos" onClick={closeSidebar}>Productos</Link>}
-          {hasPermission('special-prices.view') && <Link to="/admin/special-prices" onClick={closeSidebar}>Precios Especiales</Link>}
-          {hasPermission('descuentos.view') && <Link to="/admin/descuentos" onClick={closeSidebar}>Descuentos</Link>}
+          {hasPermission('productos.view') && <NavLink to="/admin/productos" className={getNavLinkClass} onClick={closeSidebar}>Productos</NavLink>}
+          {hasPermission('special-prices.view') && <NavLink to="/admin/special-prices" className={getNavLinkClass} onClick={closeSidebar}>Precios Especiales</NavLink>}
+          {hasPermission('descuentos.view') && <NavLink to="/admin/descuentos" className={getNavLinkClass} onClick={closeSidebar}>Descuentos</NavLink>}
         </SidebarGroup>
 
-        {/* Grupo: Clientes */}
         <SidebarGroup groupKey="clientes" title="Clientes">
-          {hasPermission('clientes.view') && <Link to="/admin/clientes" onClick={closeSidebar}>Clientes</Link>}
-          {hasPermission('referidos.view') && <Link to="/admin/referidos" onClick={closeSidebar}>Referidos</Link>}
+          {hasPermission('clientes.view') && <NavLink to="/admin/clientes" className={getNavLinkClass} onClick={closeSidebar}>Clientes</NavLink>}
+          {hasPermission('referidos.view') && <NavLink to="/admin/referidos" className={getNavLinkClass} onClick={closeSidebar}>Referidos</NavLink>}
         </SidebarGroup>
 
-        {/* Grupo: Configuración */}
         <SidebarGroup groupKey="configuracion" title="Configuración">
-          {hasPermission('horarios.view') && <Link to="/admin/horarios" onClick={closeSidebar}>Horarios</Link>}
-          {hasPermission('terminos.view') && <Link to="/admin/terminos" onClick={closeSidebar}>Términos y Cond.</Link>}
-          {hasPermission('registrar-admin.view') && <Link to="/admin/registrar-admin" onClick={closeSidebar}>Gestionar Admins</Link>}
-          {hasPermission('configuracion.view') && <Link to="/admin/configuracion" onClick={closeSidebar}>Config. General</Link>}
+          {hasPermission('horarios.view') && <NavLink to="/admin/horarios" className={getNavLinkClass} onClick={closeSidebar}>Horarios</NavLink>}
+          {hasPermission('terminos.view') && <NavLink to="/admin/terminos" className={getNavLinkClass} onClick={closeSidebar}>Términos y Cond.</NavLink>}
+          {hasPermission('registrar-admin.view') && <NavLink to="/admin/registrar-admin" className={getNavLinkClass} onClick={closeSidebar}>Gestionar Admins</NavLink>}
+          {hasPermission('configuracion.view') && <NavLink to="/admin/configuracion" className={getNavLinkClass} onClick={closeSidebar}>Config. General</NavLink>}
         </SidebarGroup>
+      {/* --- FIN MODIFICADO --- */}
 
-        {/* Botón de Logout fuera de los grupos */}
         <button className="sidebar-logout-button" onClick={handleLogoutClick}>
           Cerrar Sesión
         </button>

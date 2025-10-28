@@ -91,3 +91,14 @@
     opacity: 1; /* Se hace visible */
     transform: translateY(0); /* Vuelve a su posición */
 }
+
+.activeLink {
+  background-color: var(--color-primary-light) !important; /* Usa !important si es necesario para sobrescribir */
+  color: var(--color-primary-dark) !important;
+  font-weight: 700 !important;
+}
+/* Opcional: Si quieres que el hover sea diferente en el activo */
+.activeLink:hover {
+    background-color: var(--color-primary-light) !important; /* Mantiene el color de fondo activo */
+    /* Puedes ajustar otros estilos si quieres */
+}
