@@ -41,7 +41,6 @@ import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import NotFoundPage from "./components/NotFoundPage.jsx";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
 // Styles & Utils
-import 'leaflet/dist/leaflet.css';
 import { cleanupExpiredCache } from "./utils/cache.js";
 
 // Wrapper for Admin Permissions
