@@ -1,22 +1,26 @@
-/* BusinessHours.module.css - Mobile First Design */
+/* BusinessHours.module.css - Mobile First Optimizado */
 
 /* ============================================
    BASE STYLES - MOBILE (< 640px)
    ============================================ */
 
 .container {
-  padding: 1rem;
+    background-color: var(--bg-primary);
+  padding: 0.875rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   max-width: 100%;
   overflow-x: hidden;
+  width: 100%;
 }
 
 .container h1 {
-  font-size: 1.5rem;
-  margin: 0 0 1rem 0;
-  color: var(--text-primary, #1a1a1a);
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem 0;
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 /* ============================================
@@ -25,57 +29,64 @@
 
 .section {
   background-color: var(--bg-secondary, #ffffff);
-  padding: 1rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0.875rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid var(--border-color, #e5e5e5);
+  width: 100%;
 }
 
 .sectionHeader {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.625rem;
+  margin-bottom: 0.875rem;
 }
 
 .sectionHeader h2 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   margin: 0;
   color: var(--text-primary, #1a1a1a);
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .description {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--text-secondary, #666666);
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.875rem 0;
   line-height: 1.5;
 }
 
 /* ============================================
-   TABLES - MOBILE OPTIMIZED
+   TABLES - MOBILE CARD LAYOUT
    ============================================ */
 
 .table {
+    background-color: var(--bg-primary);
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .table thead {
-  display: none; /* Ocultar encabezados en móvil */
+  display: none;
 }
 
 .table tbody {
   display: block;
+  width: 100%;
 }
 
 .table tr {
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 0.875rem;
   background-color: var(--bg-primary, #f9f9f9);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0.875rem;
   border: 1px solid var(--border-color, #e5e5e5);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .table td {
@@ -84,6 +95,8 @@
   align-items: center;
   padding: 0.5rem 0;
   border: none;
+  min-height: 32px;
+  gap: 0.5rem;
 }
 
 .table td::before {
@@ -91,7 +104,8 @@
   font-weight: 600;
   color: var(--text-secondary, #666666);
   flex-shrink: 0;
-  margin-right: 1rem;
+  font-size: 0.8125rem;
+  min-width: 100px;
 }
 
 /* ============================================
@@ -106,10 +120,13 @@
   border-radius: 6px;
   font-size: 0.875rem;
   width: 100%;
-  max-width: 150px;
+  max-width: 100%;
   background-color: var(--bg-secondary, #ffffff);
   color: var(--text-primary, #1a1a1a);
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .timeInput:focus,
@@ -121,31 +138,36 @@
 }
 
 .checkbox {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.375rem;
+  height: 1.375rem;
   cursor: pointer;
   accent-color: var(--color-primary, #3b82f6);
+  flex-shrink: 0;
 }
 
 /* ============================================
-   BUTTONS - MOBILE FIRST
+   BUTTONS - MOBILE OPTIMIZED
    ============================================ */
 
 .saveButton,
 .editButton,
 .addButton,
 .deleteButton {
-  padding: 0.75rem 1.25rem;
+  padding: 0.75rem 1rem;
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: 8px;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  width: 100%; /* Full width en móvil */
+  width: 100%;
   text-align: center;
-  /* Mejora para touch targets mínimo 44x44px */
   min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .saveButton,
@@ -173,6 +195,9 @@
 .deleteButton {
   background-color: var(--color-error, #ef4444);
   color: white;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  min-height: 38px;
 }
 
 .deleteButton:active {
@@ -183,35 +208,40 @@
 /* ============================================
    EXCEPTION FORM - MOBILE STACKED
    ============================================ */
+
 .exceptionForm {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.875rem;
+  padding: 0.875rem;
   background-color: var(--bg-primary, #f9f9f9);
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .exceptionForm h3 {
   font-size: 1rem;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.375rem 0;
   color: var(--text-primary, #1a1a1a);
+  font-weight: 600;
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .formGroup label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--text-secondary, #666666);
+  line-height: 1.4;
 }
 
-/* Estilos especiales para el checkbox "Cerrado" */
 .formGroup label.checkboxLabel {
   display: flex;
   flex-direction: row;
@@ -220,12 +250,11 @@
   font-weight: 500;
 }
 
-/* Contenedor para los campos condicionales */
 .conditionalFields {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-top: 0.5rem;
+  gap: 0.875rem;
+  margin-top: 0.375rem;
   opacity: 1;
   max-height: 500px;
   overflow: hidden;
@@ -239,7 +268,6 @@
   pointer-events: none;
 }
 
-/* Inputs dentro del formulario */
 .formGroup .timeInput,
 .formGroup .dateInput,
 .formGroup .textInput {
@@ -251,6 +279,7 @@
   background-color: var(--bg-secondary, #ffffff);
   color: var(--text-primary, #1a1a1a);
   transition: border-color 0.2s ease;
+  box-sizing: border-box;
 }
 
 .formGroup .timeInput:focus,
@@ -271,84 +300,21 @@
 }
 
 /* ============================================
-   MEDIA QUERIES - FORMULARIO RESPONSIVE
+   MEDIA QUERIES - TABLETS (640px+)
    ============================================ */
 
-/* Tablets: 640px+ */
-@media (min-width: 640px) {
-  .exceptionForm {
-    padding: 1.5rem;
-  }
-
-  .conditionalFields {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Tablets Landscape / Small Desktop: 768px+ */
-@media (min-width: 768px) {
-  .exceptionForm {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    align-items: start;
-  }
-
-  .exceptionForm h3 {
-    grid-column: 1 / -1;
-    font-size: 1.125rem;
-  }
-
-  /* El checkbox ocupa columna completa */
-  .formGroup:has(.checkboxLabel) {
-    grid-column: 1 / -1;
-  }
-
-  /* Los campos condicionales ocupan 2 columnas */
-  .conditionalFields {
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* Campo de motivo ocupa toda la fila */
-  .formGroup:has(.textInput) {
-    grid-column: 1 / -1;
-  }
-
-  /* Botón de añadir ocupa toda la fila */
-  .exceptionForm .addButton {
-    grid-column: 1 / -1;
-  }
-}
-
-/* Desktop: 1024px+ */
-@media (min-width: 1024px) {
-  .exceptionForm {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .conditionalFields {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* ============================================
-   MEDIA QUERIES - PROGRESSIVE ENHANCEMENT
-   ============================================ */
-
-/* Tablets: 640px+ */
 @media (min-width: 640px) {
   .container {
-    padding: 1.5rem;
-    gap: 2rem;
+    padding: 1.25rem;
+    gap: 1.75rem;
   }
 
   .container h1 {
-    font-size: 1.875rem;
+    font-size: 1.75rem;
   }
 
   .section {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
 
   .sectionHeader {
@@ -358,34 +324,52 @@
   }
 
   .sectionHeader h2 {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
   }
 
   .table {
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
   }
 
   .saveButton,
   .editButton,
-  .addButton,
+  .addButton {
+    width: auto;
+    min-width: 140px;
+  }
+
   .deleteButton {
-    width: auto; /* Botones con ancho automático en tablet+ */
-    min-width: 120px;
+    width: auto;
+    min-width: 100px;
   }
 
   .exceptionForm {
-    padding: 1.5rem;
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .conditionalFields {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Tablets Landscape / Small Desktop: 768px+ */
+/* ============================================
+   MEDIA QUERIES - DESKTOP (768px+)
+   ============================================ */
+
 @media (min-width: 768px) {
   .container {
     max-width: 1200px;
     margin: 0 auto;
+    padding: 1.5rem;
+    gap: 2rem;
   }
 
-  /* Mostrar tabla tradicional en pantallas grandes */
+  .section {
+    padding: 1.5rem;
+  }
+
+  /* Tabla tradicional en desktop */
   .table thead {
     display: table-header-group;
   }
@@ -411,8 +395,9 @@
   .table th,
   .table td {
     display: table-cell;
-    padding: 1rem;
+    padding: 0.875rem;
     text-align: left;
+    vertical-align: middle;
   }
 
   .table th {
@@ -420,6 +405,7 @@
     color: var(--text-secondary, #666666);
     background-color: var(--bg-primary, #f9f9f9);
     border-bottom: 2px solid var(--border-color, #e5e5e5);
+    font-size: 0.875rem;
   }
 
   .table td {
@@ -427,25 +413,39 @@
   }
 
   .table td::before {
-    display: none; /* Remover etiquetas en desktop */
+    display: none;
   }
 
   .exceptionForm {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
-    align-items: end;
+    align-items: start;
   }
 
   .exceptionForm h3 {
     grid-column: 1 / -1;
+    font-size: 1.125rem;
   }
 
-  .formGroup:last-of-type {
+  .formGroup:has(.checkboxLabel) {
     grid-column: 1 / -1;
   }
 
-  /* Hover effects para desktop */
+  .conditionalFields {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .formGroup:has(.textInput) {
+    grid-column: 1 / -1;
+  }
+
+  .exceptionForm .addButton {
+    grid-column: 1 / -1;
+  }
+
+  /* Hover effects */
   .saveButton:hover,
   .addButton:hover {
     background-color: var(--color-primary-dark, #2563eb);
@@ -464,34 +464,35 @@
   }
 }
 
-/* Desktop: 1024px+ */
+/* ============================================
+   MEDIA QUERIES - LARGE DESKTOP (1024px+)
+   ============================================ */
+
 @media (min-width: 1024px) {
+  .container {
+    padding: 2rem;
+  }
+
   .section {
     padding: 2rem;
   }
 
   .table {
-    font-size: 1rem;
+    font-size: 0.9375rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 1rem;
   }
 
   .exceptionForm {
     grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 
-  .exceptionForm .formGroup:nth-last-child(2) {
-    grid-column: auto;
-  }
-}
-
-/* Large Desktop: 1280px+ */
-@media (min-width: 1280px) {
-  .container {
-    padding: 2rem;
-  }
-
-  .exceptionForm {
-    grid-template-columns: repeat(4, 1fr);
+  .conditionalFields {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -511,20 +512,19 @@
   border: 0;
 }
 
-/* Loading states */
 .loading {
   opacity: 0.6;
   pointer-events: none;
 }
 
-/* Animaciones suaves */
+/* Smooth scrolling */
 @media (prefers-reduced-motion: no-preference) {
   * {
     scroll-behavior: smooth;
   }
 }
 
-/* Dark mode support (opcional) */
+/* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .container h1,
   .sectionHeader h2 {
@@ -539,5 +539,9 @@
   .table tr {
     background-color: var(--bg-primary-dark, #2a2a2a);
     border-color: var(--border-color-dark, #333333);
+  }
+
+  .description {
+    color: var(--text-secondary-dark, #b3b3b3);
   }
 }

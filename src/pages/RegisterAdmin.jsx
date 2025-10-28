@@ -376,8 +376,8 @@ export default function RegisterAdmin() {
         }
 
         try {
-            // Eliminar de auth y tabla admins
-            const { error } = await supabase.auth.admin.deleteUser(adminId);
+            // Usar supabaseAdmin para tener permisos de eliminación
+            const { error } = await supabaseAdmin.auth.admin.deleteUser(adminId);
             if (error) throw error;
 
             showAlert('Administrador eliminado exitosamente.', 'success');

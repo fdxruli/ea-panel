@@ -1,5 +1,3 @@
-/* TermsAndConditions.module.css - Mobile First Design */
-
 /* ============================================
    BASE STYLES - MOBILE (< 640px)
    ============================================ */
@@ -52,12 +50,13 @@
 }
 
 .termCard {
-  background-color: var(--bg-secondary, #ffffff);
+  background-color: var(--bg-primary);
   border-radius: 12px;
   padding: 1rem;
   border: 1px solid var(--border-color, #e5e5e5);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: var(--text-primary);
 }
 
 .termCard:active {

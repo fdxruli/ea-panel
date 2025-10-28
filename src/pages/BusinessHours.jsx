@@ -231,13 +231,13 @@ export default function BusinessHours() {
                     </thead>
                     <tbody>
                         {hours.map((hour, index) => (
-                            <tr key={hour.day_of_week}>
-                                <td>{weekDays[index].name}</td>
-                                <td>
+                            <tr key={hour.day_of_week || index}>
+                                <td data-label="Día">{weekDays[index].name}</td>
+                                <td data-label="Apertura">
                                     {isEditingHours ? (
                                         <input
                                             type="time"
-                                            value={hour.open_time || ''}
+                                            value={hour.open_time}
                                             onChange={(e) => handleHourChange(hour.day_of_week, 'open_time', e.target.value)}
                                             disabled={hour.is_closed}
                                             className={styles.timeInput}
@@ -246,11 +246,11 @@ export default function BusinessHours() {
                                         hour.is_closed ? '-' : hour.open_time
                                     )}
                                 </td>
-                                <td>
+                                <td data-label="Cierre">
                                     {isEditingHours ? (
                                         <input
                                             type="time"
-                                            value={hour.close_time || ''}
+                                            value={hour.close_time}
                                             onChange={(e) => handleHourChange(hour.day_of_week, 'close_time', e.target.value)}
                                             disabled={hour.is_closed}
                                             className={styles.timeInput}
@@ -259,11 +259,11 @@ export default function BusinessHours() {
                                         hour.is_closed ? '-' : hour.close_time
                                     )}
                                 </td>
-                                <td>
+                                <td data-label="Cerrado">
                                     {isEditingHours ? (
                                         <input
                                             type="checkbox"
-                                            checked={hour.is_closed || false}
+                                            checked={hour.is_closed}
                                             onChange={(e) => handleHourChange(hour.day_of_week, 'is_closed', e.target.checked)}
                                             className={styles.checkbox}
                                         />
@@ -376,21 +376,20 @@ export default function BusinessHours() {
                     <tbody>
                         {exceptions.length === 0 ? (
                             <tr>
-                                <td colSpan={canDelete ? 4 : 3}>No hay excepciones definidas.</td>
+                                <td colSpan={canDelete ? 4 : 3} style={{ textAlign: 'center', padding: '1.5rem' }}>
+                                    No hay excepciones definidas.
+                                </td>
                             </tr>
                         ) : (
-                            exceptions.map(ex => (
+                            exceptions.map((ex) => (
                                 <tr key={ex.id}>
-                                    <td>{formatExceptionDate(ex)}</td>
-                                    <td>
-                                        {ex.is_closed
-                                            ? 'Cerrado'
-                                            : `${ex.open_time || 'N/A'} - ${ex.close_time || 'N/A'}`
-                                        }
+                                    <td data-label="Período">{formatExceptionDate(ex)}</td>
+                                    <td data-label="Estado">
+                                        {ex.is_closed ? 'Cerrado' : `${ex.open_time || 'N/A'} - ${ex.close_time || 'N/A'}`}
                                     </td>
-                                    <td>{ex.reason || '-'}</td>
+                                    <td data-label="Motivo">{ex.reason || '-'}</td>
                                     {canDelete && (
-                                        <td>
+                                        <td data-label="Acciones">
                                             <button
                                                 onClick={() => handleDeleteException(ex.id)}
                                                 className={styles.deleteButton}
