@@ -1,193 +1,122 @@
-/* ==================== BASE STYLES (MOBILE FIRST) ==================== */
-
 .container {
   padding: 1rem;
-  max-width: 100%;
-  margin: 0 auto;
-  background: var(--bg-primary);
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .header {
-  margin-bottom: 1.5rem;
-  text-align: center;
+  margin-bottom: 2rem;
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
+  margin: 0;
   font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 0.5rem 0;
 }
 
 .subtitle {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: var(--text-secondary);
-  margin: 0;
-  line-height: 1.4;
+  margin-top: 0.25rem;
 }
 
-/* ==================== STATS GRID (MOBILE FIRST) ==================== */
-
 .statsGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
 }
 
 .statCard {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 1.2rem;
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  min-height: 80px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px var(--shadow-color);
+  transition: all 0.3s ease;
 }
 
-.statCard:active {
-  transform: scale(0.98);
+.statCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px var(--shadow-color);
 }
 
 .statInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  flex: 1;
+  gap: 0.25rem;
 }
 
 .statTitle {
-  font-size: 0.8rem;
   color: var(--text-secondary);
+  font-size: 0.9rem;
   font-weight: 500;
-  line-height: 1.2;
 }
 
 .statValue {
-  font-size: 1.6rem;
+  font-size: 2.2rem;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1;
 }
 
 .statSubtitle {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   line-height: 1.2;
 }
 
 .statEvolution {
-  font-size: 0.7rem;
-  padding: 0.2rem 0.4rem;
-  border-radius: 8px;
-  background: rgba(46, 204, 113, 0.1);
-  color: #2ecc71;
+  font-size: 0.8rem;
+  color: var(--color-success);
   font-weight: 500;
-  align-self: flex-start;
 }
 
 .iconWrapper {
   width: 50px;
   height: 50px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: 1.8rem;
+  color: white;
   flex-shrink: 0;
-}
-
-/* ==================== MAIN GRID (MOBILE FIRST) ==================== */
-
-.mainGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
 }
 
 .chartCard {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 1.2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.chartCard h3 {
-  margin: 0 0 1rem 0;
-  color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.chartContainer {
-  height: 220px;
-  width: 100%;
-  position: relative;
-}
-
-/* ==================== PROFITABLE PRODUCTS LIST (MOBILE) ==================== */
-
-.profitableList {
+  background-color: var(--bg-secondary);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 15px var(--shadow-color);
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  height: 220px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.profitableItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.8rem;
-  background: var(--bg-primary);
-  border-radius: 8px;
-  border-left: 3px solid #2ecc71;
-}
-
-.productInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  flex: 1;
   min-width: 0;
 }
 
-.productName {
-  font-weight: 600;
+.chartCard h3 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.2rem;
   color: var(--text-primary);
-  font-size: 0.9rem;
-  line-height: 1.2;
-  word-break: break-word;
 }
 
-.productStats {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  line-height: 1.2;
+.chartContainer {
+  flex-grow: 1;
+  position: relative;
+  min-height: 300px;
 }
 
-.productProfit {
-  text-align: right;
-  margin-left: 0.8rem;
-  flex-shrink: 0;
+/* ==================== MOBILE FIRST GRID ==================== */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
 }
 
-.profitValue {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #2ecc71;
-  line-height: 1;
-}
-
-/* ==================== RECENT ORDERS LIST (MOBILE) ==================== */
-
+/* ==================== RECENT ORDERS STYLES (MOBILE FIRST) ==================== */
 .recentList {
   list-style: none;
   padding: 0;
@@ -210,6 +139,15 @@
   min-height: 50px;
 }
 
+.recentList span:first-child {
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  margin-right: 0.8rem;
+}
+
+/* CRÍTICO: Estilos para .orderInfo que faltaban */
 .orderInfo {
   display: flex;
   flex-direction: column;
@@ -258,12 +196,144 @@
   color: #5dade2;
 }
 
-/* ==================== TABLETS (768px+) ==================== */
+/* ==================== PROFITABLE PRODUCTS STYLES ==================== */
+.profitableList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  height: 220px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
+.profitableItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.8rem;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border-left: 3px solid #2ecc71;
+}
+
+.productInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.productName {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.productStats {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.productPricing {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.productProfit {
+  text-align: right;
+  margin-left: 0.8rem;
+  flex-shrink: 0;
+}
+
+.profitValue {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #2ecc71;
+  line-height: 1;
+}
+
+/* ==================== DEBUG PANEL STYLES ==================== */
+.debugButton {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.debugPanel {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  font-family: monospace;
+}
+
+.debugGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.debugGrid > div {
+  padding: 0.5rem;
+  background: white;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+}
+
+.debugDetails {
+  margin-top: 1rem;
+}
+
+.debugDetails summary {
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.debugList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.debugItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.debugItem strong {
+  color: #2c3e50;
+}
+
+.debugItem span {
+  color: #7f8c8d;
+}
+
+/* ==================== TABLET STYLES (768px+) ==================== */
 @media (min-width: 768px) {
   .container {
     padding: 1.5rem;
     max-width: 1200px;
+    margin: 0 auto;
   }
 
   .title {
@@ -274,9 +344,7 @@
     font-size: 1rem;
   }
 
-  /* Stats Grid - 2 columnas en tablet */
   .statsGrid {
-    display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1.2rem;
     margin-bottom: 2rem;
@@ -289,7 +357,7 @@
 
   .statCard:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px var(--shadow-color);
   }
 
   .statTitle {
@@ -310,7 +378,6 @@
     font-size: 1.4rem;
   }
 
-  /* Main Grid - 2 columnas en tablet */
   .mainGrid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -345,10 +412,171 @@
   .profitValue {
     font-size: 1.1rem;
   }
+
+  /* Mejorar estilos de recent orders para tablet */
+  .recentList li {
+    padding: 1rem;
+  }
+
+  .orderInfo {
+    gap: 0.4rem;
+  }
+
+  .orderInfo span:first-child {
+    font-size: 1rem;
+  }
+
+  .statusBadge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.8rem;
+  }
 }
 
-/* ==================== DESKTOP (1024px+) ==================== */
+/* ==================== TABLET LARGE / PANTALLAS MEDIANAS (769px - 1023px) ==================== */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .container {
+    padding: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
 
+  .title {
+    font-size: 2.2rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .statCard {
+    padding: 1.5rem;
+    min-height: 110px;
+  }
+
+  .statTitle {
+    font-size: 0.9rem;
+  }
+
+  .statValue {
+    font-size: 1.9rem;
+  }
+
+  .iconWrapper {
+    width: 55px;
+    height: 55px;
+    font-size: 1.4rem;
+  }
+
+  .mainGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+  }
+
+  .chartCard {
+    padding: 1.5rem;
+  }
+
+  .chartCard h3 {
+    font-size: 1.1rem;
+  }
+
+  .chartContainer {
+    height: 280px;
+  }
+
+  .profitableList,
+  .recentList {
+    height: 280px;
+  }
+
+  /* CRÍTICO: Solución específica para recent orders en tablets grandes */
+  .recentList {
+    gap: 0.6rem;
+  }
+
+  .recentList li {
+    padding: 0.9rem 1.2rem;
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-primary);
+    border-radius: 8px;
+  }
+
+  /* SOLUCIÓN PRINCIPAL: Layout semi-horizontal para tablets grandes */
+  .recentList span:first-child {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* CRÍTICO: Distribución específica para tablets grandes */
+    width: 55%;
+    min-width: 120px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .orderInfo {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    /* CRÍTICO: Ancho ajustado para tablets */
+    width: 45%;
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+
+  .orderInfo span:first-child {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    min-width: 45px;
+    text-align: right;
+  }
+
+  .statusBadge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 10px;
+    white-space: nowrap;
+    min-width: 75px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* Mejorar productos más rentables también */
+  .profitableItem {
+    padding: 0.9rem 1.2rem;
+  }
+
+  .productName {
+    font-size: 0.95rem;
+  }
+
+  .productStats {
+    font-size: 0.75rem;
+  }
+
+  .profitValue {
+    font-size: 1.05rem;
+  }
+}
+
+/* ==================== DESKTOP STYLES CORREGIDOS (1024px+) ==================== */
 @media (min-width: 1024px) {
   .container {
     padding: 2rem;
@@ -363,7 +591,6 @@
     font-size: 2.5rem;
   }
 
-  /* Stats Grid - 3 columnas en desktop */
   .statsGrid {
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
@@ -383,7 +610,6 @@
     font-size: 1.5rem;
   }
 
-  /* Main Grid - Layout más complejo para desktop */
   .mainGrid {
     grid-template-columns: repeat(12, 1fr);
     gap: 1.5rem;
@@ -407,14 +633,6 @@
     grid-column: span 4;
   }
 
-  .salesEvolution {
-    grid-column: span 8;
-  }
-
-  .orderStatus {
-    grid-column: span 4;
-  }
-
   .topProducts {
     grid-column: span 6;
   }
@@ -422,17 +640,81 @@
   .recentOrders {
     grid-column: span 6;
   }
+
+  /* SOLUCIÓN CRÍTICA: Rediseño completo para desktop */
+  .recentList {
+    gap: 0.5rem; /* Reducir gap entre elementos */
+  }
+
+  .recentList li {
+    padding: 1rem 1.5rem;
+    min-height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    /* CRÍTICO: Evitar que los elementos se superpongan */
+    margin-bottom: 0;
+  }
+
+  /* SOLUCIÓN PRINCIPAL: Layout horizontal con distribución fija */
+  .recentList span:first-child {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* CRÍTICO: Ancho fijo para evitar superposición */
+    width: 60%;
+    min-width: 140px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 1rem;
+    flex-shrink: 0; /* Evitar que se comprima */
+  }
+
+  .orderInfo {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    /* CRÍTICO: Ancho fijo para la información de pedido */
+    width: 40%;
+    min-width: 140px;
+    flex-shrink: 0;
+  }
+
+  .orderInfo span:first-child {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    /* CRÍTICO: Ancho mínimo para el precio */
+    min-width: 50px;
+    text-align: right;
+  }
+
+  .statusBadge {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 12px;
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: center;
+    /* CRÍTICO: Evitar que se comprima */
+    flex-shrink: 0;
+  }
 }
 
-/* ==================== LARGE DESKTOP (1440px+) ==================== */
-
+/* ==================== LARGE DESKTOP CORREGIDO (1440px+) ==================== */
 @media (min-width: 1440px) {
   .container {
     max-width: 1400px;
     padding: 2.5rem;
   }
 
-  /* Stats Grid - 4 o 6 columnas en pantallas grandes */
   .statsGrid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     max-width: none;
@@ -467,14 +749,107 @@
   .recentList {
     height: 350px;
   }
+
+  /* Mejoras adicionales para pantallas muy grandes */
+  .recentList li {
+    padding: 1.2rem 2rem;
+    min-height: 75px;
+  }
+
+  .recentList span:first-child {
+    font-size: 1.1rem;
+    max-width: 250px; /* Más espacio en pantallas grandes */
+  }
+
+  .orderInfo {
+    gap: 1.5rem;
+    min-width: 160px;
+  }
+
+  .orderInfo span:first-child {
+    font-size: 1.2rem;
+    min-width: 60px;
+  }
+
+  .statusBadge {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    min-width: 90px;
+  }
 }
 
-/* ==================== TOUCH OPTIMIZATIONS ==================== */
+/* ==================== LARGE DESKTOP (1440px+) ==================== */
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1400px;
+    padding: 2.5rem;
+  }
 
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    max-width: none;
+  }
+
+  .statCard {
+    padding: 2rem;
+  }
+
+  .statTitle {
+    font-size: 1rem;
+  }
+
+  .statValue {
+    font-size: 2.2rem;
+  }
+
+  .chartCard {
+    padding: 2rem;
+  }
+
+  .chartCard h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chartContainer {
+    height: 350px;
+  }
+
+  .profitableList,
+  .recentList {
+    height: 350px;
+  }
+
+  /* NUEVO: Mejoras adicionales para pantallas muy grandes */
+  .recentList li {
+    padding: 1.5rem;
+    min-height: 70px;
+  }
+
+  .recentList span:first-child {
+    font-size: 1.1rem;
+  }
+
+  .orderInfo {
+    gap: 1.5rem;
+    min-width: 140px;
+  }
+
+  .orderInfo span:first-child {
+    font-size: 1.2rem;
+  }
+
+  .statusBadge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1.2rem;
+  }
+}
+
+/* ==================== ACCESSIBILITY & PERFORMANCE ==================== */
 @media (hover: none) and (pointer: coarse) {
   .statCard:hover {
     transform: none;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px var(--shadow-color);
   }
 
   .statCard:active {
@@ -494,22 +869,6 @@
   }
 }
 
-/* ==================== DARK MODE SUPPORT ==================== */
-
-@media (prefers-color-scheme: dark) {
-  .statCard,
-  .chartCard {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .statCard:hover,
-  .chartCard:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  }
-}
-
-/* ==================== ACCESSIBILITY ==================== */
-
 @media (prefers-reduced-motion: reduce) {
   .statCard,
   .chartCard {
@@ -524,8 +883,6 @@
     animation: none !important;
   }
 }
-
-/* ==================== PRINT STYLES ==================== */
 
 @media print {
   .container {
@@ -543,93 +900,4 @@
   .chartContainer {
     height: 250px;
   }
-}
-
-
-/* Debug Panel Styles */
-.debugButton {
-    background: #3498db;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    margin-top: 1rem;
-}
-
-.debugPanel {
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 2rem;
-    font-family: monospace;
-}
-
-.debugGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.debugGrid > div {
-    padding: 0.5rem;
-    background: white;
-    border-radius: 4px;
-    border-left: 3px solid #3498db;
-}
-
-.debugDetails {
-    margin-top: 1rem;
-}
-
-.debugDetails summary {
-    cursor: pointer;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-}
-
-.debugList {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.debugItem {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.5rem;
-    background: white;
-    border-radius: 4px;
-    font-size: 0.8rem;
-}
-
-.debugItem strong {
-    color: #2c3e50;
-}
-
-.debugItem span {
-    color: #7f8c8d;
-}
-
-/* Styles para productPricing */
-.productPricing {
-    font-size: 0.7rem;
-    color: #7f8c8d;
-    font-style: italic;
-}
-
-@media (max-width: 768px) {
-    .debugGrid {
-        grid-template-columns: 1fr;
-    }
-    
-    .debugPanel {
-        font-size: 0.8rem;
-    }
 }
