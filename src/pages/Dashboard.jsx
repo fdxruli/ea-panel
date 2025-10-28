@@ -4,25 +4,9 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import styles from './Dashboard.module.css';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
+import { StatCard } from "../components/StatCard";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
-
-// ==================== COMPONENTES MEMOIZADOS ====================
-
-const StatCard = memo(({ title, value, icon, color, evolution, subtitle, debugInfo }) => (
-    <div className={styles.statCard} title={debugInfo}>
-        <div className={styles.statInfo}>
-            <span className={styles.statTitle}>{title}</span>
-            <span className={styles.statValue}>{value}</span>
-            {subtitle && <span className={styles.statSubtitle}>{subtitle}</span>}
-            {evolution && <span className={styles.statEvolution}>{evolution}</span>}
-        </div>
-        <div className={styles.iconWrapper} style={{ backgroundColor: color }}>
-            {icon}
-        </div>
-    </div>
-));
-StatCard.displayName = 'StatCard';
 
 // ==================== COMPONENTE DE DEBUG ====================
 const DebugPanel = memo(({ debugData, isVisible }) => {
@@ -448,6 +432,7 @@ export default function Dashboard() {
                     subtitle={`Margen: ${stats.profitMargin.toFixed(1)}%`}
                     color="#2ecc71"
                     icon="💰"
+                    helpKey="totalProfit"
                     debugInfo={`Ingresos: $${stats.totalRevenue.toFixed(2)} - Costos: $${stats.totalCosts.toFixed(2)}`}
                 />
                 <StatCard
@@ -456,6 +441,7 @@ export default function Dashboard() {
                     subtitle={`${stats.completedOrders} órdenes completadas`}
                     color="#3498db"
                     icon="💵"
+                    helpKey="totalRevenue"
                 />
                 <StatCard
                     title="Costos Totales"
@@ -463,6 +449,7 @@ export default function Dashboard() {
                     subtitle="Costos de producción"
                     color="#e74c3c"
                     icon="📊"
+                    helpKey="totalCosts"
                     debugInfo={debugData ? `Items con costo: ${debugData.itemsWithCost}, Sin costo: ${debugData.itemsWithoutCost}` : ''}
                 />
                 <StatCard
@@ -471,6 +458,7 @@ export default function Dashboard() {
                     subtitle={`${stats.pendingOrders} pendientes`}
                     color="#f1c40f"
                     icon="📦"
+                    helpKey="avgOrderValue"
                 />
                 <StatCard
                     title="Total Clientes"
@@ -478,6 +466,7 @@ export default function Dashboard() {
                     subtitle="Clientes registrados"
                     color="#9b59b6"
                     icon="👥"
+                    helpKey="totalCustomers"
                 />
                 <StatCard
                     title="Órdenes Canceladas"
@@ -485,6 +474,7 @@ export default function Dashboard() {
                     subtitle={`${((stats.canceledOrders / stats.totalOrders) * 100).toFixed(1)}% del total`}
                     color="#95a5a6"
                     icon="❌"
+                    helpKey="canceledOrders"
                 />
             </div>
 
