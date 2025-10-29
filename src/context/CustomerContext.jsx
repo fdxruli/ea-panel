@@ -166,25 +166,6 @@ export const CustomerProvider = ({ children }) => {
     if (data) {
       // Registrar la aceptación de términos
       await acceptTerms(data.id);
-
-      // ---------------------------------------------------------------------
-      // --- SECCIÓN COMENTADA/ELIMINADA ---
-      // Ya no llamamos a 'increment_referral_count' desde aquí.
-      // El trigger 'trigger_first_purchase_referral' en la tabla 'orders'
-      // se encargará de llamar a 'increment_referral_count' cuando
-      // este nuevo cliente complete su primera orden ('status' = 'completado').
-      /*
-      if (referrerId) {
-          // Esta llamada RPC ya no es necesaria aquí
-          const { error: rpcError } = await supabase.rpc('increment_referral_count', { customer_id: referrerId });
-          if (rpcError) {
-              // Loguear el error, pero el registro del cliente puede continuar
-              console.error("Error incrementing referral count (ahora manejado por trigger):", rpcError);
-          }
-      }
-      */
-      // ---------------------------------------------------------------------
-
       // Actualizar el estado local y proceder
       setCustomer(data);
       savePhoneAndContinue(newPhone, data); // Guardar teléfono y cerrar modal
