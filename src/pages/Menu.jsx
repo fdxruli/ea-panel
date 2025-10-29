@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react'; // <-- Importar useMemo y memo
 import { useProducts } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
 import styles from './Menu.module.css';
@@ -13,6 +13,44 @@ const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 const LAYOUT_STORAGE_KEY = 'product-layout-preference';
 
+// ==================== COMPONENTE PRODUCT CARD MEMOIZADO ====================
+// ✅ Envolver ProductCard con React.memo para evitar renders innecesarios
+const MemoizedProductCard = memo(({ product, layout, isBusinessOpen, handleAddToCart, setSelectedProduct }) => {
+    return (
+        <div className={styles.productCard}>
+            <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                <div className={styles.imageContainer}>
+                    <ImageWithFallback
+                        src={product.image_url}
+                        alt={`Imagen de ${product.name}`}
+                    />
+                </div>
+                <div className={styles.cardContent}>
+                    <h3>{product.name}</h3>
+                </div>
+            </div>
+            <div className={styles.cardFooter}>
+                <div className={styles.priceContainer}>
+                    {product.original_price ? (
+                        <>
+                            <span className={styles.originalPrice}>${product.original_price.toFixed(2)}</span>
+                            <span className={styles.specialPrice}>${product.price.toFixed(2)}</span>
+                        </>
+                    ) : (
+                        <span className={styles.price}>${product.price.toFixed(2)}</span>
+                    )}
+                </div>
+                <button onClick={(e) => handleAddToCart(product, 1, e)} disabled={!isBusinessOpen}>
+                    {isBusinessOpen ? 'Añadir' : 'Cerrado'}
+                </button>
+            </div>
+        </div>
+    );
+});
+MemoizedProductCard.displayName = 'MemoizedProductCard'; // <-- Buenas prácticas: añadir displayName
+
+// ==================== COMPONENTE PRINCIPAL ====================
+
 export default function Menu() {
     const { products, categories, loading, error } = useProducts();
     const { addToCart, showToast } = useCart();
@@ -26,7 +64,9 @@ export default function Menu() {
         localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
     }, [layout]);
 
-    const handleAddToCart = (product, quantity, event) => {
+    // ✅ Usar useCallback para la función handleAddToCart para que no cambie en cada render
+    // Esto es importante para que MemoizedProductCard no se re-renderice innecesariamente
+    const handleAddToCart = useCallback((product, quantity, event) => {
         if (!isBusinessOpen) {
             showToast(' Estamos cerrados ahora mismo, no se pueden añadir productos al carrito.');
             return;
@@ -52,13 +92,20 @@ export default function Menu() {
         } else {
             showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito!`);
         }
-    };
+    }, [isBusinessOpen, addToCart, showToast]); // <-- Dependencias de useCallback
 
     const toggleLayout = () => {
         setLayout(prevLayout => (prevLayout === 'list' ? 'grid' : 'list'));
     };
 
-    const filteredProducts = products.filter(product => selectedCategory ? product.category_id === selectedCategory : true);
+    // ✅ Usar useMemo para filteredProducts
+    // Solo se recalculará si 'products' o 'selectedCategory' cambian
+    const filteredProducts = useMemo(() => {
+        console.log("Recalculando productos filtrados..."); // <-- Log para depuración
+        return products.filter(product =>
+            selectedCategory ? product.category_id === selectedCategory : true
+        );
+    }, [products, selectedCategory]); // <-- Dependencias de useMemo
 
     if (loading) return <LoadingSpinner />;
     if (error) return <p className={styles.error}>Error: {error}</p>;
@@ -102,42 +149,23 @@ export default function Menu() {
                 </div>
 
                 <div className={`${styles.productList} ${styles[layout]}`}>
+                    {/* ✅ Usar el componente memoizado */}
                     {filteredProducts.length > 0 ? filteredProducts.map(product => (
-                        <div key={product.id} className={styles.productCard}>
-                            <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                                <div className={styles.imageContainer}>
-                                    <ImageWithFallback
-                                        src={product.image_url}
-                                        alt={`Imagen de ${product.name}`}
-                                    />
-                                </div>
-                                <div className={styles.cardContent}>
-                                    <h3>{product.name}</h3>
-                                </div>
-                            </div>
-                            <div className={styles.cardFooter}>
-                                <div className={styles.priceContainer}>
-                                    {product.original_price ? (
-                                        <>
-                                            <span className={styles.originalPrice}>${product.original_price.toFixed(2)}</span>
-                                            <span className={styles.specialPrice}>${product.price.toFixed(2)}</span>
-                                        </>
-                                    ) : (
-                                        <span className={styles.price}>${product.price.toFixed(2)}</span>
-                                    )}
-                                </div>
-                                <button onClick={(e) => handleAddToCart(product, 1, e)} disabled={!isBusinessOpen}>
-                                    {isBusinessOpen ? 'Añadir' : 'Cerrado'}
-                                </button>
-                            </div>
-                        </div>
+                        <MemoizedProductCard
+                            key={product.id} // <-- key sigue siendo necesaria aquí
+                            product={product}
+                            layout={layout}
+                            isBusinessOpen={isBusinessOpen}
+                            handleAddToCart={handleAddToCart} // <-- Pasar la función memoizada
+                            setSelectedProduct={setSelectedProduct} // <-- Pasar la función de estado
+                        />
                     )) : <p>No se encontraron productos.</p>}
                 </div>
 
                 <ProductModal
                     product={selectedProduct}
                     onClose={() => setSelectedProduct(null)}
-                    onAddToCart={handleAddToCart}
+                    onAddToCart={handleAddToCart} // <-- Pasar la función memoizada
                 />
             </div>
         </>

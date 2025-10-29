@@ -138,7 +138,7 @@
 }
 
 /* === ESTILOS PARA ESCRITORIO (>= 768px) === */
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
   .container {
     /* Vuelve a ser flex container en escritorio */
     display: flex;

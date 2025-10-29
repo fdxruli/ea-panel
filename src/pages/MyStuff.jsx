@@ -1,8 +1,10 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react'; // <-- Quitar useMemo si ya no se usa para myReviews
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
+// --- 👇 MODIFICADO: Importar 'myReviews' en lugar de 'allReviews' ---
 import { useProductExtras } from '../context/ProductExtrasContext';
+// --- FIN MODIFICADO ---
 import styles from './MyStuff.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
@@ -14,8 +16,9 @@ import { useAlert } from '../context/AlertContext';
 import QRCodeModal from '../components/QRCodeModal';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO from '../components/SEO';
-import { useSettings } from '../context/SettingsContext'; // <-- AÑADIDO
+import { useSettings } from '../context/SettingsContext';
 
+// ... (Iconos y componentes ReferralSystem, RewardsSection sin cambios) ...
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3" /></svg>;
@@ -212,22 +215,26 @@ const RewardsSection = ({ customerId }) => {
     );
 };
 
+
 export default function MyStuff() {
     const { phone, setCheckoutModalOpen } = useCustomer();
     const { addToCart, showToast } = useCart();
     const { products: liveProducts } = useProducts();
     const { customer, loading: userLoading, error } = useUserData();
-    const { favorites, reviews: allReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
+    // --- 👇 MODIFICADO: Usar 'myReviews' del contexto ---
+    const { favorites, myReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
+    // --- FIN MODIFICADO ---
     const [editingReview, setEditingReview] = useState(null);
     const [reviewToDelete, setReviewToDelete] = useState(null);
     const [favoriteToRemove, setFavoriteToRemove] = useState(null);
-    const { settings, loading: settingsLoading } = useSettings(); // <-- AÑADIDO
-    const visibilitySettings = settings['client_visibility'] || {}; // <-- AÑADIDO
-    const loading = userLoading || extrasLoading || settingsLoading; // <-- Añadir settingsLoading
-    const myReviews = useMemo(() => {
-        if (!customer) return [];
-        return allReviews.filter(review => review.customer_id === customer.id);
-    }, [allReviews, customer]);
+    const { settings, loading: settingsLoading } = useSettings();
+    const visibilitySettings = settings['client_visibility'] || {};
+    const loading = userLoading || extrasLoading || settingsLoading;
+
+    // --- 🗑️ ELIMINADO: useMemo para myReviews ya no es necesario aquí ---
+    // const myReviews = useMemo(() => { ... });
+    // --- FIN ELIMINADO ---
+
 
     const handleRemoveFavorite = async () => {
         if (!favoriteToRemove || !customer) return;
@@ -258,6 +265,7 @@ export default function MyStuff() {
     };
 
     const renderContent = () => {
+        // ... (resto de renderContent sin cambios hasta la sección de reseñas) ...
         if (!phone) return <AuthPrompt />;
         if (loading) return <LoadingSpinner />;
         if (error) return <div className={styles.prompt}><h2>Error Inesperado</h2><p>No pudimos cargar tus datos.</p></div>;
@@ -281,6 +289,7 @@ export default function MyStuff() {
                 </div>
             );
         }
+
 
         return (
             <>
@@ -308,13 +317,13 @@ export default function MyStuff() {
                         ) : <p>Aún no has guardado productos favoritos.</p>}
                     </div>
                 )}
-
-                {visibilitySettings.stuff_reviews !== false && ( // <-- Envolver
+                 {/* --- 👇 MODIFICADO: Usar 'myReviews' directamente --- */}
+                {visibilitySettings.stuff_reviews !== false && (
                     <div className={styles.card}>
                         <div className={styles.cardHeader}><StarIcon /><h2>Mis Reseñas ({myReviews.length})</h2></div>
                         {myReviews.length > 0 ? (
                             <div className={styles.reviewList}>
-                                {myReviews.map(rev => rev.products && (
+                                {myReviews.map(rev => rev.products && ( // <-- Usar myReviews
                                     <div key={rev.id} className={styles.reviewItem}>
                                         {editingReview?.id === rev.id ? (
                                             <div className={styles.reviewEditor}>
@@ -340,7 +349,8 @@ export default function MyStuff() {
                             </div>
                         ) : <p>Todavía no has escrito ninguna reseña.</p>}
                     </div>
-                )}
+                 )}
+                 {/* --- FIN MODIFICADO --- */}
             </>
         );
     }

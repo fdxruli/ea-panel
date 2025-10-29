@@ -1,136 +1,206 @@
-import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
+// src/context/ProductContext.jsx
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { getCache, setCache } from '../utils/cache';
-import { CACHE_KEYS } from '../config/cacheConfig';
-// Import necessary hooks
-import { useUserData } from './UserDataContext'; // Importar useUserData para obtener el cliente
+// --- ✅ 1. Importar CACHE_KEYS y CACHE_TTL ---
+import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
+import { useUserData } from './UserDataContext';
 
 const ProductContext = createContext();
 
 export const useProducts = () => useContext(ProductContext);
 
 export const ProductProvider = ({ children }) => {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [notification, setNotification] = useState('');
+    // --- ESTADOS (sin cambios) ---
+    const [baseProducts, setBaseProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [specialPrices, setSpecialPrices] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+    const [loadingPrices, setLoadingPrices] = useState(false);
+    const [error, setError] = useState(null);
+    const [notification, setNotification] = useState('');
+    const { customer } = useUserData();
+    const customerId = customer?.id;
 
-  // Usar UserDataContext para obtener el ID del cliente actual
-  const { customer } = useUserData();
-  const customerId = customer?.id; // Obtener el ID del cliente actual o null si no está logueado
-
-  const fetchAndCacheProducts = useCallback(async () => {
-    console.log("🔄 Fetching and caching product data, considering customer:", customerId);
-    setLoading(true); // Asegurar que el estado de carga se establezca al principio
-    try {
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select(`*, product_images ( id, image_url )`)
-        .eq('is_active', true);
-      if (productsError) throw productsError;
-
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*');
-      if (categoriesError) throw categoriesError;
-
-      const today = new Date().toISOString().split('T')[0];
-
-      // --- QUERY MODIFICADA para special_prices ---
-      let specialPricesQuery = supabase
-        .from('special_prices')
-        .select('*')
-        .lte('start_date', today)
-        .gte('end_date', today);
-
-      if (customerId) {
-        // Si hay un cliente logueado, obtener precios para todos (NULL) O específicamente para él
-        specialPricesQuery = specialPricesQuery.or(`target_customer_ids.is.null,target_customer_ids.cs.{"${customerId}"}`);
-      } else {
-        // Si no hay cliente logueado, solo obtener precios para todos
-        specialPricesQuery = specialPricesQuery.is('target_customer_ids', null);
-      }
-
-      const { data: specialPrices, error: specialPricesError } = await specialPricesQuery;
-      // --- FIN DE LA QUERY MODIFICADA ---
-
-      if (specialPricesError) throw specialPricesError;
-
-      // --- El resto de la lógica permanece igual ---
-        const finalProducts = productsData.map(product => {
-        // Priorizar precio específico del producto, luego precio de categoría
-        const productSpecificPrice = specialPrices.find(p => p.product_id === product.id);
-        const categorySpecificPrice = specialPrices.find(p => p.category_id === product.category_id && !p.product_id); // Asegurar que sea solo de categoría
-
-        let specialPriceInfo = productSpecificPrice || categorySpecificPrice;
-
-        // Asegurar que el precio encontrado sea aplicable (global o dirigido a este cliente)
-        // Esta doble verificación puede ser redundante si la consulta es correcta, pero añade seguridad.
-        if (specialPriceInfo && (specialPriceInfo.target_customer_ids === null || (customerId && specialPriceInfo.target_customer_ids.includes(customerId)))) {
-           return { ...product, original_price: product.price, price: parseFloat(specialPriceInfo.override_price) };
+    // --- FETCH PRODUCTOS BASE (sin cambios) ---
+    const fetchBaseProductsAndCategories = useCallback(async () => {
+        console.log("🔄 Fetching base products and categories...");
+        setLoadingProducts(true);
+        setError(null);
+        try {
+            const { data: cachedData, isStale } = getCache(CACHE_KEYS.PRODUCTS, CACHE_TTL.PRODUCTS);
+            if (cachedData && !isStale) {
+                console.log("📦 Using cached base products and categories.");
+                setBaseProducts(cachedData.products);
+                setCategories(cachedData.categories);
+                setLoadingProducts(false);
+                return;
+            }
+            const [productsRes, categoriesRes] = await Promise.all([
+                supabase.from('products').select(`*, product_images ( id, image_url )`).eq('is_active', true),
+                supabase.from('categories').select('*')
+            ]);
+            if (productsRes.error) throw productsRes.error;
+            if (categoriesRes.error) throw categoriesRes.error;
+            const fetchedProducts = productsRes.data || [];
+            const fetchedCategories = categoriesRes.data || [];
+            setBaseProducts(fetchedProducts);
+            setCategories(fetchedCategories);
+            setCache(CACHE_KEYS.PRODUCTS, { products: fetchedProducts, categories: fetchedCategories });
+            console.log("✅ Fresh base products and categories saved to state and cache.");
+        } catch (err) {
+            console.error("Error fetching base data:", err);
+            setError(err.message);
+        } finally {
+            setLoadingProducts(false);
         }
-        return product; // Devuelve el producto original si no se encuentra un precio especial aplicable
-      });
+    }, []);
 
-      const uniqueCategories = [...new Set(finalProducts.map(p => p.category_id))];
-      const productCategories = categoriesData.filter(c => uniqueCategories.includes(c.id));
+    // --- ✅ 2. FETCH PRECIOS ESPECIALES (MODIFICADO CON CACHÉ) ---
+    const fetchSpecialPrices = useCallback(async (currentCustomerId) => {
+        console.log("💲 Fetching special prices for customer:", currentCustomerId);
+        setLoadingPrices(true);
+        setError(null);
 
-      setProducts(finalProducts);
-      setCategories(productCategories);
-      setCache(CACHE_KEYS.PRODUCTS, { products: finalProducts, categories: productCategories });
-      console.log("✅ Fresh data saved to state and cache.");
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-    // Añadir customerId como dependencia
-  }, [customerId]); // Añadir customerId aquí
+        // --- 👇 CACHÉ PARA SPECIAL PRICES ---
+        // Clave dinámica: usa el ID del cliente o 'global' si no hay cliente
+        const cacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${currentCustomerId || 'global'}`;
+        // Usar un TTL adecuado, por ejemplo, el mismo que PRODUCT_EXTRAS o uno propio
+        const cacheTTL = CACHE_TTL.PRODUCT_EXTRAS;
 
-  // --- HOOK DE CARGA INICIAL (SIN CAMBIOS) ---
-  useEffect(() => {
-    const cachedItem = localStorage.getItem(CACHE_KEYS.PRODUCTS);
-    if (cachedItem) {
-      const { data } = JSON.parse(cachedItem);
-      if (data) {
-        setProducts(data.products);
-        setCategories(data.categories);
-      }
-    }
-    fetchAndCacheProducts();
-  }, [fetchAndCacheProducts]);
+        try {
+            // Intentar cargar desde caché
+            const { data: cachedPrices, isStale } = getCache(cacheKey, cacheTTL);
+            if (cachedPrices && !isStale) {
+                console.log("💰 Using cached special prices for:", currentCustomerId || 'global');
+                setSpecialPrices(cachedPrices);
+                setLoadingPrices(false);
+                return; // Salir si el caché es válido
+            }
+            // --- FIN LÓGICA DE CACHÉ ---
 
-  // --- HOOK DEL LISTENER DE TIEMPO REAL (REFACTORIZACIÓN CLAVE) ---
-  useEffect(() => {
-    const channelRef = supabase.channel('public:products_all_changes');
+            // Si no hay caché válido, fetchear desde DB
+            const today = new Date().toISOString().split('T')[0];
+            let query = supabase
+                .from('special_prices')
+                .select('*')
+                .lte('start_date', today)
+                .gte('end_date', today);
 
-    const handleChanges = (payload) => {
-      console.log('⚡ ¡Cambio detectado en la base de datos!', payload);
-      setNotification('¡El menú se ha actualizado!');
-      setTimeout(() => setNotification(''), 4000);
-      fetchAndCacheProducts();
+            if (currentCustomerId) {
+                query = query.or(`target_customer_ids.is.null,target_customer_ids.cs.{"${currentCustomerId}"}`);
+            } else {
+                query = query.is('target_customer_ids', null);
+            }
+
+            const { data, error: priceError } = await query;
+            if (priceError) throw priceError;
+
+            const fetchedPrices = data || [];
+            setSpecialPrices(fetchedPrices);
+            // Guardar en caché
+            setCache(cacheKey, fetchedPrices);
+            console.log("💰 Fresh special prices updated and cached for:", currentCustomerId || 'global', fetchedPrices);
+
+        } catch (err) {
+            console.error("Error fetching special prices:", err);
+            setError(err.message);
+            setSpecialPrices([]);
+        } finally {
+            setLoadingPrices(false);
+        }
+    // --- Añadir CACHE_KEYS.SPECIAL_PRICES a dependencias si lo usas directamente ---
+    }, [/* Dependencias originales si las había */]); // Mantener dependencias estables si es posible
+
+    // --- Efecto carga inicial productos base (sin cambios) ---
+    useEffect(() => {
+        fetchBaseProductsAndCategories();
+    }, [fetchBaseProductsAndCategories]);
+
+    // --- Efecto carga precios especiales (sin cambios) ---
+    useEffect(() => {
+        if (!loadingProducts) {
+             fetchSpecialPrices(customerId);
+        }
+    }, [customerId, fetchSpecialPrices, loadingProducts]);
+
+    // --- COMBINAR PRECIOS (sin cambios) ---
+    const productsWithAppliedPrices = useMemo(() => {
+        console.log("🛠️ Applying special prices to base products...");
+        if (baseProducts.length === 0) return [];
+        return baseProducts.map(product => {
+            const productSpecificPrice = specialPrices.find(p => p.product_id === product.id);
+            const categorySpecificPrice = !productSpecificPrice && specialPrices.find(
+                p => p.category_id === product.category_id && !p.product_id
+            );
+            const specialPriceInfo = productSpecificPrice || categorySpecificPrice;
+            if (specialPriceInfo) {
+                return {
+                    ...product,
+                    original_price: product.price,
+                    price: parseFloat(specialPriceInfo.override_price)
+                };
+            }
+            const { original_price, ...restOfProduct } = product;
+            return restOfProduct;
+        });
+    }, [baseProducts, specialPrices]);
+
+    // --- CATEGORÍAS VISIBLES (sin cambios) ---
+    const visibleCategories = useMemo(() => {
+        if (productsWithAppliedPrices.length === 0 || categories.length === 0) return [];
+        const uniqueCategoryIdsInProducts = new Set(productsWithAppliedPrices.map(p => p.category_id));
+        return categories.filter(c => uniqueCategoryIdsInProducts.has(c.id));
+    }, [productsWithAppliedPrices, categories]);
+
+
+    // --- LISTENER REALTIME (sin cambios) ---
+    useEffect(() => {
+        const baseChannel = supabase.channel('public:products_categories');
+        const handleBaseChanges = (payload) => {
+            console.log('⚡ Cambio detectado en productos/categorías base!', payload);
+            setNotification('¡El menú se ha actualizado!');
+            setTimeout(() => setNotification(''), 4000);
+            fetchBaseProductsAndCategories();
+        };
+        baseChannel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleBaseChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleBaseChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleBaseChanges)
+            .subscribe((status) => console.log(`Base Channel Status: ${status}`));
+
+        const pricesChannel = supabase.channel('public:special_prices');
+        const handlePriceChanges = (payload) => {
+            console.log('⚡ Cambio detectado en precios especiales!', payload);
+            setNotification('¡Promociones actualizadas!');
+            setTimeout(() => setNotification(''), 4000);
+            // --- ✅ Invalidar caché al detectar cambios ---
+            // Construir la clave de caché que podría verse afectada (puede ser la global o la específica del cliente actual)
+            const affectedCacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${customerId || 'global'}`;
+            localStorage.removeItem(affectedCacheKey); // Elimina el caché para forzar refetch
+            // Podrías intentar ser más selectivo aquí si el payload te da información útil
+            fetchSpecialPrices(customerId);
+        };
+        pricesChannel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handlePriceChanges)
+            .subscribe((status) => console.log(`Prices Channel Status: ${status}`));
+
+        return () => {
+            console.log("🔌 Desconectando listeners de productos.");
+            supabase.removeChannel(baseChannel);
+            supabase.removeChannel(pricesChannel);
+        };
+    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices]); // Añadir CACHE_KEYS si es necesario
+
+
+    // Context value (sin cambios)
+    const value = {
+        products: productsWithAppliedPrices,
+        categories: visibleCategories,
+        loading: loadingProducts || loadingPrices,
+        error,
+        notification,
     };
 
-    channelRef
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleChanges)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleChanges)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handleChanges) // Escuchar cambios en precios especiales
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleChanges) // Escuchar cambios en categorías
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Listener de tiempo real conectado y suscrito.');
-        }
-      });
-
-    return () => {
-      console.log("🔌 Desconectando listener de tiempo real.");
-      supabase.removeChannel(channelRef);
-    };
-  }, [fetchAndCacheProducts]);
-
-  const value = { products, categories, loading, error, notification };
-
-  return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
+    return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
 };

@@ -20,6 +20,7 @@ export const CACHE_KEYS = {
   USER_ORDERS: 'ea-user-orders-cache', // Nuevo para órdenes
   FAVORITES: 'ea-favorites-cache',
   REVIEWS: 'ea-reviews-cache',
+  SPECIAL_PRICE: 'ea-special-price-cache',
 };
 
 /**

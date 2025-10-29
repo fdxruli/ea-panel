@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
-import { useUserData } from '../context/UserDataContext'; // <-- 1. AÑADIR ESTE IMPORT
+// --- ✅ 1. IMPORTAR useUserData ---
+import { useUserData } from '../context/UserDataContext';
 import styles from './Cart.module.css';
 import CheckoutModal from '../components/CheckoutModal';
 import { useAlert } from '../context/AlertContext';
@@ -26,13 +27,13 @@ export default function Cart() {
     } = useCart();
 
     const { phone, setPhoneModalOpen } = useCustomer();
-    const { customer } = useUserData(); // <-- 2. OBTENER LA INFO DEL CLIENTE
+    // --- ✅ 2. OBTENER CUSTOMER DE useUserData Y SU ESTADO DE CARGA ---
+    const { customer, loading: userLoading } = useUserData(); // <-- Añadir loading
 
     const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
-
     const [isDiscountVisible, setDiscountVisible] = useState(false);
 
     useEffect(() => {
@@ -40,22 +41,46 @@ export default function Cart() {
             const timer = setTimeout(() => setIsAnimating(true), 10);
             return () => clearTimeout(timer);
         } else {
-            setDiscountVisible(false);
+             setIsAnimating(false); // Reset animation state on close
+             setDiscountVisible(false); // Hide discount input on close
         }
     }, [isCartOpen]);
 
+
     const handleClose = useCallback(() => {
         setIsAnimating(false);
-        setTimeout(toggleCart, 600);
+        setTimeout(toggleCart, 600); // Wait for animation
     }, [toggleCart]);
+
 
     const handleApplyDiscount = async () => {
         if (!discountCode.trim()) return;
-        // --- 👇 3. AHORA 'customer' SÍ EXISTE Y EL ERROR SE SOLUCIONA ---
-        const result = await applyDiscount(discountCode, customer?.id);
+
+        // --- ✅ 3. VALIDACIÓN ANTES DE LLAMAR A applyDiscount ---
+        // Verificar si la información del cliente aún está cargando o no existe
+        if (userLoading) {
+            setDiscountMessage('Espera, estamos cargando tu información...');
+            setTimeout(() => setDiscountMessage(''), 3000);
+            return;
+        }
+        if (!customer?.id) {
+            // Este caso es más probable si el usuario no ha iniciado sesión
+            setDiscountMessage('Debes iniciar sesión para usar un código.');
+            // No limpiar este mensaje automáticamente
+            return;
+        }
+        // --- FIN VALIDACIÓN ---
+
+        // Se usa el ID del cliente del contexto UserData, que es la fuente principal de datos del cliente logueado.
+        const result = await applyDiscount(discountCode, customer.id); // Ahora sabemos que customer.id existe
         setDiscountMessage(result.message);
-        setTimeout(() => setDiscountMessage(''), 3000);
+
+        // Limpiar mensaje después de 3 segundos solo si fue exitoso o inválido, no si requiere login
+        if (result.success || result.message !== 'Debes iniciar sesión para usar un código.') {
+            setTimeout(() => setDiscountMessage(''), 3000);
+        }
     };
+
 
     const handleRemoveDiscount = () => {
         removeDiscount(); setDiscountCode(''); setDiscountMessage('');
@@ -67,28 +92,39 @@ export default function Cart() {
             showAlert("Por favor, revisa que todos los productos tengan una cantidad válida."); return;
         }
         if (!phone) {
+             // If phone is missing, open phone modal. On success, it will open checkout.
             setPhoneModalOpen(() => { setCheckoutModalOpen(true); }); return;
         }
+         // If phone exists, proceed directly to checkout.
         setCheckoutModalOpen(true);
     };
 
-    if (!isCartOpen && !isAnimating) return null;
+    // Use isCartOpen directly for rendering check
+    if (!isCartOpen) return null;
+
 
     return (
         <>
-            <div className={styles.overlay} onClick={handleClose}></div>
+            {/* Overlay */}
+            <div className={`${styles.overlay} ${isCartOpen && isAnimating ? styles.open : ''}`} onClick={handleClose}></div>
+
+            {/* Sidebar */}
             <div className={`${styles.cartSidebar} ${isCartOpen && isAnimating ? styles.open : ''}`}>
+                {/* Header */}
                 <div className={styles.cartHeader}>
                     <h2 className={styles.cartTitle}><ShoppingCartIcon /> Tu Pedido</h2>
                     <button onClick={handleClose} className={styles.closeButton}>×</button>
                 </div>
 
-                {cartNotification && (
+                 {/* Notification Area */}
+                 {cartNotification && (
                     <div className={styles.cartNotification}>
                         <p>{cartNotification}</p>
                         <button onClick={clearCartNotification}>&times;</button>
                     </div>
                 )}
+
+                {/* Cart Body */}
                 {cartItems.length === 0 ? (
                     <div className={styles.cartBody}>
                         <p className={styles.emptyMessage}>Tu carrito está vacío. ¡Añade unas alitas!</p>
@@ -127,28 +163,32 @@ export default function Cart() {
                             </div>
                         </div>
 
+                        {/* Cart Footer */}
                         <div className={styles.cartFooter}>
-                            <div className={styles.discountAccordion}>
+                             <div className={styles.discountAccordion}>
                                 {!discount && (
                                     <button
                                         onClick={() => setDiscountVisible(!isDiscountVisible)}
                                         className={styles.discountToggleButton}
                                     >
-                                        ¿Tienes un codigo? click aquí
+                                        ¿Tienes un código? Haz clic aquí {isDiscountVisible ? '▲' : '▼'}
                                     </button>
                                 )}
 
                                 <div className={`${styles.discountAccordionContent} ${isDiscountVisible || discount ? styles.open : ''}`}>
                                     {!discount && (
                                         <div className={styles.discountSection}>
-                                            <input type="text" placeholder="Código de descuento" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className={styles.discountInput} />
+                                            <input type="text" placeholder="Código de descuento" value={discountCode} onChange={(e) => setDiscountCode(e.target.value.toUpperCase())} className={styles.discountInput} />
                                             <button onClick={handleApplyDiscount} className={styles.applyButton}>Aplicar</button>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
+                            {/* Discount Message */}
                             {discountMessage && <p className={styles.discountMessage}>{discountMessage}</p>}
+
+                            {/* Totals */}
                             <div className={styles.totals}>
                                 <p>Subtotal: <span>${subtotal.toFixed(2)}</span></p>
                                 {discount && (
@@ -159,6 +199,8 @@ export default function Cart() {
                                 )}
                                 <h3 className={styles.total}>Total: <span>${total.toFixed(2)}</span></h3>
                             </div>
+
+                            {/* Checkout Button */}
                             <button onClick={handleProceedToCheckout} className={styles.whatsappButton}>
                                 {phone ? 'Continuar con mi Pedido' : 'Ingresa tu número para continuar'}
                             </button>
@@ -167,6 +209,7 @@ export default function Cart() {
                 )}
             </div>
 
+            {/* Checkout Modal */}
             {isCheckoutModalOpen && (
                 <CheckoutModal
                     phone={phone}

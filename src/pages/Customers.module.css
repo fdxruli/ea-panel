@@ -1162,3 +1162,12 @@
 [data-theme="dark"] .infoNote {
   background: rgba(77, 182, 172, 0.15);
 }
+
+.addressMapContainer {
+  height: 150px; /* Ajusta la altura como necesites */
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 0.5rem; /* Espacio opcional arriba */
+  border: 1px solid var(--border-color);
+}

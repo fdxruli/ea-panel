@@ -349,3 +349,52 @@
     }
 }
 
+.ordersListContainer {
+    display: flex; /* O grid */
+    flex-direction: column;
+    gap: 1.5rem; /* Espacio entre tarjetas */
+    margin-bottom: 1rem; /* Espacio antes de los controles de paginación */
+}
+
+.paginationControls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem; /* Espacio sobre los controles */
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.paginationControls button {
+    padding: 0.5rem 1rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--color-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.paginationControls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+}
+
+.paginationControls span {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* --- (Opcional) ---
+   Si quieres que en desktop se muestren en columnas, puedes usar media queries
+   para cambiar .ordersListContainer a grid en pantallas grandes */
+@media (min-width: 768px) {
+    .ordersListContainer {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+}
