@@ -1,324 +1,231 @@
+/* Mobile first! */
+
+/* == Overlay and Modal == */
 .modalOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.70);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 12px;
+}
+.modalBox {
+  background: var(--bg-secondary, #fff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 18px;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.20);
 }
 
-.modalContent {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    max-width: 700px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    padding: 30px;
-    position: relative;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+/* == Mobile typography == */
+.modalBox h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+.modalBox h4 {
+  font-size: 18px;
+  margin-bottom: 10px;
 }
 
+/* == Cierre == */
 .closeButton {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition-speed) ease;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  color: var(--text-primary, #333);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
 }
-
 .closeButton:hover {
-    background: var(--color-error);
-    color: var(--text-light);
-    border-color: var(--color-error);
+  background: var(--color-error, #c00);
+  color: var(--text-light, #fff);
+  border-color: var(--color-error, #c00);
 }
 
-.modalContent h2 {
-    margin: 0 0 24px 0;
-    font-size: 24px;
-    color: var(--text-primary);
+/* == Formulario de creación y edición de niveles == */
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.formSection input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 6px;
+  font-size: 16px;
+  background: var(--bg-secondary, #fafafa);
+  color: var(--text-primary, #222);
+  margin-bottom: 8px;
+}
+.formSection button {
+  padding: 10px 0;
+  background: var(--color-primary, #1346af);
+  color: var(--text-light, #fff);
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+.formSection button:hover:not(:disabled) {
+  background: var(--color-primary-dark, #0d347a);
+}
+.formSection button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.modalContent h3 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
-    color: var(--text-primary);
-}
-
-/* ===== CREATE SECTION ===== */
-.createSection {
-    background: var(--bg-primary);
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 30px;
-    border: 2px solid var(--color-primary);
-}
-
-.formRow {
-    display: grid;
-    grid-template-columns: 1fr 150px auto;
-    gap: 12px;
-}
-
-.formRow input {
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-.formRow input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-}
-
-.formRow input:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.createButton {
-    padding: 10px 20px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all var(--transition-speed) ease;
-}
-
-.createButton:hover:not(:disabled) {
-    background: var(--color-primary-dark);
-    transform: translateY(-1px);
-}
-
-.createButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* ===== LEVELS SECTION ===== */
-.levelsSection {
-    margin-bottom: 20px;
-}
-
-.levelsList {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
+/* == Nivel == */
 .levelCard {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    transition: all var(--transition-speed) ease;
+  background: var(--bg-primary, #f9fafb);
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 13px;
+}
+.levelCard > div {
+  margin-bottom: 8px;
+  font-size: 17px;
+  color: var(--color-primary, #1346af);
+  font-weight: 700;
 }
 
-.levelCard:hover {
-    border-color: var(--color-primary);
+/* == Botones de nivel == */
+.levelCard button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: all .2s;
+}
+.levelCard button:first-of-type { background: var(--color-accent, #bfd8f9); color: var(--text-primary, #1346af); }
+.levelCard button:last-of-type { background: var(--color-error, #c00); color: #fff; }
+.levelCard button:hover { opacity: 0.85; }
+
+/* == Recompensas de nivel == */
+.rewardsSection {
+  background: var(--bg-highlight);
+  border: 1.5px solid var(--border-highlight);
+  border-radius: 9px;
+  padding: 13px;
+  margin-top: 8px;
+  color: var(--text-primary);
 }
 
-/* ===== VIEW MODE ===== */
-.viewMode {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
+.addRewardForm {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 12px;
 }
 
-.levelInfo h4 {
-    margin: 0 0 4px 0;
-    font-size: 16px;
-    color: var(--color-primary);
+.addRewardForm input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-input);
+  border-radius: 5px;
+  font-size: 15px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border 0.18s, background 0.18s;
 }
 
-.levelInfo p {
-    margin: 0;
-    font-size: 13px;
-    color: var(--text-secondary);
+.addRewardForm button {
+  background: var(--color-primary);
+  color: var(--text-light);
+  padding: 10px 0;
+  border: none;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 1px 5px var(--shadow-light);
+  transition: background 0.18s;
+}
+.addRewardForm button:hover {
+  background: var(--color-primary-dark);
 }
 
-.levelActions {
-    display: flex;
-    gap: 8px;
+.rewardsSection ul {
+  padding-left: 20px;
+  margin: 0;
+}
+.rewardsSection li {
+  margin-bottom: 6px;
+  font-size: 15px;
+  color: var(--color-primary);
+  list-style: disc inside;
+}
+.rewardsSection b {
+  color: var(--color-highlight);
 }
 
-.editButton,
-.deleteButton {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
+/* == Eliminar recompensa == */
+.rewardsSection button {
+  margin-left: 8px;
+  background: var(--bg-secondary,);
+  color: var(--color-highlight);
+  border: 1px solid var(--border-highlight);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, color 0.2s;
 }
-
-.editButton {
-    background: var(--color-accent);
-    color: var(--text-light);
+.rewardsSection button:hover {
+  background: var(--color-highlight);
+  color: #fff;
 }
-
-.editButton:hover {
-    background: var(--color-primary);
+/* == Spinner/Cargando == */
+.spinner {
+  margin: 27px auto;
+  display: block;
+  width: 38px;
+  height: 38px;
+  border: 4px solid #e2e5ea;
+  border-top: 4px solid #1346af;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
+@keyframes spin { 100% { transform: rotate(360deg); } }
 
-.deleteButton {
-    background: var(--bg-secondary);
-    color: var(--color-error);
-    border: 1px solid var(--border-color);
-}
-
-.deleteButton:hover {
-    background: var(--color-error);
-    color: var(--text-light);
-    border-color: var(--color-error);
-}
-
-/* ===== EDIT MODE ===== */
-.editMode {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.editMode input {
-    padding: 10px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-.editMode input:focus {
-    outline: none;
-    border-color: var(--color-primary);
-}
-
-.editActions {
-    display: flex;
-    gap: 8px;
-}
-
-.saveButton,
-.cancelButton {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-}
-
-.saveButton {
-    background: var(--color-success);
-    color: var(--text-light);
-}
-
-.saveButton:hover {
-    background: var(--color-primary);
-}
-
-.cancelButton {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-.cancelButton:hover {
-    background: var(--bg-primary);
-}
-
-/* ===== EMPTY STATE ===== */
+/* == Empty == */
 .emptyState {
-    text-align: center;
-    padding: 40px 20px;
-    background: var(--bg-primary);
-    border-radius: 8px;
-    border: 2px dashed var(--border-color);
+  text-align: center;
+  padding: 28px 6px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #dedede;
+  margin-top: 20px;
 }
 
-.emptyState p {
-    margin: 0 0 8px 0;
-    color: var(--text-secondary);
-}
-
-.hint {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-style: italic;
-}
-
-/* ===== MODAL FOOTER ===== */
-.modalFooter {
-    padding-top: 20px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: flex-end;
-}
-
-.closeFooterButton {
-    padding: 10px 24px;
-    background: var(--color-primary);
-    color: var(--text-light);
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-speed) ease;
-}
-
-.closeFooterButton:hover {
-    background: var(--color-primary-dark);
-    transform: translateY(-1px);
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .modalContent {
-        padding: 20px;
-        max-height: 100vh;
-        border-radius: 0;
-    }
-
-    .formRow {
-        grid-template-columns: 1fr;
-    }
-
-    .viewMode {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .levelActions {
-        width: 100%;
-    }
-
-    .editButton,
-    .deleteButton {
-        flex: 1;
-    }
+/* == Mobile == */
+@media (min-width: 769px) {
+  .modalBox { padding: 30px; }
+  .formSection { flex-direction: row; gap: 18px; align-items: center; }
+  .formSection input { width: 240px; margin-bottom: 0; }
+  .formSection button { width: auto; min-width: 135px; }
+  .levelCard { padding: 20px; font-size: 18px; }
+  .rewardsSection { margin-top: 14px; }
+  .addRewardForm { flex-direction: row; gap: 11px; }
+  .addRewardForm input { width: 220px; }
+  .addRewardForm button { width: 140px; }
 }
