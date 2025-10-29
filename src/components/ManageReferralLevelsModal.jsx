@@ -1,3 +1,4 @@
+// src/components/ManageReferralLevelsModal.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageReferralLevelsModal.module.css';
@@ -5,7 +6,9 @@ import { useAlert } from '../context/AlertContext';
 import DOMPurify from 'dompurify';
 import LoadingSpinner from './LoadingSpinner';
 
+// Componente LevelRewards (sin cambios)
 const LevelRewards = ({ levelId }) => {
+  // ... (código existente de LevelRewards) ...
   const { showAlert } = useAlert();
   const [rewards, setRewards] = useState([]);
   const [description, setDescription] = useState('');
@@ -32,16 +35,15 @@ const LevelRewards = ({ levelId }) => {
       showAlert('La descripción es obligatoria.');
       return;
     }
-    if (!rewardCode.trim()) {
-      showAlert('El código de promoción es obligatorio.');
-      return;
-    }
+    // Permitir código vacío si el usuario lo desea (quizás es solo un logro sin código)
+    const sanitizedCode = rewardCode.trim() ? DOMPurify.sanitize(rewardCode.toUpperCase()) : null;
+    
     const { error } = await supabase
       .from('rewards')
       .insert({
         level_id: levelId,
         description: DOMPurify.sanitize(description),
-        reward_code: DOMPurify.sanitize(rewardCode.toUpperCase()),
+        reward_code: sanitizedCode, // Usar código sanitizado o null
       });
     if (error) {
       showAlert('Hubo un error al añadir la recompensa: ' + error.message);
@@ -73,13 +75,13 @@ const LevelRewards = ({ levelId }) => {
       <div className={styles.addRewardForm}>
         <input
           type="text"
-          placeholder="Descripción de la recompensa"
+          placeholder="Descripción (ej: 10% Descuento)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <input
           type="text"
-          placeholder="Código de promoción"
+          placeholder="Código Promoción (Opcional)"
           value={rewardCode}
           onChange={(e) => setRewardCode(e.target.value)}
         />
@@ -90,21 +92,25 @@ const LevelRewards = ({ levelId }) => {
       {loadingRewards ? (
         <LoadingSpinner />
       ) : (
-        <ul>
-          {rewards.map((reward) => (
-            <li key={reward.id}>
-              {reward.description} | <b>{reward.reward_code}</b>
-              <button onClick={() => handleDeleteReward(reward.id)} style={{ marginLeft: 8 }}>
-                Eliminar
-              </button>
-            </li>
-          ))}
-        </ul>
+        rewards.length === 0 ? <p>No hay recompensas para este nivel.</p> : (
+          <ul>
+            {rewards.map((reward) => (
+              <li key={reward.id}>
+                {reward.description} {reward.reward_code ? `| ${reward.reward_code}` : ''}
+                <button onClick={() => handleDeleteReward(reward.id)} style={{ marginLeft: 8 }}>
+                  Eliminar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
       )}
     </div>
   );
 };
 
+
+// Componente Principal
 export default function ManageReferralLevelsModal({ isOpen, onClose }) {
   const { showAlert } = useAlert();
   const [levels, setLevels] = useState([]);
@@ -112,12 +118,14 @@ export default function ManageReferralLevelsModal({ isOpen, onClose }) {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', min_referrals: '' });
 
-  const fetchLevels = useCallback(async () => {
+  // fetchLevels, handleEdit, handleCancel, handleSave, handleCreate (sin cambios)
+    const fetchLevels = useCallback(async () => {
     setLoading(true);
     try {
+      // ✅ Incluir las recompensas asociadas en la consulta inicial
       const { data, error } = await supabase
         .from('referral_levels')
-        .select('*')
+        .select('*, rewards(*)') // <-- Añadir rewards(*)
         .order('min_referrals', { ascending: true });
       if (error) throw error;
       setLevels(data || []);
@@ -195,32 +203,64 @@ export default function ManageReferralLevelsModal({ isOpen, onClose }) {
     }
   }, [formData, showAlert, fetchLevels]);
 
-  const handleDelete = useCallback(async (levelId) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este nivel?')) return;
-    try {
-      const { error } = await supabase
-        .from('referral_levels')
-        .delete()
-        .eq('id', levelId);
-      if (error) throw error;
-      showAlert('Nivel eliminado con éxito.', 'success');
-      fetchLevels();
-    } catch (error) {
-      showAlert(`Error: ${error.message}`);
-    }
+  // --- 👇 handleDelete MODIFICADO ---
+  const handleDelete = useCallback(async (levelId, levelName, associatedRewardsCount) => {
+      let confirmationMessage = `¿Estás seguro de que deseas eliminar el nivel "${levelName}"?`;
+      if (associatedRewardsCount > 0) {
+          confirmationMessage += `\n\n⚠️ ¡Atención! Este nivel tiene ${associatedRewardsCount} recompensa(s) asociada(s). Si continúas, TAMBIÉN SE ELIMINARÁN las recompensas.`;
+      }
+
+      if (!window.confirm(confirmationMessage)) return;
+
+      try {
+          // 1. Si hay recompensas, eliminarlas PRIMERO
+          if (associatedRewardsCount > 0) {
+              console.log(`Eliminando ${associatedRewardsCount} recompensas asociadas al nivel ${levelId}...`);
+              const { error: rewardsError } = await supabase
+                  .from('rewards')
+                  .delete()
+                  .eq('level_id', levelId);
+
+              if (rewardsError) {
+                  // Si falla la eliminación de recompensas, no continuar
+                  throw new Error(`Error al eliminar recompensas asociadas: ${rewardsError.message}`);
+              }
+              console.log("Recompensas eliminadas.");
+          }
+
+          // 2. Eliminar el nivel
+          console.log(`Eliminando el nivel ${levelId}...`);
+          const { error: levelError } = await supabase
+              .from('referral_levels')
+              .delete()
+              .eq('id', levelId);
+
+          if (levelError) throw levelError;
+
+          showAlert('Nivel y sus recompensas (si las había) eliminados con éxito.', 'success');
+          fetchLevels(); // Recargar la lista de niveles
+
+      } catch (error) {
+          console.error("Error en handleDelete:", error);
+          // Mostrar un mensaje de error más específico
+          showAlert(`Error al eliminar: ${error.message}`);
+      }
   }, [showAlert, fetchLevels]);
+  // --- FIN handleDelete MODIFICADO ---
+
 
   if (!isOpen) return null;
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalBox}>
-        <button className={styles.closeButton} onClick={onClose}>
-          ×
-        </button>
+        <button className={styles.closeButton} onClick={onClose}>×</button>
         <h2>Gestionar niveles de referidos</h2>
+
+        {/* Formulario (sin cambios) */}
         <div className={styles.formSection}>
-          <input
+            {/* ... inputs y botones de crear/guardar ... */}
+             <input
             type="text"
             placeholder="Nombre del nivel"
             value={formData.name}
@@ -242,19 +282,21 @@ export default function ManageReferralLevelsModal({ isOpen, onClose }) {
           )}
         </div>
 
+        {/* Lista de Niveles */}
         {loading ? <LoadingSpinner /> : (
           levels.length === 0 ? (
-            <p>Aún no hay niveles creados.</p>
+            <div className={styles.emptyState}>Aún no hay niveles creados.</div>
           ) : (
             levels.map(level => (
               <div key={level.id} className={styles.levelCard}>
-                <div>
-                  <b>{level.name}</b> — {level.min_referrals} referidos mínimos
-                </div>
-                <button onClick={() => handleEdit(level)}>Editar</button>
-                <button onClick={() => handleDelete(level.id)}>Eliminar</button>
-                {/* Sección de recompensas */}
-                <LevelRewards levelId={level.id} />
+                <div><b>{level.name}</b> — {level.min_referrals} referidos mínimos</div>
+                <button onClick={() => handleEdit(level)}>Editar Nivel</button>
+                {/* --- 👇 Pasar datos necesarios a handleDelete --- */}
+                <button onClick={() => handleDelete(level.id, level.name, level.rewards?.length || 0)}>
+                    Eliminar Nivel
+                </button>
+                 {/* --- FIN Pasar datos --- */}
+                <LevelRewards levelId={level.id} /> {/* Mostrar recompensas */}
               </div>
             ))
           )

@@ -36,7 +36,7 @@
   height: 24px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
   .desktopMenuToggle {
     display: block; /* Visible en desktop */
   }

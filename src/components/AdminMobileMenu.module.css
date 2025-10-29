@@ -185,7 +185,7 @@
    RESPONSIVE - OCULTAR EN ESCRITORIO
    ============================================ */
 
-@media (min-width: 768px) {
+@media (min-width: 768px) and (min-height: 600px) {
   .bottomNav {
     display: none;
   }
