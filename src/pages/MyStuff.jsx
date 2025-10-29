@@ -35,8 +35,8 @@ const ReferralSystem = ({ customer }) => {
         <div className={styles.card}>
             <div className={styles.cardHeader}><TrophyIcon /><h2>Invita y Gana</h2></div>
             <p>
-                Comparte tu enlace de referido con tus amigos. Cuando se registren usando tu enlace,
-                ¡acumularás puntos para subir de nivel y obtener recompensas!
+                Comparte tu enlace de referido con tus amigos. Cuando se registren usando tu enlace
+                y realicen su primera compra ¡acumularás puntos para subir de nivel y obtener recompensas!
             </p>
             <div className={styles.referralBox}>
                 <input type="text" readOnly value={referralLink} />
@@ -187,7 +187,7 @@ const RewardsSection = ({ customerId }) => {
                                             </li>
                                         );
                                     })
-                                    : <li>Cuando hayas alcanzado la meta aqui apareceran tus remcompensa</li>
+                                    : <li>Cuando hayas alcanzado la meta aqui apareceran tus recompensa</li>
                                 }
                             </ul>
                         </div>

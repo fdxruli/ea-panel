@@ -135,7 +135,7 @@ MaintenanceModeSection.displayName = 'MaintenanceModeSection';
 export default function Settings() {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
-  const { refreshSettings } = useSettings();
+  const { refetch: refreshSettings } = useSettings();
   
   const [loading, setLoading] = useState(true);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
