@@ -29,7 +29,7 @@ Son los pedidos que están en proceso o aún no se han completado.
 `,
 
   completedOrders: `
-Muestra cuántos pedidos se han completado exitosamente.
+Muestra los pedidos completados exitosamente.
 `,
 
   canceledOrders: `
