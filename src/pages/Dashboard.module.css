@@ -1081,3 +1081,139 @@
   border: none;
   padding: 0;
 }
+
+/* ==================== DATE FILTER STYLES (AÑADIDOS) ==================== */
+.dateFilterContainer {
+  display: flex;
+  flex-wrap: wrap; /* Permite que se apilen en móvil */
+  gap: 1rem;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  margin-top: 1.5rem; /* Espacio desde el subtítulo */
+}
+
+.dateInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dateInputGroup label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.dateInput {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.filterButton, .clearButton {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.filterButton {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.filterButton:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.clearButton {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.clearButton:hover {
+  border-color: var(--text-secondary);
+}
+
+/* Responsive para los filtros */
+@media (max-width: 600px) {
+  .dateFilterContainer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dateInputGroup {
+    justify-content: space-between; /* Alinear label e input */
+  }
+
+  .filterButton, .clearButton {
+    width: 100%;
+  }
+}
+
+.chartHeader {
+  display: flex;
+  flex-direction: column; /* Apilado en móvil por defecto */
+  gap: 0.75rem;
+  margin-bottom: 1.5rem; /* El margen que antes tenía el h3 */
+}
+
+/* El h3 dentro del nuevo encabezado */
+.chartHeader h3 {
+  margin: 0; /* Reiniciar margen */
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.exportButton {
+  display: inline-flex; /* Para alinear icono y texto */
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  align-self: flex-start; /* Alinear a la izquierda en móvil */
+}
+
+.exportButton:hover {
+  background: var(--bg-primary);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.exportButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* En pantallas más grandes, ponerlos en línea */
+@media (min-width: 768px) {
+  .chartHeader {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .exportButton {
+    align-self: auto; /* Resetear alineación */
+  }
+}

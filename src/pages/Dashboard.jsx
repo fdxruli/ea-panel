@@ -5,6 +5,7 @@ import styles from './Dashboard.module.css';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { StatCard } from "../components/StatCard";
+import { exportToCSV } from "../utils/exportUtils";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -166,6 +167,16 @@ const ProfitMarginChart = memo(({ profitData }) => {
 });
 ProfitMarginChart.displayName = 'ProfitMarginChart';
 
+// ==================== BOTON DE DESCARGAS ====================
+const DownloadIcon = memo(() => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+    </svg>
+));
+DownloadIcon.displayName = 'DownloadIcon';
+
 // ==================== COMPONENTE PRINCIPAL CORREGIDO ====================
 
 export default function Dashboard() {
@@ -188,40 +199,66 @@ export default function Dashboard() {
     const [showDebugPanel, setShowDebugPanel] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // --- 👇 ESTADO PARA FILTROS DE FECHA ---
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    // Estado para los filtros aplicados
+    const [filterRange, setFilterRange] = useState({ start: '', end: '' });
+    // --- FIN ESTADO FECHAS ---
+
     const fetchAdvancedStats = useCallback(async () => {
         try {
             setLoading(true);
 
-            console.log('🔍 Iniciando análisis de rentabilidad...');
+            // --- 👇 LEER FILTROS APLICADOS ---
+            const { start, end } = filterRange;
+            console.log(`🔍 Iniciando análisis... Rango: ${start || 'N/A'} a ${end || 'N/A'}`);
 
             // ===== CONSULTA CRÍTICA: OBTENER DATOS CON JOINS =====
+
+            // --- Query 1: Órdenes (con filtro de fecha) ---
+            let ordersQuery = supabase
+                .from('orders')
+                .select(`
+                    id,
+                    status, 
+                    total_amount, 
+                    created_at,
+                    customers(name)
+                `)
+                .order('created_at', { ascending: false });
+            
+            if (start) ordersQuery = ordersQuery.gte('created_at', start);
+            if (end) ordersQuery = ordersQuery.lte('created_at', `${end}T23:59:59.999Z`);
+
+            // --- Query 2: Clientes (sin filtro de fecha) ---
+            const customersQuery = supabase
+                .from('customers')
+                .select('id', { count: 'exact', head: true });
+
+            // --- Query 3: Items (con filtro de fecha en la tabla 'orders') ---
+            let orderItemsQuery = supabase
+                .from('order_items')
+                .select(`
+                    quantity,
+                    price,
+                    cost,
+                    products!inner(name, id, price, cost),
+                    orders!inner(status, created_at, id)
+                `);
+
+            // Aplicar filtros de fecha a la tabla anidada 'orders'
+            if (start) orderItemsQuery = orderItemsQuery.gte('orders.created_at', start);
+            if (end) orderItemsQuery = orderItemsQuery.lte('orders.created_at', `${end}T23:59:59.999Z`);
+            
+            // Ejecutar consultas en paralelo
             const [ordersResult, customersResult, orderItemsResult] = await Promise.all([
-                supabase
-                    .from('orders')
-                    .select(`
-                        id,
-                        status, 
-                        total_amount, 
-                        created_at,
-                        customers(name)
-                    `)
-                    .order('created_at', { ascending: false }),
-
-                supabase
-                    .from('customers')
-                    .select('id', { count: 'exact', head: true }),
-
-                // ⚠️ CONSULTA CRÍTICA: Asegurar que obtenemos price Y cost
-                supabase
-                    .from('order_items')
-                    .select(`
-                        quantity,
-                        price,
-                        cost,
-                        products!inner(name, id, price, cost),
-                        orders!inner(status, created_at, id)
-                    `)
+                ordersQuery,
+                customersQuery,
+                orderItemsQuery
             ]);
+            
+            // --- FIN QUERIES ---
 
             if (ordersResult.error) {
                 console.error('❌ Error en orders:', ordersResult.error);
@@ -247,32 +284,21 @@ export default function Dashboard() {
             });
 
             // ===== ANÁLISIS DE COSTOS =====
-
-            // Filtrar solo items de órdenes completadas
             const completedItems = itemsData.filter(item =>
                 item.orders?.status === 'completado'
             );
 
             console.log(`✅ Items de órdenes completadas: ${completedItems.length}`);
-
-            // DEBUG: Verificar estructura de datos
-            if (completedItems.length > 0) {
-                console.log('🔍 Muestra de item:', completedItems[0]);
-            }
+            if (completedItems.length > 0) console.log('🔍 Muestra de item:', completedItems[0]);
 
             // ===== CÁLCULOS DE RENTABILIDAD CORREGIDOS =====
-
             let totalRevenue = 0;
             let totalCosts = 0;
             let itemsWithCost = 0;
             let itemsWithoutCost = 0;
-
             const productAnalysis = {};
 
             completedItems.forEach(item => {
-                // ⚠️ CRITICAL: Determinar de dónde viene el precio y costo
-
-                // Prioridad: order_item.price/cost > products.price/cost
                 const itemPrice = Number(item.price) || Number(item.products?.price) || 0;
                 const itemCost = Number(item.cost) || Number(item.products?.cost) || 0;
                 const quantity = Number(item.quantity) || 0;
@@ -283,20 +309,10 @@ export default function Dashboard() {
                 totalRevenue += revenue;
                 totalCosts += cost;
 
-                if (itemCost > 0) {
-                    itemsWithCost++;
-                } else {
-                    itemsWithoutCost++;
-                    console.warn(`⚠️ Producto sin costo: ${item.products?.name}`, {
-                        orderItemCost: item.cost,
-                        productCost: item.products?.cost,
-                        price: itemPrice
-                    });
-                }
+                if (itemCost > 0) itemsWithCost++;
+                else itemsWithoutCost++;
 
-                // Análisis por producto
                 const productName = item.products?.name || 'Producto Desconocido';
-
                 if (!productAnalysis[productName]) {
                     productAnalysis[productName] = {
                         name: productName,
@@ -308,7 +324,6 @@ export default function Dashboard() {
                         avgCost: 0
                     };
                 }
-
                 productAnalysis[productName].revenue += revenue;
                 productAnalysis[productName].totalCost += cost;
                 productAnalysis[productName].profit += (revenue - cost);
@@ -329,7 +344,6 @@ export default function Dashboard() {
                 itemsWithoutCost
             });
 
-            // Top productos más rentables
             const sortedProfitableProducts = Object.values(productAnalysis)
                 .map(product => ({
                     ...product,
@@ -339,14 +353,13 @@ export default function Dashboard() {
                 .sort((a, b) => b.profit - a.profit)
                 .slice(0, 10);
 
-            // Estado de pedidos
+            // Estado de pedidos (basado en los datos filtrados por fecha)
             const completedOrders = ordersData.filter(o => o.status === 'completado').length;
             const pendingOrders = ordersData.filter(o => o.status === 'pendiente').length;
             const canceledOrders = ordersData.filter(o => o.status === 'cancelado').length;
 
             const avgOrderValue = completedOrders > 0 ? totalRevenue / completedOrders : 0;
 
-            // ===== DATOS DE DEBUG =====
             const debugInfo = {
                 totalItems: completedItems.length,
                 itemsWithCost,
@@ -362,7 +375,7 @@ export default function Dashboard() {
                 totalProfit: totalProfit,
                 totalCosts: totalCosts,
                 pendingOrders: pendingOrders,
-                totalCustomers: customersCount,
+                totalCustomers: customersCount, // Total clientes no se filtra por fecha
                 avgOrderValue: avgOrderValue,
                 profitMargin: profitMargin,
                 completedOrders: completedOrders,
@@ -380,7 +393,8 @@ export default function Dashboard() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    // --- 👇 AÑADIR filterRange como dependencia ---
+    }, [filterRange]); 
 
     useEffect(() => {
         fetchAdvancedStats();
@@ -416,6 +430,60 @@ export default function Dashboard() {
 
     const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
 
+    // --- 👇 HANDLERS PARA FILTROS ---
+    const handleFilterApply = () => {
+        if (startDate && endDate && endDate < startDate) {
+            // Idealmente usarías useAlert aquí
+            alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+            return;
+        }
+        setFilterRange({ start: startDate, end: endDate });
+    };
+
+    const handleFilterClear = () => {
+        setStartDate('');
+        setEndDate('');
+        setFilterRange({ start: '', end: '' });
+    };
+
+    const handleExportProfitability = useCallback(() => {
+        // Formatear los datos para que sean legibles en el CSV
+        const dataToExport = profitableProducts.map(p => ({
+            'Producto': p.name,
+            'Ingresos ($)': p.revenue.toFixed(2),
+            'Costos ($)': p.totalCost.toFixed(2),
+            'Ganancia ($)': p.profit.toFixed(2),
+            'Margen (%)': p.marginPercent,
+            'Cantidad Vendida': p.quantity,
+            'Precio Promedio ($)': p.avgPrice.toFixed(2),
+            'Costo Promedio ($)': p.avgCost.toFixed(2)
+        }));
+        
+        if (dataToExport.length === 0) {
+            alert("No hay datos de rentabilidad para exportar.");
+            return;
+        }
+        
+        exportToCSV(dataToExport, 'analisis_rentabilidad.csv');
+    }, [profitableProducts]);
+
+    const handleExportMargins = useCallback(() => {
+        // Formatear datos específicos para este gráfico
+        const dataToExport = profitableProducts.map(p => ({
+            'Producto': p.name,
+            'Margen (%)': p.marginPercent,
+            'Ganancia ($)': p.profit.toFixed(2),
+            'Cantidad Vendida': p.quantity
+        }));
+        
+        if (dataToExport.length === 0) {
+            alert("No hay datos de márgenes para exportar.");
+            return;
+        }
+        
+        exportToCSV(dataToExport, 'margenes_ganancia.csv');
+    }, [profitableProducts]);
+
     if (loading) return <LoadingSpinner />;
 
     return (
@@ -423,6 +491,39 @@ export default function Dashboard() {
             <div className={styles.header}>
                 <h1 className={styles.title}>Dashboard Avanzado</h1>
                 <p className={styles.subtitle}>Análisis completo de rentabilidad y operaciones de tu negocio.</p>
+
+                {/* --- 👇 FILTRO DE FECHAS --- */}
+                <div className={styles.dateFilterContainer}>
+                    <div className={styles.dateInputGroup}>
+                        <label htmlFor="start-date">Desde:</label>
+                        <input
+                            type="date"
+                            id="start-date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className={styles.dateInput}
+                        />
+                    </div>
+                    <div className={styles.dateInputGroup}>
+                        <label htmlFor="end-date">Hasta:</label>
+                        <input
+                            type="date"
+                            id="end-date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className={styles.dateInput}
+                            min={startDate} // Evita que la fecha fin sea anterior
+                        />
+                    </div>
+                    <button onClick={handleFilterApply} className={styles.filterButton}>
+                        Filtrar
+                    </button>
+                    <button onClick={handleFilterClear} className={styles.clearButton}>
+                        Limpiar
+                    </button>
+                </div>
+                {/* --- FIN FILTRO --- */}
+
             </div>
             {/* Grid principal de métricas */}
             <div className={styles.statsGrid}>
@@ -438,7 +539,7 @@ export default function Dashboard() {
                 <StatCard
                     title="Ingresos Totales"
                     value={`$${stats.totalRevenue.toFixed(2)}`}
-                    subtitle={`${stats.completedOrders} órdenes completadas`}
+                    /* subtitle eliminado */
                     color="#3498db"
                     icon="💵"
                     helpKey="totalRevenue"
@@ -455,7 +556,7 @@ export default function Dashboard() {
                 <StatCard
                     title="Valor Promedio/Pedido"
                     value={`$${stats.avgOrderValue.toFixed(2)}`}
-                    subtitle={`${stats.pendingOrders} pendientes`}
+                    /* subtitle eliminado */
                     color="#f1c40f"
                     icon="📦"
                     helpKey="avgOrderValue"
@@ -468,21 +569,47 @@ export default function Dashboard() {
                     icon="👥"
                     helpKey="totalCustomers"
                 />
+                
+                {/* --- TARJETAS DE ESTADO DE PEDIDOS AGRUPADAS --- */}
+                <StatCard
+                    title="Pedidos Pendientes"
+                    value={stats.pendingOrders}
+                    subtitle={`${(stats.totalOrders > 0 ? (stats.pendingOrders / stats.totalOrders) * 100 : 0).toFixed(1)}% del total`}
+                    color="#e67e22" 
+                    icon="⌛"
+                    helpKey="pendingOrders"
+                />
+                <StatCard
+                    title="Pedidos Completados"
+                    value={stats.completedOrders}
+                    subtitle={`${(stats.totalOrders > 0 ? (stats.completedOrders / stats.totalOrders) * 100 : 0).toFixed(1)}% del total`}
+                    color="#2ecc71"
+                    icon="✅"
+                    helpKey="completedOrders"
+                />
                 <StatCard
                     title="Órdenes Canceladas"
                     value={stats.canceledOrders}
-                    subtitle={`${((stats.canceledOrders / stats.totalOrders) * 100).toFixed(1)}% del total`}
+                    subtitle={`${(stats.totalOrders > 0 ? (stats.canceledOrders / stats.totalOrders) * 100 : 0).toFixed(1)}% del total`}
                     color="#95a5a6"
                     icon="❌"
                     helpKey="canceledOrders"
                 />
+                {/* --- FIN TARJETAS DE ESTADO --- */}
             </div>
 
             {/* Grid de gráficos principales */}
             <div className={styles.mainGrid}>
                 {/* Análisis de Rentabilidad por Producto */}
                 <div className={`${styles.chartCard} ${styles.profitability}`}>
-                    <h3>💹 Análisis de Rentabilidad por Producto</h3>
+                    {/* Encabezado ahora es un div con flex */}
+                    <div className={styles.chartHeader}>
+                        <h3>💹 Análisis de Rentabilidad por Producto</h3>
+                        <button onClick={handleExportProfitability} className={styles.exportButton}>
+                            <DownloadIcon />
+                            Exportar
+                        </button>
+                    </div>
                     <div className={styles.chartContainer}>
                         <ProfitabilityChart profitData={profitableProducts.slice(0, 6)} />
                     </div>
@@ -490,7 +617,14 @@ export default function Dashboard() {
 
                 {/* Márgenes de Ganancia */}
                 <div className={`${styles.chartCard} ${styles.marginAnalysis}`}>
-                    <h3>🎯 Márgenes de Ganancia</h3>
+                    {/* Encabezado ahora es un div con flex */}
+                    <div className={styles.chartHeader}>
+                        <h3>🎯 Márgenes de Ganancia</h3>
+                        <button onClick={handleExportMargins} className={styles.exportButton}>
+                            <DownloadIcon />
+                            Exportar
+                        </button>
+                    </div>
                     <div className={styles.chartContainer}>
                         <ProfitMarginChart profitData={profitableProducts.slice(0, 5)} />
                     </div>
