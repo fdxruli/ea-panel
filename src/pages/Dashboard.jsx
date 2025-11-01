@@ -542,8 +542,10 @@ export default function Dashboard() {
                                 className={styles.dateInput}
                             />
                         </div>
+                        <div className={"buttonGroup"}>
                         <button onClick={handleFilterApply} className={styles.filterButton}>Filtrar</button>
                         <button onClick={handleFilterClear} className={styles.clearButton}>Limpiar</button>
+                        </div>
                     </div>
                 </div>
                 {/* --- FIN FILTRO --- */}

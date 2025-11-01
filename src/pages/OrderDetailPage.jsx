@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // --- Añadido useNavigate y useCustomer ---
 import { useParams, Link, useNavigate } from 'react-router-dom';
+// --- MODIFICADO: Añadir setPhoneModalOpen ---
 import { useCustomer } from '../context/CustomerContext'; // Asegúrate que la ruta sea correcta
 // --- Fin añadidos ---
 import { supabase } from '../lib/supabaseClient'; // Asegúrate que la ruta sea correcta
@@ -18,7 +19,8 @@ export default function OrderDetailPage() {
     const [error, setError] = useState(null);
     // --- Hooks para redirección y sesión ---
     const navigate = useNavigate();
-    const { phone } = useCustomer(); // Obtiene el teléfono si el usuario tiene sesión
+    // --- MODIFICADO: Añadir setPhoneModalOpen ---
+    const { phone, setPhoneModalOpen } = useCustomer(); // Obtiene el teléfono si el usuario tiene sesión
     // --- Fin hooks ---
 
     // --- Efecto para la Redirección Inteligente ---
@@ -242,8 +244,22 @@ export default function OrderDetailPage() {
                             <strong>Total: ${order.total_amount.toFixed(2)}</strong>
                             {/* No incluimos botones de acción aquí */}
                         </div>
+
+                        {/* --- ⛔️ SECCIÓN DE LOGIN MOVIDA FUERA DE ESTE DIV ⛔️ --- */}
                     </div>
                 </div>
+                
+                {/* --- ✅ NUEVA UBICACIÓN (FUERA DE LA TARJETA) --- */}
+                {/* Se muestra solo si 'phone' no está definido (usuario no logueado) */}
+                {!phone && (
+                    <div className={styles.loginPrompt}>
+                        <strong onClick={() => setPhoneModalOpen(true)}>
+                            Ingresa tu número
+                        </strong>
+                        &nbsp;para hacer pedidos, ganar descuentos y recibir notificaciones al cambiar el estatus de tu pedido.
+                    </div>
+                )}
+                {/* --- FIN NUEVA UBICACIÓN --- */}
             </div>
         </>
     );

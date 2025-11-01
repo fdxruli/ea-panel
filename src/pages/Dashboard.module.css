@@ -1110,7 +1110,7 @@
   display: none; /* Oculto por defecto en móvil */
   flex-wrap: wrap; 
   gap: 1rem;
-  align-items: center;
+  align-items: stretch;
   background-color: var(--bg-secondary);
   padding: 1rem;
   border-radius: var(--border-radius);
@@ -1156,6 +1156,13 @@
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.9rem;
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  justify-content: flex-start;
 }
 
 .filterButton, .clearButton {
@@ -1283,5 +1290,83 @@
     flex-shrink: 0;
     animation: none; /* No necesita animación al cargar */
     box-shadow: none; /* Quitar sombra en desktop */
+  }
+}
+
+@media (min-width: 900px) {
+  .dateFilterContainer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 2.5rem;
+    padding: 1.5rem 2rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 14px var(--shadow-color);
+    border: 1px solid var(--border-color);
+    margin-bottom: 2rem;
+  }
+  .dateInputGroup {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 0;
+  }
+  .dateInputGroup label {
+    margin-right: 0.7rem;
+    margin-bottom: 0;
+    font-size: 1.1rem;
+  }
+  .dateInput {
+    min-width: 170px;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+  }
+  .filterButton, .clearButton {
+    width: auto;
+    min-width: 140px;
+    margin-left: 1.3rem;
+    margin-bottom: 0;
+    padding: 0.8rem 1.6rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
+  }
+  .buttonGroup {
+    flex-direction: row; /* ya es fila, lo mantenemos por claridad */
+    align-items: center;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 800px) and (max-width: 1023px) {
+  .dateFilterContainer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1.2rem;
+    padding: 1.2rem 1.2rem;
+    width: 100%;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    margin-bottom: 1.5rem;
+  }
+  .dateInputGroup {
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0;
+  }
+  .filterButton, .clearButton {
+    width: auto;
+    min-width: 120px;
+    margin-left: 1rem;
+    margin-bottom: 0;
+    padding: 0.7rem 1.1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
   }
 }
