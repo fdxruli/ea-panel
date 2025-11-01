@@ -1,0 +1,484 @@
+.container {
+    max-width: 700px;
+    margin: 2rem auto;
+    padding: 1rem;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.container h1, .container h2, .container h3 {
+    text-align: left;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+
+.ordersContainer {
+    display: flex;
+    overflow-x: auto;
+    gap: 1.5rem;
+    padding: 0.5rem; /* Add some padding so cards don't touch edges */
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    align-items: flex-start; /* <--- FIX HERE */
+}
+
+/* Ocultar la barra de scroll */
+.ordersContainer::-webkit-scrollbar { display: none; }
+.ordersContainer { -ms-overflow-style: none; scrollbar-width: none; }
+
+.orderCard {
+    flex: 0 0 320px; /* Base width for cards */
+    scroll-snap-align: start;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden; /* Keep hidden on the main card */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Transition only border and shadow */
+    display: flex; /* Use flexbox for vertical layout */
+    flex-direction: column; /* Stack header, details, footer */
+}
+
+.orderCard.open {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.cardHeader {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color); /* Keep border here */
+    flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.headerInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0; /* Prevent status/icon shrinking */
+}
+
+.toggleIcon {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease, color 0.3s ease; /* Added color transition */
+}
+
+.orderCard.open .toggleIcon {
+    transform: rotate(45deg); /* Keep rotation */
+    color: var(--color-error); /* Keep error color for 'x' */
+}
+
+.orderDetails {
+    max-height: 0;
+    overflow: hidden; /* Keep overflow hidden */
+    /* Define transition primarily on max-height */
+    transition: max-height 0.4s ease-out;
+    /* Padding will appear instantly when open */
+    padding: 0 1.5rem;
+    flex-grow: 1; /* Allow details to take available space */
+    min-height: 0; /* Needed for flex-grow */
+}
+
+.orderCard.open .orderDetails {
+    max-height: 1500px; /* Increased max-height */
+    padding: 1.5rem; /* Apply padding only when open */
+    overflow-y: auto; /* Allow internal scroll if content is VERY tall */
+    border-top: 1px solid var(--border-color); /* Add border only when open */
+    /* Transition for max-height happens from definition above */
+}
+
+/* Style paragraphs inside details for better wrapping */
+.orderDetails p {
+    margin: 0.5rem 0;
+    line-height: 1.5; /* Improve readability */
+    word-break: break-word; /* Allow long words/dates to break */
+}
+.orderDetails p strong {
+    color: var(--text-primary); /* Ensure labels are clearly visible */
+    margin-right: 0.5em;
+}
+
+/* Styling for the scheduled time specifically */
+.scheduledTime {
+    color: var(--color-primary); /* Make it stand out */
+    font-weight: 500;
+}
+
+
+/* Product list inside details */
+.orderDetails ul {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.orderDetails li {
+    padding: 0.6rem 0; /* Slightly reduced padding */
+    border-bottom: 1px solid var(--border-color);
+    display: flex; /* Use flexbox for alignment */
+    justify-content: space-between; /* Space out name and price */
+    align-items: center; /* Vertically align */
+    gap: 1rem; /* Space between elements */
+}
+.orderDetails li:last-child {
+    border-bottom: none;
+}
+
+.orderDetails li span:first-child { /* Product name part */
+    flex-grow: 1; /* Allow name to take space */
+    word-break: break-word; /* Allow name to wrap */
+}
+.orderDetails li span:last-child { /* Price part */
+    flex-shrink: 0; /* Prevent price from shrinking */
+    font-weight: 500;
+    white-space: nowrap; /* Keep price on one line */
+}
+
+
+.activeOrdersContainer,
+.historyContainer {
+    margin-top: 1rem;
+}
+
+.status {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.pendiente { background-color: #f0ad4e; }
+.en_proceso { background-color: #3498db; }
+.en_envio { background-color: #3498db; }
+.completado { background-color: var(--color-success); }
+.cancelado { background-color: var(--color-error); }
+
+
+.orderFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    flex-shrink: 0; /* Prevent footer from shrinking */
+    border-top: 1px solid var(--border-color); /* Add separator */
+    padding-top: 1.5rem; /* Space above total */
+}
+.orderFooter strong {
+    align-self: flex-end; /* Align total to the right */
+}
+
+.actionsContainer {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.editButton, .cancelButton, .reorderButton {
+    color: var(--text-light);
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.editButton { background-color: #3498db; }
+.cancelButton { background-color: var(--color-error); }
+.reorderButton { background-color: var(--color-success); }
+
+.prompt {
+    text-align: center;
+    padding: 3rem 1.5rem; /* Aumentar padding vertical */
+    margin: 2rem auto; /* Añadir margen superior/inferior y centrar horizontalmente */
+    max-width: 500px; /* Limitar ancho máximo */
+}
+
+.prompt h2 {
+    margin-bottom: 1rem; /* Más espacio bajo el título */
+    color: var(--color-error); /* Color rojo para el título del error */
+}
+
+.prompt p {
+    color: var(--text-secondary); /* Color secundario para el mensaje */
+    line-height: 1.6; /* Mejorar legibilidad */
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 2rem;
+  text-align: center;
+}
+
+.errorTitle {
+  color: var(--color-error);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+}
+
+.errorMessage {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+}
+
+.errorButton {
+  display: inline-block;
+  background-color: var(--color-primary);
+  color: white;
+  padding: 0.9rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.errorButton:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+
+.cancellationReason {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    background-color: var(--color-primary-light);
+    border-left: 4px solid var(--color-error);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-radius: 4px;
+}
+
+.carouselWrapper {
+    position: relative;
+}
+
+.scrollButton {
+    display: none; /* Keep hidden by default */
+}
+
+/* --- Media Queries remain the same --- */
+@media (min-width: 768px) {
+    /* ... (existing desktop scroll button styles) ... */
+     .scrollButton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 10;
+        background-color: var(--bg-secondary);
+        color: var(--color-primary);
+        border: 2px solid var(--border-color);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        font-size: 2rem;
+        cursor: pointer;
+        box-shadow: 0 2px 8px var(--shadow-color);
+        transition: all 0.2s ease;
+    }
+
+    .scrollButton:hover {
+        background-color: var(--color-primary);
+        color: var(--text-light);
+        border-color: var(--color-primary);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .scrollButton.prev {
+        left: -22px;
+    }
+
+    .scrollButton.next {
+        right: -22px;
+    }
+
+    .ordersContainer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+
+@media (min-width: 1024px) {
+    .ordersContainer {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        overflow-x: visible; /* Disable horizontal scroll on large screens */
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .orderCard {
+        flex: 1 1 auto; /* Let grid control the sizing */
+        min-width: 350px; /* Ensure a minimum width */
+    }
+
+    .scrollButton {
+        display: none; /* Hide scroll buttons on grid layout */
+    }
+}
+
+.ordersListContainer {
+    display: flex; /* O grid */
+    flex-direction: column;
+    gap: 1.5rem; /* Espacio entre tarjetas */
+    margin-bottom: 1rem; /* Espacio antes de los controles de paginación */
+}
+
+.paginationControls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem; /* Espacio sobre los controles */
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+}
+
+.paginationControls button {
+    padding: 0.5rem 1rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--color-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.paginationControls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--bg-primary);
+    color: var(--text-secondary);
+}
+
+.paginationControls span {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* --- (Opcional) ---
+   Si quieres que en desktop se muestren en columnas, puedes usar media queries
+   para cambiar .ordersListContainer a grid en pantallas grandes */
+@media (min-width: 768px) {
+    .ordersListContainer {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+}
+
+.cancellationReason {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    background-color: var(--color-primary-light);
+    border-left: 4px solid var(--color-error);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-radius: 4px;
+}
+
+/* --- ✅ NUEVOS ESTILOS AÑADIDOS --- */
+.loginPrompt {
+    margin-top: 1.5rem;
+    padding: 1.5rem; /* Un poco más de padding */
+    background-color: var(--color-primary-light);
+    border-left: 4px solid var(--color-primary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-radius: 8px;
+    line-height: 1.5;
+    text-align: center; /* Centrar título y botón */
+}
+
+.loginPrompt p { /* Estilo para el párrafo introductorio */
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.loginPrompt h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary);
+    font-size: 1.2rem; /* Más grande */
+    font-weight: 600;
+    padding: 0; /* Asegurar que no tenga padding de h4 general */
+    text-align: center; /* Asegurar centrado del h4 */
+}
+
+.loginPrompt ul {
+    margin: 0.75rem 0 1rem 1.2rem; /* Margen para la lista */
+    padding: 0;
+    text-align: left; /* Alinear beneficios a la izquierda */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* Espacio entre beneficios */
+}
+
+.loginPrompt li {
+    list-style-type: '✅ '; /* Usar un checkmark como viñeta */
+    padding-left: 0.5rem; /* Espacio después del checkmark */
+    font-size: 0.9rem; /* Mantener el tamaño de fuente */
+}
+
+.loginPrompt .promptActionButton {
+    /* Un botón para la acción principal */
+    display: inline-block;
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+    text-decoration: none; /* Quitar subrayado */
+    margin-top: 1rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.loginPrompt .promptActionButton:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+}
+/* --- FIN NUEVOS ESTILOS --- */
+
+
+.carouselWrapper {
+    position: relative;
+}
