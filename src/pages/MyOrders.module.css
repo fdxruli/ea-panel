@@ -409,25 +409,76 @@
     border-radius: 4px;
 }
 
-/* --- ✅ NUEVO ESTILO AÑADIDO --- */
+/* --- ✅ NUEVOS ESTILOS AÑADIDOS --- */
 .loginPrompt {
     margin-top: 1.5rem;
-    padding: 1rem;
+    padding: 1.5rem; /* Un poco más de padding */
     background-color: var(--color-primary-light);
     border-left: 4px solid var(--color-primary);
     color: var(--text-secondary);
     font-size: 0.9rem;
-    border-radius: 4px;
+    border-radius: 8px;
     line-height: 1.5;
+    text-align: center; /* Centrar título y botón */
 }
 
-.loginPrompt strong {
+.loginPrompt p { /* Estilo para el párrafo introductorio */
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    font-size: 0.95rem;
     color: var(--text-primary);
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: underline;
 }
 
-.loginPrompt strong:hover {
-    color: var(--color-primary-dark);
+.loginPrompt h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary);
+    font-size: 1.2rem; /* Más grande */
+    font-weight: 600;
+    padding: 0; /* Asegurar que no tenga padding de h4 general */
+    text-align: center; /* Asegurar centrado del h4 */
+}
+
+.loginPrompt ul {
+    margin: 0.75rem 0 1rem 1.2rem; /* Margen para la lista */
+    padding: 0;
+    text-align: left; /* Alinear beneficios a la izquierda */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* Espacio entre beneficios */
+}
+
+.loginPrompt li {
+    list-style-type: '✅ '; /* Usar un checkmark como viñeta */
+    padding-left: 0.5rem; /* Espacio después del checkmark */
+    font-size: 0.9rem; /* Mantener el tamaño de fuente */
+}
+
+.loginPrompt .promptActionButton {
+    /* Un botón para la acción principal */
+    display: inline-block;
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    text-align: center;
+    text-decoration: none; /* Quitar subrayado */
+    margin-top: 1rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.loginPrompt .promptActionButton:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+}
+/* --- FIN NUEVOS ESTILOS --- */
+
+
+.carouselWrapper {
+    position: relative;
 }

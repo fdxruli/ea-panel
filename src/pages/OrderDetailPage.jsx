@@ -244,19 +244,27 @@ export default function OrderDetailPage() {
                             <strong>Total: ${order.total_amount.toFixed(2)}</strong>
                             {/* No incluimos botones de acción aquí */}
                         </div>
-
-                        {/* --- ⛔️ SECCIÓN DE LOGIN MOVIDA FUERA DE ESTE DIV ⛔️ --- */}
                     </div>
                 </div>
                 
-                {/* --- ✅ NUEVA UBICACIÓN (FUERA DE LA TARJETA) --- */}
+                {/* --- ✅ NUEVA UBICACIÓN Y COPYWRITING MEJORADO --- */}
                 {/* Se muestra solo si 'phone' no está definido (usuario no logueado) */}
                 {!phone && (
                     <div className={styles.loginPrompt}>
-                        <strong onClick={() => setPhoneModalOpen(true)}>
-                            Ingresa tu número
-                        </strong>
-                        &nbsp;para hacer pedidos, ganar descuentos y recibir notificaciones al cambiar el estatus de tu pedido.
+                        <h4>¡Crea tu cuenta con solo tu número!</h4>
+                        <p>Al ingresar tu número podrás:</p>
+                        <ul>
+                            <li>Hacer pedidos futuros más rápido.</li>
+                            <li>Ganar recompensas y descuentos.</li>
+                            <li>Recibir notificaciones de tus pedidos.</li>
+                            <li>Guardar tus direcciones, favoritos y reseñas a nuestros productos.</li>
+                        </ul>
+                        <button 
+                            onClick={() => setPhoneModalOpen(true)}
+                            className={styles.promptActionButton}
+                        >
+                            Ingresar mi número
+                        </button>
                     </div>
                 )}
                 {/* --- FIN NUEVA UBICACIÓN --- */}
