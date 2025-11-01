@@ -204,6 +204,8 @@ export default function Dashboard() {
     const [endDate, setEndDate] = useState('');
     // Estado para los filtros aplicados
     const [filterRange, setFilterRange] = useState({ start: '', end: '' });
+    // --- ✅ RE-AÑADIDO showDateFilter ---
+    const [showDateFilter, setShowDateFilter] = useState(false);
     // --- FIN ESTADO FECHAS ---
 
     const fetchAdvancedStats = useCallback(async () => {
@@ -227,9 +229,9 @@ export default function Dashboard() {
                     customers(name)
                 `)
                 .order('created_at', { ascending: false });
-            
+
             if (start) ordersQuery = ordersQuery.gte('created_at', start);
-            if (end) ordersQuery = ordersQuery.lte('created_at', `${end}T23:59:59.999Z`);
+            if (end) ordersQuery = ordersQuery.lte('created_at', end);
 
             // --- Query 2: Clientes (sin filtro de fecha) ---
             const customersQuery = supabase
@@ -249,15 +251,15 @@ export default function Dashboard() {
 
             // Aplicar filtros de fecha a la tabla anidada 'orders'
             if (start) orderItemsQuery = orderItemsQuery.gte('orders.created_at', start);
-            if (end) orderItemsQuery = orderItemsQuery.lte('orders.created_at', `${end}T23:59:59.999Z`);
-            
+            if (end) orderItemsQuery = orderItemsQuery.lte('orders.created_at', end);
+
             // Ejecutar consultas en paralelo
             const [ordersResult, customersResult, orderItemsResult] = await Promise.all([
                 ordersQuery,
                 customersQuery,
                 orderItemsQuery
             ]);
-            
+
             // --- FIN QUERIES ---
 
             if (ordersResult.error) {
@@ -393,8 +395,8 @@ export default function Dashboard() {
         } finally {
             setLoading(false);
         }
-    // --- 👇 AÑADIR filterRange como dependencia ---
-    }, [filterRange]); 
+        // --- 👇 AÑADIR filterRange como dependencia ---
+    }, [filterRange]);
 
     useEffect(() => {
         fetchAdvancedStats();
@@ -430,14 +432,27 @@ export default function Dashboard() {
 
     const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
 
-    // --- 👇 HANDLERS PARA FILTROS ---
     const handleFilterApply = () => {
         if (startDate && endDate && endDate < startDate) {
-            // Idealmente usarías useAlert aquí
-            alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+            showAlert('La fecha de fin no puede ser anterior a la fecha de inicio.');
             return;
         }
-        setFilterRange({ start: startDate, end: endDate });
+
+        let utcStart = '';
+        let utcEnd = '';
+
+        if (startDate) {
+            const localStart = new Date(`${startDate}T00:00:00`);
+            utcStart = localStart.toISOString(); 
+        }
+
+        if (endDate) {
+            const localEnd = new Date(`${endDate}T23:59:59.999`);
+            utcEnd = localEnd.toISOString();
+        }
+
+        // Guarda las fechas UTC completas en el estado del filtro
+        setFilterRange({ start: utcStart, end: utcEnd });
     };
 
     const handleFilterClear = () => {
@@ -458,12 +473,12 @@ export default function Dashboard() {
             'Precio Promedio ($)': p.avgPrice.toFixed(2),
             'Costo Promedio ($)': p.avgCost.toFixed(2)
         }));
-        
+
         if (dataToExport.length === 0) {
             alert("No hay datos de rentabilidad para exportar.");
             return;
         }
-        
+
         exportToCSV(dataToExport, 'analisis_rentabilidad.csv');
     }, [profitableProducts]);
 
@@ -475,12 +490,12 @@ export default function Dashboard() {
             'Ganancia ($)': p.profit.toFixed(2),
             'Cantidad Vendida': p.quantity
         }));
-        
+
         if (dataToExport.length === 0) {
             alert("No hay datos de márgenes para exportar.");
             return;
         }
-        
+
         exportToCSV(dataToExport, 'margenes_ganancia.csv');
     }, [profitableProducts]);
 
@@ -492,35 +507,44 @@ export default function Dashboard() {
                 <h1 className={styles.title}>Dashboard Avanzado</h1>
                 <p className={styles.subtitle}>Análisis completo de rentabilidad y operaciones de tu negocio.</p>
 
-                {/* --- 👇 FILTRO DE FECHAS --- */}
-                <div className={styles.dateFilterContainer}>
-                    <div className={styles.dateInputGroup}>
-                        <label htmlFor="start-date">Desde:</label>
-                        <input
-                            type="date"
-                            id="start-date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            className={styles.dateInput}
-                        />
-                    </div>
-                    <div className={styles.dateInputGroup}>
-                        <label htmlFor="end-date">Hasta:</label>
-                        <input
-                            type="date"
-                            id="end-date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            className={styles.dateInput}
-                            min={startDate} // Evita que la fecha fin sea anterior
-                        />
-                    </div>
-                    <button onClick={handleFilterApply} className={styles.filterButton}>
-                        Filtrar
+                {/* --- 👇 FILTRO DE FECHAS REVERTIDO --- */}
+                {/* Este div agrupa el botón y el filtro en móvil */}
+                <div className={styles.dateFilterMobile}>
+                    <button
+                        className={styles.expandButton}
+                        onClick={() => setShowDateFilter(!showDateFilter)}
+                    >
+                        {showDateFilter ? 'Ocultar Filtros' : 'Filtrar por fecha'}
                     </button>
-                    <button onClick={handleFilterClear} className={styles.clearButton}>
-                        Limpiar
-                    </button>
+                    
+                    {/* Este contenedor se muestra condicionalmente en MÓVIL (por showDateFilter)
+                      y se fuerza a mostrar SIEMPRE en ESCRITORIO (con CSS).
+                    */}
+                    <div className={`${styles.dateFilterContainer} ${showDateFilter ? styles.filtersVisible : ''}`}>
+                        <div className={styles.dateInputGroup}>
+                            <label htmlFor="start-date">Desde</label>
+                            <input
+                                type="date"
+                                id="start-date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className={styles.dateInput}
+                            />
+                        </div>
+                        <div className={styles.dateInputGroup}>
+                            <label htmlFor="end-date">Hasta</label>
+                            <input
+                                type="date"
+                                id="end-date"
+                                value={endDate}
+                                min={startDate}
+                                onChange={e => setEndDate(e.target.value)}
+                                className={styles.dateInput}
+                            />
+                        </div>
+                        <button onClick={handleFilterApply} className={styles.filterButton}>Filtrar</button>
+                        <button onClick={handleFilterClear} className={styles.clearButton}>Limpiar</button>
+                    </div>
                 </div>
                 {/* --- FIN FILTRO --- */}
 
@@ -569,13 +593,13 @@ export default function Dashboard() {
                     icon="👥"
                     helpKey="totalCustomers"
                 />
-                
+
                 {/* --- TARJETAS DE ESTADO DE PEDIDOS AGRUPADAS --- */}
                 <StatCard
                     title="Pedidos Pendientes"
                     value={stats.pendingOrders}
                     subtitle={`${(stats.totalOrders > 0 ? (stats.pendingOrders / stats.totalOrders) * 100 : 0).toFixed(1)}% del total`}
-                    color="#e67e22" 
+                    color="#e67e22"
                     icon="⌛"
                     helpKey="pendingOrders"
                 />

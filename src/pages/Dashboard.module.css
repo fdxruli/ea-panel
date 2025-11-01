@@ -1082,18 +1082,59 @@
   padding: 0;
 }
 
-/* ==================== DATE FILTER STYLES (AÑADIDOS) ==================== */
+/* ==================== DATE FILTER STYLES (MODIFICADO) ==================== */
+
+/* Contenedor del botón en móvil */
+.dateFilterMobile {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+/* El botón para expandir/colapsar en MÓVIL */
+.expandButton {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 0.5rem; /* Espacio entre el botón y el contenedor (cuando se abre) */
+  text-align: center;
+}
+
+/* El contenedor de los filtros (oculto/mostrado por JSX en móvil) */
 .dateFilterContainer {
-  display: flex;
-  flex-wrap: wrap; /* Permite que se apilen en móvil */
+  display: none; /* Oculto por defecto en móvil */
+  flex-wrap: wrap; 
   gap: 1rem;
   align-items: center;
   background-color: var(--bg-secondary);
   padding: 1rem;
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
-  margin-top: 1.5rem; /* Espacio desde el subtítulo */
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
+
+/* Se muestra cuando el estado showDateFilter es true */
+.dateFilterContainer.filtersVisible {
+  display: flex;
+  animation: slideDownFilter 0.3s ease-out;
+}
+
+@keyframes slideDownFilter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 .dateInputGroup {
   display: flex;
@@ -1146,7 +1187,7 @@
   border-color: var(--text-secondary);
 }
 
-/* Responsive para los filtros */
+/* Responsive para los filtros (Pantallas pequeñas) */
 @media (max-width: 600px) {
   .dateFilterContainer {
     flex-direction: column;
@@ -1161,6 +1202,7 @@
     width: 100%;
   }
 }
+
 
 .chartHeader {
   display: flex;
@@ -1215,5 +1257,31 @@
 
   .exportButton {
     align-self: auto; /* Resetear alineación */
+  }
+  
+  /* --- LÓGICA DE ESCRITORIO PARA FILTROS --- */
+  .header {
+    display: flex;
+    flex-wrap: wrap; /* Permitir que el filtro baje si no cabe */
+    justify-content: space-between;
+    align-items: flex-start; /* Alinear arriba */
+  }
+  
+  .dateFilterMobile { /* El contenedor del filtro ahora se alinea en el header */
+    width: auto;
+    margin-top: 0;
+  }
+  
+  .expandButton {
+    display: none; /* Oculta el botón en desktop */
+  }
+
+  .dateFilterContainer {
+    display: flex; /* Muestra siempre el contenedor en desktop */
+    margin-top: 0;
+    width: auto;
+    flex-shrink: 0;
+    animation: none; /* No necesita animación al cargar */
+    box-shadow: none; /* Quitar sombra en desktop */
   }
 }
