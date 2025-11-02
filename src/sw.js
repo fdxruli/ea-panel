@@ -21,9 +21,9 @@ self.addEventListener('install', (event) => {
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Click en notificación');
   event.notification.close();
-  
+
   const urlToOpen = event.notification.data?.url || '/';
-  
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
@@ -60,7 +60,7 @@ const messaging = getMessaging(app);
 // Manejo de notificaciones en background
 onBackgroundMessage(messaging, (payload) => {
   console.log('[SW] Mensaje FCM recibido:', payload);
-  
+
   const notificationTitle = payload.notification?.title || 'Nueva Notificación';
   const notificationOptions = {
     body: payload.notification?.body || '',
@@ -70,7 +70,7 @@ onBackgroundMessage(messaging, (payload) => {
     tag: 'notification-' + Date.now(),
     requireInteraction: false
   };
-  
+
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
@@ -95,8 +95,8 @@ registerRoute(
 
 // Manifiestos - NetworkFirst (para que siempre estén actualizados)
 registerRoute(
-  ({ url }) => url.pathname.endsWith('manifest-client.json') || 
-               url.pathname.endsWith('manifest-admin.json'),
+  ({ url }) => url.pathname.endsWith('manifest-client.json') ||
+    url.pathname.endsWith('manifest-admin.json'),
   new NetworkFirst({
     cacheName: 'manifest-cache',
   })
@@ -122,16 +122,15 @@ registerRoute(
   })
 );
 
-// Estrategia para rutas de cliente - CacheFirst para mejor performance
 registerRoute(
   ({ url, request }) => {
-    // Excluir admin y API
-    return request.mode === 'navigate' && 
-           !url.pathname.startsWith('/admin') &&
-           !url.pathname.startsWith('/api/');
+    return request.mode === 'navigate' &&
+      !url.pathname.startsWith('/admin') &&
+      !url.pathname.startsWith('/api/');
   },
-  new CacheFirst({
+  new NetworkFirst({
     cacheName: 'client-pages-cache',
+    networkTimeoutSeconds: 7,
     plugins: [
       {
         cacheWillUpdate: async ({ response }) => {
