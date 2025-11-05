@@ -1,27 +1,43 @@
-import React, { useState, useEffect, useMemo } from 'react'; // Asegúrate de importar useMemo y React si no está
+/* src/components/SpecialPriceForm.jsx (Migrado) */
+
+import React, { useState, useEffect, useMemo } from 'react'; // <-- Añadido useMemo
 import { supabase } from '../lib/supabaseClient';
 import styles from './SpecialPriceForm.module.css';
 import { useAlert } from '../context/AlertContext';
 
-const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
+// --- (PASO A) AÑADIR IMPORT ---
+import { useCategoriesCache } from '../hooks/useCategoriesCache';
+// --- FIN PASO A ---
+
+// (Añadido por si las categorías están cargando)
+import LoadingSpinner from './LoadingSpinner'; 
+
+// --- (PASO B) CAMBIAR PROPS ---
+const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
   const { showAlert } = useAlert();
+  
+  // --- (PASO B) OBTENER CATEGORÍAS DEL HOOK ---
+  const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
+  // Corrección para evitar error en null.map
+  const categories = useMemo(() => categoriesData || [], [categoriesData]);
+  // --- FIN PASO B ---
+
   const [targetType, setTargetType] = useState('product');
   const [targetId, setTargetId] = useState('');
   const [overridePrice, setOverridePrice] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
-  const [appliesTo, setAppliesTo] = useState('everyone'); // 'everyone' or 'specific'
+  const [appliesTo, setAppliesTo] = useState('everyone'); 
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [allCustomers, setAllCustomers] = useState([]); // Necesitamos obtener los clientes
+  const [allCustomers, setAllCustomers] = useState([]); 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
 
-  // Obtener clientes cuando el componente se monta o appliesTo cambia a 'specific'
+  // ... (useEffect para fetchCustomers sin cambios) ...
   useEffect(() => {
     const fetchCustomers = async () => {
-      // Optimizacion: Solo traer id, name, phone
       const { data, error } = await supabase.from('customers').select('id, name, phone');
       if (error) {
         showAlert('Error al obtener clientes para la selección.');
@@ -34,12 +50,12 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
     }
   }, [appliesTo, showAlert]);
 
-  // Actualizar estado cuando initialData cambia (para edición)
+  // ... (useEffect para initialData sin cambios) ...
   useEffect(() => {
     if (initialData) {
       const type = initialData.product_id ? 'product' : 'category';
       setTargetType(type);
-      setTargetId(initialData.product_id || initialData.category_id || ''); // Asegurar valor inicial '' si no hay id
+      setTargetId(initialData.product_id || initialData.category_id || '');
       setOverridePrice(initialData.override_price || '');
       setStartDate(initialData.start_date || '');
       setEndDate(initialData.end_date || '');
@@ -53,7 +69,6 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
         setSelectedCustomerIds([]);
       }
     } else {
-      // Resetear para nueva entrada
       setTargetType('product');
       setTargetId('');
       setOverridePrice('');
@@ -65,21 +80,21 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
     }
   }, [initialData]);
 
-  // Filtrar clientes para la UI de búsqueda/selección
+  // ... (filteredCustomers, handleAddCustomer, handleRemoveCustomer, handleSubmit sin cambios) ...
   const filteredCustomers = useMemo(() => {
     if (!customerSearch) return [];
     const lowerSearch = customerSearch.toLowerCase();
     return allCustomers.filter(c =>
-        !selectedCustomerIds.includes(c.id) && // Excluir ya seleccionados
+        !selectedCustomerIds.includes(c.id) && 
         (c.name.toLowerCase().includes(lowerSearch) || (c.phone && c.phone.includes(customerSearch)))
-    ).slice(0, 10); // Limitar resultados
+    ).slice(0, 10);
   }, [customerSearch, allCustomers, selectedCustomerIds]);
 
   const handleAddCustomer = (customerId) => {
     if (!selectedCustomerIds.includes(customerId)) {
          setSelectedCustomerIds(prev => [...prev, customerId]);
     }
-    setCustomerSearch(''); // Limpiar búsqueda después de seleccionar
+    setCustomerSearch(''); 
   };
 
   const handleRemoveCustomer = (customerId) => {
@@ -100,17 +115,15 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
     setIsSubmitting(true);
 
     const specialPriceData = {
-      product_id: targetType === 'product' ? targetId || null : null, // Asegurar null si está vacío
-      category_id: targetType === 'category' ? targetId || null : null, // Asegurar null si está vacío
-      override_price: parseFloat(overridePrice), // Asegurar que sea número
+      product_id: targetType === 'product' ? targetId || null : null,
+      category_id: targetType === 'category' ? targetId || null : null,
+      override_price: parseFloat(overridePrice),
       start_date: startDate,
       end_date: endDate,
-      reason: reason || null, // Asegurar null si está vacío
-      // --- NUEVO CAMPO ---
-      target_customer_ids: appliesTo === 'specific' ? selectedCustomerIds : null, // Usa null para 'todos'
+      reason: reason || null,
+      target_customer_ids: appliesTo === 'specific' ? selectedCustomerIds : null,
     };
 
-    // Validación adicional: Al menos product_id o category_id debe estar presente
     if (!specialPriceData.product_id && !specialPriceData.category_id) {
         showAlert('Debes seleccionar un Producto o una Categoría.');
         setIsSubmitting(false);
@@ -121,23 +134,20 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
     try {
       let response;
       if (initialData?.id) {
-        // Actualizar
         response = await supabase.from('special_prices').update(specialPriceData).eq('id', initialData.id).select().single();
       } else {
-        // Insertar
         response = await supabase.from('special_prices').insert(specialPriceData).select().single();
       }
 
       if (response.error) {
-          // Manejo específico para violación de unicidad si es necesario
-          if (response.error.code === '23505') { // Código típico de violación de unicidad
+          if (response.error.code === '23505') { 
               showAlert('Error: Ya existe una promoción similar para este objetivo y fechas.');
           } else {
               throw response.error;
           }
       } else {
           showAlert(`Promoción ${initialData ? 'actualizada' : 'creada'} con éxito.`);
-          onSubmit(); // Llama al callback proporcionado por el padre
+          onSubmit(); 
       }
 
     } catch (error) {
@@ -147,7 +157,18 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
     }
   };
 
+
+  // 'categories' ahora viene del hook
   const options = targetType === 'product' ? products : categories;
+
+  // Añadimos un spinner si las categorías están cargando
+  if (loadingCategories) {
+      return (
+          <div className={styles.form}>
+              <LoadingSpinner />
+          </div>
+      );
+  }
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
@@ -164,13 +185,14 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
         <label>{targetType === 'product' ? 'Producto' : 'Categoría'}:</label>
         <select value={targetId} onChange={(e) => setTargetId(e.target.value)} required>
           <option value="">Selecciona una opción</option>
+          {/* 'options' ahora depende de 'categories' del hook */}
           {options.map(option => (
             <option key={option.id} value={option.id}>{option.name}</option>
           ))}
         </select>
       </div>
 
-      {/* Inputs de Precio, Fechas, Motivo */}
+      {/* ... (Resto del formulario sin cambios) ... */}
       <div className={styles.formGroup}>
         <label>Nuevo Precio (Ej: 99.99)</label>
         <input type="number" step="0.01" min="0" value={overridePrice} onChange={(e) => setOverridePrice(e.target.value)} required />
@@ -187,9 +209,7 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
         <label>Fecha de Fin:</label>
         <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
       </div>
-
-      {/* --- NUEVA SECCIÓN para Selección de Clientes --- */}
-      <div className={`${styles.formGroup} ${styles.fullWidth}`}> {/* Asumiendo clase fullWidth */}
+      <div className={`${styles.formGroup} ${styles.fullWidth}`}>
         <label>Visible Para:</label>
         <select value={appliesTo} onChange={(e) => setAppliesTo(e.target.value)}>
           <option value="everyone">Todos los Clientes</option>
@@ -205,10 +225,10 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
             placeholder="Buscar por nombre o teléfono..."
             value={customerSearch}
             onChange={(e) => setCustomerSearch(e.target.value)}
-            disabled={!allCustomers.length} // Deshabilitar si no hay clientes cargados
+            disabled={!allCustomers.length}
           />
           {customerSearch && filteredCustomers.length > 0 && (
-            <ul className={styles.customerSearchResults}> {/* Añadir estilos CSS para esta lista */}
+            <ul className={styles.customerSearchResults}> 
               {filteredCustomers.map(c => (
                 <li key={c.id} onClick={() => handleAddCustomer(c.id)} role="button">
                   {c.name} ({c.phone || 'Sin teléfono'})
@@ -218,13 +238,13 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
           )}
           {customerSearch && !filteredCustomers.length && <p className={styles.noResults}>No se encontraron clientes.</p>}
 
-          <div className={styles.selectedCustomersList}> {/* Añadir estilos CSS para esta lista */}
+          <div className={styles.selectedCustomersList}> 
              <label>Clientes Seleccionados ({selectedCustomerIds.length}):</label>
             {selectedCustomerIds.length > 0 ? (
                 selectedCustomerIds.map(id => {
                   const customer = allCustomers.find(c => c.id === id);
                   return (
-                    <div key={id} className={styles.selectedCustomerTag}> {/* Añadir estilos CSS */}
+                    <div key={id} className={styles.selectedCustomerTag}> 
                       <span>{customer?.name || `ID: ${id.substring(0, 6)}...`}</span>
                       <button type="button" onClick={() => handleRemoveCustomer(id)} aria-label={`Quitar ${customer?.name || 'cliente'}`}>×</button>
                     </div>
@@ -235,8 +255,6 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
           </div>
         </div>
       )}
-      {/* --- FIN DE LA NUEVA SECCIÓN --- */}
-
       <button type="submit" disabled={isSubmitting} className={styles.submitButton}>
          {isSubmitting ? 'Guardando...' : (initialData ? 'Actualizar Promoción' : 'Crear Promoción')}
       </button>
@@ -244,4 +262,6 @@ const SpecialPriceForm = ({ products, categories, onSubmit, initialData }) => {
   );
 };
 
+// No necesitas exportar 'default' si ya lo haces en el componente padre
+// (Asumiendo que SpecialPriceForm está en su propio archivo)
 export default SpecialPriceForm;

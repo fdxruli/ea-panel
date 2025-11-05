@@ -1,3 +1,5 @@
+/* src/components/ManageCategoriesModal.jsx (Migrado) */
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageCategoriesModal.module.css';
@@ -7,8 +9,17 @@ import ConfirmModal from './ConfirmModal';
 import ReassignProductsModal from './ReassignProductsModal';
 import DOMPurify from 'dompurify';
 
+// --- (PASO A) AÑADIR IMPORT ---
+import { useCacheAdmin } from '../context/CacheAdminContext';
+// --- FIN PASO A ---
+
 export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpdate }) {
     const { showAlert } = useAlert();
+    
+    // --- (PASO B) AÑADIR HOOK ---
+    const { invalidate } = useCacheAdmin();
+    // --- FIN PASO B ---
+
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,6 +68,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             setProductsInCategoryCount(count);
             setIsReassignModalOpen(true);
         } else {
+            // Si count es 0, el modal de confirmación simple se abrirá
+            // (ya que !!categoryToDelete será true y isReassignModalOpen será false)
             setIsReassignModalOpen(false);
         }
     };
@@ -69,6 +82,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             showAlert(`Error al eliminar: ${error.message}`);
         } else {
             showAlert('Categoría eliminada con éxito.');
+            // --- (PASO D) INVALIDAR CACHÉ ---
+            invalidate('categories');
         }
         setCategoryToDelete(null);
         fetchCategories();
@@ -97,6 +112,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             showAlert(`Productos reasignados, pero hubo un error al eliminar la categoría: ${deleteError.message}`);
         } else {
             showAlert('Productos reasignados y categoría eliminada con éxito.');
+            // --- (PASO D) INVALIDAR CACHÉ ---
+            invalidate('categories');
         }
         
         setIsReassignModalOpen(false);
@@ -133,6 +150,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             resetForm();
             fetchCategories(); 
             onCategoriesUpdate();
+            // --- (PASO C) INVALIDAR CACHÉ ---
+            invalidate('categories');
         }
         setIsSubmitting(false);
     };
