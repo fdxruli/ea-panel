@@ -1,25 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useCustomer } from '../context/CustomerContext'; // Asegúrate que la ruta sea correcta
-import { supabase } from '../lib/supabaseClient'; // Asegúrate que la ruta sea correcta
-import LoadingSpinner from '../components/LoadingSpinner'; // Asegúrate que la ruta sea correcta
-import ImageWithFallback from '../components/ImageWithFallback'; // Asegúrate que la ruta sea correcta
-import SEO from '../components/SEO'; // Asegúrate que la ruta sea correcta
-import styles from '../pages/MyOrders.module.css'; // Reutilizamos estilos de MyOrders para consistencia
+import { useCustomer } from '../context/CustomerContext';
+import { supabase } from '../lib/supabaseClient';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ImageWithFallback from '../components/ImageWithFallback';
+import SEO from '../components/SEO';
+import styles from '../pages/MyOrders.module.css';
 
 export default function OrderDetailPage() {
     const { orderCode } = useParams();
     const [order, setOrder] = useState(null);
-    // Este estado de carga es solo para la BÚSQUEDA del pedido
     const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
-    // --- ¡MODIFICACIÓN CLAVE! ---
-    // 1. Obtenemos 'isCustomerLoading' del contexto
     const { phone, setPhoneModalOpen, isCustomerLoading } = useCustomer();
 
-    // Efecto para buscar los datos del pedido
     useEffect(() => {
         const fetchOrderDetails = async () => {
             setLoading(true);
@@ -69,48 +65,30 @@ export default function OrderDetailPage() {
             }
         };
 
-        // --- LÓGICA DE FLUJO UNIFICADO ---
-        
-        // 2. Esperamos a que la comprobación de sesión termine
         if (isCustomerLoading) {
-            // Aún no sabemos si el usuario está logueado o no.
-            // Mantenemos 'loading' en true (ver render) y no hacemos nada.
             setLoading(true);
             return;
         }
 
-        // 3. La comprobación de sesión TERMINÓ. Ahora decidimos qué hacer.
         if (phone) {
-            // CASO A: El usuario ESTÁ logueado. Redirigir.
             navigate('/mis-pedidos', { replace: true });
         } else if (orderCode) {
-            // CASO B: El usuario NO está logueado y hay un orderCode. Buscar pedido.
             fetchOrderDetails();
         } else {
-            // CASO C: El usuario NO está logueado y NO hay orderCode. Mostrar error.
             setError('No se proporcionó un código de pedido en el enlace.');
             setLoading(false);
         }
 
     }, [orderCode, phone, isCustomerLoading, navigate]); // 4. Depende de la carga del cliente
 
-
-    // --- LÓGICA DE RENDERIZADO LIMPIA ---
-
-    // 5. Mostrar spinner si la SESIÓN o el PEDIDO están cargando.
-    //    Esto cubre ambos casos y evita la pantalla en blanco.
     if (isCustomerLoading || loading) {
         return <LoadingSpinner />;
     }
 
-    // 6. Si el usuario está logueado, estamos redirigiendo.
-    //    (Este render puede ocurrir por un instante ANTES de que navigate() termine)
-    //    Al mostrar un spinner, la transición es limpia.
     if (phone) {
         return <LoadingSpinner />;
     }
 
-    // 7. Si hay un error (ya sea por 'fetch' o por falta de orderCode)
     if (error) {
         return (
             <>
@@ -131,7 +109,6 @@ export default function OrderDetailPage() {
         );
     }
 
-    // 8. Si no hay error, no cargamos, no estamos logueados, PERO no se encontró el pedido
     if (!order) {
         return (
             <>
@@ -153,8 +130,6 @@ export default function OrderDetailPage() {
             </>
         );
     }
-
-    // --- Si llegamos aquí, todo es correcto y mostramos el pedido ---
 
     const formatScheduledTime = (isoString) => {
         if (!isoString) return null;
@@ -234,7 +209,6 @@ export default function OrderDetailPage() {
                     </div>
                 </div>
                 
-                {/* El prompt de login. Ya que 'phone' es null, esto se mostrará correctamente. */}
                 {!phone && (
                     <div className={styles.loginPrompt}>
                         <h4>¡Crea tu cuenta con solo tu número!</h4>

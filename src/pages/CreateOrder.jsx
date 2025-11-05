@@ -1,3 +1,5 @@
+/* src/pages/CreateOrder.jsx (Migrado) */
+
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
@@ -7,66 +9,40 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import DOMPurify from 'dompurify';
 
-// ==================== ICONOS MEMOIZADOS ====================
-const UserPlusIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="8.5" cy="7" r="4"></circle>
-        <line x1="20" y1="8" x2="20" y2="14"></line>
-        <line x1="17" y1="11" x2="23" y2="11"></line>
-    </svg>
-));
+// --- (PASO A) AÑADIR IMPORT ---
+import { useCategoriesCache } from '../hooks/useCategoriesCache';
+// --- FIN PASO A ---
+
+// ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
+const UserPlusIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="17" y1="11" x2="23" y2="11"></line></svg>));
 UserPlusIcon.displayName = 'UserPlusIcon';
-
-const SearchIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-    </svg>
-));
+const SearchIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>));
 SearchIcon.displayName = 'SearchIcon';
-
-const TrashIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        <line x1="10" y1="11" x2="10" y2="17"></line>
-        <line x1="14" y1="11" x2="14" y2="17"></line>
-    </svg>
-));
+const TrashIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>));
 TrashIcon.displayName = 'TrashIcon';
-
-const ClockIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-    </svg>
-));
+const ClockIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>));
 ClockIcon.displayName = 'ClockIcon';
 
-// ==================== CUSTOM HOOKS ====================
+// ==================== CUSTOM HOOKS (Sin cambios) ====================
 
-// ✅ Hook de debounce personalizado
 function useDebounce(value, delay = 300) {
+    // ... (código existente)
     const [debouncedValue, setDebouncedValue] = useState(value);
-
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedValue(value);
         }, delay);
-
         return () => {
             clearTimeout(handler);
         };
     }, [value, delay]);
-
     return debouncedValue;
 }
 
-// ==================== COMPONENTES MEMOIZADOS ====================
+// ==================== COMPONENTES MEMOIZADOS (Sin cambios) ====================
 
-// Componente de item del carrito memoizado
 const CartItem = memo(({ item, onUpdateQuantity, onRemove, canEdit }) => {
+    // ... (código existente)
     return (
         <li>
             <ImageWithFallback
@@ -123,19 +99,11 @@ const CartItem = memo(({ item, onUpdateQuantity, onRemove, canEdit }) => {
             <strong>${(item.price * item.quantity).toFixed(2)}</strong>
         </li>
     );
-}, (prevProps, nextProps) => {
-    // Comparación personalizada para evitar re-renders innecesarios
-    return (
-        prevProps.item.id === nextProps.item.id &&
-        prevProps.item.quantity === nextProps.item.quantity &&
-        prevProps.item.price === nextProps.item.price &&
-        prevProps.canEdit === nextProps.canEdit
-    );
 });
 CartItem.displayName = 'CartItem';
 
-// Componente de producto memoizado
 const ProductItem = memo(({ product, onAdd, canEdit }) => {
+    // ... (código existente)
     return (
         <div
             className={styles.productItem}
@@ -184,7 +152,13 @@ export default function CreateOrder() {
 
     const [allProducts, setAllProducts] = useState([]);
     const [productsWithPrices, setProductsWithPrices] = useState([]);
-    const [categories, setCategories] = useState([]);
+    
+    // --- (PASO B) REEMPLAZAR ESTADO ---
+    // const [categories, setCategories] = useState([]); // <-- Eliminado
+    const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
+    const categories = useMemo(() => categoriesData || [], [categoriesData]);
+    // --- FIN PASO B ---
+
     const [productSearch, setProductSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
 
@@ -196,28 +170,24 @@ export default function CreateOrder() {
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
 
-    // ✅ Debouncing para búsquedas
     const debouncedCustomerSearch = useDebounce(customerSearch, 300);
     const debouncedProductSearch = useDebounce(productSearch, 300);
 
     const canEdit = hasPermission('crear-pedido.edit');
 
-    // ✅ OPTIMIZACIÓN: Carga inicial paralela y con límites
+    // --- (PASO C) ELIMINAR FETCH DE CATEGORÍAS ---
     useEffect(() => {
         const fetchInitialData = async () => {
             setLoadingCustomers(true);
             try {
                 // Consultas paralelas optimizadas
-                const [customersRes, categoriesRes, productsRes] = await Promise.all([
+                const [customersRes, productsRes] = await Promise.all([
                     supabase
                         .from('customers')
                         .select('id, name, phone') // Solo columnas necesarias
                         .order('name')
                         .limit(500), // Límite razonable
-                    supabase
-                        .from('categories')
-                        .select('id, name')
-                        .order('name'),
+                    // categoriesRes eliminada
                     supabase
                         .from('products')
                         .select('id, name, description, price, cost, image_url, category_id, is_active')
@@ -225,11 +195,11 @@ export default function CreateOrder() {
                 ]);
 
                 if (customersRes.error) throw customersRes.error;
-                if (categoriesRes.error) throw categoriesRes.error;
+                // if (categoriesRes.error) throw categoriesRes.error; // <-- Eliminado
                 if (productsRes.error) throw productsRes.error;
 
                 setCustomers(customersRes.data || []);
-                setCategories(categoriesRes.data || []);
+                // setCategories(categoriesRes.data || []); // <-- Eliminado
                 setAllProducts(productsRes.data || []);
             } catch (error) {
                 showAlert(`Error al cargar datos iniciales: ${error.message}`);
@@ -239,8 +209,9 @@ export default function CreateOrder() {
         };
         fetchInitialData();
     }, [showAlert]);
+    // --- FIN PASO C ---
 
-    // ✅ OPTIMIZACIÓN: Fetch de precios especiales con cache
+    // ... (El resto del componente: fetchProductsWithSpecialPrices, filteredCustomers, filteredProducts, handleCreateCustomer, handlers de carrito, cartTotal, y handlePlaceOrder no cambian) ...
     const fetchProductsWithSpecialPrices = useCallback(async (customerId) => {
         if (!customerId) {
             setProductsWithPrices([]);
@@ -252,7 +223,6 @@ export default function CreateOrder() {
         try {
             const today = new Date().toISOString().split('T')[0];
 
-            // Consulta optimizada con filtros específicos
             const { data: specialPrices, error: specialPricesError } = await supabase
                 .from('special_prices')
                 .select('product_id, category_id, override_price, target_customer_ids')
@@ -261,7 +231,6 @@ export default function CreateOrder() {
 
             if (specialPricesError) throw specialPricesError;
 
-            // Mapeo optimizado con early return
             const customerSpecificProducts = allProducts.map(product => {
                 const productPrice = specialPrices?.find(p => p.product_id === product.id);
                 const categoryPrice = !productPrice && specialPrices?.find(
@@ -299,7 +268,6 @@ export default function CreateOrder() {
         }
     }, [selectedCustomer, fetchProductsWithSpecialPrices]);
 
-    // ✅ OPTIMIZACIÓN: Filtros memoizados con debounce
     const filteredCustomers = useMemo(() => {
         if (!debouncedCustomerSearch) return [];
         const lowerSearch = debouncedCustomerSearch.toLowerCase();
@@ -308,7 +276,7 @@ export default function CreateOrder() {
                 c.name.toLowerCase().includes(lowerSearch) ||
                 (c.phone && c.phone.includes(debouncedCustomerSearch))
             )
-            .slice(0, 10); // Aumentado a 10 resultados
+            .slice(0, 10);
     }, [customers, debouncedCustomerSearch]);
 
     const filteredProducts = useMemo(() => {
@@ -319,7 +287,6 @@ export default function CreateOrder() {
         });
     }, [productsWithPrices, debouncedProductSearch, categoryFilter]);
 
-    // ✅ OPTIMIZACIÓN: Handlers memoizados
     const handleCreateCustomer = useCallback(async () => {
         if (!canEdit) return;
 
@@ -337,7 +304,6 @@ export default function CreateOrder() {
 
         setIsSubmitting(true);
         try {
-            // Verifica existencia
             const { data: existingCustomer, error: checkError } = await supabase
                 .from('customers')
                 .select('id')
@@ -372,7 +338,6 @@ export default function CreateOrder() {
         }
     }, [canEdit, newCustomer, showAlert]);
 
-    // ✅ Handlers del carrito memoizados
     const addToCart = useCallback((product) => {
         if (!canEdit || !selectedCustomer) return;
         setCart(prev => {
@@ -408,12 +373,10 @@ export default function CreateOrder() {
         setCart(prev => prev.filter(item => item.id !== productId));
     }, [canEdit]);
 
-    // ✅ Total del carrito memoizado
     const cartTotal = useMemo(() => {
         return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }, [cart]);
 
-    // ✅ OPTIMIZACIÓN CRÍTICA: Transacción mejorada con manejo robusto
     const handlePlaceOrder = useCallback(async () => {
         if (!canEdit || !selectedCustomer || cart.length === 0) {
             showAlert('Debes seleccionar un cliente y añadir al menos un producto.');
@@ -438,9 +401,6 @@ export default function CreateOrder() {
         setIsSubmitting(true);
 
         try {
-            // ✅ Usar RPC para transacción atómica (ver función SQL más abajo)
-            // Alternativa: Inserción manual con manejo de errores robusto
-
             const { data: orderData, error: orderError } = await supabase
                 .from('orders')
                 .insert({
@@ -454,7 +414,6 @@ export default function CreateOrder() {
 
             if (orderError) throw orderError;
 
-            // Preparar items con validación
             const orderItems = cart.map(item => ({
                 order_id: orderData.id,
                 product_id: item.id,
@@ -467,12 +426,10 @@ export default function CreateOrder() {
                 .insert(orderItems);
 
             if (itemsError) {
-                // Rollback manual
                 await supabase.from('orders').delete().eq('id', orderData.id);
                 throw itemsError;
             }
 
-            // Mensaje WhatsApp optimizado
             let message = `Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
             cart.forEach(item => {
                 message += `• ${item.quantity}x ${item.name}\n`;
@@ -497,7 +454,6 @@ export default function CreateOrder() {
                 'info',
                 () => {
                     window.open(whatsappUrl, '_blank');
-                    // Reset completo
                     setStep(1);
                     setSelectedCustomer(null);
                     setCart([]);
@@ -517,7 +473,9 @@ export default function CreateOrder() {
         }
     }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, showAlert]);
 
-    if (loadingCustomers) return <LoadingSpinner />;
+
+    // --- (PASO D) AJUSTAR CONDICIÓN DE LOADING ---
+    if (loadingCustomers || loadingCategories) return <LoadingSpinner />;
 
     // ==================== RENDERIZADO ====================
     return (
@@ -621,6 +579,7 @@ export default function CreateOrder() {
                                 value={categoryFilter}
                             >
                                 <option value="all">Todas las categorías</option>
+                                {/* 'categories' ahora viene del hook */}
                                 {categories.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
@@ -728,7 +687,7 @@ export default function CreateOrder() {
                 </div>
             </div>
 
-            {/* MODAL CREAR CLIENTE */}
+            {/* MODAL CREAR CLIENTE (Sin cambios) */}
             {isCreatingCustomer && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent}>

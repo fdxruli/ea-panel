@@ -1,3 +1,5 @@
+/* src/pages/Referrals.jsx (Migrado) */
+
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
@@ -7,44 +9,21 @@ import ManageReferralLevelsModal from '../components/ManageReferralLevelsModal';
 import EditReferralCountModal from '../components/EditReferralCountModal';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
-// ==================== ICONOS MEMOIZADOS ====================
+// --- (PASO A) AÑADIR IMPORT ---
+import { useReferralLevelsCache } from '../hooks/useReferralLevelsCache';
+// --- FIN PASO A ---
 
-const TrophyIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
-        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
-        <path d="M4 22h16"></path>
-        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
-        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
-        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
-    </svg>
-));
+// ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
+const TrophyIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>));
 TrophyIcon.displayName = 'TrophyIcon';
-
-const UserPlusIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <line x1="19" y1="8" x2="19" y2="14"></line>
-        <line x1="22" y1="11" x2="16" y2="11"></line>
-    </svg>
-));
+const UserPlusIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>));
 UserPlusIcon.displayName = 'UserPlusIcon';
-
-const GiftIcon = memo(() => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <polyline points="20 12 20 22 4 22 4 12"></polyline>
-        <rect x="2" y="7" width="20" height="5"></rect>
-        <line x1="12" y1="22" x2="12" y2="7"></line>
-        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
-        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
-    </svg>
-));
+const GiftIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path></svg>));
 GiftIcon.displayName = 'GiftIcon';
 
-// ==================== COMPONENTE: WELCOME REWARD EDITOR ====================
-
+// ==================== COMPONENTE: WELCOME REWARD EDITOR (Sin cambios) ====================
 const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
+    // ... (código existente de WelcomeRewardEditor) ...
     const { hasPermission } = useAdminAuth();
     const canEdit = hasPermission('referidos.edit');
 
@@ -73,7 +52,6 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                 setLoading(false);
             }
         };
-
         fetchReward();
     }, []);
 
@@ -124,7 +102,6 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
     return (
         <div className={styles.rewardEditor}>
             <h3><GiftIcon /> Recompensa de Bienvenida para Referidos</h3>
-
             <div className={styles.formGroup}>
                 <label>
                     <input
@@ -136,7 +113,6 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                     <span>Habilitar recompensa de bienvenida</span>
                 </label>
             </div>
-
             {reward.enabled && (
                 <>
                     <div className={styles.formGroup}>
@@ -151,7 +127,6 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                             disabled={!canEdit}
                         />
                     </div>
-                    
                     <div className={styles.formGroup}>
                         <label htmlFor="discount_code">Código de Descuento</label>
                         <input
@@ -164,7 +139,6 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                         />
                         <small>Este código debe existir en la sección de Descuentos</small>
                     </div>
-
                     {canEdit && (
                         <button
                             onClick={handleSave}
@@ -181,9 +155,9 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
 });
 WelcomeRewardEditor.displayName = 'WelcomeRewardEditor';
 
-// ==================== COMPONENTE: REFERRAL ROW ====================
-
+// ==================== COMPONENTE: REFERRAL ROW (Sin cambios) ====================
 const ReferralRow = memo(({ customer, onEdit, canEdit }) => {
+    // ... (código existente de ReferralRow) ...
     const [isExpanded, setIsExpanded] = useState(false);
 
     return (
@@ -253,7 +227,18 @@ export default function Referrals() {
     const { hasPermission } = useAdminAuth();
 
     const [customersWithReferrals, setCustomersWithReferrals] = useState([]);
-    const [referralLevels, setReferralLevels] = useState([]);
+    
+    // --- (PASO B) REEMPLAZAR ESTADO ---
+    // const [referralLevels, setReferralLevels] = useState([]); // <-- Eliminado
+    const { 
+        data: referralLevelsData, 
+        isLoading: loadingLevels, 
+        invalidate: invalidateLevels 
+    } = useReferralLevelsCache();
+    // Corrección para evitar error en null.filter/.sort
+    const referralLevels = useMemo(() => referralLevelsData || [], [referralLevelsData]);
+    // --- FIN PASO B ---
+
     const [loading, setLoading] = useState(true);
     const [isLevelsModalOpen, setIsLevelsModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState(null);
@@ -262,15 +247,16 @@ export default function Referrals() {
     const canView = hasPermission('referidos.view');
     const canEdit = hasPermission('referidos.edit');
 
+    // --- (PASO C) ELIMINAR FETCH DE NIVELES ---
     const fetchData = useCallback(async () => {
         if (!canView) return;
 
         setLoading(true);
         try {
-            const [customersRes, levelsRes] = await Promise.all([
-                supabase
-                    .from('customers')
-                    .select(`
+            // Solo fetchear clientes
+            const customersRes = await supabase
+                .from('customers')
+                .select(`
                     id,
                     name,
                     phone,
@@ -278,20 +264,17 @@ export default function Referrals() {
                     referral_count,
                     referrer_id
                 `)
-                    .not('referral_code', 'is', null)
-                    .order('referral_count', { ascending: false }),
-
-                supabase
-                    .from('referral_levels')
-                    .select('*')
-                    .order('min_referrals', { ascending: true })  // ✅ CAMBIADO de required_referrals a min_referrals
-            ]);
+                .not('referral_code', 'is', null)
+                .order('referral_count', { ascending: false });
+            
+            // levelsRes (eliminado)
 
             if (customersRes.error) throw customersRes.error;
-            if (levelsRes.error) throw levelsRes.error;
+            // levelsRes.error (eliminado)
 
             const customers = customersRes.data || [];
-            const levels = levelsRes.data || [];
+            const levels = referralLevels; // <-- Obtener niveles del hook
+            // setReferralLevels(levels); // <-- Eliminado
 
             // Fetch referidos para cada cliente
             const customersWithDetails = await Promise.all(
@@ -299,9 +282,8 @@ export default function Referrals() {
                     const { data: referred } = await supabase
                         .from('customers')
                         .select('name, phone')
-                        .eq('referrer_id', customer.id);  // ✅ CORRECTO
+                        .eq('referrer_id', customer.id);
 
-                    // ✅ Buscar nivel según min_referrals
                     const level = levels
                         .filter(l => customer.referral_count >= l.min_referrals)
                         .sort((a, b) => b.min_referrals - a.min_referrals)[0] || { name: 'Novato' };
@@ -316,7 +298,7 @@ export default function Referrals() {
             );
 
             setCustomersWithReferrals(customersWithDetails);
-            setReferralLevels(levels);
+            // setReferralLevels(levels); // <-- Ya estaba eliminado antes, pero lo confirmo
 
         } catch (error) {
             console.error('Fetch error:', error);
@@ -324,13 +306,17 @@ export default function Referrals() {
         } finally {
             setLoading(false);
         }
-    }, [canView, showAlert]);
+    }, [canView, showAlert, referralLevels]); // <-- Añadir referralLevels como dependencia
+    // --- FIN PASO C ---
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        // Solo fetchear si los niveles ya cargaron (o si referralLevels es [])
+        if (!loadingLevels) {
+            fetchData();
+        }
+    }, [fetchData, loadingLevels]); // Añadir loadingLevels
 
-    // ✅ Realtime selectivo
+    // --- (PASO D) ACTUALIZAR LISTENER DE REALTIME ---
     useEffect(() => {
         if (!canView) return;
 
@@ -340,21 +326,24 @@ export default function Referrals() {
                 event: '*',
                 schema: 'public',
                 table: 'customers'
-            }, () => fetchData())
+            }, () => fetchData()) // <-- Esto se mantiene
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'referral_levels'
-            }, () => fetchData())
+            }, () => {
+                console.log('[Referrals] Cambio en niveles detectado, invalidando caché.');
+                invalidateLevels(); // <-- Solo invalida el caché
+            })
             .subscribe();
 
         return () => supabase.removeChannel(channel);
-    }, [canView, fetchData]);
+    }, [canView, fetchData, invalidateLevels]); // <-- Añadir invalidateLevels
+    // --- FIN PASO D ---
 
-    // ✅ Filtrado memoizado
+    // ... (filteredCustomers, stats, handleEditCustomer, handleCloseEditModal sin cambios) ...
     const filteredCustomers = useMemo(() => {
         if (!searchTerm) return customersWithReferrals;
-
         const lowerSearch = searchTerm.toLowerCase();
         return customersWithReferrals.filter(c =>
             c.customer_name.toLowerCase().includes(lowerSearch) ||
@@ -363,14 +352,12 @@ export default function Referrals() {
         );
     }, [customersWithReferrals, searchTerm]);
 
-    // ✅ Estadísticas memoizadas
     const stats = useMemo(() => {
         const totalReferrers = customersWithReferrals.length;
         const totalReferrals = customersWithReferrals.reduce((sum, c) => sum + c.referral_count, 0);
         const avgReferralsPerCustomer = totalReferrers > 0
             ? (totalReferrals / totalReferrers).toFixed(1)
             : 0;
-
         return { totalReferrers, totalReferrals, avgReferralsPerCustomer };
     }, [customersWithReferrals]);
 
@@ -383,7 +370,10 @@ export default function Referrals() {
         fetchData();
     }, [fetchData]);
 
-    if (loading) return <LoadingSpinner />;
+
+    // --- (PASO E) AJUSTAR LOADING ---
+    if (loading || loadingLevels) return <LoadingSpinner />;
+    // --- FIN PASO E ---
 
     if (!canView) {
         return (
@@ -422,7 +412,7 @@ export default function Referrals() {
             {/* Niveles de Referido */}
             <div className={styles.levelsSection}>
                 <h2>Niveles de Referido</h2>
-                {referralLevels.length === 0 ? (
+                {referralLevels.length === 0 ? ( // <-- 'referralLevels' ahora viene del hook
                     <div className={styles.emptyState}>
                         <p>No hay niveles configurados.</p>
                         {canEdit && (
@@ -436,7 +426,7 @@ export default function Referrals() {
                     </div>
                 ) : (
                     <div className={styles.levelsGrid}>
-                        {referralLevels.map(level => (
+                        {referralLevels.map(level => ( // <-- 'referralLevels' del hook
                             <div key={level.id} className={styles.levelCard}>
                                 <h3>{level.name}</h3>
                                 <p className={styles.levelRequirement}>
@@ -505,7 +495,8 @@ export default function Referrals() {
                     isOpen={isLevelsModalOpen}
                     onClose={() => {
                         setIsLevelsModalOpen(false);
-                        fetchData();
+                        // No es necesario fetchData(), el listener invalidará el hook
+                        // y el hook se actualizará solo.
                     }}
                 />
             )}

@@ -162,10 +162,11 @@ export default function MyProfile() {
                         <form onSubmit={handleInfoSubmit} className={styles.form}>
                             <label htmlFor="name">Nombre:</label>
                             <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required /> {/* Añadido required */}
+                            <small> Puedes cambiar tu nombre las veces que quieras</small>
                             <label htmlFor="phone">Número de WhatsApp:</label>
                             {/* Hacer el teléfono no editable o mostrar advertencia */}
                             <input id="phone" type="tel" value={editForm.phone} readOnly disabled title="Para cambiar tu número, cierra sesión e ingresa con el nuevo."/>
-                            <small>Para cambiar tu número, cierra sesión e ingresa con el nuevo.</small>
+                            <small>Para cambiar de numero, cierra sesión e ingresa con el nuevo. </small>
 
                             <button type="submit" className={styles.actionButton}>Guardar Cambios de Nombre</button>
                         </form>

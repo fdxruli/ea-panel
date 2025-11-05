@@ -20,8 +20,9 @@ import MyOrders from "./pages/MyOrders.jsx";
 import MyProfile from "./pages/MyProfile.jsx";
 import MyStuff from "./pages/MyStuff.jsx";
 import TermsPage from "./pages/TermsPage.jsx";
-import OrderDetailPage from "./pages/OrderDetailPage.jsx"; // <<<--- NUEVA IMPORTACIÓN
+import OrderDetailPage from "./pages/OrderDetailPage.jsx";
 // Admin Pages
+import { CacheAdminProvider } from "./context/CacheAdminContext.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Orders from "./pages/Orders.jsx";
 import Products from "./pages/Products.jsx";
@@ -119,11 +120,13 @@ function App() {
                   <Route
                     path="/admin"
                     element={
-                       <Suspense fallback={<LoadingSpinner />}>
-                         <AdminAuthProvider> {/* Specific Admin Context */}
-                           <AdminLayout />
-                         </AdminAuthProvider>
-                       </Suspense>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <AdminAuthProvider>
+                          <CacheAdminProvider>
+                            <AdminLayout />
+                          </CacheAdminProvider>
+                        </AdminAuthProvider>
+                      </Suspense>
                     }
                   >
                     {/* Index route requires dashboard view permission */}

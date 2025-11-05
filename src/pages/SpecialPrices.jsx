@@ -1,15 +1,15 @@
+/* src/pages/SpecialPrices.jsx (Migrado) */
+
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import SpecialPriceForm from '../components/SpecialPriceForm'; // <-- Asegúrate que la ruta sea correcta
+import SpecialPriceForm from '../components/SpecialPriceForm'; 
 import styles from './SpecialPrices.module.css';
 import ConfirmModal from '../components/ConfirmModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
-// ==================== COMPONENTES MEMOIZADOS ====================
-
-// Componente de fila de tabla memoizado (sin cambios)
+// ... (Componente PriceTableRow sin cambios) ...
 const PriceTableRow = memo(({
   price,
   canEdit,
@@ -19,7 +19,6 @@ const PriceTableRow = memo(({
   getTargetName,
   getAudience
 }) => {
-  // ... (código existente del componente PriceTableRow) ...
   return (
     <tr>
       <td>{getTargetName(price)}</td>
@@ -56,7 +55,6 @@ const PriceTableRow = memo(({
 });
 PriceTableRow.displayName = 'PriceTableRow';
 
-// ==================== COMPONENTE PRINCIPAL ====================
 
 const SpecialPrices = () => {
   const { showAlert } = useAlert();
@@ -64,18 +62,19 @@ const SpecialPrices = () => {
 
   const [specialPrices, setSpecialPrices] = useState([]);
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
+  // 'categories' se sigue fetcheando aquí, pero solo para 'getTargetName'.
+  // El formulario (SpecialPriceForm) ya no lo necesita como prop.
+  const [categories, setCategories] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [editingPrice, setEditingPrice] = useState(null);
-  const [isFormVisible, setIsFormVisible] = useState(false); // Estado para mostrar/ocultar formulario
+  const [isFormVisible, setIsFormVisible] = useState(false); 
   const [priceToDelete, setPriceToDelete] = useState(null);
 
   const canEdit = hasPermission('special-prices.edit');
   const canDelete = hasPermission('special-prices.delete');
 
-  // Fetch data (sin cambios)
+  // fetchData sigue trayendo categories para getTargetName
   const fetchData = useCallback(async () => {
-    // ... (código existente de fetchData) ...
      setLoading(true);
     try {
       const [pricesRes, productsRes, categoriesRes] = await Promise.all([
@@ -103,7 +102,7 @@ const SpecialPrices = () => {
 
       setSpecialPrices(adaptedPrices);
       setProducts(productsRes.data || []);
-      setCategories(categoriesRes.data || []);
+      setCategories(categoriesRes.data || []); // Sigue siendo necesario aquí
 
     } catch (error) {
       console.error('Fetch error:', error);
@@ -117,9 +116,8 @@ const SpecialPrices = () => {
     fetchData();
   }, [fetchData]);
 
-  // Realtime (sin cambios)
+  // ... (Realtime sin cambios) ...
   useEffect(() => {
-    // ... (código existente del listener de realtime) ...
     const channel = supabase
       .channel('special-prices-changes')
       .on(
@@ -134,22 +132,20 @@ const SpecialPrices = () => {
           console.log('Special price change detected:', payload);
 
           if (payload.eventType === 'INSERT') {
-            fetchData(); // Necesita refetch para traer relaciones
+            fetchData();
           } else if (payload.eventType === 'UPDATE') {
             setSpecialPrices(prev => prev.map(price =>
               price.id === payload.new.id
-                ? { ...price, ...payload.new } // Actualizar con nuevos datos
+                ? { ...price, ...payload.new } 
                 : price
             ));
-             // Si se estaba editando este precio, actualizar initialData del form
              if (editingPrice?.id === payload.new.id) {
-               // Necesitamos buscar las relaciones actualizadas si cambiaron
-               fetchData(); // Refetch para asegurar relaciones correctas
+               fetchData(); 
              }
           } else if (payload.eventType === 'DELETE') {
             setSpecialPrices(prev => prev.filter(price => price.id !== payload.old.id));
             if (editingPrice?.id === payload.old.id) {
-                 setIsFormVisible(false); // Ocultar form si se elimina el que se editaba
+                 setIsFormVisible(false); 
                  setEditingPrice(null);
              }
           }
@@ -160,44 +156,36 @@ const SpecialPrices = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchData, editingPrice]); // <-- Añadir editingPrice como dependencia
+  }, [fetchData, editingPrice]);
 
-  // Handlers (sin cambios)
+  // ... (Handlers: handleFormSubmit, handleEdit, handleDelete, confirmDelete sin cambios) ...
   const handleFormSubmit = useCallback(() => {
-    // ... (código existente de handleFormSubmit) ...
     fetchData();
     setIsFormVisible(false);
     setEditingPrice(null);
   }, [fetchData]);
 
   const handleEdit = useCallback((price) => {
-    // ... (código existente de handleEdit) ...
     if (!canEdit) return;
     setEditingPrice(price);
     setIsFormVisible(true);
   }, [canEdit]);
 
   const handleDelete = useCallback((price) => {
-    // ... (código existente de handleDelete) ...
     if (!canDelete) return;
     setPriceToDelete(price);
   }, [canDelete]);
 
   const confirmDelete = useCallback(async () => {
-    // ... (código existente de confirmDelete) ...
     if (!priceToDelete || !canDelete) return;
-
     try {
       const { error } = await supabase
         .from('special_prices')
         .delete()
         .eq('id', priceToDelete.id);
-
       if (error) throw error;
-
       showAlert('Promoción eliminada con éxito.', 'success');
       setSpecialPrices(prev => prev.filter(p => p.id !== priceToDelete.id));
-
     } catch (error) {
       console.error('Delete error:', error);
       showAlert(`Error al eliminar: ${error.message}`);
@@ -206,9 +194,9 @@ const SpecialPrices = () => {
     }
   }, [priceToDelete, canDelete, showAlert]);
 
-  // Funciones auxiliares (sin cambios)
+
+  // getTargetName sigue usando las 'categories' locales de este componente
   const getTargetName = useCallback((price) => {
-    // ... (código existente de getTargetName) ...
       if (price.product_id && price.products) {
       return `Producto: ${price.products.name}`;
     }
@@ -218,14 +206,15 @@ const SpecialPrices = () => {
     if (price.product_id) {
       return `Producto (ID: ${price.product_id.substring(0, 6)}...)`;
     }
+    // Fallback usando las 'categories' de SpecialPrices.jsx
     if (price.category_id) {
-      return `Categoría (ID: ${price.category_id.substring(0, 6)}...)`;
+        const catName = categories.find(c => c.id === price.category_id)?.name;
+        return `Categoría: ${catName || `ID: ${price.category_id.substring(0, 6)}...`}`;
     }
     return 'N/A';
-  }, []);
+  }, [categories]); // <-- 'categories' sigue siendo una dependencia aquí
 
   const getAudience = useCallback((price) => {
-    // ... (código existente de getAudience) ...
       if (price.target_customer_ids === null || price.target_customer_ids?.length === 0) {
       return "Todos";
     }
@@ -233,18 +222,15 @@ const SpecialPrices = () => {
     return `Específicos (${count})`;
   }, []);
 
-  // Separación de listas (sin cambios)
+  // ... (useMemo para activeAndUpcomingPrices y stats sin cambios) ...
   const { activeAndUpcomingPrices, pastPrices } = useMemo(() => {
-    // ... (código existente de useMemo) ...
      const now = new Date().toISOString().split('T')[0];
     const active = specialPrices.filter(p => !p.end_date || p.end_date >= now);
     const past = specialPrices.filter(p => p.end_date && p.end_date < now);
     return { activeAndUpcomingPrices: active, pastPrices: past };
   }, [specialPrices]);
 
-  // Estadísticas (sin cambios)
   const stats = useMemo(() => {
-    // ... (código existente de useMemo para stats) ...
       const now = new Date().toISOString().split('T')[0];
     return {
       total: specialPrices.length,
@@ -255,6 +241,7 @@ const SpecialPrices = () => {
       ).length
     };
   }, [specialPrices, activeAndUpcomingPrices, pastPrices]);
+
 
   if (loading) {
     return <LoadingSpinner />;
@@ -272,10 +259,8 @@ const SpecialPrices = () => {
         </div>
         {canEdit && (
           <button
-            // Modificado: Ahora solo alterna la visibilidad del formulario
             onClick={() => {
               setIsFormVisible(!isFormVisible);
-              // Si se estaba editando y se cierra, limpiar el estado de edición
               if (isFormVisible) {
                 setEditingPrice(null);
               }
@@ -287,28 +272,27 @@ const SpecialPrices = () => {
         )}
       </div>
 
-      {/* --- MOVIDO: Renderizado condicional del formulario aquí --- */}
       {isFormVisible && (
-        <section className={styles.section}> {/* Envuelve el formulario en una sección */}
+        <section className={styles.section}> 
           <h2>{editingPrice ? 'Editar Promoción' : 'Crear Nueva Promoción'}</h2>
+          
+          {/* --- (PASO C) ELIMINAR PROP 'categories' --- */}
           <SpecialPriceForm
-            // isOpen ya no es necesario pasarlo al componente hijo si no lo usa internamente
-            onClose={() => { // onClose ahora solo oculta y resetea
+            onClose={() => { 
               setIsFormVisible(false);
               setEditingPrice(null);
             }}
             onSubmit={handleFormSubmit}
             products={products}
-            categories={categories}
-            initialData={editingPrice} // Cambiado a initialData
+            // categories={categories} // <-- ELIMINADO
+            initialData={editingPrice} 
           />
+          {/* --- FIN PASO C --- */}
         </section>
       )}
-      {/* --- FIN MOVIDO --- */}
 
-
-      {/* Tabla de Promociones Activas/Futuras */}
-      <section className={styles.section}>
+      {/* ... (Resto del JSX: Tabla de activas y pasadas, y Modal de confirmación sin cambios) ... */}
+       <section className={styles.section}>
         <h2>Promociones Activas y Futuras</h2>
         <div className={styles.tableWrapper}>
           <table className={styles.pricesTable}>
@@ -339,7 +323,7 @@ const SpecialPrices = () => {
                     price={price}
                     canEdit={canEdit}
                     canDelete={canDelete}
-                    onEdit={handleEdit} // Sigue funcionando igual, abre el form y pasa los datos
+                    onEdit={handleEdit} 
                     onDelete={handleDelete}
                     getTargetName={getTargetName}
                     getAudience={getAudience}
@@ -351,10 +335,8 @@ const SpecialPrices = () => {
         </div>
       </section>
 
-      {/* Tabla de Promociones Pasadas */}
       {pastPrices.length > 0 && (
         <section className={styles.section}>
-          {/* ... (código existente de la tabla de promociones pasadas) ... */}
             <h2>Promociones Pasadas</h2>
           <div className={styles.tableWrapper}>
             <table className={styles.pricesTable}>
@@ -383,10 +365,6 @@ const SpecialPrices = () => {
         </section>
       )}
 
-      {/* --- ELIMINADO: Modal de Formulario (ahora se renderiza inline) --- */}
-      {/* {isFormVisible && ( ... )} */}
-
-      {/* Modal de Confirmación (sin cambios) */}
       <ConfirmModal
         isOpen={!!priceToDelete}
         onClose={() => setPriceToDelete(null)}

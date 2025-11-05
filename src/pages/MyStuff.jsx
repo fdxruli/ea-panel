@@ -293,7 +293,6 @@ export default function MyStuff() {
 
         return (
             <>
-                <p className={styles.subtitle}>Gestiona tus recompensas, productos favoritos y reseñas.</p>
                 {visibilitySettings.stuff_referrals !== false && customer.referral_code && <ReferralSystem customer={customer} />} {/* <-- Envolver */}
                 {visibilitySettings.stuff_rewards !== false && <RewardsSection customerId={customer.id} />} {/* <-- Envolver */}
 
