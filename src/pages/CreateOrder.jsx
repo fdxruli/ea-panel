@@ -1,4 +1,4 @@
-/* src/pages/CreateOrder.jsx (Migrado) */
+/* src/pages/CreateOrder.jsx (Migrado con Clientes/Productos Básicos) */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -9,8 +9,10 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import DOMPurify from 'dompurify';
 
-// --- (PASO A) AÑADIR IMPORT ---
+// --- (PASO A) AÑADIR IMPORTS ---
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
+import { useProductsBasicCache } from '../hooks/useProductsBasicCache';
+import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -24,77 +26,35 @@ const ClockIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://ww
 ClockIcon.displayName = 'ClockIcon';
 
 // ==================== CUSTOM HOOKS (Sin cambios) ====================
-
 function useDebounce(value, delay = 300) {
     // ... (código existente)
     const [debouncedValue, setDebouncedValue] = useState(value);
     useEffect(() => {
-        const handler = setTimeout(() => {
-            setDebouncedValue(value);
-        }, delay);
-        return () => {
-            clearTimeout(handler);
-        };
+        const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
+        return () => { clearTimeout(handler); };
     }, [value, delay]);
     return debouncedValue;
 }
 
 // ==================== COMPONENTES MEMOIZADOS (Sin cambios) ====================
-
 const CartItem = memo(({ item, onUpdateQuantity, onRemove, canEdit }) => {
     // ... (código existente)
     return (
         <li>
-            <ImageWithFallback
-                src={item.image_url || 'https://placehold.co/50'}
-                alt={item.name}
-                className={styles.cartItemImage}
-            />
+            <ImageWithFallback src={item.image_url || 'https://placehold.co/50'} alt={item.name} className={styles.cartItemImage}/>
             <div className={styles.cartItemInfo}>
                 <span>{item.name}</span>
                 <small>
                     {item.original_price && item.original_price !== item.price ? (
-                        <>
-                            <span className={styles.originalPriceSmall}>
-                                ${item.original_price.toFixed(2)}
-                            </span> ${item.price.toFixed(2)}
-                        </>
-                    ) : (
-                        `$${item.price.toFixed(2)}`
-                    )} c/u
+                        <><span className={styles.originalPriceSmall}>${item.original_price.toFixed(2)}</span> ${item.price.toFixed(2)}</>
+                    ) : ( `$${item.price.toFixed(2)}` )} c/u
                 </small>
             </div>
             <div className={styles.quantityControl}>
-                <button
-                    onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                    disabled={!canEdit}
-                    aria-label="Disminuir cantidad"
-                >
-                    -
-                </button>
-                <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) => onUpdateQuantity(item.id, e.target.value)}
-                    disabled={!canEdit}
-                    aria-label={`Cantidad de ${item.name}`}
-                />
-                <button
-                    onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                    disabled={!canEdit}
-                    aria-label="Aumentar cantidad"
-                >
-                    +
-                </button>
-                <button
-                    onClick={() => onRemove(item.id)}
-                    className={styles.removeButton}
-                    disabled={!canEdit}
-                    aria-label={`Quitar ${item.name}`}
-                >
-                    <TrashIcon />
-                </button>
+                <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} disabled={!canEdit} aria-label="Disminuir cantidad">-</button>
+                <input type="number" min="1" value={item.quantity} onChange={(e) => onUpdateQuantity(item.id, e.target.value)} disabled={!canEdit} aria-label={`Cantidad de ${item.name}`}/>
+                <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} disabled={!canEdit} aria-label="Aumentar cantidad">+</button>
+                <button onClick={() => onRemove(item.id)} className={styles.removeButton} disabled={!canEdit} aria-label={`Quitar ${item.name}`}><TrashIcon /></button>
             </div>
             <strong>${(item.price * item.quantity).toFixed(2)}</strong>
         </li>
@@ -105,28 +65,12 @@ CartItem.displayName = 'CartItem';
 const ProductItem = memo(({ product, onAdd, canEdit }) => {
     // ... (código existente)
     return (
-        <div
-            className={styles.productItem}
-            onClick={() => canEdit && onAdd(product)}
-            role="button"
-            tabIndex={0}
-            onKeyPress={(e) => e.key === 'Enter' && canEdit && onAdd(product)}
-        >
-            <ImageWithFallback
-                src={product.image_url || 'https://placehold.co/100'}
-                alt={product.name}
-            />
+        <div className={styles.productItem} onClick={() => canEdit && onAdd(product)} role="button" tabIndex={0} onKeyPress={(e) => e.key === 'Enter' && canEdit && onAdd(product)}>
+            <ImageWithFallback src={product.image_url || 'https://placehold.co/100'} alt={product.name}/>
             <div className={styles.productInfo}>
                 <strong>{product.name}</strong>
                 {product.original_price && product.original_price !== product.price ? (
-                    <>
-                        <span className={styles.originalPrice}>
-                            ${product.original_price.toFixed(2)}
-                        </span>
-                        <span className={styles.specialPrice}>
-                            ${product.price.toFixed(2)}
-                        </span>
-                    </>
+                    <><span className={styles.originalPrice}>${product.original_price.toFixed(2)}</span><span className={styles.specialPrice}>${product.price.toFixed(2)}</span></>
                 ) : (
                     <span className={styles.price}>${product.price.toFixed(2)}</span>
                 )}
@@ -143,28 +87,41 @@ export default function CreateOrder() {
     const { hasPermission } = useAdminAuth();
     const [step, setStep] = useState(1);
 
-    // Estados principales
-    const [customers, setCustomers] = useState([]);
+    // --- (PASO B) REEMPLAZAR ESTADOS ---
+    // Productos básicos desde caché
+    const { 
+      data: allProductsData, 
+      isLoading: loadingProducts 
+    } = useProductsBasicCache();
+    // Clientes básicos desde caché
+    const { 
+      data: customersData, 
+      isLoading: loadingCustomers 
+    } = useCustomersBasicCache();
+    
+    // Corrección para evitar 'null'
+    const allProducts = useMemo(() => allProductsData || [], [allProductsData]);
+    const customers = useMemo(() => customersData || [], [customersData]);
+    
+    // Estado local para productos con precios especiales
+    const [productsWithPrices, setProductsWithPrices] = useState([]);
+    const [loadingSpecialPrices, setLoadingSpecialPrices] = useState(false); // <-- Nuevo estado
+    // --- FIN PASO B ---
+
+    // Categorías (de la Fase 1)
+    const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
+    const categories = useMemo(() => categoriesData || [], [categoriesData]);
+
+    // Resto de estados locales
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [customerSearch, setCustomerSearch] = useState('');
     const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
     const [newCustomer, setNewCustomer] = useState({ name: '', phone: '' });
 
-    const [allProducts, setAllProducts] = useState([]);
-    const [productsWithPrices, setProductsWithPrices] = useState([]);
-    
-    // --- (PASO B) REEMPLAZAR ESTADO ---
-    // const [categories, setCategories] = useState([]); // <-- Eliminado
-    const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
-    const categories = useMemo(() => categoriesData || [], [categoriesData]);
-    // --- FIN PASO B ---
-
     const [productSearch, setProductSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
 
     const [cart, setCart] = useState([]);
-    const [loadingCustomers, setLoadingCustomers] = useState(true);
-    const [loadingProducts, setLoadingProducts] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [scheduleDate, setScheduleDate] = useState('');
@@ -175,54 +132,19 @@ export default function CreateOrder() {
 
     const canEdit = hasPermission('crear-pedido.edit');
 
-    // --- (PASO C) ELIMINAR FETCH DE CATEGORÍAS ---
-    useEffect(() => {
-        const fetchInitialData = async () => {
-            setLoadingCustomers(true);
-            try {
-                // Consultas paralelas optimizadas
-                const [customersRes, productsRes] = await Promise.all([
-                    supabase
-                        .from('customers')
-                        .select('id, name, phone') // Solo columnas necesarias
-                        .order('name')
-                        .limit(500), // Límite razonable
-                    // categoriesRes eliminada
-                    supabase
-                        .from('products')
-                        .select('id, name, description, price, cost, image_url, category_id, is_active')
-                        .eq('is_active', true)
-                ]);
-
-                if (customersRes.error) throw customersRes.error;
-                // if (categoriesRes.error) throw categoriesRes.error; // <-- Eliminado
-                if (productsRes.error) throw productsRes.error;
-
-                setCustomers(customersRes.data || []);
-                // setCategories(categoriesRes.data || []); // <-- Eliminado
-                setAllProducts(productsRes.data || []);
-            } catch (error) {
-                showAlert(`Error al cargar datos iniciales: ${error.message}`);
-            } finally {
-                setLoadingCustomers(false);
-            }
-        };
-        fetchInitialData();
-    }, [showAlert]);
-    // --- FIN PASO C ---
-
-    // ... (El resto del componente: fetchProductsWithSpecialPrices, filteredCustomers, filteredProducts, handleCreateCustomer, handlers de carrito, cartTotal, y handlePlaceOrder no cambian) ...
+    // --- (PASO C) ELIMINADO: useEffect(fetchInitialData, ...) ---
+    
+    // --- (PASO D) Modificar fetchProductsWithSpecialPrices ---
     const fetchProductsWithSpecialPrices = useCallback(async (customerId) => {
         if (!customerId) {
             setProductsWithPrices([]);
-            setLoadingProducts(false);
+            setLoadingSpecialPrices(false); // <-- CAMBIADO
             return;
         }
-
-        setLoadingProducts(true);
+        setLoadingSpecialPrices(true); // <-- CAMBIADO
         try {
             const today = new Date().toISOString().split('T')[0];
-
+            
             const { data: specialPrices, error: specialPricesError } = await supabase
                 .from('special_prices')
                 .select('product_id, category_id, override_price, target_customer_ids')
@@ -231,14 +153,13 @@ export default function CreateOrder() {
 
             if (specialPricesError) throw specialPricesError;
 
+            // Mapear sobre allProducts (que viene del caché)
             const customerSpecificProducts = allProducts.map(product => {
                 const productPrice = specialPrices?.find(p => p.product_id === product.id);
                 const categoryPrice = !productPrice && specialPrices?.find(
                     p => p.category_id === product.category_id && !p.product_id
                 );
-
                 const specialPriceInfo = productPrice || categoryPrice;
-
                 if (specialPriceInfo &&
                     (!specialPriceInfo.target_customer_ids ||
                         specialPriceInfo.target_customer_ids.includes(customerId))) {
@@ -250,15 +171,16 @@ export default function CreateOrder() {
                 }
                 return product;
             });
-
             setProductsWithPrices(customerSpecificProducts);
         } catch (error) {
+            console.error('Error fetching special prices:', error);
             showAlert(`Error al cargar precios especiales: ${error.message}`);
-            setProductsWithPrices(allProducts);
+            setProductsWithPrices(allProducts); // Fallback
         } finally {
-            setLoadingProducts(false);
+            setLoadingSpecialPrices(false); // <-- CAMBIADO
         }
-    }, [allProducts, showAlert]);
+    }, [allProducts, showAlert]); // <-- 'allProducts' (del useMemo) es la dependencia
+    // --- FIN PASO D ---
 
     useEffect(() => {
         if (selectedCustomer) {
@@ -268,6 +190,7 @@ export default function CreateOrder() {
         }
     }, [selectedCustomer, fetchProductsWithSpecialPrices]);
 
+    // --- (PASO F) Filtro de clientes (MANTENIDO) ---
     const filteredCustomers = useMemo(() => {
         if (!debouncedCustomerSearch) return [];
         const lowerSearch = debouncedCustomerSearch.toLowerCase();
@@ -279,6 +202,7 @@ export default function CreateOrder() {
             .slice(0, 10);
     }, [customers, debouncedCustomerSearch]);
 
+    // Filtro de productos (sin cambios)
     const filteredProducts = useMemo(() => {
         return productsWithPrices.filter(p => {
             const matchesCategory = categoryFilter === 'all' || p.category_id === categoryFilter;
@@ -287,12 +211,12 @@ export default function CreateOrder() {
         });
     }, [productsWithPrices, debouncedProductSearch, categoryFilter]);
 
+    // ... (El resto del componente: handleCreateCustomer, handlers de carrito, cartTotal, y handlePlaceOrder no cambian) ...
+    // ... (Omitidos por brevedad, son idénticos al archivo original) ...
     const handleCreateCustomer = useCallback(async () => {
         if (!canEdit) return;
-
         const cleanName = DOMPurify.sanitize(newCustomer.name.trim());
         const cleanPhone = DOMPurify.sanitize(newCustomer.phone.trim().replace(/\D/g, ''));
-
         if (!cleanName || !cleanPhone) {
             showAlert('El nombre y el teléfono son obligatorios.');
             return;
@@ -301,30 +225,17 @@ export default function CreateOrder() {
             showAlert('El teléfono debe tener 10 dígitos.');
             return;
         }
-
         setIsSubmitting(true);
         try {
-            const { data: existingCustomer, error: checkError } = await supabase
-                .from('customers')
-                .select('id')
-                .eq('phone', cleanPhone)
-                .maybeSingle();
-
+            const { data: existingCustomer, error: checkError } = await supabase.from('customers').select('id').eq('phone', cleanPhone).maybeSingle();
             if (checkError) throw checkError;
             if (existingCustomer) {
                 showAlert('Ya existe un cliente con este número de teléfono.');
                 setIsSubmitting(false);
                 return;
             }
-
-            const { data, error } = await supabase
-                .from('customers')
-                .insert({ name: cleanName, phone: cleanPhone })
-                .select()
-                .single();
-
+            const { data, error } = await supabase.from('customers').insert({ name: cleanName, phone: cleanPhone }).select().single();
             if (error) throw error;
-
             showAlert('Cliente creado con éxito.');
             setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
             setSelectedCustomer(data);
@@ -343,11 +254,7 @@ export default function CreateOrder() {
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
-                return prev.map(item =>
-                    item.id === product.id
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                );
+                return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
             }
             return [...prev, { ...product, quantity: 1 }];
         });
@@ -356,15 +263,10 @@ export default function CreateOrder() {
     const updateQuantity = useCallback((productId, newQuantityStr) => {
         if (!canEdit) return;
         const newQuantity = parseInt(newQuantityStr, 10);
-
         if (isNaN(newQuantity) || newQuantity <= 0) {
             setCart(prev => prev.filter(item => item.id !== productId));
         } else {
-            setCart(prev => prev.map(item =>
-                item.id === productId
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            ));
+            setCart(prev => prev.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item));
         }
     }, [canEdit]);
 
@@ -382,60 +284,31 @@ export default function CreateOrder() {
             showAlert('Debes seleccionar un cliente y añadir al menos un producto.');
             return;
         }
-
         let scheduledTimestamp = null;
         if (scheduleDate || scheduleTime) {
             const datePart = scheduleDate || new Date().toISOString().split('T')[0];
             const timePart = scheduleTime || '00:00';
             const dateTimeString = `${datePart}T${timePart}:00`;
             const scheduledDateObj = new Date(dateTimeString);
-
             if (isNaN(scheduledDateObj.getTime())) {
                 showAlert('La fecha u hora de programación no es válida.');
                 return;
             }
-
             scheduledTimestamp = scheduledDateObj.toISOString();
         }
-
         setIsSubmitting(true);
-
         try {
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
-                .insert({
-                    customer_id: selectedCustomer.id,
-                    total_amount: cartTotal,
-                    status: 'pendiente',
-                    scheduled_for: scheduledTimestamp
-                })
-                .select('id, order_code, created_at')
-                .single();
-
+            const { data: orderData, error: orderError } = await supabase.from('orders').insert({ customer_id: selectedCustomer.id, total_amount: cartTotal, status: 'pendiente', scheduled_for: scheduledTimestamp }).select('id, order_code, created_at').single();
             if (orderError) throw orderError;
-
-            const orderItems = cart.map(item => ({
-                order_id: orderData.id,
-                product_id: item.id,
-                quantity: item.quantity,
-                price: item.price
-            }));
-
-            const { error: itemsError } = await supabase
-                .from('order_items')
-                .insert(orderItems);
-
+            const orderItems = cart.map(item => ({ order_id: orderData.id, product_id: item.id, quantity: item.quantity, price: item.price }));
+            const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
             if (itemsError) {
                 await supabase.from('orders').delete().eq('id', orderData.id);
                 throw itemsError;
             }
-
             let message = `Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
-            cart.forEach(item => {
-                message += `• ${item.quantity}x ${item.name}\n`;
-            });
+            cart.forEach(item => { message += `• ${item.quantity}x ${item.name}\n`; });
             message += `\n*Total a pagar: $${cartTotal.toFixed(2)}*`;
-
             if (scheduledTimestamp) {
                 const scheduledDateObj = new Date(scheduledTimestamp);
                 const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -443,12 +316,9 @@ export default function CreateOrder() {
                 const formattedDate = `${scheduledDateObj.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDateObj.toLocaleTimeString('es-MX', timeOptions)}`;
                 message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
             }
-
             const clientSpecificOrderUrl = `https://ea-panel.vercel.app/mis-pedidos/${orderData.order_code}`;
             message += `\n\nPuedes ver el estado de tu pedido aquí:\n${clientSpecificOrderUrl}`;
-
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${selectedCustomer.phone}&text=${encodeURIComponent(message)}`;
-
             showAlert(
                 `¡Pedido #${orderData.order_code} creado! Serás redirigido a WhatsApp para notificar al cliente.`,
                 'info',
@@ -465,7 +335,6 @@ export default function CreateOrder() {
                     setScheduleTime('');
                 }
             );
-
         } catch (error) {
             showAlert(`Error al crear el pedido: ${error.message}`);
         } finally {
@@ -474,8 +343,8 @@ export default function CreateOrder() {
     }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, showAlert]);
 
 
-    // --- (PASO D) AJUSTAR CONDICIÓN DE LOADING ---
-    if (loadingCustomers || loadingCategories) return <LoadingSpinner />;
+    // --- (PASO E) AJUSTAR LOADING ---
+    if (loadingCustomers || loadingProducts || loadingCategories) return <LoadingSpinner />;
 
     // ==================== RENDERIZADO ====================
     return (
@@ -525,6 +394,7 @@ export default function CreateOrder() {
                                 </div>
                                 {customerSearch && filteredCustomers.length > 0 && (
                                     <ul className={styles.customerResults}>
+                                        {/* 'filteredCustomers' ahora usa 'customers' del hook */}
                                         {filteredCustomers.map(c => (
                                             <li
                                                 key={c.id}
@@ -579,7 +449,7 @@ export default function CreateOrder() {
                                 value={categoryFilter}
                             >
                                 <option value="all">Todas las categorías</option>
-                                {/* 'categories' ahora viene del hook */}
+                                {/* 'categories' viene del hook */}
                                 {categories.map(c => (
                                     <option key={c.id} value={c.id}>{c.name}</option>
                                 ))}
@@ -590,7 +460,7 @@ export default function CreateOrder() {
                                 <p className={styles.disabledText}>
                                     Selecciona un cliente para ver los productos.
                                 </p>
-                            ) : loadingProducts ? (
+                            ) : loadingSpecialPrices ? ( // <-- Usa el loading de precios
                                 <LoadingSpinner />
                             ) : filteredProducts.length === 0 ? (
                                 <p className={styles.disabledText}>
@@ -636,7 +506,7 @@ export default function CreateOrder() {
                             </>
                         )}
 
-                        {/* PROGRAMACIÓN */}
+                        {/* PROGRAMACIÓN (Sin cambios) */}
                         {selectedCustomer && cart.length > 0 && canEdit && (
                             <div className={styles.scheduleSection}>
                                 <h4><ClockIcon /> Programar Entrega (Opcional)</h4>
