@@ -40,28 +40,25 @@ function useDebounce(value, delay = 400) {
 
 // ==================== COMPONENTE: ORDER HISTORY (PASO H) ====================
 
-const OrderHistory = memo(({ customerId, initialOrders, loadCustomerOrders }) => { // <-- Props cambiadas
+const OrderHistory = memo(({ customerId, loadCustomerOrders }) => { // <-- Props cambiadas
   const [filter, setFilter] = useState('activos');
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [orderItems, setOrderItems] = useState({});
   const [loadingItems, setLoadingItems] = useState(false);
 
-  const [orders, setOrders] = useState(initialOrders || []); // <-- Nuevo estado
-  const [loadingOrders, setLoadingOrders] = useState(false); // <-- Nuevo estado
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true); // <-- Nuevo estado
 
   // Cargar pedidos completos cuando componente se monta
   useEffect(() => {
     const loadOrders = async () => {
-      // Si ya tiene pedidos (del cálculo de stats básicos), no los cargues
-      if (initialOrders && initialOrders.length > 0) return;
-
       setLoadingOrders(true);
       const fullOrders = await loadCustomerOrders(customerId);
-      setOrders(fullOrders);
+      setOrders(fullOrders || []);
       setLoadingOrders(false);
     };
     loadOrders();
-  }, [customerId, initialOrders, loadCustomerOrders]); // <-- Dependencias actualizadas
+  }, [customerId, loadCustomerOrders]); // <-- Dependencias actualizadas
 
   const filteredOrders = useMemo(() => {
     if (filter === 'activos') {
@@ -141,8 +138,8 @@ const OrderHistory = memo(({ customerId, initialOrders, loadCustomerOrders }) =>
               >
                 <div className={styles.orderHeaderLeft}>
                   <strong>#{order.order_code}</strong>
-                  <span className={`${styles.statusBadge} ${styles[order.status]}`}>
-                    {order.status.replace('_', ' ')}
+                  <span className={`${styles.statusBadge} ${styles[order.status || 'pendiente']}`}>
+                    {(order.status || 'pendiente').replace('_', ' ')}
                   </span>
                 </div>
                 <div className={styles.orderHeaderRight}>
@@ -543,7 +540,7 @@ export default function Customers() {
             completedOrders: statsObject?.completed_orders || 0,
             totalSpent: statsObject?.total_spent || 0,
             // Simular 'orders' (para CustomerCard) basado en el conteo de la RPC
-            orders: Array(statsObject?.total_orders || 0).fill({})
+            //orders: Array(statsObject?.total_orders || 0).fill({})
           };
         } catch (error) {
           console.error(`Error loading stats for customer ${customer.id}:`, error);
@@ -684,7 +681,7 @@ export default function Customers() {
         `)
         .eq('customer_id', customerId)
         .order('created_at', { ascending: false })
-        .limit(20);
+        //.limit(20);
       if (error) throw error;
 
       setCached(ordersKey, data, 2 * 60 * 1000); // Cache 2 minutos
@@ -966,7 +963,6 @@ export default function Customers() {
                 {/* --- (PASO I) Actualizar llamada a OrderHistory --- */}
                 <OrderHistory
                   customerId={selectedCustomer.id}
-                  initialOrders={selectedCustomer.orders || []}
                   loadCustomerOrders={loadCustomerOrders}
                 />
                 {/* --- FIN PASO I --- */}
