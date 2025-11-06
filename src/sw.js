@@ -5,7 +5,7 @@ import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from 'workbox-strategi
 import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
-// Eventos de lifecycle
+// Eventos de lifecycle (Sin cambios)
 self.addEventListener('activate', (event) => {
   console.log('[SW] Service Worker activado');
   cleanupOutdatedCaches();
@@ -14,26 +14,22 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Service Worker instalando...');
-  self.skipWaiting(); // Activar inmediatamente
+  self.skipWaiting();
 });
 
-// Manejo de clicks en notificaciones
+// Manejo de clicks en notificaciones (Sin cambios)
 self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Click en notificación');
   event.notification.close();
-
   const urlToOpen = event.notification.data?.url || '/';
-
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Buscar si ya hay una ventana abierta con esa URL
         for (const client of clientList) {
           if (client.url.includes(urlToOpen) && 'focus' in client) {
             return client.focus();
           }
         }
-        // Si no hay ventana abierta, abrir una nueva
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }
@@ -41,68 +37,69 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// Precache de recursos
+// Precache de recursos (Sin cambios)
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Configuración de Firebase
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
-// Manejo de notificaciones en background
-onBackgroundMessage(messaging, (payload) => {
-  console.log('[SW] Mensaje FCM recibido:', payload);
-
-  const notificationTitle = payload.notification?.title || 'Nueva Notificación';
-  const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
-    data: { url: payload.data?.url || '/' },
-    tag: 'notification-' + Date.now(),
-    requireInteraction: false
+// --- 👇 MODIFICACIÓN IMPORTANTE AQUÍ 👇 ---
+// Solo ejecutar el código de Firebase Messaging en PRODUCCIÓN.
+// import.meta.env.DEV es 'true' en desarrollo (npm run dev)
+// y 'false' en producción (npm run build).
+if (!import.meta.env.DEV) {
+  console.log('[SW] Modo Producción: Inicializando Firebase Messaging...');
+  
+  const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
   };
 
-  return self.registration.showNotification(notificationTitle, notificationOptions);
-});
+  try {
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
-// ===== ESTRATEGIAS DE CACHE DIFERENCIADAS =====
+    onBackgroundMessage(messaging, (payload) => {
+      console.log('[SW] Mensaje FCM recibido:', payload);
 
-// Rutas de API - NetworkFirst
+      const notificationTitle = payload.notification?.title || 'Nueva Notificación';
+      const notificationOptions = {
+        body: payload.notification?.body || '',
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+        data: { url: payload.data?.url || '/' },
+        tag: 'notification-' + Date.now(),
+        requireInteraction: false
+      };
+
+      return self.registration.showNotification(notificationTitle, notificationOptions);
+    });
+  } catch (err) {
+    console.warn('[SW] Falló la inicialización de Firebase Messaging en Producción.', err);
+  }
+} else {
+  console.log('[SW] Modo Desarrollo: Omitiendo Firebase Messaging.');
+}
+// --- 👆 FIN DE LA MODIFICACIÓN 👆 ---
+
+// ===== ESTRATEGIAS DE CACHE (Sin cambios) =====
 registerRoute(
   ({ url }) => url.pathname.startsWith('/api/'),
-  new NetworkFirst({
-    cacheName: 'api-cache',
-    networkTimeoutSeconds: 10,
-  })
+  new NetworkFirst({ cacheName: 'api-cache', networkTimeoutSeconds: 10 })
 );
 
-// Imágenes - StaleWhileRevalidate
 registerRoute(
   ({ request }) => request.destination === 'image',
-  new StaleWhileRevalidate({
-    cacheName: 'images-cache',
-  })
+  new StaleWhileRevalidate({ cacheName: 'images-cache' })
 );
 
-// Manifiestos - NetworkFirst (para que siempre estén actualizados)
+// ... (resto de las rutas de 'registerRoute' sin cambios) ...
 registerRoute(
-  ({ url }) => url.pathname.endsWith('manifest-client.json') ||
-    url.pathname.endsWith('manifest-admin.json'),
-  new NetworkFirst({
-    cacheName: 'manifest-cache',
-  })
+  ({ url }) => url.pathname.endsWith('manifest-client.json') || url.pathname.endsWith('manifest-admin.json'),
+  new NetworkFirst({ cacheName: 'manifest-cache' })
 );
 
-// Estrategia para rutas de admin - NetworkFirst más agresivo
 registerRoute(
   ({ url }) => url.pathname.startsWith('/admin'),
   new NetworkFirst({
@@ -111,10 +108,7 @@ registerRoute(
     plugins: [
       {
         cacheWillUpdate: async ({ response }) => {
-          // Solo cachear respuestas exitosas
-          if (response && response.status === 200) {
-            return response;
-          }
+          if (response && response.status === 200) return response;
           return null;
         },
       },
@@ -134,9 +128,7 @@ registerRoute(
     plugins: [
       {
         cacheWillUpdate: async ({ response }) => {
-          if (response && response.status === 200) {
-            return response;
-          }
+          if (response && response.status === 200) return response;
           return null;
         },
       },

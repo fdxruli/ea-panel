@@ -11,15 +11,21 @@ import { useTheme } from '../context/ThemeContext';
 import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
-import { useSettings } from '../context/SettingsContext'; // <-- AÑADIDO
+import { useSettings } from '../context/SettingsContext';
+
+// --- 👇 OPTIMIZACIÓN: Cambiamos los imports del mapa ---
+import StaticMap from '../components/StaticMap'; // <-- AÑADIDO
+// import ClientOnly from '../components/ClientOnly'; // <-- ELIMINADO
+// import DynamicMapPicker from '../components/DynamicMapPicker'; // <-- ELIMINADO
+// --- FIN OPTIMIZACIÓN ---
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone, setCheckoutModalOpen } = useCustomer();
-    const { customer, addresses, loading: userLoading, error, refetch } = useUserData(); // <-- Cambiado 'loading' a 'userLoading' para evitar conflicto
+    const { customer, addresses, loading: userLoading, error, refetch } = useUserData();
     const { theme, changeTheme } = useTheme();
-    const { settings, loading: settingsLoading } = useSettings(); // <-- AÑADIDO
-    const visibilitySettings = settings['client_visibility'] || {}; // <-- AÑADIDO
+    const { settings, loading: settingsLoading } = useSettings();
+    const visibilitySettings = settings['client_visibility'] || {};
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -27,8 +33,7 @@ export default function MyProfile() {
     const [addressToDelete, setAddressToDelete] = useState(null);
     const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
 
-    // Combinar estados de carga
-    const loading = userLoading || settingsLoading; // <-- Usar loading combinado
+    const loading = userLoading || settingsLoading;
 
     useEffect(() => {
         if (customer) {
@@ -36,6 +41,7 @@ export default function MyProfile() {
         }
     }, [customer]);
 
+    // --- (Toda la lógica de handlers como handleSetDefaultAddress, handleInfoSubmit, etc., permanece sin cambios) ---
     const handleSetDefaultAddress = async (addressId) => {
         await supabase.from('customer_addresses').update({ is_default: false }).eq('customer_id', customer.id);
         const { error } = await supabase.from('customer_addresses').update({ is_default: true }).eq('id', addressId);
@@ -57,8 +63,7 @@ export default function MyProfile() {
         else {
             showAlert("Información actualizada con éxito.");
             if (editForm.phone !== phone) {
-                // Si el teléfono cambió, es mejor recargar para revalidar todo
-                 localStorage.setItem('customer_phone', editForm.phone); // Actualizar localStorage antes de recargar
+                 localStorage.setItem('customer_phone', editForm.phone);
                  window.location.reload();
             } else {
                 refetch();
@@ -69,8 +74,8 @@ export default function MyProfile() {
 
     const handleDeleteAddress = async () => {
         if (!addressToDelete) return;
-        const { error } = await supabase.from('customer_addresses').delete().eq('id', addressToDelete.id); // <-- Corregido await
-        if (error) { // <-- Añadido manejo de error
+        const { error } = await supabase.from('customer_addresses').delete().eq('id', addressToDelete.id);
+        if (error) {
             showAlert('Error al eliminar la dirección.');
             console.error("Error deleting address:", error);
         } else {
@@ -82,35 +87,31 @@ export default function MyProfile() {
 
     const handleSaveAddress = async (addressData, shouldSave, addressId) => {
         let response;
-        // Sanitizar datos antes de guardar
         const dataToSave = {
-             customer_id: customer.id, // Asegurar que customer_id siempre esté presente
+             customer_id: customer.id,
              label: DOMPurify.sanitize(addressData.label),
              address_reference: DOMPurify.sanitize(addressData.address_reference),
              latitude: addressData.latitude,
              longitude: addressData.longitude
          };
 
-
         if (addressId) {
-            response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId).select().single(); // <-- Añadido select()
+            response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId).select().single();
         } else {
-             // Si es nueva y hay otras, no poner is_default. Si es la primera, sí.
              dataToSave.is_default = addresses.length === 0;
-            response = await supabase.from('customer_addresses').insert(dataToSave).select().single(); // <-- Añadido select()
+            response = await supabase.from('customer_addresses').insert(dataToSave).select().single();
         }
 
         if (response.error) {
             showAlert(`Error al guardar: ${response.error.message}`);
-            throw new Error(response.error.message); // Lanzar error para manejo en AddressModal si es necesario
+            throw new Error(response.error.message);
         } else {
             showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
-            refetch(); // Refrescar datos del usuario
-            setAddressModalOpen(false); // <-- Cerrar modal al guardar exitosamente
-            setEditingAddress(null); // <-- Limpiar estado de edición
+            refetch();
+            setAddressModalOpen(false);
+            setEditingAddress(null);
         }
     };
-
 
     const openAddressModal = (address = null) => {
         setEditingAddress(address);
@@ -120,17 +121,15 @@ export default function MyProfile() {
     const confirmLogout = () => {
         clearPhone();
         setLogoutModalOpen(false);
-        // Opcional: Redirigir al inicio o mostrar mensaje
-        // navigate('/'); // Si usas react-router-dom
         showAlert("Has cerrado sesión.");
     };
+    // --- (Fin de la lógica de handlers) ---
 
 
     const renderContent = () => {
         if (!phone) return <AuthPrompt />;
-        if (loading) return <LoadingSpinner />; // Usar loading combinado
+        if (loading) return <LoadingSpinner />;
         if (error) return <div className={styles.prompt}><h2>Error Inesperado</h2><p>No pudimos cargar tus datos.</p></div>;
-
         if (!customer) {
             return (
                 <div className={styles.prompt}>
@@ -143,7 +142,6 @@ export default function MyProfile() {
             );
         }
 
-        // Comprobar si la página entera debe ocultarse
         if (visibilitySettings.my_profile_page === false) {
             return (
                 <div className={styles.prompt}>
@@ -156,23 +154,21 @@ export default function MyProfile() {
 
         return (
             <>
-                {visibilitySettings.profile_my_data !== false && ( // <-- Envolver sección
+                {/* --- (Sección Mis Datos y Apariencia sin cambios) --- */}
+                {visibilitySettings.profile_my_data !== false && (
                     <div className={styles.card}>
                         <h2>Mis Datos</h2>
                         <form onSubmit={handleInfoSubmit} className={styles.form}>
                             <label htmlFor="name">Nombre:</label>
-                            <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required /> {/* Añadido required */}
+                            <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
                             <small> Puedes cambiar tu nombre las veces que quieras</small>
                             <label htmlFor="phone">Número de WhatsApp:</label>
-                            {/* Hacer el teléfono no editable o mostrar advertencia */}
                             <input id="phone" type="tel" value={editForm.phone} readOnly disabled title="Para cambiar tu número, cierra sesión e ingresa con el nuevo."/>
                             <small>Para cambiar de numero, cierra sesión e ingresa con el nuevo. </small>
-
                             <button type="submit" className={styles.actionButton}>Guardar Cambios de Nombre</button>
                         </form>
                     </div>
                 )}
-
 
                 <div className={styles.card}>
                     <h2>Apariencia</h2>
@@ -185,8 +181,10 @@ export default function MyProfile() {
                         </select>
                     </div>
                 </div>
+                {/* --- (Fin Secciones Mis Datos y Apariencia) --- */}
 
-                {visibilitySettings.profile_my_addresses !== false && ( // <-- Envolver sección
+
+                {visibilitySettings.profile_my_addresses !== false && (
                     <div className={styles.card}>
                         <div className={styles.addressHeader}>
                             <h2>Mis Direcciones</h2>
@@ -194,8 +192,16 @@ export default function MyProfile() {
                         </div>
                         {addresses.length > 0 ? (
                             <div className={styles.addressCarousel}>
-                                {addresses.map(addr => (
+                                {addresses.map((addr) => (
                                     <div key={addr.id} className={`${styles.addressItem} ${addr.is_default ? styles.defaultAddress : ''}`}>
+                                        
+                                        {/* --- 👇 OPTIMIZACIÓN AQUÍ --- */}
+                                        {/* Este div faltaba en tu CSS, lo añadiremos en el siguiente paso */}
+                                        <div className={styles.addressMapContainer}>
+                                            <StaticMap latitude={addr.latitude} longitude={addr.longitude} />
+                                        </div>
+                                        {/* --- FIN OPTIMIZACIÓN --- */}
+                                        
                                         <div>
                                             <div className={styles.addressLabelContainer}>
                                                 <strong>{addr.label}</strong>
@@ -205,7 +211,6 @@ export default function MyProfile() {
                                         </div>
                                         <div className={styles.addressActions}>
                                             <button onClick={() => openAddressModal(addr)} className={styles.editButton}>Editar</button>
-                                            {/* Deshabilitar eliminar si es la única dirección */}
                                             <button
                                                 onClick={() => setAddressToDelete(addr)}
                                                 className={styles.deleteButton}
@@ -246,14 +251,13 @@ export default function MyProfile() {
             />
             <div className={styles.container}>
                 {renderContent()}
-                 {/* Asegúrate que customerId se pase correctamente */}
                 <AddressModal
                     isOpen={isAddressModalOpen}
-                    onClose={() => { setAddressModalOpen(false); setEditingAddress(null); }} // Limpiar al cerrar
+                    onClose={() => { setAddressModalOpen(false); setEditingAddress(null); }}
                     onSave={handleSaveAddress}
                     address={editingAddress}
-                    customerId={customer?.id} // Pasar el ID del cliente
-                    showSaveOption={true} // Permitir guardar/no guardar si es relevante aquí
+                    customerId={customer?.id}
+                    showSaveOption={true}
                  />
                 <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
                     Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.

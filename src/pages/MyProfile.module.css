@@ -212,3 +212,12 @@
     background-color: var(--color-error);
     color: var(--text-light);
 }
+
+.addressMapContainer {
+  height: 150px; /* Altura fija para el mapa en el carrusel */
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem; /* Espacio entre el mapa y el texto */
+  background-color: #f0f0f0; /* Color de fondo mientras carga */
+}
