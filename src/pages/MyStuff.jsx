@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'; // <-- Quitar useMemo si ya no se usa para myReviews
+// --- 1. AÑADIMOS 'lazy' y 'Suspense' ---
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
-// --- 👇 MODIFICADO: Importar 'myReviews' en lugar de 'allReviews' ---
 import { useProductExtras } from '../context/ProductExtrasContext';
-// --- FIN MODIFICADO ---
 import styles from './MyStuff.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmModal from '../components/ConfirmModal';
@@ -13,16 +12,21 @@ import { useProducts } from '../context/ProductContext';
 import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
 import { useAlert } from '../context/AlertContext';
-import QRCodeModal from '../components/QRCodeModal';
+// --- 2. COMENTAMOS LA IMPORTACIÓN ESTÁTICA ---
+// import QRCodeModal from '../components/QRCodeModal';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO from '../components/SEO';
 import { useSettings } from '../context/SettingsContext';
 
-// ... (Iconos y componentes ReferralSystem, RewardsSection sin cambios) ...
+// --- 3. IMPORTAMOS EL MODAL CON 'lazy' ---
+const QRCodeModal = lazy(() => import('../components/QRCodeModal.jsx'));
+
+// --- (Iconos sin cambios) ---
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3" /></svg>;
 
+// --- (Componente ReferralSystem MODIFICADO) ---
 const ReferralSystem = ({ customer }) => {
     const { showAlert } = useAlert();
     const [isQrModalOpen, setQrModalOpen] = useState(false);
@@ -51,20 +55,27 @@ const ReferralSystem = ({ customer }) => {
             <div className={styles.referralStats}>
                 <p><strong>Amigos Invitados:</strong> {customer.referral_count || 0}</p>
             </div>
+            
+            {/* --- 4. ENVOLVEMOS EL MODAL EN SUSPENSE --- */}
             {isQrModalOpen && (
-                <QRCodeModal
-                    url={referralLink}
-                    onClose={() => setQrModalOpen(false)}
-                />
+                <Suspense fallback={<LoadingSpinner />}>
+                    <QRCodeModal
+                        url={referralLink}
+                        onClose={() => setQrModalOpen(false)}
+                    />
+                </Suspense>
             )}
+            {/* --- FIN DEL CAMBIO --- */}
         </div>
     );
 };
+
+// --- (Componente RewardsSection SIN CAMBIOS) ---
 const RewardsSection = ({ customerId }) => {
     const [progress, setProgress] = useState(null);
     const [loading, setLoading] = useState(true);
     const { showAlert } = useAlert();
-    const [isAccordionOpen, setIsAccordionOpen] = useState(true); // Estado para el acordeón
+    const [isAccordionOpen, setIsAccordionOpen] = useState(true);
 
     const fetchProgress = useCallback(async () => {
         if (!customerId) return;
@@ -129,7 +140,6 @@ const RewardsSection = ({ customerId }) => {
         ? (referral_count / next_level.min_referrals) * 100
         : (current_level?.name ? 100 : 0);
 
-    // La condición ahora comprueba si los niveles tienen un nombre, lo cual es más fiable.
     const noLevelsConfigured = !current_level?.name && !next_level?.name;
     const hasReachedMaxLevel = current_level?.name && !next_level?.name;
 
@@ -138,12 +148,10 @@ const RewardsSection = ({ customerId }) => {
             <div className={styles.cardHeader}><TrophyIcon /><h2>Mis Recompensas</h2></div>
             <div className={styles.rewardsProgress}>
                 <div className={styles.levelInfo}>
-                    {/* Mostramos el nivel solo si realmente existe, si no, no mostramos la línea */}
                     {current_level?.name && <span>Nivel actual: <strong>{current_level.name}</strong></span>}
                     {next_level?.name && <span>Siguiente nivel: <strong>{next_level.name}</strong></span>}
                 </div>
 
-                {/* Ocultamos la barra de progreso si no hay niveles configurados */}
                 {!noLevelsConfigured && (
                     <div className={styles.progressBarContainer}>
                         <div className={styles.progressBar} style={{ width: `${progressPercentage}%` }}></div>
@@ -221,9 +229,7 @@ export default function MyStuff() {
     const { addToCart, showToast } = useCart();
     const { products: liveProducts } = useProducts();
     const { customer, loading: userLoading, error } = useUserData();
-    // --- 👇 MODIFICADO: Usar 'myReviews' del contexto ---
     const { favorites, myReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
-    // --- FIN MODIFICADO ---
     const [editingReview, setEditingReview] = useState(null);
     const [reviewToDelete, setReviewToDelete] = useState(null);
     const [favoriteToRemove, setFavoriteToRemove] = useState(null);
@@ -231,11 +237,7 @@ export default function MyStuff() {
     const visibilitySettings = settings['client_visibility'] || {};
     const loading = userLoading || extrasLoading || settingsLoading;
 
-    // --- 🗑️ ELIMINADO: useMemo para myReviews ya no es necesario aquí ---
-    // const myReviews = useMemo(() => { ... });
-    // --- FIN ELIMINADO ---
-
-
+    // --- (HANDLERS SIN CAMBIOS) ---
     const handleRemoveFavorite = async () => {
         if (!favoriteToRemove || !customer) return;
         await supabase.from('customer_favorites').delete().match({ customer_id: customer.id, product_id: favoriteToRemove.products.id });
@@ -264,8 +266,8 @@ export default function MyStuff() {
         showToast(`¡${fullProduct.name} añadido al carrito!`);
     };
 
+    // --- (FUNCIÓN RENDERCONTENT SIN CAMBIOS) ---
     const renderContent = () => {
-        // ... (resto de renderContent sin cambios hasta la sección de reseñas) ...
         if (!phone) return <AuthPrompt />;
         if (loading) return <LoadingSpinner />;
         if (error) return <div className={styles.prompt}><h2>Error Inesperado</h2><p>No pudimos cargar tus datos.</p></div>;
@@ -280,7 +282,6 @@ export default function MyStuff() {
             );
         }
 
-        // Comprobar si la página entera debe ocultarse
         if (visibilitySettings.my_stuff_page === false) {
             return (
                 <div className={styles.prompt}>
@@ -293,10 +294,10 @@ export default function MyStuff() {
 
         return (
             <>
-                {visibilitySettings.stuff_referrals !== false && customer.referral_code && <ReferralSystem customer={customer} />} {/* <-- Envolver */}
-                {visibilitySettings.stuff_rewards !== false && <RewardsSection customerId={customer.id} />} {/* <-- Envolver */}
+                {visibilitySettings.stuff_referrals !== false && customer.referral_code && <ReferralSystem customer={customer} />}
+                {visibilitySettings.stuff_rewards !== false && <RewardsSection customerId={customer.id} />}
 
-                {visibilitySettings.stuff_favorites !== false && ( // <-- Envolver
+                {visibilitySettings.stuff_favorites !== false && (
                     <div className={styles.card}>
                         <div className={styles.cardHeader}><HeartIcon /><h2>Mis Favoritos ({favorites.length})</h2></div>
                         {favorites.length > 0 ? (
@@ -316,13 +317,12 @@ export default function MyStuff() {
                         ) : <p>Aún no has guardado productos favoritos.</p>}
                     </div>
                 )}
-                 {/* --- 👇 MODIFICADO: Usar 'myReviews' directamente --- */}
                 {visibilitySettings.stuff_reviews !== false && (
                     <div className={styles.card}>
                         <div className={styles.cardHeader}><StarIcon /><h2>Mis Reseñas ({myReviews.length})</h2></div>
                         {myReviews.length > 0 ? (
                             <div className={styles.reviewList}>
-                                {myReviews.map(rev => rev.products && ( // <-- Usar myReviews
+                                {myReviews.map(rev => rev.products && (
                                     <div key={rev.id} className={styles.reviewItem}>
                                         {editingReview?.id === rev.id ? (
                                             <div className={styles.reviewEditor}>
@@ -349,11 +349,11 @@ export default function MyStuff() {
                         ) : <p>Todavía no has escrito ninguna reseña.</p>}
                     </div>
                  )}
-                 {/* --- FIN MODIFICADO --- */}
             </>
         );
     }
 
+    // --- (RETURN FINAL SIN CAMBIOS) ---
     return (
         <>
             <SEO
