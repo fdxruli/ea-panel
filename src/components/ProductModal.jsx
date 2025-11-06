@@ -101,9 +101,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         }
     }, [product]);
 
-    // --- 👇 CAMBIOS PRINCIPALES AQUÍ ---
-
-    // 1. Este Effect se encarga de reiniciar los estados BÁSICOS solo cuando el producto cambia.
     useEffect(() => {
         if (product) {
             setQuantity(1);
@@ -114,9 +111,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             setUserComment('');
             setIsReviewFormVisible(false);
         }
-    }, [product?.id]); // Usamos product.id para evitar reinicios innecesarios
+    }, [product?.id]);
 
-    // 2. Este Effect actualiza las reseñas del producto actual cuando cambian las reseñas generales.
     useEffect(() => {
         if (product) {
             const currentProductReviews = allReviews.filter(r => r.products?.id === product.id);
@@ -124,7 +120,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         }
     }, [product?.id, allReviews]);
 
-    // 3. Este Effect actualiza el estado de favorito y si el usuario ya ha reseñado.
     useEffect(() => {
         if (product && customerId) {
             setIsFavorite(favorites.some(f => f.products?.id === product.id));
@@ -234,6 +229,10 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const incrementQuantity = () => setQuantity(q => q + 1);
     const decrementQuantity = () => setQuantity(q => (q > 1 ? q - 1 : 1));
 
+    // --- 👇 Definimos los tamaños para la imagen del modal ---
+    const modalImageSizes = [400, 800]; // Tamaños medianos/grandes
+    const modalSizes = "(max-width: 768px) 100vw, 450px"; // 100% en móvil, 450px en desktop
+
     return (
         <div className={`${styles.overlay} ${isAnimating ? styles.open : ''}`} onClick={handleClose}>
             <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''}`} onClick={(e) => e.stopPropagation()}>
@@ -255,6 +254,12 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             src={src || 'https://placehold.co/400'}
                             alt={`${product.name} ${index + 1}`}
                             className={`${styles.productImage} ${index === currentImageIndex ? styles.active : ''}`}
+                            
+                            // --- 👇 OPTIMIZACIÓN APLICADA ---
+                            imageSizes={modalImageSizes}
+                            sizes={modalSizes}
+                            // Carga prioritaria solo para la primera imagen
+                            priority={index === 0} 
                         />
                     ))}
                     <button onClick={handleClose} className={`${styles.closeButton} ${styles.mobileOnly}`}>×</button>
