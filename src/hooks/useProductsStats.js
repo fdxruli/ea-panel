@@ -9,37 +9,54 @@ import { generateKey } from '../utils/cacheAdminUtils';
  * @param {string} productId - ID del producto
  */
 const fetchProductStats = async (productId) => {
-  // Primero intentar RPC (si existe)
+  // Intentar RPC primero
   const { data, error } = await supabase.rpc('get_product_stats_single', {
     p_product_id: productId
   });
 
-  // Si la RPC falla (devuelve null) o no existe, usar el fallback
-  if (!data && !error) { // Asumimos que si no hay data y no hay error, la RPC no devolvió nada
-    console.warn(`[Cache] RPC 'get_product_stats_single' no devolvió datos para ${productId}. Usando fallback.`);
-    
+  // --- CORRECCIÓN CRÍTICA ---
+  // Si la RPC no existe (error) O no devolvió datos, usar fallback
+  if (!data || error) {
+    if (error) {
+      console.warn(`[Cache] RPC no existe o falló (${error.message}). Usando fallback.`);
+    }
+
+    // --- VERIFICAR NOMBRES DE TABLAS ---
     const [salesData, reviewsData, favoritesData] = await Promise.all([
-      // Total vendido
       supabase
         .from('order_items')
         .select('quantity, price, orders!inner(status)')
         .eq('product_id', productId)
         .eq('orders.status', 'completado'),
-        
-      // Reviews (usando la tabla 'product_reviews' como en MyStuff.jsx)
+
+      // ⚠️ VERIFICAR: ¿Es 'reviews' o 'product_reviews'?
       supabase
-        .from('product_reviews')
+        .from('reviews') // ← O 'product_reviews'
         .select('rating')
         .eq('product_id', productId),
-        
-      // Favoritos (usando la tabla 'customer_favorites' como en MyStuff.jsx)
+
+      // ⚠️ VERIFICAR: ¿Es 'favorites' o 'customer_favorites'?
       supabase
-        .from('customer_favorites')
+        .from('favorites') // ← O 'customer_favorites'
         .select('id', { count: 'exact', head: true })
         .eq('product_id', productId)
     ]);
 
-    // Calcular stats manualmente
+    // Verificar errores en queries del fallback
+    if (salesData.error) {
+      console.error('[Cache] Error en salesData:', salesData.error);
+      throw new Error(salesData.error.message);
+    }
+    if (reviewsData.error) {
+      console.error('[Cache] Error en reviewsData:', reviewsData.error);
+      throw new Error(reviewsData.error.message);
+    }
+    if (favoritesData.error) {
+      console.error('[Cache] Error en favoritesData:', favoritesData.error);
+      throw new Error(favoritesData.error.message);
+    }
+
+    // Calcular stats
     const totalSold = salesData.data?.reduce((sum, item) => sum + item.quantity, 0) || 0;
     const totalRevenue = salesData.data?.reduce((sum, item) => sum + (item.quantity * item.price), 0) || 0;
     const avgRating = reviewsData.data?.length > 0
@@ -60,9 +77,9 @@ const fetchProductStats = async (productId) => {
       error: null
     };
   }
-  
-  // Si la RPC funcionó (o falló con error), devolver su resultado
-  return { data, error };
+
+  // RPC funcionó correctamente
+  return { data, error: null };
 };
 
 /**
