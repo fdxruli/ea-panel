@@ -7,6 +7,9 @@ import ProductModal from '../components/ProductModal';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO, { restaurantSchema } from '../components/SEO';
+import { getThumbnailUrl } from '../utils/imageUtils';
+
+// ==================== ICONOS PARA CAMBIO DE VISTA ====================
 
 const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
 const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>;
@@ -36,7 +39,7 @@ const MemoizedProductCard = memo(({
       <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <div className={styles.imageContainer}>
           <ImageWithFallback
-            src={product.image_url}
+            src={getThumbnailUrl(product.image_url, 150, 150)} // Usar la función para obtener thumbnail
             alt={`Imagen de ${product.name}`}
             // --- 3. APLICAR NUEVAS PROPS ---
             imageSizes={cardImageSizes}
