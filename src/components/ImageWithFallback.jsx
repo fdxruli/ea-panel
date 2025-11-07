@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styles from './ImageWithFallback.module.css';
 
 const PLACEHOLDER_IMAGE = 'https://placehold.co/300x200?text=Imagen+no+disponible';
@@ -8,6 +8,13 @@ const PLACEHOLDER_IMAGE = 'https://placehold.co/300x200?text=Imagen+no+disponibl
  * Añade el parámetro 'width' a la URL existente.
  */
 const getSupabaseTransformUrl = (src, width) => {
+  // --- ¡NUEVA LÍNEA! ---
+  // Si la URL ya tiene parámetros de transformación, no la modificamos.
+  if (src && (src.includes('?transform=') || src.includes('&transform='))) {
+    return src;
+  }
+  // --- FIN DE LÍNEA NUEVA ---
+
   // No transformar placeholders o URLs que ya sean inválidas
   if (!src || src.includes('placehold.co') || typeof src !== 'string') {
     return src;
@@ -24,6 +31,7 @@ const getSupabaseTransformUrl = (src, width) => {
   }
 };
 
+
 export default function ImageWithFallback({
   src,
   alt,
@@ -37,7 +45,6 @@ export default function ImageWithFallback({
   const [hasError, setHasError] = useState(!src);
   const [retries, setRetries] = useState(0);
 
-  // Reinicia el estado si la imagen de origen (src) cambia
   useEffect(() => {
     setImageSrc(src || PLACEHOLDER_IMAGE);
     setHasError(!src);
@@ -67,12 +74,14 @@ export default function ImageWithFallback({
   }
 
   // --- Lógica de SrcSet ---
-  let srcSet = null;
-  if (imageSizes && Array.isArray(imageSizes) && imageSizes.length > 0) {
-    srcSet = imageSizes
+  const srcSet = useMemo(() => {
+    if (!imageSizes || !Array.isArray(imageSizes) || imageSizes.length === 0) {
+      return null;
+    }
+    return imageSizes
       .map(width => `${getSupabaseTransformUrl(src, width)} ${width}w`)
       .join(', ');
-  }
+  }, [src, imageSizes]);
   // --- Fin Lógica ---
 
   return (
@@ -84,9 +93,8 @@ export default function ImageWithFallback({
       alt={alt}
       className={`${styles.image} ${className}`}
       onError={handleError}
-      // --- Lógica de Prioridad de Carga ---
-      loading={priority ? undefined : 'lazy'} // Quitar lazy loading si es prioritaria
-      fetchPriority={priority ? 'high' : undefined} // <-- CORREGIDO A camelCase
+      loading={priority ? 'eager' : 'lazy'} // Carga prioritaria si 'priority' es true
+      fetchPriority={priority ? 'high' : 'auto'} // Pista al navegador
       {...props}
     />
   );
