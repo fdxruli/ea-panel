@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+/* src/components/ManageImagesModal.jsx (CORREGIDO - V2) */
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './ManageImagesModal.module.css';
 import { useAlert } from '../context/AlertContext';
@@ -13,32 +14,8 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
 
-  useEffect(() => {
-    if (product) {
-      const allImages = [
-        { id: 'main', image_url: product.image_url, is_main: true },
-        ...(product.product_images || []).map(img => ({ ...img, is_main: false }))
-      ].filter(img => img.image_url);
-      setImages(allImages);
-    }
-  }, [product, isOpen]);
+  // --- INICIO DE FUNCIONES MOVIDAS ---
 
-  useEffect(() => {
-    if (!isOpen) {
-      clearAllPreviews();
-      setNotification(null);
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    return () => {
-      previewUrls.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [previewUrls]);
-
-  if (!isOpen) return null;
-
-  // Mostrar notificación temporal
   const showNotification = (message, type = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 4000);
@@ -54,6 +31,21 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
   const getFileKey = (file) => {
     return `${file.name}-${file.size}-${file.lastModified}`;
   };
+  
+  // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
+  // Hacemos esta función "estable" usando la forma funcional de setState.
+  // Ya no depende de `previewUrls`, por lo que `useCallback`
+  // devuelve la *misma* instancia de la función cada vez.
+  const clearAllPreviews = useCallback(() => {
+    setPreviewUrls(prevUrls => {
+      // Revocamos las URLs del estado anterior
+      prevUrls.forEach(url => URL.revokeObjectURL(url));
+      // Devolvemos el nuevo estado (vacío)
+      return []; 
+    });
+    setSelectedFiles([]); 
+  }, [setPreviewUrls, setSelectedFiles]); // Solo depende de setters, que son estables
+  // --- 👆 FIN DE LA CORRECCIÓN ---
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -97,19 +89,15 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
   };
 
   const removePreviewAtIndex = (index) => {
-    URL.revokeObjectURL(previewUrls[index]);
+    // Aún necesitamos la URL específica aquí, así que la leemos del estado
+    const urlToRevoke = previewUrls[index];
+    URL.revokeObjectURL(urlToRevoke);
     
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     const newPreviews = previewUrls.filter((_, i) => i !== index);
     
     setSelectedFiles(newFiles);
     setPreviewUrls(newPreviews);
-  };
-
-  const clearAllPreviews = () => {
-    previewUrls.forEach(url => URL.revokeObjectURL(url));
-    setSelectedFiles([]);
-    setPreviewUrls([]);
   };
 
   const uploadImages = async () => {
@@ -195,6 +183,36 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
     }
     setLoading(false);
   };
+  // --- FIN DE FUNCIONES MOVIDAS ---
+
+
+  useEffect(() => {
+    if (product) {
+      const allImages = [
+        { id: 'main', image_url: product.image_url, is_main: true },
+        ...(product.product_images || []).map(img => ({ ...img, is_main: false }))
+      ].filter(img => img.image_url);
+      setImages(allImages);
+    }
+  }, [product, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      clearAllPreviews(); // <-- Ahora es una función estable
+      setNotification(null);
+    }
+  }, [isOpen, clearAllPreviews]); // <-- El useEffect ya no se dispara en bucle
+
+  useEffect(() => {
+    // Esta función de limpieza sigue siendo importante
+    // Se ejecutará cuando el componente se desmonte
+    const urls = [...previewUrls];
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  if (!isOpen) return null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
