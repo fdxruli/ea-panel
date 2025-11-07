@@ -37,9 +37,7 @@ export const ProductProvider = ({ children }) => {
                 return;
             }
             const [productsRes, categoriesRes] = await Promise.all([
-                supabase.from('products').select(`*, product_images ( id, image_url )`)
-                        .eq('is_active', true)
-                        .order('name', { ascending: true }), // <-- AÑADIR ESTA LÍNEA
+                supabase.from('products').select(`*, product_images ( id, image_url )`).eq('is_active', true),
                 supabase.from('categories').select('*')
             ]);
             if (productsRes.error) throw productsRes.error;

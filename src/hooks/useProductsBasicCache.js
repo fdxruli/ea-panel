@@ -23,7 +23,7 @@ const fetchBasicProducts = async () => {
       category_id,
       is_active
     `)
-    .eq('is_active', true)
+    //.eq('is_active', true)
     .order('name');
 };
 
