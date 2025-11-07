@@ -62,8 +62,8 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         if (isScheduling) {
             const { date, hour, minute, period } = scheduleDetails;
             if (!date) {
-                 setScheduledTime(null);
-                 return;
+                setScheduledTime(null);
+                return;
             };
 
             let twentyFourHour = parseInt(hour, 10);
@@ -89,7 +89,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         if (shouldSchedule && !scheduleDetails.date) {
             const now = new Date();
             if (now.getHours() >= 19) {
-                 now.setDate(now.getDate() + 1);
+                now.setDate(now.getDate() + 1);
             }
             const defaultDate = now.toISOString().split('T')[0];
             setScheduleDetails(prev => ({ ...prev, date: defaultDate }));
@@ -125,23 +125,23 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         if (shouldSave) {
             let response;
             const dataToSave = {
-                 customer_id: customer.id,
-                 label: DOMPurify.sanitize(addressData.label),
-                 address_reference: DOMPurify.sanitize(addressData.address_reference),
-                 latitude: addressData.latitude,
-                 longitude: addressData.longitude
-             };
+                customer_id: customer.id,
+                label: DOMPurify.sanitize(addressData.label),
+                address_reference: DOMPurify.sanitize(addressData.address_reference),
+                latitude: addressData.latitude,
+                longitude: addressData.longitude
+            };
 
             if (addressId) {
                 response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId).select().single();
             } else {
-                 dataToSave.is_default = addresses.length === 0;
+                dataToSave.is_default = addresses.length === 0;
                 response = await supabase.from('customer_addresses').insert(dataToSave).select().single();
             }
 
             if (response.error) {
-                 showAlert(`Error al guardar: ${response.error.message}`);
-                 throw new Error(response.error.message);
+                showAlert(`Error al guardar: ${response.error.message}`);
+                throw new Error(response.error.message);
             } else {
                 showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
                 refetchUserData();
@@ -228,7 +228,14 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             cartItems.forEach(item => {
                 message += `• ${item.quantity}x ${item.name}\n`;
             });
-            message += `\n*Total a pagar: $${total.toFixed(2)}*\n`;
+
+            if (discount) {
+                message += `\n*Subtotal:* $${subtotal.toFixed(2)}`;
+                message += `\n*Descuento (${discount.code}):* -$${discount.amount.toFixed(2)}`;
+                message += `\n*Total a pagar: $${total.toFixed(2)}*\n`;
+            } else {
+                message += `\n*Total a pagar: $${total.toFixed(2)}*\n`;
+            }
 
             if (scheduledTime) {
                 const scheduledDate = new Date(scheduledTime);
@@ -268,7 +275,7 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
 
     const handleScheduleChange = (e) => {
         const { name, value } = e.target;
-        setScheduleDetails(prev => ({...prev, [name]: value}));
+        setScheduleDetails(prev => ({ ...prev, [name]: value }));
     }
 
 
@@ -305,14 +312,14 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                                 />
                             </ClientOnly> 
                             */}
-                            
+
                             {/* ...por nuestro nuevo StaticMap ligero */}
                             <StaticMap
-                              latitude={mapInitialPosition.lat}
-                              longitude={mapInitialPosition.lng}
-                              height={220} // La altura está definida por el CSS
+                                latitude={mapInitialPosition.lat}
+                                longitude={mapInitialPosition.lng}
+                                height={220} // La altura está definida por el CSS
                             />
-                            
+
                             <div className={styles.mapOverlay}></div>
                         </div>
                     )}
