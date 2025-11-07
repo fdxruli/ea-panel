@@ -42,8 +42,6 @@ const MemoizedProductCard = memo(({
             src={getThumbnailUrl(product.image_url, 150, 150)} // Usar la función para obtener thumbnail
             alt={`Imagen de ${product.name}`}
             // --- 3. APLICAR NUEVAS PROPS ---
-            imageSizes={cardImageSizes}
-            sizes={cardSizes}
             priority={priority} // <-- Pasar la prop
           />
         </div>
