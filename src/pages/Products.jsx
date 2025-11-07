@@ -248,8 +248,22 @@ export default function Products() {
 
             showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`, 'success');
 
-            // Invalidar caché (Realtime lo manejará automáticamente)
-            invalidate('products:basic');
+            const cached = getCached('products:basic');
+            if (cached) {
+                const updatedProducts = cached.data.map(p =>
+                    p.id === dataToUpsert.id  // <--- CORREGIDO
+                        ? { ...p, ...dataToUpsert } // <--- CORREGIDO
+                        : p
+                );
+                setCached('products:basic', updatedProducts);
+            }
+
+            // También actualizar en productsWithStats (el estado local)
+            setProductsWithStats(prev => prev.map(p =>
+                p.id === dataToUpsert.id  // <--- CORREGIDO
+                    ? { ...p, ...dataToUpsert } // <--- CORREGIDO
+                    : p
+            ));
 
             setFormModalOpen(false);
             setSelectedProduct(null);

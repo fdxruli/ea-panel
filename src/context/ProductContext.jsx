@@ -109,7 +109,7 @@ export const ProductProvider = ({ children }) => {
         } finally {
             setLoadingPrices(false);
         }
-    // --- Añadir CACHE_KEYS.SPECIAL_PRICES a dependencias si lo usas directamente ---
+        // --- Añadir CACHE_KEYS.SPECIAL_PRICES a dependencias si lo usas directamente ---
     }, [/* Dependencias originales si las había */]); // Mantener dependencias estables si es posible
 
     // --- Efecto carga inicial productos base (sin cambios) ---
@@ -120,15 +120,18 @@ export const ProductProvider = ({ children }) => {
     // --- Efecto carga precios especiales (sin cambios) ---
     useEffect(() => {
         if (!loadingProducts) {
-             fetchSpecialPrices(customerId);
+            fetchSpecialPrices(customerId);
         }
     }, [customerId, fetchSpecialPrices, loadingProducts]);
 
-    // --- COMBINAR PRECIOS (sin cambios) ---
+    // src/context/ProductContext.jsx
+
+    // --- COMBINAR PRECIOS (CON ORDENAMIENTO CORREGIDO) ---
     const productsWithAppliedPrices = useMemo(() => {
         console.log("🛠️ Applying special prices to base products...");
         if (baseProducts.length === 0) return [];
-        return baseProducts.map(product => {
+
+        const pricedProducts = baseProducts.map(product => {
             const productSpecificPrice = specialPrices.find(p => p.product_id === product.id);
             const categorySpecificPrice = !productSpecificPrice && specialPrices.find(
                 p => p.category_id === product.category_id && !p.product_id
@@ -144,7 +147,39 @@ export const ProductProvider = ({ children }) => {
             const { original_price, ...restOfProduct } = product;
             return restOfProduct;
         });
-    }, [baseProducts, specialPrices]);
+
+        // --- 👇 LÓGICA DE ORDENAMIENTO MULTI-NIVEL ---
+        return pricedProducts.sort((a, b) => {
+            // 1. Obtener nombres de categorías (usar 'Z' como fallback para ordenar al final)
+            const categoryA = categories.find(c => c.id === a.category_id)?.name || 'Z';
+            const categoryB = categories.find(c => c.id === b.category_id)?.name || 'Z';
+
+            const isAlitasA = categoryA === 'Alitas';
+            const isAlitasB = categoryB === 'Alitas';
+
+            // 2. Ordenamiento Primario: Categoría "Alitas" siempre primero.
+            if (isAlitasA && !isAlitasB) {
+                return -1; // A (Alitas) va antes que B (No Alitas)
+            }
+            if (!isAlitasA && isAlitasB) {
+                return 1; // B (Alitas) va antes que A (No Alitas)
+            }
+
+            // 3. Ordenamiento Secundario: Si ambos son "Alitas" o ambos "No Alitas",
+            //    ordenar por NOMBRE DE CATEGORÍA.
+            const categoryCompare = categoryA.localeCompare(categoryB);
+            if (categoryCompare !== 0) {
+                // "Bebidas" (B) vendrá antes que "Extras" (E)
+                return categoryCompare;
+            }
+
+            // 4. Ordenamiento Terciario: Si las categorías son iguales,
+            //    ordenar por NOMBRE DE PRODUCTO.
+            return a.name.localeCompare(b.name);
+        });
+        // --- 👆 FIN DE LA MODIFICACIÓN ---
+
+    }, [baseProducts, specialPrices, categories]); // <-- 'categories' debe estar aquí
 
     // --- CATEGORÍAS VISIBLES (sin cambios) ---
     const visibleCategories = useMemo(() => {
