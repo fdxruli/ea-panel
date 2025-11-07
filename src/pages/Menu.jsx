@@ -39,7 +39,7 @@ const MemoizedProductCard = memo(({
       <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         <div className={styles.imageContainer}>
           <ImageWithFallback
-            src={getThumbnailUrl(product.image_url, 150, 150)} // Usar la función para obtener thumbnail
+            src={getThumbnailUrl(product.image_url, 110, 110)} // Usar la función para obtener thumbnail
             alt={`Imagen de ${product.name}`}
             // --- 3. APLICAR NUEVAS PROPS ---
             priority={priority} // <-- Pasar la prop
