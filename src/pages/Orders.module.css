@@ -95,44 +95,52 @@
 }
 
 .infoSection h4 {
-    margin: 0 0 0.5rem 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary); 
+    font-size: 1rem;
+    font-weight: 600;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
 }
 
 .customerInfo {
     font-size: 1rem;
+    color: var(--text-secondary);
 }
 .customerInfo span {
-    font-weight: 500;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 0.25rem;
 }
 
 .productsList {
     list-style: none;
     padding: 0;
     margin: 0;
-    max-height: 120px;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background-color: var(--bg-primary);
 }
 .productsList li {
     display: flex;
     justify-content: space-between;
-    padding: 0.6rem 0.8rem;
-    font-size: 0.9rem;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    font-size: 1.1rem;
 }
 .productsList li:not(:last-child) {
     border-bottom: 1px solid var(--border-color);
 }
+
 .productName {
-    font-weight: 500;
+    font-weight: 1000;
+    color: var(--text-primary);
+    word-break: break-word;
 }
+
 .productQuantity {
-    color: var(--text-secondary);
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+    margin-left: 1rem;
 }
 
 .scheduledTime {
@@ -143,7 +151,12 @@
     font-weight: 600;
     text-align: center;
     font-size: 0.9rem;
+    border: 1px dashed var(--color-primary);
 }
+.scheduledTime strong {
+    color: var(--text-primary);
+}
+
 
 .cardFooter {
     display: flex;
@@ -210,9 +223,6 @@
 
 }
 
-/* ... (Estilos existentes) ... */
-
-/* Estilo para mostrar la hora programada en la tarjeta */
 .scheduledTime {
     background-color: var(--color-primary-light);
     color: var(--color-primary-dark);
