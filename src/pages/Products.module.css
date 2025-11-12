@@ -491,3 +491,190 @@
     cursor: not-allowed;
     transform: none;
 }
+
+.productFormModalLarge {
+  max-width: 800px;
+}
+
+.modalTabs {
+  display: flex;
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.tabButton {
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px; /* Alinea con el borde inferior */
+}
+
+.tabButton.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.tabContent {
+  display: none; /* Oculto por defecto */
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.tabContent.active {
+  display: flex; /* Visible cuando está activo */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.formHelp {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: -0.75rem 0 0 0;
+}
+
+.recipeBuilder {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.recipeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.recipeItem {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.recipeItem:last-child {
+  border-bottom: none;
+}
+
+.recipeItemInfo {
+  display: flex;
+  flex-direction: column;
+}
+.recipeItemInfo strong {
+  font-size: 0.95rem;
+}
+.recipeItemInfo small {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.recipeQuantityInput {
+  width: 70px;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  text-align: right;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.recipeUnit {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.recipeDeleteButton {
+  background: none;
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Toggle para "Deducir Stock" */
+.recipeDeductToggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+}
+.recipeDeductToggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.recipeDeductSlider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 22px;
+}
+.recipeDeductSlider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+.recipeDeductToggle input:checked + .recipeDeductSlider {
+  background-color: var(--color-success);
+}
+.recipeDeductToggle input:checked + .recipeDeductSlider:before {
+  transform: translateX(18px);
+}
+/* Fin Toggle */
+
+.pricingSection {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed var(--border-color);
+}
+
+.costSummary {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  margin-top: 1rem;
+}
+.costSummary strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.costSummary .negativeProfit {
+  color: var(--color-error);
+}

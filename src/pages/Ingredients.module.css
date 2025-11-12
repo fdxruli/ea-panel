@@ -1,0 +1,231 @@
+/* CREAR NUEVO ARCHIVO: src/pages/Ingredients.module.css */
+
+.container {
+  padding: 1rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  flex-grow: 1;
+}
+
+.primaryButton {
+  background-color: var(--color-primary);
+  color: white;
+}
+.primaryButton:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.secondaryButton {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.secondaryButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.ingredientsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ingredientsTable th,
+.ingredientsTable td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.ingredientsTable th {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.ingredientsTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ingredientsTable tbody tr:hover {
+  background: var(--bg-primary);
+}
+
+.ingredientName {
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.ingredientName:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.badgeStock,
+.badgeNoStock {
+  display: block;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 12px;
+  width: fit-content;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+.badgeStock {
+  background-color: var(--color-success);
+  color: white;
+}
+.badgeNoStock {
+  background-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.lowStock {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.actionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.actionButton:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.emptyMessage {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Tablet y Desktop */
+@media (min-width: 768px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 {
+    font-size: 2rem;
+  }
+  .headerActions {
+    width: auto;
+  }
+  .primaryButton,
+  .secondaryButton {
+    flex-grow: 0;
+  }
+  .searchInput {
+    max-width: 400px;
+  }
+  .actionButtons {
+    flex-direction: row;
+  }
+
+  /* Ocultar data-label en desktop */
+  .ingredientsTable td::before {
+    display: none;
+  }
+}
+
+/* Estilos de tabla responsive para móvil */
+@media (max-width: 767px) {
+  .ingredientsTable thead {
+    display: none;
+  }
+  .ingredientsTable tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .ingredientsTable td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    padding: 0.8rem;
+  }
+  .ingredientsTable td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-align: left;
+    color: var(--text-primary);
+  }
+  .ingredientsTable td:last-child {
+    border-bottom: none;
+  }
+}

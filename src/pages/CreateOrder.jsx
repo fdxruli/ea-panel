@@ -41,18 +41,18 @@ const CartItem = memo(({ item, onUpdateQuantity, onRemove, canEdit }) => {
     // ... (código existente)
     return (
         <li>
-            <ImageWithFallback src={item.image_url || 'https://placehold.co/50'} alt={item.name} className={styles.cartItemImage}/>
+            <ImageWithFallback src={item.image_url || 'https://placehold.co/50'} alt={item.name} className={styles.cartItemImage} />
             <div className={styles.cartItemInfo}>
                 <span>{item.name}</span>
                 <small>
                     {item.original_price && item.original_price !== item.price ? (
                         <><span className={styles.originalPriceSmall}>${item.original_price.toFixed(2)}</span> ${item.price.toFixed(2)}</>
-                    ) : ( `$${item.price.toFixed(2)}` )} c/u
+                    ) : (`$${item.price.toFixed(2)}`)} c/u
                 </small>
             </div>
             <div className={styles.quantityControl}>
                 <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} disabled={!canEdit} aria-label="Disminuir cantidad">-</button>
-                <input type="number" min="1" value={item.quantity} onChange={(e) => onUpdateQuantity(item.id, e.target.value)} disabled={!canEdit} aria-label={`Cantidad de ${item.name}`}/>
+                <input type="number" min="1" value={item.quantity} onChange={(e) => onUpdateQuantity(item.id, e.target.value)} disabled={!canEdit} aria-label={`Cantidad de ${item.name}`} />
                 <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} disabled={!canEdit} aria-label="Aumentar cantidad">+</button>
                 <button onClick={() => onRemove(item.id)} className={styles.removeButton} disabled={!canEdit} aria-label={`Quitar ${item.name}`}><TrashIcon /></button>
             </div>
@@ -66,7 +66,7 @@ const ProductItem = memo(({ product, onAdd, canEdit }) => {
     // ... (código existente)
     return (
         <div className={styles.productItem} onClick={() => canEdit && onAdd(product)} role="button" tabIndex={0} onKeyPress={(e) => e.key === 'Enter' && canEdit && onAdd(product)}>
-            <ImageWithFallback src={product.image_url || 'https://placehold.co/100'} alt={product.name}/>
+            <ImageWithFallback src={product.image_url || 'https://placehold.co/100'} alt={product.name} />
             <div className={styles.productInfo}>
                 <strong>{product.name}</strong>
                 {product.original_price && product.original_price !== product.price ? (
@@ -89,20 +89,20 @@ export default function CreateOrder() {
 
     // --- (PASO B) REEMPLAZAR ESTADOS ---
     // Productos básicos desde caché
-    const { 
-      data: allProductsData, 
-      isLoading: loadingProducts 
+    const {
+        data: allProductsData,
+        isLoading: loadingProducts
     } = useProductsBasicCache();
     // Clientes básicos desde caché
-    const { 
-      data: customersData, 
-      isLoading: loadingCustomers 
+    const {
+        data: customersData,
+        isLoading: loadingCustomers
     } = useCustomersBasicCache();
-    
+
     // Corrección para evitar 'null'
     const allProducts = useMemo(() => allProductsData || [], [allProductsData]);
     const customers = useMemo(() => customersData || [], [customersData]);
-    
+
     // Estado local para productos con precios especiales
     const [productsWithPrices, setProductsWithPrices] = useState([]);
     const [loadingSpecialPrices, setLoadingSpecialPrices] = useState(false); // <-- Nuevo estado
@@ -133,7 +133,7 @@ export default function CreateOrder() {
     const canEdit = hasPermission('crear-pedido.edit');
 
     // --- (PASO C) ELIMINADO: useEffect(fetchInitialData, ...) ---
-    
+
     // --- (PASO D) Modificar fetchProductsWithSpecialPrices ---
     const fetchProductsWithSpecialPrices = useCallback(async (customerId) => {
         if (!customerId) {
@@ -144,7 +144,7 @@ export default function CreateOrder() {
         setLoadingSpecialPrices(true); // <-- CAMBIADO
         try {
             const today = new Date().toISOString().split('T')[0];
-            
+
             const { data: specialPrices, error: specialPricesError } = await supabase
                 .from('special_prices')
                 .select('product_id, category_id, override_price, target_customer_ids')
@@ -284,6 +284,7 @@ export default function CreateOrder() {
             showAlert('Debes seleccionar un cliente y añadir al menos un producto.');
             return;
         }
+
         let scheduledTimestamp = null;
         if (scheduleDate || scheduleTime) {
             const datePart = scheduleDate || new Date().toISOString().split('T')[0];
@@ -296,19 +297,46 @@ export default function CreateOrder() {
             }
             scheduledTimestamp = scheduledDateObj.toISOString();
         }
+
         setIsSubmitting(true);
+
         try {
-            const { data: orderData, error: orderError } = await supabase.from('orders').insert({ customer_id: selectedCustomer.id, total_amount: cartTotal, status: 'pendiente', scheduled_for: scheduledTimestamp }).select('id, order_code, created_at').single();
-            if (orderError) throw orderError;
-            const orderItems = cart.map(item => ({ order_id: orderData.id, product_id: item.id, quantity: item.quantity, price: item.price }));
-            const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-            if (itemsError) {
-                await supabase.from('orders').delete().eq('id', orderData.id);
-                throw itemsError;
+            // --- INICIO DE LA MODIFICACIÓN ---
+
+            // 1. Mapear el carrito al formato que espera la RPC ('cart_item[]')
+            const p_cart_items = cart.map(item => ({
+                product_id: item.id,
+                quantity: item.quantity,
+                price: item.price,
+                cost: item.cost // El 'cost' se guarda al crear el producto
+            }));
+
+            // 2. Llamar a la RPC en lugar de .insert()
+            const { data: orderData, error: rpcError } = await supabase.rpc('create_order_with_stock_check', {
+                p_customer_id: selectedCustomer.id,
+                p_total_amount: cartTotal,
+                p_scheduled_for: scheduledTimestamp,
+                p_cart_items: p_cart_items
+            });
+
+            if (rpcError) {
+                // Si la RPC falla (ej: por stock), el error vendrá aquí
+                throw rpcError;
             }
-            let message = `Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
+
+            // La RPC nos devuelve el pedido creado, pero en un array
+            const newOrder = orderData[0];
+            if (!newOrder) {
+                throw new Error('La RPC no devolvió la información del pedido creado.');
+            }
+
+            // --- FIN DE LA MODIFICACIÓN ---
+
+            // 3. El resto de la lógica (notificación por WhatsApp) sigue igual
+            let message = `Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${newOrder.order_code}*\n\n`;
             cart.forEach(item => { message += `• ${item.quantity}x ${item.name}\n`; });
             message += `\n*Total a pagar: $${cartTotal.toFixed(2)}*`;
+
             if (scheduledTimestamp) {
                 const scheduledDateObj = new Date(scheduledTimestamp);
                 const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -316,14 +344,18 @@ export default function CreateOrder() {
                 const formattedDate = `${scheduledDateObj.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDateObj.toLocaleTimeString('es-MX', timeOptions)}`;
                 message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
             }
-            const clientSpecificOrderUrl = `https://ea-panel.vercel.app/mis-pedidos/${orderData.order_code}`;
+
+            const clientSpecificOrderUrl = `https://ea-panel.vercel.app/mis-pedidos/${newOrder.order_code}`;
             message += `\n\nPuedes ver el estado de tu pedido aquí:\n${clientSpecificOrderUrl}`;
+
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${selectedCustomer.phone}&text=${encodeURIComponent(message)}`;
+
             showAlert(
-                `¡Pedido #${orderData.order_code} creado! Serás redirigido a WhatsApp para notificar al cliente.`,
+                `¡Pedido #${newOrder.order_code} creado! Serás redirigido a WhatsApp para notificar al cliente.`,
                 'info',
                 () => {
                     window.open(whatsappUrl, '_blank');
+                    // Resetear el formulario
                     setStep(1);
                     setSelectedCustomer(null);
                     setCart([]);
@@ -335,13 +367,18 @@ export default function CreateOrder() {
                     setScheduleTime('');
                 }
             );
+
         } catch (error) {
-            showAlert(`Error al crear el pedido: ${error.message}`);
+            // ¡Aquí capturamos el error de stock!
+            if (error.message.includes('Stock insuficiente')) {
+                showAlert(`Error de Stock: ${error.message}`, 'error');
+            } else {
+                showAlert(`Error al crear el pedido: ${error.message}`, 'error');
+            }
         } finally {
             setIsSubmitting(false);
         }
-    }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, showAlert]);
-
+    }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, showAlert, categories]); // Asegúrate de que 'categories' esté si 'allProducts' depende de él.
 
     // --- (PASO E) AJUSTAR LOADING ---
     if (loadingCustomers || loadingProducts || loadingCategories) return <LoadingSpinner />;

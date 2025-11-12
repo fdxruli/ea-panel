@@ -235,44 +235,82 @@ export default function Products() {
 
 
     // --- (PASO J) Actualizar handleSaveProduct ---
-    const handleSaveProduct = useCallback(async (productData) => {
-        try {
-            const { total_sold, total_revenue, avg_rating, reviews_count, favorites_count, product_images, ...dataToUpsert } = productData;
+    const handleSaveProduct = useCallback(async ({ productData, recipeData }) => {
+        // 'productData' viene del modal (incluye id, name, price, cost, track_stock, etc.)
+        // 'recipeData' es el array de ingredientes (ej: [{ ingredient_id, quantity_used, ... }])
 
-            const { error } = await supabase
+        // ¡LA LÍNEA "setIsSubmitting(true);" SE ELIMINA DE AQUÍ!
+
+        try {
+            // 1. Limpiar datos del producto antes de guardar
+            const {
+                total_sold, total_revenue, avg_rating, reviews_count,
+                favorites_count, product_images, ...dataToUpsert
+            } = productData;
+
+            // 2. Guardar el producto principal (Crear o Actualizar)
+            // .select() es crucial para obtener el ID del producto guardado
+            const { data: savedProduct, error: productError } = await supabase
                 .from('products')
                 .upsert(dataToUpsert)
-                .select();
+                .select('id')
+                .single();
 
-            if (error) throw error;
+            if (productError) throw productError;
 
-            showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`, 'success');
+            const productId = savedProduct.id;
 
-            const cached = getCached('products:basic');
-            if (cached) {
-                const updatedProducts = cached.data.map(p =>
-                    p.id === dataToUpsert.id  // <--- CORREGIDO
-                        ? { ...p, ...dataToUpsert } // <--- CORREGIDO
-                        : p
-                );
-                setCached('products:basic', updatedProducts);
+            // 3. Borrar la receta antigua (transacción parte 1)
+            const { error: deleteError } = await supabase
+                .from('product_recipes')
+                .delete()
+                .eq('product_id', productId);
+
+            if (deleteError) throw deleteError;
+
+            // 4. Si hay una nueva receta, insertarla (transacción parte 2)
+            if (recipeData && recipeData.length > 0) {
+                const newRecipeItems = recipeData.map(item => ({
+                    product_id: productId,
+                    ingredient_id: item.ingredient_id,
+                    quantity_used: item.quantity_used,
+                    deduct_stock_automatically: item.deduct_stock_automatically
+                }));
+
+                const { error: insertRecipeError } = await supabase
+                    .from('product_recipes')
+                    .insert(newRecipeItems);
+
+                if (insertRecipeError) throw insertRecipeError;
             }
 
-            // También actualizar en productsWithStats (el estado local)
-            setProductsWithStats(prev => prev.map(p =>
-                p.id === dataToUpsert.id  // <--- CORREGIDO
-                    ? { ...p, ...dataToUpsert } // <--- CORREGIDO
-                    : p
-            ));
+            // 5. Éxito
+            showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`, 'success');
+
+            // Invalidar cachés para forzar recarga de datos frescos
+            invalidate('products:basic');
+            invalidate(new RegExp('^product_stats')); // Invalidar todos los stats de productos
 
             setFormModalOpen(false);
             setSelectedProduct(null);
 
+            // Opcional: Refrescar la lista de productos en el estado local si es necesario
+            // (Aunque la invalidación de caché debería manejarlo en la próxima carga)
+            // refetchProducts(); 
+
         } catch (error) {
-            console.error('Save error:', error);
-            showAlert(`Error: ${error.message}`);
+            console.error('Error al guardar el producto y su receta:', error);
+            showAlert(`Error: ${error.message}`, 'error');
+
+            // RE-LANZAMOS EL ERROR para que el 'finally' del modal sepa que algo falló
+            // y no cierre el modal (permitiendo al usuario reintentar).
+            // Opcionalmente, puedes comentar la siguiente línea si prefieres que el modal
+            // se quede abierto pero el botón "Guardar" se reactive.
+            throw error;
         }
-    }, [showAlert, invalidate]); // <-- Dependencias actualizadas
+        // ¡EL BLOQUE 'finally { setIsSubmitting(false); }' SE ELIMINA DE AQUÍ!
+
+    }, [showAlert, invalidate, setFormModalOpen, setSelectedProduct]);
     // --- FIN PASO J ---
 
     // --- (PASO K) Actualizar toggleActive ---

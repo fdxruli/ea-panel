@@ -41,6 +41,7 @@ const BusinessHours = lazy(() => import("./pages/BusinessHours.jsx"));
 const CreateOrder = lazy(() => import("./pages/CreateOrder.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Settings = lazy(() => import("./pages/Settings.jsx"));
+const Ingredients = lazy(() => import("./pages/Ingredients.jsx"));
 
 // --- Auth & Utility Pages ---
 const Login = lazy(() => import("./pages/Login.jsx"));
@@ -165,6 +166,7 @@ function App() {
                       <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
                       <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
                       <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
+                      <Route path="ingredientes" element={<PermissionWrapper permissionKey="productos.view" element={<Ingredients />} />} />
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
                   </Route>
