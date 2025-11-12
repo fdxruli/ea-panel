@@ -45,6 +45,7 @@ const adminLinks = [
   { to: "/admin/clientes", label: "Clientes", permissionKey: "clientes.view" },
   { to: "/admin/referidos", label: "Referidos", permissionKey: "referidos.view" },
   { to: "/admin/productos", label: "Productos", permissionKey: "productos.view" },
+  { to: "/admin/ingredientes", label: "Ingredientes", permissionKey: "productos.view" },
   { to: "/admin/horarios", label: "Horarios", permissionKey: "horarios.view" },
   { to: "/admin/descuentos", label: "Descuentos", permissionKey: "descuentos.view" },
   { to: "/admin/terminos", label: "Términos y Cond.", permissionKey: "terminos.view" },

@@ -18,6 +18,7 @@ const routeToGroupMap = {
   '/admin/crear-pedido': 'gestionPrincipal',
   '/admin/pedidos': 'gestionPrincipal',
   '/admin/productos': 'catalogo',
+  '/admin/ingredientes': 'catalogo',
   '/admin/special-prices': 'catalogo',
   '/admin/descuentos': 'catalogo',
   '/admin/clientes': 'clientes',
@@ -109,6 +110,7 @@ export default function Sidebar({ isSidebarOpen, closeSidebar }) {
 
         <SidebarGroup groupKey="catalogo" title="Catálogo">
           {hasPermission('productos.view') && <NavLink to="/admin/productos" className={getNavLinkClass} onClick={closeSidebar}>Productos</NavLink>}
+          {hasPermission('productos.view') && <NavLink to="/admin/ingredientes" className={getNavLinkClass} onClick={closeSidebar}>Ingredientes</NavLink>}
           {hasPermission('special-prices.view') && <NavLink to="/admin/special-prices" className={getNavLinkClass} onClick={closeSidebar}>Precios Especiales</NavLink>}
           {hasPermission('descuentos.view') && <NavLink to="/admin/descuentos" className={getNavLinkClass} onClick={closeSidebar}>Descuentos</NavLink>}
         </SidebarGroup>

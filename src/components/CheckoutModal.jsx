@@ -199,36 +199,56 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
         }
 
         setIsSubmitting(true);
+
         try {
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders').insert({
-                    customer_id: customer.id,
-                    total_amount: total,
-                    status: 'pendiente',
-                    scheduled_for: scheduledTime
-                }).select().single();
-            if (orderError) throw orderError;
+            // --- INICIO DE LA MODIFICACIÓN ---
 
-            const orderItemsToInsert = cartItems.map(item => ({ order_id: orderData.id, product_id: item.id, quantity: item.quantity, price: item.price }));
-            const { error: itemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
-            if (itemsError) throw itemsError;
+            // 1. Mapear el carrito al formato que espera la RPC
+            // Tu CartContext ya guarda el producto completo, incluyendo el 'cost'
+            const p_cart_items = cartItems.map(item => ({
+                product_id: item.id,
+                quantity: item.quantity,
+                price: item.price,
+                cost: item.cost || 0 // Usar item.cost o 0 si no está
+            }));
 
+            // 2. Llamar a la RPC
+            const { data: orderData, error: rpcError } = await supabase.rpc('create_order_with_stock_check', {
+                p_customer_id: customer.id,
+                p_total_amount: total, // El 'total' del useCart
+                p_scheduled_for: scheduledTime,
+                p_cart_items: p_cart_items
+            });
+
+            if (rpcError) {
+                // Si la RPC falla (ej: por stock), el error vendrá aquí
+                throw rpcError;
+            }
+
+            const newOrder = orderData[0];
+            if (!newOrder) {
+                throw new Error('La RPC no devolvió la información del pedido creado.');
+            }
+
+            // --- FIN DE LA MODIFICACIÓN ---
+
+            // 3. Lógica de descuento y WhatsApp (sin cambios)
             if (discount && discount.details.is_single_use) {
+                // ... (tu lógica de 'record_discount_usage' sigue igual)
                 const { error: usageError } = await supabase.rpc('record_discount_usage_and_deactivate', {
                     p_customer_id: customer.id,
                     p_discount_id: discount.details.id
                 });
-
                 if (usageError) {
                     console.error("Error al registrar y desactivar el descuento:", usageError);
                 }
             }
 
-            let message = `¡Hola! 👋 Quiero hacer el siguiente pedido:\n\n*Pedido N°: ${orderData.order_code}*\n\n`;
+            let message = `¡Hola! 👋 Quiero hacer el siguiente pedido:\n\n*Pedido N°: ${newOrder.order_code}*\n\n`;
             cartItems.forEach(item => {
                 message += `• ${item.quantity}x ${item.name}\n`;
             });
-
+            // ... (el resto de tu lógica para armar el mensaje de WhatsApp) ...
             if (discount) {
                 message += `\n*Subtotal:* $${subtotal.toFixed(2)}`;
                 message += `\n*Descuento (${discount.code}):* -$${discount.amount.toFixed(2)}`;
@@ -236,7 +256,6 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
             } else {
                 message += `\n*Total a pagar: $${total.toFixed(2)}*\n`;
             }
-
             if (scheduledTime) {
                 const scheduledDate = new Date(scheduledTime);
                 const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -244,7 +263,6 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
                 const formattedDate = `${scheduledDate.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDate.toLocaleTimeString('es-MX', timeOptions)}`;
                 message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
             }
-
             message += `\n*Datos del cliente:*\n*Nombre:* ${customer?.name}\n`;
             if (selectedAddress?.address_reference) {
                 message += `*Referencia de domicilio:* ${selectedAddress.address_reference}`;
@@ -267,7 +285,13 @@ export default function CheckoutModal({ phone, onClose, mode = 'checkout' }) {
 
         } catch (error) {
             console.error("Error al procesar el pedido:", error);
-            showAlert(`Hubo un error al crear tu pedido: ${error.message}`);
+            // ¡Aquí capturamos el error de stock!
+            if (error.message.includes('Stock insuficiente')) {
+                // Damos un mensaje amigable al cliente
+                showAlert(`¡Oops! Alguien se llevó el último. ${error.message}`, 'error');
+            } else {
+                showAlert(`Hubo un error al crear tu pedido: ${error.message}`, 'error');
+            }
         } finally {
             setIsSubmitting(false);
         }
