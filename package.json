@@ -1,5 +1,5 @@
 {
-  "name": "admin-panel",
+  "name": "lanzo-pos-react",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,36 +7,33 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "dependencies": {
-    "@react-google-maps/api": "^2.20.7",
-    "@supabase/supabase-js": "^2.57.4",
-    "async-mutex": "^0.5.0",
-    "browser-image-compression": "^2.0.2",
-    "chart.js": "^4.5.0",
-    "dompurify": "^3.2.7",
-    "firebase": "^12.4.0",
-    "qrcode.react": "^4.2.0",
-    "react": "^19.1.1",
-    "react-chartjs-2": "^5.3.0",
-    "react-dom": "^19.1.1",
-    "react-helmet-async": "^2.0.5",
-    "react-leaflet": "^5.0.0",
-    "react-router-dom": "^7.9.1",
-    "vite-plugin-svgr": "^4.5.0"
+    "@fingerprintjs/fingerprintjs": "^5.0.1",
+    "@supabase/supabase-js": "^2.86.0",
+    "lucide-react": "^0.553.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hot-toast": "^2.6.0",
+    "react-router-dom": "^7.9.6",
+    "react-virtualized-auto-sizer": "^1.0.26",
+    "react-window": "^2.2.3",
+    "react-zxing": "^2.1.0",
+    "zod": "^4.1.13",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@eslint/js": "^9.33.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^5.0.0",
-    "eslint": "^9.33.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^16.3.0",
-    "rollup-plugin-visualizer": "^6.0.5",
-    "vite": "^7.1.2",
-    "vite-plugin-pwa": "^1.1.0"
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "vite": "^7.2.2",
+    "vitest": "^4.0.14"
   }
 }
