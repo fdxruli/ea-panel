@@ -8,6 +8,7 @@ import { useBusinessHours } from '../context/BusinessHoursContext';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO, { restaurantSchema } from '../components/SEO';
 import { getThumbnailUrl } from '../utils/imageUtils';
+import { useSearchParams } from 'react-router-dom';
 
 // ==================== ICONOS PARA CAMBIO DE VISTA ====================
 
@@ -16,6 +17,17 @@ const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 
 const LAYOUT_STORAGE_KEY = 'product-layout-preference';
 
+const createSlug = (text) => {
+    return text
+      .toString()
+      .toLowerCase()
+      .normalize("NFD") // Descompone acentos (á -> a)
+      .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
+      .trim()
+      .replace(/\s+/g, '-') // Reemplaza espacios con guiones
+      .replace(/[^\w\-]+/g, '') // Elimina caracteres no alfanuméricos
+      .replace(/\-\-+/g, '-'); // Reemplaza múltiples guiones por uno solo
+  };
 // ==================== COMPONENTE PRODUCT CARD MEMOIZADO (MODIFICADO) ====================
 const MemoizedProductCard = memo(({
   product,
@@ -74,11 +86,49 @@ MemoizedProductCard.displayName = 'MemoizedProductCard';
 export default function Menu() {
   const { products, categories, loading, error } = useProducts();
   const { addToCart, showToast } = useCart();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'grid');
   const [flyingImages, setFlyingImages] = useState([]);
   const { isOpen: isBusinessOpen } = useBusinessHours();
+
+  useEffect(() => {
+    const productParam = searchParams.get('product'); // Esto ahora puede ser un ID o un Slug
+
+    if (productParam && products.length > 0) {
+      // Intentamos encontrar por ID (compatibilidad antigua) O por Slug (nuevo nombre bonito)
+      const productFound = products.find(p =>
+        p.id.toString() === productParam || createSlug(p.name) === productParam
+      );
+
+      if (productFound) {
+        if (!selectedProduct || selectedProduct.id !== productFound.id) {
+          setSelectedProduct(productFound);
+        }
+      }
+    } else if (!productParam && selectedProduct) {
+      setSelectedProduct(null);
+    }
+  }, [searchParams, products]);
+
+  const handleOpenProduct = useCallback((product) => {
+    setSelectedProduct(product);
+
+    // Aquí usamos el SLUG en lugar del ID para la URL
+    setSearchParams(prev => {
+      prev.set('product', createSlug(product.name)); // <--- CAMBIO CLAVE
+      return prev;
+    });
+  }, [setSearchParams]);
+
+  const handleCloseProduct = useCallback(() => {
+    setSelectedProduct(null);
+    setSearchParams(prev => {
+      prev.delete('product');
+      return prev;
+    });
+  }, [setSearchParams]);
 
   useEffect(() => {
     localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
@@ -171,19 +221,19 @@ export default function Menu() {
               layout={layout}
               isBusinessOpen={isBusinessOpen}
               handleAddToCart={handleAddToCart}
-              setSelectedProduct={setSelectedProduct}
-              // --- 5. AÑADIR PROP 'priority' ---
-              // Carga prioritaria para las primeras 4 imágenes (las más visibles)
+              setSelectedProduct={handleOpenProduct}
               priority={index < 4}
             />
           )) : <p>No se encontraron productos.</p>}
         </div>
 
-        <ProductModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onAddToCart={handleAddToCart}
-        />
+        {selectedProduct && (
+          <ProductModal
+            product={selectedProduct}
+            onClose={handleCloseProduct} // Asegúrate que esta sea tu función que limpia la URL
+            onAddToCart={handleAddToCart}
+          />
+        )}
       </div>
     </>
   );

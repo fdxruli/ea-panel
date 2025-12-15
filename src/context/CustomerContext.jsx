@@ -155,7 +155,7 @@ export const CustomerProvider = ({ children }) => {
     if (existingCustomer) {
       customerData = customer;
     } else if (name) {
-      customerData = await registerNewCustomer(name, phoneToSave);
+      customerData = await registerNewCustomer(phoneToSave, name);
       if (customerData) {
         setCustomer(customerData);
         setPhone(phoneToSave);
