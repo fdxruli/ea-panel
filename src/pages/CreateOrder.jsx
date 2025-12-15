@@ -38,7 +38,6 @@ function useDebounce(value, delay = 300) {
 
 // ==================== COMPONENTES MEMOIZADOS (Sin cambios) ====================
 const CartItem = memo(({ item, onUpdateQuantity, onRemove, canEdit }) => {
-    // ... (código existente)
     return (
         <li>
             <ImageWithFallback src={item.image_url || 'https://placehold.co/50'} alt={item.name} className={styles.cartItemImage} />
@@ -86,17 +85,17 @@ export default function CreateOrder() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
     const [step, setStep] = useState(1);
+    const [newCustomerCountryCode, setNewCustomerCountryCode] = useState('+52');
 
-    // --- (PASO B) REEMPLAZAR ESTADOS ---
-    // Productos básicos desde caché
     const {
         data: allProductsData,
         isLoading: loadingProducts
     } = useProductsBasicCache();
-    // Clientes básicos desde caché
+
     const {
         data: customersData,
-        isLoading: loadingCustomers
+        isLoading: loadingCustomers,
+        refetch: refetchCustomers
     } = useCustomersBasicCache();
 
     // Corrección para evitar 'null'
@@ -211,12 +210,11 @@ export default function CreateOrder() {
         });
     }, [productsWithPrices, debouncedProductSearch, categoryFilter]);
 
-    // ... (El resto del componente: handleCreateCustomer, handlers de carrito, cartTotal, y handlePlaceOrder no cambian) ...
-    // ... (Omitidos por brevedad, son idénticos al archivo original) ...
     const handleCreateCustomer = useCallback(async () => {
         if (!canEdit) return;
         const cleanName = DOMPurify.sanitize(newCustomer.name.trim());
         const cleanPhone = DOMPurify.sanitize(newCustomer.phone.trim().replace(/\D/g, ''));
+
         if (!cleanName || !cleanPhone) {
             showAlert('El nombre y el teléfono son obligatorios.');
             return;
@@ -225,29 +223,40 @@ export default function CreateOrder() {
             showAlert('El teléfono debe tener 10 dígitos.');
             return;
         }
+
+        // Combinar Lada + Teléfono
+        const finalPhone = `${newCustomerCountryCode}${cleanPhone}`;
+
         setIsSubmitting(true);
         try {
-            const { data: existingCustomer, error: checkError } = await supabase.from('customers').select('id').eq('phone', cleanPhone).maybeSingle();
+            // Verificar existencia usando el número completo
+            const { data: existingCustomer, error: checkError } = await supabase.from('customers').select('id').eq('phone', finalPhone).maybeSingle();
             if (checkError) throw checkError;
+
             if (existingCustomer) {
                 showAlert('Ya existe un cliente con este número de teléfono.');
                 setIsSubmitting(false);
                 return;
             }
-            const { data, error } = await supabase.from('customers').insert({ name: cleanName, phone: cleanPhone }).select().single();
+
+            // Guardar con Lada
+            const { data, error } = await supabase.from('customers').insert({ name: cleanName, phone: finalPhone }).select().single();
             if (error) throw error;
+
             showAlert('Cliente creado con éxito.');
-            setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+            refetchCustomers(); // Actualizar caché
+
             setSelectedCustomer(data);
             setStep(2);
             setIsCreatingCustomer(false);
             setNewCustomer({ name: '', phone: '' });
+            setNewCustomerCountryCode('+52'); // Resetear a default
         } catch (error) {
             showAlert(`Error al crear cliente: ${error.message}`);
         } finally {
             setIsSubmitting(false);
         }
-    }, [canEdit, newCustomer, showAlert]);
+    }, [canEdit, newCustomer, newCustomerCountryCode, showAlert, refetchCustomers]);
 
     const addToCart = useCallback((product) => {
         if (!canEdit || !selectedCustomer) return;
@@ -618,21 +627,36 @@ export default function CreateOrder() {
                             </div>
                             <div className={styles.formGroup}>
                                 <label htmlFor="new-customer-phone">
-                                    Número de Teléfono (10 dígitos)
+                                    Número de Teléfono
                                 </label>
-                                <input
-                                    id="new-customer-phone"
-                                    type="tel"
-                                    maxLength="10"
-                                    pattern="\d{10}"
-                                    title="Ingresa 10 dígitos numéricos"
-                                    value={newCustomer.phone}
-                                    onChange={e => setNewCustomer({
-                                        ...newCustomer,
-                                        phone: e.target.value.replace(/\D/g, '')
-                                    })}
-                                    required
-                                />
+                                {/* Usamos la nueva clase contenedora */}
+                                <div className={styles.phoneContainer}>
+                                    <select
+                                        value={newCustomerCountryCode}
+                                        onChange={(e) => setNewCustomerCountryCode(e.target.value)}
+                                        className={styles.countrySelect} // <--- AQUI aplicamos la clase nueva
+                                    >
+                                        <option value="+52">🇲🇽 +52</option>
+                                        <option value="+1">🇺🇸 +1</option>
+                                    </select>
+
+                                    <input
+                                        id="new-customer-phone"
+                                        type="tel"
+                                        maxLength="10"
+                                        pattern="\d{10}"
+                                        placeholder="10 dígitos"
+                                        title="Ingresa 10 dígitos numéricos"
+                                        value={newCustomer.phone}
+                                        onChange={e => setNewCustomer({
+                                            ...newCustomer,
+                                            phone: e.target.value.replace(/\D/g, '')
+                                        })}
+                                        required
+                                        // Asegúrate que el input tenga su clase si la necesita, o déjalo como estaba
+                                        style={{ flex: 1 }}
+                                    />
+                                </div>
                             </div>
                             <div className={styles.modalActions}>
                                 <button
@@ -640,6 +664,7 @@ export default function CreateOrder() {
                                     onClick={() => {
                                         setIsCreatingCustomer(false);
                                         setNewCustomer({ name: '', phone: '' });
+                                        setNewCustomerCountryCode('+52');
                                     }}
                                     className="admin-button-secondary"
                                 >

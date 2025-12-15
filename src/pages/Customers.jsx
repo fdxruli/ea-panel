@@ -246,11 +246,30 @@ const CustomerFormModal = memo(({ isOpen, onClose, onSave, customer = null }) =>
   // ... (código existente, omitido por brevedad) ...
   const { showAlert } = useAlert();
   const [formData, setFormData] = useState({ name: '', phone: '' });
+  const [countryCode, setCountryCode] = useState('+52');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (customer) { setFormData({ name: customer.name || '', phone: customer.phone || '' }); }
-    else { setFormData({ name: '', phone: '' }); }
+    if (customer) {
+      let phone = customer.phone || '';
+      let code = '+52';
+
+      // Detectar lada existente para separar en el formulario
+      if (phone.startsWith('+52')) {
+        code = '+52';
+        phone = phone.substring(3);
+      } else if (phone.startsWith('+1')) {
+        code = '+1';
+        phone = phone.substring(2);
+      }
+      // Si el número antiguo no tiene lada (ej: 10 dígitos), asumimos +52 y dejamos el número tal cual
+
+      setFormData({ name: customer.name || '', phone: phone });
+      setCountryCode(code);
+    } else {
+      setFormData({ name: '', phone: '' });
+      setCountryCode('+52');
+    }
   }, [customer, isOpen]);
 
   if (!isOpen) return null;
@@ -258,29 +277,36 @@ const CustomerFormModal = memo(({ isOpen, onClose, onSave, customer = null }) =>
   const handleSubmit = async (e) => {
     e.preventDefault();
     const cleanName = DOMPurify.sanitize(formData.name.trim());
+    // Limpiamos el teléfono de cualquier caracter no numérico
     const cleanPhone = DOMPurify.sanitize(formData.phone.trim().replace(/\D/g, ''));
+
     if (!cleanName || !cleanPhone) {
       showAlert('El nombre y el teléfono son obligatorios.');
       return;
     }
     if (cleanPhone.length !== 10) {
-      showAlert('El teléfono debe tener 10 dígitos.');
+      showAlert('El número debe tener 10 dígitos (sin contar la lada).');
       return;
     }
+
+    // Combinamos Lada + Número para guardar en la BD
+    const finalPhone = `${countryCode}${cleanPhone}`;
+
     setIsSubmitting(true);
     try {
       if (customer) {
-        const { error } = await supabase.from('customers').update({ name: cleanName, phone: cleanPhone }).eq('id', customer.id);
+        // Al actualizar, se guardará con el nuevo formato +52...
+        const { error } = await supabase.from('customers').update({ name: cleanName, phone: finalPhone }).eq('id', customer.id);
         if (error) throw error;
         showAlert('Cliente actualizado con éxito.', 'success');
       } else {
-        const { data: existing } = await supabase.from('customers').select('id').eq('phone', cleanPhone).maybeSingle();
+        const { data: existing } = await supabase.from('customers').select('id').eq('phone', finalPhone).maybeSingle();
         if (existing) {
           showAlert('Ya existe un cliente con este teléfono.');
           setIsSubmitting(false);
           return;
         }
-        const { error } = await supabase.from('customers').insert({ name: cleanName, phone: cleanPhone });
+        const { error } = await supabase.from('customers').insert({ name: cleanName, phone: finalPhone });
         if (error) throw error;
         showAlert('Cliente creado con éxito.', 'success');
       }
@@ -292,17 +318,50 @@ const CustomerFormModal = memo(({ isOpen, onClose, onSave, customer = null }) =>
       setIsSubmitting(false);
     }
   };
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.formModal} onClick={(e) => e.stopPropagation()}>
         <button className={styles.closeButton} onClick={onClose}>✕</button>
         <h2>{customer ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
         <form onSubmit={handleSubmit}>
-          <div className={styles.formGroup}><label htmlFor="name">Nombre Completo *</label><input id="name" type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} required /></div>
-          <div className={styles.formGroup}><label htmlFor="phone">Teléfono (10 dígitos) *</label><input id="phone" type="tel" maxLength="10" pattern="\d{10}" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }))} required /></div>
+          <div className={styles.formGroup}>
+            <label htmlFor="name">Nombre Completo *</label>
+            <input id="name" type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} required />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="phone">Teléfono *</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <select
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                style={{ width: '110px', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+              >
+                <option value="+52">🇲🇽 +52</option>
+                <option value="+1">🇺🇸 +1</option>
+                {/* Puedes agregar más ladas aquí */}
+              </select>
+              <input
+                id="phone"
+                type="tel"
+                maxLength="10"
+                placeholder="10 dígitos"
+                pattern="\d{10}"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }))}
+                required
+                style={{ flex: 1 }}
+              />
+            </div>
+            <small style={{ color: '#666', fontSize: '0.85em' }}>Se guardará como: {countryCode}{formData.phone}</small>
+          </div>
+
           <div className={styles.modalActions}>
             <button type="button" onClick={onClose} className={styles.cancelButton}>Cancelar</button>
-            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : (customer ? 'Actualizar' : 'Crear')}</button>
+            <button type="submit" className={styles.submitButton} disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando...' : (customer ? 'Actualizar' : 'Crear')}
+            </button>
           </div>
         </form>
       </div>
@@ -681,7 +740,7 @@ export default function Customers() {
         `)
         .eq('customer_id', customerId)
         .order('created_at', { ascending: false })
-        //.limit(20);
+      //.limit(20);
       if (error) throw error;
 
       setCached(ordersKey, data, 2 * 60 * 1000); // Cache 2 minutos

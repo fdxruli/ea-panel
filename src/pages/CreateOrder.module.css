@@ -12,6 +12,34 @@
     align-items: flex-start;
 }
 
+.phoneContainer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.countrySelect {
+  /* Copia aquí los mismos estilos que tengan tus inputs normales */
+  width: 110px;
+  padding: 0.8rem; /* Ajusta según tus inputs */
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color, #ccc); 
+  background-color: var(--bg-color, #1a1a1a); /* O el color de fondo de tus inputs */
+  color: var(--text-color, #ffffff);
+  font-size: 1rem;
+  cursor: pointer;
+  
+  /* Asegura que no se vea diferente en modo oscuro */
+  color-scheme: light dark; 
+}
+
+.countrySelect:focus {
+  outline: 2px solid var(--primary-color, #007bff);
+  border-color: transparent;
+  background-color: var(--bg-color, #1a1a1a); /* Fondo oscuro */
+  color: var(--text-color, #ffffff); /* Texto claro */
+}
+
 /* En pantallas más grandes, volver a 2 columnas */
 @media (min-width: 900px) {
     .mainGrid {

@@ -8,34 +8,34 @@ const CUSTOMER_PHONE_KEY = 'customer_phone';
 export const useCustomer = () => useContext(CustomerContext);
 
 const generateUniqueReferralCode = async (name, phone) => {
-    const namePart = name.substring(0, 2).toUpperCase();
-    const phonePart = phone.slice(-2);
-    const baseCode = `EA-${namePart}-${phonePart}`;
+  const namePart = name.substring(0, 2).toUpperCase();
+  const phonePart = phone.slice(-2);
+  const baseCode = `EA-${namePart}-${phonePart}`;
 
-    let finalCode = baseCode;
-    let counter = 1;
-    let isUnique = false;
+  let finalCode = baseCode;
+  let counter = 1;
+  let isUnique = false;
 
-    while (!isUnique) {
-        const { data, error } = await supabase
-            .from('customers')
-            .select('id')
-            .eq('referral_code', finalCode)
-            .maybeSingle();
+  while (!isUnique) {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('referral_code', finalCode)
+      .maybeSingle();
 
-        if (error) {
-            console.error("Error checking for unique code:", error);
-            return `EA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        }
-
-        if (!data) {
-            isUnique = true;
-        } else {
-            counter++;
-            finalCode = `${baseCode}-${counter}`;
-        }
+    if (error) {
+      console.error("Error checking for unique code:", error);
+      return `EA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     }
-    return finalCode;
+
+    if (!data) {
+      isUnique = true;
+    } else {
+      counter++;
+      finalCode = `${baseCode}-${counter}`;
+    }
+  }
+  return finalCode;
 };
 
 
@@ -48,78 +48,94 @@ export const CustomerProvider = ({ children }) => {
   const [onSuccessCallback, setOnSuccessCallback] = useState(null);
 
   const [isCustomerLoading, setIsCustomerLoading] = useState(true);
-  
+
   const checkAndLogin = async (phoneToLogin) => {
     if (!phoneToLogin || phoneToLogin.length < 10) {
       console.warn("Intento de login con número inválido.");
       return false;
     }
-    
+
     try {
-        const { data, error } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('phone', phoneToLogin)
-            .maybeSingle();
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', phoneToLogin)
+        .maybeSingle();
 
-        if (error) {
-            console.error('Error en checkAndLogin (buscando cliente):', error);
-            clearPhone();
-            return false;
-        }
-
-        if (data) {
-            setCustomer(data);
-            localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToLogin);
-            setPhone(phoneToLogin);
-            
-            if (isPhoneModalOpen) {
-                setPhoneModalOpen(false);
-            }
-            if (onSuccessCallback) {
-                onSuccessCallback();
-                setOnSuccessCallback(null);
-            }
-            return true;
-        } else {
-            console.log("Cliente no encontrado, limpiando sesión.");
-            clearPhone();
-            return false;
-        }
-
-    } catch (error) {
-        console.error('Error inesperado en checkAndLogin:', error);
+      if (error) {
+        console.error('Error en checkAndLogin (buscando cliente):', error);
         clearPhone();
         return false;
+      }
+
+      if (data) {
+        setCustomer(data);
+        localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToLogin);
+        setPhone(phoneToLogin);
+
+        if (isPhoneModalOpen) {
+          setPhoneModalOpen(false);
+        }
+        if (onSuccessCallback) {
+          onSuccessCallback();
+          setOnSuccessCallback(null);
+        }
+        return true;
+      } else {
+        console.log("Cliente no encontrado, limpiando sesión.");
+        clearPhone();
+        return false;
+      }
+
+    } catch (error) {
+      console.error('Error inesperado en checkAndLogin:', error);
+      clearPhone();
+      return false;
     }
   };
 
   useEffect(() => {
     const initializeSession = async () => {
       const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
-      
+
       if (savedPhone) {
         await checkAndLogin(savedPhone);
       }
-      
+
       setIsCustomerLoading(false);
     };
 
     initializeSession();
   }, []);
-  
 
-  const registerNewCustomer = async (name, phone) => {
-    const referralCode = await generateUniqueReferralCode(name, phone);
+
+  const registerNewCustomer = async (phone, name, inviterCode = null) => {
+
+    const newClientReferralCode = await generateUniqueReferralCode(name, phone);
+
+    let referrerId = null;
+
+    if (inviterCode) {
+      const { data: referrerData } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('referral_code', inviterCode)
+        .maybeSingle();
+
+      if (referrerData) {
+        referrerId = referrerData.id;
+      }
+    }
 
     const { data: newCustomer, error } = await supabase
       .from('customers')
       .insert({
         name: name,
         phone: phone,
-        referral_code: referralCode,
-        referral_level_id: 1,
-        referrals_count: 0 
+        referral_code: newClientReferralCode,
+        referrer_id: referrerId,
+        referral_count: 0,
+        has_made_first_purchase: false
       })
       .select()
       .single();
@@ -137,26 +153,26 @@ export const CustomerProvider = ({ children }) => {
     const existingCustomer = await checkAndLogin(phoneToSave);
 
     if (existingCustomer) {
-        customerData = customer;
+      customerData = customer;
     } else if (name) {
-        customerData = await registerNewCustomer(name, phoneToSave);
-        if (customerData) {
-            setCustomer(customerData);
-            setPhone(phoneToSave);
-            localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
-        }
-    } else {
+      customerData = await registerNewCustomer(name, phoneToSave);
+      if (customerData) {
+        setCustomer(customerData);
         setPhone(phoneToSave);
         localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
+      }
+    } else {
+      setPhone(phoneToSave);
+      localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
     }
-    
+
     if (customerData && isPhoneModalOpen) {
-        setPhoneModalOpen(false);
-        if (onSuccessCallback) {
-            onSuccessCallback();
-            setOnSuccessCallback(null);
-        }
-        return true;
+      setPhoneModalOpen(false);
+      if (onSuccessCallback) {
+        onSuccessCallback();
+        setOnSuccessCallback(null);
+      }
+      return true;
     }
     return false;
   }
