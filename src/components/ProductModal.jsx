@@ -35,6 +35,11 @@ const HeartIcon = ({ isFavorite }) => (
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
     </svg>
 );
+const ShareIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+    </svg>
+);
 
 const AverageRating = ({ reviews }) => {
     if (!reviews || reviews.length === 0) {
@@ -95,11 +100,9 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     ].filter(Boolean) : [];
 
     useEffect(() => {
-        if (product) {
-            const timer = setTimeout(() => setIsAnimating(true), 10);
-            return () => clearTimeout(timer);
-        }
-    }, [product]);
+        const timer = setTimeout(() => setIsAnimating(true), 10);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         if (product) {
@@ -133,7 +136,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     const handleClose = useCallback(() => {
         setIsAnimating(false);
-        setTimeout(onClose, 600);
+        setTimeout(onClose, 280);
     }, [onClose]);
 
 
@@ -144,6 +147,17 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const handlePrevImage = () => {
         setCurrentImageIndex(prev => (prev - 1 + galleryImages.length) % galleryImages.length);
     };
+
+    const handleShare = async () => {
+        const url = window.location.href;
+        try {
+            await navigator.clipboard.writeText(url);
+            showAlert("¡Enlace del producto copiado al portapapeles!");
+        } catch (err) {
+            console.error("Error copiando al portapapeles:", err);
+            showAlert("No se pudo copiar el enlace. Por favor, intenta manualmente.");
+        }
+    }
 
     const startCarousel = useCallback(() => {
         stopCarousel();
@@ -162,7 +176,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         startCarousel();
         return () => stopCarousel();
     }, [startCarousel]);
-    
+
     if (!product) return null;
 
     const handleAddToCartClick = (event) => {
@@ -236,7 +250,6 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     return (
         <div className={`${styles.overlay} ${isAnimating ? styles.open : ''}`} onClick={handleClose}>
             <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''}`} onClick={(e) => e.stopPropagation()}>
-                <button onClick={handleClose} className={`${styles.closeButton} ${styles.desktopOnly}`}>×</button>
                 <div
                     className={styles.galleryContainer}
                     onMouseEnter={stopCarousel}
@@ -254,15 +267,14 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             src={src || 'https://placehold.co/400'}
                             alt={`${product.name} ${index + 1}`}
                             className={`${styles.productImage} ${index === currentImageIndex ? styles.active : ''}`}
-                            
+
                             // --- 👇 OPTIMIZACIÓN APLICADA ---
                             imageSizes={modalImageSizes}
                             sizes={modalSizes}
                             // Carga prioritaria solo para la primera imagen
-                            priority={index === 0} 
+                            priority={index === 0}
                         />
                     ))}
-                    <button onClick={handleClose} className={`${styles.closeButton} ${styles.mobileOnly}`}>×</button>
                 </div>
 
                 <div className={styles.productDetails}>
@@ -271,9 +283,28 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                             <h2 className={styles.productName}>{product.name}</h2>
                             <AverageRating reviews={productReviews} />
                         </div>
-                        <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.mobileOnly}`}>
-                            <HeartIcon isFavorite={isFavorite} />
-                        </button>
+
+                        <div style={{ display: 'flex', gap: '10px' }}>
+
+                            {/* Botón de Compartir */}
+                            <button
+                                type="button"
+                                onClick={handleShare}
+                                className={styles.favoriteButton}
+                                title="Copiar enlace del producto"
+                            >
+                                <ShareIcon />
+                            </button>
+
+                            {/* Botón de Favorito (Solo móvil) */}
+                            <button
+                                type="button"
+                                onClick={handleToggleFavorite}
+                                className={`${styles.favoriteButton} ${styles.mobileOnly}`}
+                            >
+                                <HeartIcon isFavorite={isFavorite} />
+                            </button>
+                        </div>
                     </div>
 
                     <div className={styles.tabButtons}>

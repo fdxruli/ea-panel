@@ -34,15 +34,49 @@
 .modalContent h2 { margin-top: 0; font-size: 1.8rem; color: var(--text-primary); }
 .modalContent p { margin-bottom: 1.5rem; line-height: 1.6; color: var(--text-secondary); }
 
-.phoneInput, .nameInput {
+.nameInput {
   text-align: center;
   font-size: 1.1rem;
   padding: 14px;
 }
-.phoneInput:focus, .nameInput:focus {
+.nameInput:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.phoneInputGroup {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 5px; /* Espacio antes del mensaje de "Verificando" */
+}
+
+.countrySelect {
+  width: auto;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Ajustamos el input para que tome el resto del espacio */
+.phoneInput {
+  flex: 1;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  /* Eliminamos el margin-bottom original si lo tenía, ya que lo maneja el grupo */
+  margin-bottom: 0; 
+}
+
+.phoneInput:focus,
+.countrySelect:focus {
+  border-color: #ff4757;
 }
 
 .error {
