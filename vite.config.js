@@ -1,37 +1,45 @@
+// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  plugins: [react()],
-  build: {
-    // 1. Optimización de compilación
-    target: 'esnext', // Código moderno más ligero y rápido
-    minify: 'esbuild', // Minificación rápida
-    cssCodeSplit: true, // CSS por separado para no bloquear renderizado
-    
-    // 2. Reporte de tamaño (para que veas qué pesa más)
-    chunkSizeWarningLimit: 1000, // Aumentamos el límite de aviso a 1MB
-
-    rollupOptions: {
-      output: {
-        // 3. ESTRATEGIA MANUAL DE CHUNKS (La clave de la optimización)
-        manualChunks: {
-          // Núcleo de React (siempre necesario)
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          
-          // Estado y Utilidades (Zustand es ligero, pero mejor separado)
-          'vendor-utils': ['zustand'],
-          
-          // Iconos (Suelen pesar mucho si se importan todos)
-          'vendor-icons': ['lucide-react'],
-          
-          // Supabase (Pesado, mejor aislarlo)
-          'vendor-supabase': ['@supabase/supabase-js'],
-          
-          // Escáner y Gráficos (Solo se cargan cuando se usan)
-          'vendor-heavy': ['react-zxing'] // Si usas recharts u otros pesados
-        }
-      }
-    }
-  }
+  plugins: [
+    react(),
+    svgr(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      
+      // Configuración de injectManifest
+      injectManifest: {
+        // Patrones de archivos a incluir en el precache
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}',
+          // Incluir ambos manifiestos en el precache
+          '**/manifest-*.json'
+        ],
+        // Archivos grandes que quieres incluir (opcional)
+        maximumFileSizeToCacheInBytes: 3000000, // 3MB
+        // Directorio de salida (por defecto es 'dist')
+        globDirectory: 'dist',
+      },
+      
+      // Opciones de desarrollo
+      devOptions: {
+        enabled: true,
+        type: 'module',
+        navigateFallback: 'index.html',
+      },
+      
+      // Workbox para sourcemaps (opcional, útil para debugging)
+      workbox: {
+        sourcemap: true,
+      },
+      
+    }),
+  ],
 });
