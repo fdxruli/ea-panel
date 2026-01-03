@@ -23,8 +23,50 @@
   margin: 0 auto;
   padding: 0 1rem;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-login-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+
+  /* ✅ CORREGIDO: Usar las variables de tu tema */
+  color: var(--color-primary);
+  /* Se vuelve oscuro en tema claro y BLANCO en tema oscuro */
+  border: 1px solid var(--border-color);
+  /* Borde gris suave que se adapta al tema */
+
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  margin-left: auto;
+  /* Mantiene el botón a la derecha */
+  transition: all 0.3s ease;
+}
+
+/* Efecto Hover */
+.mobile-login-btn:active,
+.mobile-login-btn:hover {
+  background-color: var(--bg-primary); /* Usa el fondo primario para un contraste sutil */
+  color: var(--color-primary);         /* Al tocarlo, se ilumina con el color de tu marca */
+  border-color: var(--color-primary);
+}
+
+.mobile-login-btn svg {
+  display: block;
+}
+
+/* Ocultar en escritorio (pantallas mayores a 768px, ajusta según tus breakpoints) */
+@media (min-width: 768px) {
+  .mobile-login-trigger {
+    display: none;
+  }
 }
 
 .logo {
