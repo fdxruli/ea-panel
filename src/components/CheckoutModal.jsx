@@ -29,6 +29,11 @@ const EditIcon = () => (
         <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
     </svg>
 );
+const CheckIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#10b981' }}>
+        <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+);
 
 export default function CheckoutModal({ phone, onClose }) {
     const { showAlert } = useAlert();
@@ -38,6 +43,26 @@ export default function CheckoutModal({ phone, onClose }) {
 
     // Estados de flujo
     const [mode, setMode] = useState('selection');
+
+    const [rememberGuest, setRememberGuest] = useState(false);
+    const [isAutoDispatching, setIsAutoDispatching] = useState(false);
+    useEffect(() => {
+        const guestPref = localStorage.getItem('guest_preference');
+
+        // Si no hay usuario logueado, existe la preferencia y el modal está recién montado
+        if (!customer && guestPref === 'true' && !isSubmitting && !isAutoDispatching) {
+            console.log(' Detectado modo invitado recurrente. Enviando pedido...');
+            setIsAutoDispatching(true);
+
+            // Ejecutamos el pedido inmediatamente
+            handlePlaceOrder(true)
+                .catch(err => {
+                    console.error("Error en auto-despacho:", err);
+                    // Si falla (ej. cerrado), quitamos el modo auto para que vea el error y las opciones
+                    setIsAutoDispatching(false);
+                });
+        }
+    }, [customer]);
 
     // Estados para usuarios logueados
     const [selectedAddress, setSelectedAddress] = useState(null);
@@ -247,6 +272,18 @@ export default function CheckoutModal({ phone, onClose }) {
         }
     };
 
+    const handleGuestSelection = () => {
+        if (rememberGuest) {
+            localStorage.setItem('guest_preference', 'true');
+        }
+        handlePlaceOrder(true);
+    };
+
+    const resetGuestPreference = () => {
+        localStorage.removeItem('guest_preference');
+        setMode('selection');
+    };
+
     // 🔧 FIX 4: Función unificada de pedido con validación robusta
     const handlePlaceOrder = async (isGuest) => {
         // Validaciones generales
@@ -276,6 +313,10 @@ export default function CheckoutModal({ phone, onClose }) {
         setIsSubmitting(true);
 
         try {
+            if (isGuest && rememberGuest && !isAutoDispatching){
+                localStorage.setItem('guest_preference', 'true');
+            }
+            
             const targetCustomerId = isGuest ? GUEST_CUSTOMER_ID : customer.id;
 
             // Preparar items para RPC
@@ -375,27 +416,92 @@ export default function CheckoutModal({ phone, onClose }) {
 
     // RENDERIZADO DEL CONTENIDO
     const renderContent = () => {
+        // --- NUEVO: Pantalla de carga para auto-despacho ---
+        if (isAutoDispatching) {
+            return (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                    {/* Puedes poner aquí tu <LoadingSpinner /> si lo tienes importado */}
+                    <div className={styles.spinner} style={{ margin: '0 auto 20px' }}></div>
+                    <h3>Conectando con WhatsApp...</h3>
+                    <p>Estamos generando tu pedido automáticamente.</p>
+                </div>
+            );
+        }
         // MODO 1: Selección (invitado vs login)
         if (mode === 'selection' && !customer) {
             return (
-                <div className={styles.selectionContainer}>
-                    <h3>¿Cómo quieres continuar?</h3>
-                    <p>Puedes agregar tu número para acumular puntos, guardar direcciones y pedir más rápido.</p>
+                <div className={styles.selectionRoot}>
+                    <div className={styles.header}>
+                        <h3>¿Cómo prefieres pedir?</h3>
+                        <button onClick={() => onClose()} className={styles.closeButton}>×</button>
+                    </div>
 
-                    <div className={styles.selectionButtons}>
-                        <button
-                            className={styles.btnGuest}
-                            onClick={() => setMode('guest_confirm')}
-                        >
-                            Pedir como Invitado (Rápido)
-                        </button>
+                    <div className={styles.selectionContainer}>
 
-                        <button
-                            className={styles.btnAuth}
-                            onClick={() => onClose(true)}
-                        >
-                            Ingresar mi número (Ganar Puntos)
-                        </button>
+                        {/* Opción B: INVITADO (Simple) */}
+                        <div className={`${styles.optionCard} ${styles.guestCard}`}>
+                            <div className={styles.guestContent}>
+                                <div className={styles.guestInfo}>
+                                    <span className={styles.guestLabel}>Pedido Rápido</span>
+                                    <span className={styles.guestTotal}>Total: ${total.toFixed(2)}</span>
+                                </div>
+
+                                <button
+                                    className={styles.btnGuest}
+                                    onClick={() => {
+                                        handlePlaceOrder(true);
+                                    }}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Procesando...' : 'Pedir sin registrarse'}
+                                </button>
+                                {/* --- INICIO AGREGADO: Checkbox Recordar --- */}
+                                <div style={{ margin: '10px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#555' }}>
+                                    <input
+                                        type="checkbox"
+                                        id="chkRememberGuest"
+                                        checked={rememberGuest}
+                                        onChange={(e) => setRememberGuest(e.target.checked)}
+                                        style={{ cursor: 'pointer', accentColor: 'var(--primary-color)' }}
+                                    />
+                                    <label htmlFor="chkRememberGuest" style={{ cursor: 'pointer', userSelect: 'none' }}>
+                                        Recordar mi elección
+                                    </label>
+                                </div>
+                                {/* --- FIN AGREGADO --- */}
+                            </div>
+                        </div>
+
+                        {/* Separador con estilo */}
+                        <div className={styles.dividerText}>
+                            <span>o continúa como invitado</span>
+                        </div>
+
+                        {/* Opción A: USUARIO REGISTRADO (Destacada) */}
+                        <div className={`${styles.optionCard} ${styles.memberCard}`}>
+                            <div className={styles.cardBadge}>Recomendado</div>
+                            <h4 className={styles.cardTitle}>Soy Cliente Frecuente</h4>
+
+                            <ul className={styles.benefitsList}>
+                                <li>
+                                    <CheckIcon /> <span>Guarda tus <strong>direcciones</strong> (Casa, Trabajo)</span>
+                                </li>
+                                <li>
+                                    <CheckIcon /> <span>Realiza pedidos en <strong>segundos</strong></span>
+                                </li>
+                                <li>
+                                    <CheckIcon /> <span>Accede a <strong>promociones</strong> exclusivas</span>
+                                </li>
+                            </ul>
+
+                            <button
+                                className={styles.btnAuth}
+                                onClick={() => onClose(true)}
+                            >
+                                Ingresar con mi número
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             );
@@ -410,6 +516,7 @@ export default function CheckoutModal({ phone, onClose }) {
                         <button onClick={onClose} className={styles.closeButton}>×</button>
                     </div>
 
+                    {/* ... (el contenido del resumen se queda igual) ... */}
                     <div className={styles.summaryCompact}>
                         <p>Total a pagar: <strong>${total.toFixed(2)}</strong></p>
                         <p className={styles.helperText}>
@@ -425,7 +532,30 @@ export default function CheckoutModal({ phone, onClose }) {
                         >
                             {isSubmitting ? 'Procesando...' : 'Enviar Pedido por WhatsApp'}
                         </button>
-                        <button className={styles.backButton} onClick={() => setMode('selection')}>Atrás</button>
+
+                        {/* CAMBIO: Modificamos el botón de atrás para que permita resetear si estaba recordado */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '100%' }}>
+                            <button className={styles.backButton} onClick={() => setMode('selection')}>
+                                Atrás
+                            </button>
+
+                            {/* --- NUEVO: Enlace para usuarios que recordaron su opción pero quieren registrarse --- */}
+                            {localStorage.getItem('guest_preference') === 'true' && (
+                                <button
+                                    onClick={resetGuestPreference}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#666',
+                                        textDecoration: 'underline',
+                                        fontSize: '0.85rem',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    ¿Quieres registrarte o iniciar sesión?
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             );
