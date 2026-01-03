@@ -4,7 +4,7 @@ import styles from './StaticMap.module.css'; // Crearemos este archivo a continu
 
 // Asegúrate de que esta variable de entorno esté disponible para el cliente (VITE_...)
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
+ 
 const StaticMap = ({ latitude, longitude, width = 400, height = 300 }) => {
   if (!latitude || !longitude) {
     return <div className={styles.mapContainer}>Ubicación no disponible.</div>;
