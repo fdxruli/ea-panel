@@ -1,5 +1,5 @@
 // src/components/CheckoutModal.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCart } from '../context/CartContext';
 import styles from './CheckoutModal.module.css';
@@ -46,20 +46,29 @@ export default function CheckoutModal({ phone, onClose }) {
 
     const [rememberGuest, setRememberGuest] = useState(false);
     const [isAutoDispatching, setIsAutoDispatching] = useState(false);
+    
+    // ✅ NUEVO: Ref para evitar doble ejecución del auto-despacho
+    const hasAutoDispatchedRef = useRef(false);
+
+    // ✅ CORREGIDO: useEffect con protección contra doble ejecución
     useEffect(() => {
         const guestPref = localStorage.getItem('guest_preference');
 
-        // Si no hay usuario logueado, existe la preferencia y el modal está recién montado
-        if (!customer && guestPref === 'true' && !isSubmitting && !isAutoDispatching) {
-            console.log(' Detectado modo invitado recurrente. Enviando pedido...');
+        if (!customer && 
+            guestPref === 'true' && 
+            !isSubmitting && 
+            !isAutoDispatching &&
+            !hasAutoDispatchedRef.current) { // ← Verificar que no se haya ejecutado
+            
+            console.log('🔄 Detectado modo invitado recurrente. Enviando pedido...');
             setIsAutoDispatching(true);
+            hasAutoDispatchedRef.current = true; // ← Marcar como ejecutado
 
-            // Ejecutamos el pedido inmediatamente
             handlePlaceOrder(true)
                 .catch(err => {
                     console.error("Error en auto-despacho:", err);
-                    // Si falla (ej. cerrado), quitamos el modo auto para que vea el error y las opciones
                     setIsAutoDispatching(false);
+                    hasAutoDispatchedRef.current = false; // ← Resetear en caso de error
                 });
         }
     }, [customer]);
@@ -81,14 +90,12 @@ export default function CheckoutModal({ phone, onClose }) {
         period: 'pm'
     });
 
-    // 🔧 FIX 1: Detección automática de modo al montar
     useEffect(() => {
         if (customer) {
             setMode('logged_user_confirm');
         }
     }, [customer]);
 
-    // 🔧 FIX 2: Gestión mejorada de direcciones con sincronización
     useEffect(() => {
         console.log('🔄 [useEffect-Addresses] Disparado:', {
             hasCustomer: !!customer,
@@ -98,7 +105,6 @@ export default function CheckoutModal({ phone, onClose }) {
         });
 
         if (customer && addresses && addresses.length > 0) {
-            // Prioridad 1: Dirección recién guardada
             if (justSavedAddressId) {
                 const newlySavedAddress = addresses.find(a => a.id === justSavedAddressId);
 
@@ -106,13 +112,12 @@ export default function CheckoutModal({ phone, onClose }) {
                     console.log('✅ Seleccionando dirección recién guardada:', newlySavedAddress.label);
                     setSelectedAddress(newlySavedAddress);
                     setJustSavedAddressId(null);
-                    return; // ⚠️ Salir temprano
+                    return;
                 } else {
                     console.warn('⚠️ No se encontró la dirección recién guardada en la lista');
                 }
             }
 
-            // Prioridad 2: Si no hay selección, usar default o primera
             if (!selectedAddress) {
                 const defaultAddress = addresses.find(a => a.is_default) || addresses[0];
                 console.log('✅ Seleccionando dirección default/primera:', defaultAddress.label);
@@ -124,7 +129,6 @@ export default function CheckoutModal({ phone, onClose }) {
         }
     }, [customer, addresses, justSavedAddressId]);
 
-    // Efecto para calcular fecha programada (sin cambios)
     useEffect(() => {
         if (isScheduling) {
             const { date, hour, minute, period } = scheduleDetails;
@@ -149,7 +153,6 @@ export default function CheckoutModal({ phone, onClose }) {
         }
     }, [isScheduling, scheduleDetails]);
 
-    // Handlers (sin cambios)
     const handleToggleScheduling = (shouldSchedule) => {
         setIsScheduling(shouldSchedule);
         if (shouldSchedule && !scheduleDetails.date) {
@@ -182,14 +185,12 @@ export default function CheckoutModal({ phone, onClose }) {
 
         try {
             if (shouldSave) {
-                // Validación de seguridad
                 if (!customer?.id) {
                     throw new Error('No se detectó tu sesión de usuario.');
                 }
 
-                // 🔧 CONSTRUIR PAYLOAD PARA SUPABASE
                 const dataToSave = {
-                    customer_id: customer.id, // ✅ Ahora lo agregamos AQUÍ
+                    customer_id: customer.id,
                     label: addressData.label,
                     address_reference: addressData.address_reference,
                     latitude: addressData.latitude,
@@ -201,7 +202,6 @@ export default function CheckoutModal({ phone, onClose }) {
                 let response;
 
                 if (addressId) {
-                    // ACTUALIZAR dirección existente
                     response = await supabase
                         .from('customer_addresses')
                         .update(dataToSave)
@@ -209,7 +209,6 @@ export default function CheckoutModal({ phone, onClose }) {
                         .select()
                         .single();
                 } else {
-                    // INSERTAR nueva dirección
                     dataToSave.is_default = (addresses?.length || 0) === 0;
 
                     response = await supabase
@@ -230,13 +229,11 @@ export default function CheckoutModal({ phone, onClose }) {
                     throw new Error('No se recibieron datos de la dirección guardada.');
                 }
 
-                // ✅ ACTUALIZACIÓN INMEDIATA DEL ESTADO
                 console.log('✅ [handleSaveAddress] Actualizando estado local...');
 
                 setSelectedAddress(response.data);
                 setJustSavedAddressId(response.data.id);
 
-                // 🔄 REFETCH en segundo plano (no bloqueante)
                 console.log('🔄 [handleSaveAddress] Refetch en background...');
                 refetchUserData().catch(err => {
                     console.warn('⚠️ Refetch falló (no crítico):', err);
@@ -245,7 +242,6 @@ export default function CheckoutModal({ phone, onClose }) {
                 showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`, 'success');
 
             } else {
-                // DIRECCIÓN TEMPORAL (sin guardar en DB)
                 console.log('📍 [handleSaveAddress] Usando dirección temporal');
 
                 const temporaryAddress = {
@@ -261,14 +257,13 @@ export default function CheckoutModal({ phone, onClose }) {
                 showAlert('Dirección temporal seleccionada para este pedido.', 'info');
             }
 
-            // ✅ CERRAR MODAL Y LIMPIAR
             setAddressModalOpen(false);
             setAddressToEdit(null);
 
         } catch (error) {
             console.error('💥 [handleSaveAddress] ERROR CRÍTICO:', error);
             showAlert(`Error al guardar: ${error.message}`, 'error');
-            throw error; // ⚠️ Re-lanzar para que AddressModal no cierre
+            throw error;
         }
     };
 
@@ -284,15 +279,13 @@ export default function CheckoutModal({ phone, onClose }) {
         setMode('selection');
     };
 
-    // 🔧 FIX 4: Función unificada de pedido con validación robusta
+    // ✅ CORREGIDO: Función de pedido con protección contra guardado duplicado
     const handlePlaceOrder = async (isGuest) => {
-        // Validaciones generales
         if (!isBusinessOpen) {
             showAlert("Lo sentimos, el negocio está cerrado y no podemos procesar tu pedido ahora.");
             return;
         }
 
-        // Validaciones específicas para usuarios registrados
         if (!isGuest) {
             if (!customer) {
                 showAlert("Error: No se detectó tu sesión. Por favor, recarga la página.");
@@ -313,13 +306,14 @@ export default function CheckoutModal({ phone, onClose }) {
         setIsSubmitting(true);
 
         try {
-            if (isGuest && rememberGuest && !isAutoDispatching){
+            // ✅ CORREGIDO: Solo guardar preferencia si NO está en auto-despacho
+            if (isGuest && rememberGuest && !isAutoDispatching) {
+                console.log('💾 Guardando preferencia de invitado (desde clic manual)');
                 localStorage.setItem('guest_preference', 'true');
             }
             
             const targetCustomerId = isGuest ? GUEST_CUSTOMER_ID : customer.id;
 
-            // Preparar items para RPC
             const p_cart_items = cartItems.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
@@ -327,7 +321,6 @@ export default function CheckoutModal({ phone, onClose }) {
                 cost: item.cost || 0
             }));
 
-            // Llamar a RPC
             const { data: orderData, error: rpcError } = await supabase.rpc('create_order_with_stock_check', {
                 p_customer_id: targetCustomerId,
                 p_total_amount: total,
@@ -338,7 +331,6 @@ export default function CheckoutModal({ phone, onClose }) {
             if (rpcError) throw rpcError;
             const newOrder = orderData[0];
 
-            // Lógica de descuentos (solo para registrados)
             if (!isGuest && discount && discount.details?.is_single_use) {
                 await supabase.rpc('record_discount_usage_and_deactivate', {
                     p_customer_id: customer.id,
@@ -346,11 +338,9 @@ export default function CheckoutModal({ phone, onClose }) {
                 });
             }
 
-            // Construcción del mensaje de WhatsApp
             let message = "";
 
             if (isGuest) {
-                // Formato simple para invitados
                 message = `Hola, quiero hacer el siguiente pedido:\n`;
                 message += `*Pedido N°: ${newOrder.order_code}*\n\n`;
                 cartItems.forEach(item => {
@@ -358,7 +348,6 @@ export default function CheckoutModal({ phone, onClose }) {
                 });
                 message += `\n*Total: $${total.toFixed(2)}*`;
             } else {
-                // Formato robusto para registrados
                 message = `¡Hola! 👋 Quiero confirmar mi pedido:\n`;
                 message += `*Pedido N°: ${newOrder.order_code}*\n\n`;
                 cartItems.forEach(item => {
@@ -387,7 +376,6 @@ export default function CheckoutModal({ phone, onClose }) {
                 }
             }
 
-            // Enviar y limpiar
             const businessNumber = BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
 
@@ -416,18 +404,16 @@ export default function CheckoutModal({ phone, onClose }) {
 
     // RENDERIZADO DEL CONTENIDO
     const renderContent = () => {
-        // --- NUEVO: Pantalla de carga para auto-despacho ---
         if (isAutoDispatching) {
             return (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-                    {/* Puedes poner aquí tu <LoadingSpinner /> si lo tienes importado */}
                     <div className={styles.spinner} style={{ margin: '0 auto 20px' }}></div>
                     <h3>Conectando con WhatsApp...</h3>
                     <p>Estamos generando tu pedido automáticamente.</p>
                 </div>
             );
         }
-        // MODO 1: Selección (invitado vs login)
+
         if (mode === 'selection' && !customer) {
             return (
                 <div className={styles.selectionRoot}>
@@ -437,8 +423,6 @@ export default function CheckoutModal({ phone, onClose }) {
                     </div>
 
                     <div className={styles.selectionContainer}>
-
-                        {/* Opción B: INVITADO (Simple) */}
                         <div className={`${styles.optionCard} ${styles.guestCard}`}>
                             <div className={styles.guestContent}>
                                 <div className={styles.guestInfo}>
@@ -446,16 +430,18 @@ export default function CheckoutModal({ phone, onClose }) {
                                     <span className={styles.guestTotal}>Total: ${total.toFixed(2)}</span>
                                 </div>
 
+                                {/* ✅ CORREGIDO: Botón con protección contra doble clic */}
                                 <button
                                     className={styles.btnGuest}
                                     onClick={() => {
+                                        if (isSubmitting) return; // ← Prevenir doble clic
                                         handlePlaceOrder(true);
                                     }}
                                     disabled={isSubmitting}
                                 >
                                     {isSubmitting ? 'Procesando...' : 'Pedir sin registrarse'}
                                 </button>
-                                {/* --- INICIO AGREGADO: Checkbox Recordar --- */}
+
                                 <div style={{ margin: '10px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#555' }}>
                                     <input
                                         type="checkbox"
@@ -468,16 +454,13 @@ export default function CheckoutModal({ phone, onClose }) {
                                         Recordar mi elección
                                     </label>
                                 </div>
-                                {/* --- FIN AGREGADO --- */}
                             </div>
                         </div>
 
-                        {/* Separador con estilo */}
                         <div className={styles.dividerText}>
                             <span>o continúa como invitado</span>
                         </div>
 
-                        {/* Opción A: USUARIO REGISTRADO (Destacada) */}
                         <div className={`${styles.optionCard} ${styles.memberCard}`}>
                             <div className={styles.cardBadge}>Recomendado</div>
                             <h4 className={styles.cardTitle}>Soy Cliente Frecuente</h4>
@@ -501,13 +484,11 @@ export default function CheckoutModal({ phone, onClose }) {
                                 Ingresar con mi número
                             </button>
                         </div>
-
                     </div>
                 </div>
             );
         }
 
-        // MODO 2: Confirmación invitado
         if (mode === 'guest_confirm') {
             return (
                 <div className={styles.confirmContainer}>
@@ -516,7 +497,6 @@ export default function CheckoutModal({ phone, onClose }) {
                         <button onClick={onClose} className={styles.closeButton}>×</button>
                     </div>
 
-                    {/* ... (el contenido del resumen se queda igual) ... */}
                     <div className={styles.summaryCompact}>
                         <p>Total a pagar: <strong>${total.toFixed(2)}</strong></p>
                         <p className={styles.helperText}>
@@ -533,13 +513,11 @@ export default function CheckoutModal({ phone, onClose }) {
                             {isSubmitting ? 'Procesando...' : 'Enviar Pedido por WhatsApp'}
                         </button>
 
-                        {/* CAMBIO: Modificamos el botón de atrás para que permita resetear si estaba recordado */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '100%' }}>
                             <button className={styles.backButton} onClick={() => setMode('selection')}>
                                 Atrás
                             </button>
 
-                            {/* --- NUEVO: Enlace para usuarios que recordaron su opción pero quieren registrarse --- */}
                             {localStorage.getItem('guest_preference') === 'true' && (
                                 <button
                                     onClick={resetGuestPreference}
@@ -561,7 +539,6 @@ export default function CheckoutModal({ phone, onClose }) {
             );
         }
 
-        // MODO 3: Confirmación usuario registrado
         if (mode === 'logged_user_confirm') {
             const mapInitialPosition = selectedAddress ? { lat: selectedAddress.latitude, lng: selectedAddress.longitude } : null;
 
