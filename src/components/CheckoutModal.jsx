@@ -11,7 +11,7 @@ import { useBusinessHours } from '../context/BusinessHoursContext';
 import { GUEST_CUSTOMER_ID, BUSINESS_PHONE } from '../config/constantes';
 import DOMPurify from 'dompurify';
 
-// --- ICONOS ---
+// Iconos (sin cambios)
 const MapPinIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -31,19 +31,15 @@ const EditIcon = () => (
 );
 
 export default function CheckoutModal({ phone, onClose }) {
-    // --- CONTEXTOS ---
     const { showAlert } = useAlert();
     const { cartItems, total, subtotal, discount, clearCart, toggleCart, closeCart } = useCart();
     const { customer, addresses, refetch: refetchUserData } = useUserData();
     const { isOpen: isBusinessOpen } = useBusinessHours();
 
-    // --- ESTADOS DE FLUJO ---
-    // 'selection': Pantalla inicial (¿Invitado o Login?)
-    // 'guest_confirm': Pantalla simple para invitados
-    // 'logged_user_confirm': Pantalla robusta para usuarios (Mapas, Direcciones, Horarios)
+    // Estados de flujo
     const [mode, setMode] = useState('selection');
 
-    // --- ESTADOS DE LA LÓGICA ROBUSTA (Solo se usan si hay customer) ---
+    // Estados para usuarios logueados
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -60,38 +56,57 @@ export default function CheckoutModal({ phone, onClose }) {
         period: 'pm'
     });
 
-    // --- EFECTO: DETECTAR USUARIO LOGUEADO ---
-    // Si entra un usuario ya registrado, saltamos directo al modo robusto
+    // 🔧 FIX 1: Detección automática de modo al montar
     useEffect(() => {
         if (customer) {
             setMode('logged_user_confirm');
         }
     }, [customer]);
 
-    // --- EFECTO: GESTIÓN DE DIRECCIONES (Lógica Robusta) ---
+    // 🔧 FIX 2: Gestión mejorada de direcciones con sincronización
     useEffect(() => {
+        console.log('🔄 [useEffect-Addresses] Disparado:', {
+            hasCustomer: !!customer,
+            addressesCount: addresses?.length || 0,
+            justSavedAddressId,
+            currentSelectedId: selectedAddress?.id
+        });
+
         if (customer && addresses && addresses.length > 0) {
+            // Prioridad 1: Dirección recién guardada
             if (justSavedAddressId) {
                 const newlySavedAddress = addresses.find(a => a.id === justSavedAddressId);
+
                 if (newlySavedAddress) {
+                    console.log('✅ Seleccionando dirección recién guardada:', newlySavedAddress.label);
                     setSelectedAddress(newlySavedAddress);
                     setJustSavedAddressId(null);
+                    return; // ⚠️ Salir temprano
+                } else {
+                    console.warn('⚠️ No se encontró la dirección recién guardada en la lista');
                 }
-            } else if (!selectedAddress) {
+            }
+
+            // Prioridad 2: Si no hay selección, usar default o primera
+            if (!selectedAddress) {
                 const defaultAddress = addresses.find(a => a.is_default) || addresses[0];
+                console.log('✅ Seleccionando dirección default/primera:', defaultAddress.label);
                 setSelectedAddress(defaultAddress);
             }
+        } else if (customer && addresses && addresses.length === 0) {
+            console.log('⚠️ Usuario sin direcciones guardadas');
+            setSelectedAddress(null);
         }
-    }, [customer, addresses, justSavedAddressId, selectedAddress]);
+    }, [customer, addresses, justSavedAddressId]);
 
-    // --- EFECTO: CALCULAR FECHA PROGRAMADA (Lógica Robusta) ---
+    // Efecto para calcular fecha programada (sin cambios)
     useEffect(() => {
         if (isScheduling) {
             const { date, hour, minute, period } = scheduleDetails;
             if (!date) {
                 setScheduledTime(null);
                 return;
-            };
+            }
 
             let twentyFourHour = parseInt(hour, 10);
             if (period === 'pm' && twentyFourHour < 12) {
@@ -103,14 +118,13 @@ export default function CheckoutModal({ phone, onClose }) {
 
             const finalDate = new Date(`${date}T00:00:00`);
             finalDate.setHours(twentyFourHour, parseInt(minute, 10));
-
             setScheduledTime(finalDate.toISOString());
         } else {
             setScheduledTime(null);
         }
     }, [isScheduling, scheduleDetails]);
 
-    // --- HANDLERS (Lógica Robusta) ---
+    // Handlers (sin cambios)
     const handleToggleScheduling = (shouldSchedule) => {
         setIsScheduling(shouldSchedule);
         if (shouldSchedule && !scheduleDetails.date) {
@@ -134,70 +148,125 @@ export default function CheckoutModal({ phone, onClose }) {
     };
 
     const handleSaveAddress = async (addressData, shouldSave, addressId) => {
-        if (shouldSave) {
-            let response;
-            const dataToSave = {
-                customer_id: customer.id,
-                label: DOMPurify.sanitize(addressData.label),
-                address_reference: DOMPurify.sanitize(addressData.address_reference),
-                latitude: addressData.latitude,
-                longitude: addressData.longitude
-            };
+        console.log('🔍 [handleSaveAddress] INICIO:', {
+            shouldSave,
+            addressId,
+            addressData,
+            customerIdFromContext: customer?.id
+        });
 
-            if (addressId) {
-                // Actualizar existente
-                response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId).select().single();
-            } else {
-                // Insertar nueva
-                dataToSave.is_default = addresses.length === 0;
-                response = await supabase.from('customer_addresses').insert(dataToSave).select().single();
-            }
-
-            if (response.error) {
-                showAlert(`Error al guardar: ${response.error.message}`);
-                throw new Error(response.error.message);
-            } else {
-                showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`);
-
-                // --- CORRECCIÓN AQUÍ ---
-                // 1. Actualizamos inmediatamente la dirección seleccionada con la respuesta del servidor.
-                // Esto hace que el cambio sea visualmente instantáneo sin esperar al "refetch".
-                if (response.data) {
-                    setSelectedAddress(response.data);
-                    setJustSavedAddressId(response.data.id); // Mantenemos esto para asegurar consistencia cuando llegue el refetch
+        try {
+            if (shouldSave) {
+                // Validación de seguridad
+                if (!customer?.id) {
+                    throw new Error('No se detectó tu sesión de usuario.');
                 }
 
-                // 2. Pedimos refrescar la lista en segundo plano
-                await refetchUserData();
+                // 🔧 CONSTRUIR PAYLOAD PARA SUPABASE
+                const dataToSave = {
+                    customer_id: customer.id, // ✅ Ahora lo agregamos AQUÍ
+                    label: addressData.label,
+                    address_reference: addressData.address_reference,
+                    latitude: addressData.latitude,
+                    longitude: addressData.longitude
+                };
+
+                console.log('📤 [handleSaveAddress] Enviando a Supabase:', dataToSave);
+
+                let response;
+
+                if (addressId) {
+                    // ACTUALIZAR dirección existente
+                    response = await supabase
+                        .from('customer_addresses')
+                        .update(dataToSave)
+                        .eq('id', addressId)
+                        .select()
+                        .single();
+                } else {
+                    // INSERTAR nueva dirección
+                    dataToSave.is_default = (addresses?.length || 0) === 0;
+
+                    response = await supabase
+                        .from('customer_addresses')
+                        .insert(dataToSave)
+                        .select()
+                        .single();
+                }
+
+                console.log('📥 [handleSaveAddress] Respuesta de Supabase:', response);
+
+                if (response.error) {
+                    console.error('❌ [handleSaveAddress] ERROR:', response.error);
+                    throw new Error(response.error.message);
+                }
+
+                if (!response.data) {
+                    throw new Error('No se recibieron datos de la dirección guardada.');
+                }
+
+                // ✅ ACTUALIZACIÓN INMEDIATA DEL ESTADO
+                console.log('✅ [handleSaveAddress] Actualizando estado local...');
+
+                setSelectedAddress(response.data);
+                setJustSavedAddressId(response.data.id);
+
+                // 🔄 REFETCH en segundo plano (no bloqueante)
+                console.log('🔄 [handleSaveAddress] Refetch en background...');
+                refetchUserData().catch(err => {
+                    console.warn('⚠️ Refetch falló (no crítico):', err);
+                });
+
+                showAlert(`Dirección ${addressId ? 'actualizada' : 'guardada'} con éxito.`, 'success');
+
+            } else {
+                // DIRECCIÓN TEMPORAL (sin guardar en DB)
+                console.log('📍 [handleSaveAddress] Usando dirección temporal');
+
+                const temporaryAddress = {
+                    id: `temp_${Date.now()}`,
+                    label: addressData.label,
+                    address_reference: addressData.address_reference,
+                    latitude: addressData.latitude,
+                    longitude: addressData.longitude,
+                    isTemporary: true
+                };
+
+                setSelectedAddress(temporaryAddress);
+                showAlert('Dirección temporal seleccionada para este pedido.', 'info');
             }
-        } else {
-            // Dirección temporal (sin cambios aquí)
-            const temporaryAddress = {
-                id: `temp_${Date.now()}`,
-                ...addressData,
-                isTemporary: true
-            };
-            setSelectedAddress(temporaryAddress);
-            showAlert('Dirección temporal seleccionada para este pedido.');
+
+            // ✅ CERRAR MODAL Y LIMPIAR
+            setAddressModalOpen(false);
+            setAddressToEdit(null);
+
+        } catch (error) {
+            console.error('💥 [handleSaveAddress] ERROR CRÍTICO:', error);
+            showAlert(`Error al guardar: ${error.message}`, 'error');
+            throw error; // ⚠️ Re-lanzar para que AddressModal no cierre
         }
-        setAddressModalOpen(false);
-        setAddressToEdit(null);
     };
 
-    // --- PROCESAR PEDIDO (UNIFICADO) ---
+    // 🔧 FIX 4: Función unificada de pedido con validación robusta
     const handlePlaceOrder = async (isGuest) => {
-        // 1. Validaciones Generales
+        // Validaciones generales
         if (!isBusinessOpen) {
             showAlert("Lo sentimos, el negocio está cerrado y no podemos procesar tu pedido ahora.");
             return;
         }
 
-        // 2. Validaciones Específicas de Usuario Registrado
+        // Validaciones específicas para usuarios registrados
         if (!isGuest) {
+            if (!customer) {
+                showAlert("Error: No se detectó tu sesión. Por favor, recarga la página.");
+                return;
+            }
+
             if (!selectedAddress) {
                 showAlert("Por favor, selecciona o añade una dirección de entrega.");
                 return;
             }
+
             if (isScheduling && !scheduledTime) {
                 showAlert("Por favor, selecciona una fecha y hora válidas para programar tu pedido.");
                 return;
@@ -209,7 +278,7 @@ export default function CheckoutModal({ phone, onClose }) {
         try {
             const targetCustomerId = isGuest ? GUEST_CUSTOMER_ID : customer.id;
 
-            // 3. Preparar items para RPC
+            // Preparar items para RPC
             const p_cart_items = cartItems.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
@@ -217,7 +286,7 @@ export default function CheckoutModal({ phone, onClose }) {
                 cost: item.cost || 0
             }));
 
-            // 4. Llamar a la RPC (Gestión de Stock Centralizada)
+            // Llamar a RPC
             const { data: orderData, error: rpcError } = await supabase.rpc('create_order_with_stock_check', {
                 p_customer_id: targetCustomerId,
                 p_total_amount: total,
@@ -228,7 +297,7 @@ export default function CheckoutModal({ phone, onClose }) {
             if (rpcError) throw rpcError;
             const newOrder = orderData[0];
 
-            // 5. Lógica de Descuentos (Solo Registrados)
+            // Lógica de descuentos (solo para registrados)
             if (!isGuest && discount && discount.details?.is_single_use) {
                 await supabase.rpc('record_discount_usage_and_deactivate', {
                     p_customer_id: customer.id,
@@ -236,33 +305,25 @@ export default function CheckoutModal({ phone, onClose }) {
                 });
             }
 
-            // ==========================================
-            // 6. CONSTRUCCIÓN DEL MENSAJE DE WHATSAPP
-            // ==========================================
+            // Construcción del mensaje de WhatsApp
             let message = "";
 
             if (isGuest) {
-                // --- FORMATO SIMPLE (INVITADO) ---
+                // Formato simple para invitados
                 message = `Hola, quiero hacer el siguiente pedido:\n`;
                 message += `*Pedido N°: ${newOrder.order_code}*\n\n`;
-
                 cartItems.forEach(item => {
                     message += `• ${item.quantity}x ${item.name}\n`;
                 });
-
                 message += `\n*Total: $${total.toFixed(2)}*`;
-
             } else {
-                // --- FORMATO ROBUSTO (REGISTRADO) ---
+                // Formato robusto para registrados
                 message = `¡Hola! 👋 Quiero confirmar mi pedido:\n`;
                 message += `*Pedido N°: ${newOrder.order_code}*\n\n`;
-
-                // Detalle Items
                 cartItems.forEach(item => {
                     message += `• ${item.quantity}x ${item.name}\n`;
                 });
 
-                // Detalle Financiero
                 if (discount) {
                     message += `\n*Subtotal:* $${subtotal.toFixed(2)}`;
                     message += `\n*Descuento (${discount.code}):* -$${discount.amount.toFixed(2)}`;
@@ -271,7 +332,6 @@ export default function CheckoutModal({ phone, onClose }) {
                     message += `\n*Total a pagar: $${total.toFixed(2)}*\n`;
                 }
 
-                // Programación
                 if (scheduledTime) {
                     const scheduledDate = new Date(scheduledTime);
                     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -280,20 +340,19 @@ export default function CheckoutModal({ phone, onClose }) {
                     message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
                 }
 
-                // Datos de Entrega
                 message += `\n*Datos del cliente:*\n*Nombre:* ${customer?.name}\n`;
                 if (selectedAddress?.address_reference) {
                     message += `*Referencia de domicilio:* ${selectedAddress.address_reference}`;
                 }
             }
 
-            // 7. Enviar y Limpiar
+            // Enviar y limpiar
             const businessNumber = BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
 
             showAlert(
                 "¡Pedido creado! Serás redirigido a WhatsApp.",
-                'success', // Cambiado a success para feedback positivo
+                'success',
                 () => {
                     window.open(whatsappUrl, '_blank');
                     clearCart();
@@ -314,10 +373,9 @@ export default function CheckoutModal({ phone, onClose }) {
         }
     };
 
-    // --- RENDERIZADO DEL CONTENIDO ---
-
+    // RENDERIZADO DEL CONTENIDO
     const renderContent = () => {
-        // MODO 1: SELECCIÓN (Solo si no hay usuario logueado)
+        // MODO 1: Selección (invitado vs login)
         if (mode === 'selection' && !customer) {
             return (
                 <div className={styles.selectionContainer}>
@@ -334,7 +392,7 @@ export default function CheckoutModal({ phone, onClose }) {
 
                         <button
                             className={styles.btnAuth}
-                            onClick={() => onClose(true)} // onClose(true) indica al padre abrir Login
+                            onClick={() => onClose(true)}
                         >
                             Ingresar mi número (Ganar Puntos)
                         </button>
@@ -343,7 +401,7 @@ export default function CheckoutModal({ phone, onClose }) {
             );
         }
 
-        // MODO 2: CONFIRMACIÓN INVITADO (Simple y Rápida)
+        // MODO 2: Confirmación invitado
         if (mode === 'guest_confirm') {
             return (
                 <div className={styles.confirmContainer}>
@@ -362,7 +420,7 @@ export default function CheckoutModal({ phone, onClose }) {
                     <div className={styles.footer}>
                         <button
                             className={styles.confirmButton}
-                            onClick={() => handlePlaceOrder(true)} // true = isGuest
+                            onClick={() => handlePlaceOrder(true)}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? 'Procesando...' : 'Enviar Pedido por WhatsApp'}
@@ -373,7 +431,7 @@ export default function CheckoutModal({ phone, onClose }) {
             );
         }
 
-        // MODO 3: CONFIRMACIÓN USUARIO REGISTRADO (Robusta y Completa)
+        // MODO 3: Confirmación usuario registrado
         if (mode === 'logged_user_confirm') {
             const mapInitialPosition = selectedAddress ? { lat: selectedAddress.latitude, lng: selectedAddress.longitude } : null;
 
@@ -384,7 +442,6 @@ export default function CheckoutModal({ phone, onClose }) {
                         <button onClick={() => onClose()} className={styles.closeButton}>×</button>
                     </div>
 
-                    {/* --- MAPA ESTÁTICO (Optimización) --- */}
                     {mapInitialPosition && (
                         <div className={styles.mapDisplay}>
                             <StaticMap
@@ -397,7 +454,6 @@ export default function CheckoutModal({ phone, onClose }) {
                     )}
 
                     <div className={styles.scrollableContent}>
-                        {/* --- DETALLES DE ENTREGA --- */}
                         <div className={styles.detailsGroup}>
                             <div className={styles.detailItem}>
                                 <MapPinIcon />
@@ -415,7 +471,6 @@ export default function CheckoutModal({ phone, onClose }) {
                             </div>
                         </div>
 
-                        {/* --- SELECTOR DE DIRECCIONES --- */}
                         <div className={styles.addressActions}>
                             {addresses && addresses.length > 1 && (
                                 <select
@@ -438,7 +493,6 @@ export default function CheckoutModal({ phone, onClose }) {
                             </button>
                         </div>
 
-                        {/* --- PROGRAMACIÓN DE PEDIDO --- */}
                         <div className={styles.detailsGroup}>
                             <h4>¿Cuándo lo quieres recibir?</h4>
                             <div className={styles.deliveryOptions}>
@@ -485,7 +539,6 @@ export default function CheckoutModal({ phone, onClose }) {
                             )}
                         </div>
 
-                        {/* --- RESUMEN FINANCIERO COMPLETO --- */}
                         <div className={styles.summary}>
                             <h4>Resumen del pedido</h4>
                             <div className={styles.summaryLine}><span>Subtotal</span> <span>${subtotal.toFixed(2)}</span></div>
@@ -501,7 +554,7 @@ export default function CheckoutModal({ phone, onClose }) {
 
                     <div className={styles.footer}>
                         <button
-                            onClick={() => handlePlaceOrder(false)} // false = isGuest (es decir, es User)
+                            onClick={() => handlePlaceOrder(false)}
                             className={styles.confirmButton}
                             disabled={isSubmitting || !isBusinessOpen}
                         >
@@ -519,7 +572,6 @@ export default function CheckoutModal({ phone, onClose }) {
                 {renderContent()}
             </div>
 
-            {/* Modal de Direcciones (Solo se renderiza si es necesario) */}
             {isAddressModalOpen && (
                 <AddressModal
                     isOpen={isAddressModalOpen}
