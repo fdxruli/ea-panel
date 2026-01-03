@@ -119,10 +119,18 @@ export default function MyProfile() {
     };
 
     const confirmLogout = () => {
+        // 1. Limpiamos datos del usuario (caché de UserDataContext)
         logout();
+        
+        // 2. Limpiamos el teléfono (CustomerContext)
         clearPhone();
+        
+        // 3. Cerramos el modal
         setLogoutModalOpen(false);
-        showAlert("Has cerrado sesión.");
+        
+        // 4. ✅ CRÍTICO: Recargamos la página para desmontar TODOS los contextos
+        // Esto asegura que no queden datos residuales en memoria
+        window.location.href = '/'; // Redirige al inicio y fuerza recarga completa
     };
 
     const renderContent = () => {
