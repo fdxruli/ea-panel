@@ -51,6 +51,7 @@ const NotFoundPage = lazy(() => import("./components/NotFoundPage.jsx"));
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 // Utils
 import { cleanupExpiredCache } from "./utils/cache.js";
@@ -67,15 +68,15 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
       </div>
     );
   }
-  
+
   if (hasPermission(permissionKey)) {
     return element;
   }
-  
+
   if (isIndex) {
     return <Navigate to="/login" replace />;
   }
-  
+
   const canViewDashboard = hasPermission('dashboard.view');
   return <Navigate to={canViewDashboard ? "/admin" : "/login"} replace />;
 };
@@ -99,83 +100,82 @@ function App() {
           <SettingsProvider>
             <BusinessHoursProvider>
               <ReloadPrompt />
-              {/* Envolvemos TODAS las rutas en un Suspense de nivel superior.
-                Esto manejará la carga de CUALQUIER página lazy.
-              */}
-              <Suspense fallback={<FullscreenLoader />}>
-                <Routes>
-                  {/* --- Client Routes --- */}
-                  <Route
-                    path="/"
-                    element={
-                      <CustomerProvider>
-                        <UserDataProvider>
-                          <ProductProvider>
-                            <ProductExtrasProvider>
-                              <CartProvider>
-                                {/* El Suspense aquí ya no es necesario
+              <ErrorBoundary>
+                <Suspense fallback={<FullscreenLoader />}>
+                  <Routes>
+                    {/* --- Client Routes --- */}
+                    <Route
+                      path="/"
+                      element={
+                        <CustomerProvider>
+                          <UserDataProvider>
+                            <ProductProvider>
+                              <ProductExtrasProvider>
+                                <CartProvider>
+                                  {/* El Suspense aquí ya no es necesario
                                     si tenemos uno global, pero lo dejamos
                                     por si ClientLayout hace algo especial */}
-                                <Suspense fallback={<FullscreenLoader />}>
-                                  <ClientLayout />
-                                </Suspense>
-                              </CartProvider>
-                            </ProductExtrasProvider>
-                          </ProductProvider>
-                        </UserDataProvider>
-                      </CustomerProvider>
-                    }
-                  >
-                    <Route index element={<Menu />} />
-                    <Route path="mis-pedidos" element={<MyOrders />} />
-                    <Route path="mis-pedidos/:orderCode" element={<OrderDetailPage />} />
-                    <Route path="mi-perfil" element={<MyProfile />} />
-                    <Route path="mi-actividad" element={<MyStuff />} />
-                    <Route path="terminos" element={<TermsPage />} />
-                    {/* Este NotFoundPage es solo para rutas DENTRO del ClientLayout */}
-                    <Route path="*" element={<NotFoundPage />} /> 
-                  </Route>
-
-                  {/* --- Admin Login --- */}
-                  <Route path="/login" element={<Login />} />
-
-                  {/* --- Admin Routes --- */}
-                  <Route element={<ProtectedRoute />}>
-                    <Route
-                      path="/admin"
-                      element={
-                        /* El Suspense aquí también es correcto */
-                        <Suspense fallback={<FullscreenLoader />}>
-                          <AdminAuthProvider>
-                            <CacheAdminProvider>
-                              <AdminLayout />
-                            </CacheAdminProvider>
-                          </AdminAuthProvider>
-                        </Suspense>
+                                  <Suspense fallback={<FullscreenLoader />}>
+                                    <ClientLayout />
+                                  </Suspense>
+                                </CartProvider>
+                              </ProductExtrasProvider>
+                            </ProductProvider>
+                          </UserDataProvider>
+                        </CustomerProvider>
                       }
                     >
-                      <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
-                      <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
-                      <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
-                      <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />
-                      <Route path="clientes" element={<PermissionWrapper permissionKey="clientes.view" element={<Customers />} />} />
-                      <Route path="referidos" element={<PermissionWrapper permissionKey="referidos.view" element={<Referrals />} />} />
-                      <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
-                      <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
-                      <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
-                      <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
-                      <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
-                      <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
-                      <Route path="ingredientes" element={<PermissionWrapper permissionKey="productos.view" element={<Ingredients />} />} />
+                      <Route index element={<Menu />} />
+                      <Route path="mis-pedidos" element={<MyOrders />} />
+                      <Route path="mis-pedidos/:orderCode" element={<OrderDetailPage />} />
+                      <Route path="mi-perfil" element={<MyProfile />} />
+                      <Route path="mi-actividad" element={<MyStuff />} />
+                      <Route path="terminos" element={<TermsPage />} />
+                      {/* Este NotFoundPage es solo para rutas DENTRO del ClientLayout */}
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
-                  </Route>
 
-                  {/* --- Global Catch-all --- */}
-                  <Route path="*" element={<NotFoundPage />} />
+                    {/* --- Admin Login --- */}
+                    <Route path="/login" element={<Login />} />
 
-                </Routes>
-              </Suspense>
+                    {/* --- Admin Routes --- */}
+                    <Route element={<ProtectedRoute />}>
+                      <Route
+                        path="/admin"
+                        element={
+                          /* El Suspense aquí también es correcto */
+                          <Suspense fallback={<FullscreenLoader />}>
+                            <AdminAuthProvider>
+                              <CacheAdminProvider>
+                                <AdminLayout />
+                              </CacheAdminProvider>
+                            </AdminAuthProvider>
+                          </Suspense>
+                        }
+                      >
+                        <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
+                        <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
+                        <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
+                        <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />
+                        <Route path="clientes" element={<PermissionWrapper permissionKey="clientes.view" element={<Customers />} />} />
+                        <Route path="referidos" element={<PermissionWrapper permissionKey="referidos.view" element={<Referrals />} />} />
+                        <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
+                        <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
+                        <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
+                        <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
+                        <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
+                        <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
+                        <Route path="ingredientes" element={<PermissionWrapper permissionKey="productos.view" element={<Ingredients />} />} />
+                        <Route path="*" element={<NotFoundPage />} />
+                      </Route>
+                    </Route>
+
+                    {/* --- Global Catch-all --- */}
+                    <Route path="*" element={<NotFoundPage />} />
+
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
             </BusinessHoursProvider>
           </SettingsProvider>
         </AlertProvider>

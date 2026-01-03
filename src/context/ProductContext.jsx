@@ -196,6 +196,9 @@ export const ProductProvider = ({ children }) => {
             console.log('⚡ Cambio detectado en productos/categorías base!', payload);
             setNotification('¡El menú se ha actualizado!');
             setTimeout(() => setNotification(''), 4000);
+            localStorage.removeItem(CACHE_KEYS.PRODUCTS); // Elimina caché de productos base
+            localStorage.removeItem('products:basic');
+            localStorage.removeItem('ea-categories-cache');
             fetchBaseProductsAndCategories();
         };
         baseChannel

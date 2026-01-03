@@ -22,7 +22,7 @@ import StaticMap from '../components/StaticMap'; // <-- AÑADIDO
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { phone, setPhoneModalOpen, clearPhone, setCheckoutModalOpen } = useCustomer();
-    const { customer, addresses, loading: userLoading, error, refetch } = useUserData();
+    const { customer, addresses, loading: userLoading, error, refetch, logout } = useUserData();
     const { theme, changeTheme } = useTheme();
     const { settings, loading: settingsLoading } = useSettings();
     const visibilitySettings = settings['client_visibility'] || {};
@@ -119,12 +119,11 @@ export default function MyProfile() {
     };
 
     const confirmLogout = () => {
+        logout();
         clearPhone();
         setLogoutModalOpen(false);
         showAlert("Has cerrado sesión.");
     };
-    // --- (Fin de la lógica de handlers) ---
-
 
     const renderContent = () => {
         if (!phone) return <AuthPrompt />;

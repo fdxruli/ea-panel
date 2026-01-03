@@ -1,4 +1,4 @@
-// src/context/CartContext.jsx (CORREGIDO Y FINAL)
+// src/context/CartContext.jsx
 
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -11,6 +11,7 @@ const CART_STORAGE_KEY = 'ea-panel-cart';
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
+    // 1. Carga inicial del carrito desde LocalStorage
     const [cartItems, setCartItems] = useState(() => {
         try {
             const storedCartItems = window.localStorage.getItem(CART_STORAGE_KEY);
@@ -25,14 +26,18 @@ export const CartProvider = ({ children }) => {
     const [subtotal, setSubtotal] = useState(0);
     const [discount, setDiscount] = useState(null);
     const [total, setTotal] = useState(0);
-    const [cartNotification, setCartNotification] = useState('');
+    
+    // Notificaciones
+    const [cartNotification, setCartNotification] = useState(''); // Para modales de alerta (items eliminados)
+    const [toast, setToast] = useState({ message: '', key: 0 });  // Para mensajes discretos (precios actualizados)
+
     const { products: liveProducts, loading: productsLoading } = useProducts();
-    const [toast, setToast] = useState({ message: '', key: 0 });
 
     const showToast = useCallback((message) => {
         setToast({ message, key: Date.now() });
     }, []);
 
+    // 2. Persistencia en LocalStorage cada vez que cambia el carrito
     useEffect(() => {
         try {
             window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
@@ -41,21 +46,78 @@ export const CartProvider = ({ children }) => {
         }
     }, [cartItems]);
 
+    // --- 👇 LÓGICA DE SINCRONIZACIÓN MEJORADA 👇 ---
     useEffect(() => {
+        // Solo ejecutamos si los productos "en vivo" ya cargaron y si hay algo en el carrito local
         if (productsLoading || cartItems.length === 0) return;
-        const liveProductIds = new Set(liveProducts.map(p => p.id));
-        const validCartItems = cartItems.filter(item => liveProductIds.has(item.id));
 
-        if (validCartItems.length < cartItems.length) {
-            const removedItems = cartItems.filter(item => !liveProductIds.has(item.id));
-            const removedProductNames = removedItems.map(item => item.name).join(', ');
-            const singularOrPlural = removedItems.length > 1;
-            const notificationMessage = `Se ${singularOrPlural ? 'han eliminado' : 'ha eliminado'} "${removedProductNames}" de tu carrito por no estar disponible.`;
-            setCartNotification(notificationMessage);
-            setCartItems(validCartItems);
+        // Mapa para búsqueda rápida O(1)
+        const liveProductsMap = new Map(liveProducts.map(p => [p.id, p]));
+        
+        let shouldUpdateCart = false;
+        let pricesChanged = false;
+        let itemsRemoved = false;
+        const removedNames = [];
+
+        // Validamos cada item del carrito contra la base de datos actual
+        const validatedItems = cartItems.reduce((acc, item) => {
+            const liveProduct = liveProductsMap.get(item.id);
+
+            // CASO A: El producto ya no existe en la DB (o está deshabilitado si useProducts filtra eso)
+            if (!liveProduct) {
+                itemsRemoved = true;
+                removedNames.push(item.name);
+                shouldUpdateCart = true;
+                return acc; // No lo agregamos al acumulador
+            }
+
+            // CASO B: El producto existe, pero verifiquemos si el PRECIO cambió
+            if (Number(liveProduct.price) !== Number(item.price)) {
+                pricesChanged = true;
+                shouldUpdateCart = true;
+                // Actualizamos el precio al valor actual de la DB
+                acc.push({ ...item, price: liveProduct.price });
+            } else {
+                // CASO C: Todo igual, lo dejamos como está
+                acc.push(item);
+            }
+            
+            return acc;
+        }, []);
+
+        // Si hubo cambios (eliminaciones o cambios de precio), actualizamos el estado
+        if (shouldUpdateCart) {
+            // Verificamos si realmente cambió el contenido para evitar loops infinitos
+            // (JSON.stringify es una forma rápida de comparar arrays de objetos simples)
+            const currentCartString = JSON.stringify(cartItems);
+            const newCartString = JSON.stringify(validatedItems);
+
+            if (currentCartString !== newCartString) {
+                setCartItems(validatedItems);
+
+                if (itemsRemoved) {
+                    const names = removedNames.join(', ');
+                    const singularOrPlural = removedNames.length > 1;
+                    setCartNotification(
+                        `Se ${singularOrPlural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por no estar disponible(s).`
+                    );
+                }
+
+                if (pricesChanged) {
+                    showToast("Algunos precios en tu carrito se han actualizado a su valor actual.");
+                }
+            }
         }
-    }, [liveProducts, productsLoading, cartItems]);
+        
+    // NOTA: Quitamos 'cartItems' de las dependencias para evitar que este efecto
+    // se dispare cíclicamente cuando 'setCartItems' se ejecute dentro de él.
+    // Solo queremos que corra cuando llegue nueva información de la DB ('liveProducts').
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [liveProducts, productsLoading]); 
+    // --- 👆 FIN DE LA MEJORA 👆 ---
 
+
+    // 3. Cálculos de Totales y Descuentos (Sin cambios mayores)
     const calculateDiscount = useCallback((currentSubtotal, items, discountDetails) => {
         if (!discountDetails) return 0;
         let applicableValue = 0;
@@ -79,10 +141,9 @@ export const CartProvider = ({ children }) => {
         setTotal(newSubtotal - discountAmount);
     }, [cartItems, discount, calculateDiscount]);
 
+    // 4. Funciones del carrito (Sin cambios)
     const applyDiscount = async (code, customerId) => {
-        if (!customerId) {
-            return { success: false, message: 'Debes iniciar sesión para usar un código.' };
-        }
+        if (!customerId) return { success: false, message: 'Debes iniciar sesión para usar un código.' };
         const upperCaseCode = code.toUpperCase();
         try {
             const { data: discountData, error } = await supabase.from('discounts').select('*').eq('code', upperCaseCode).single();
@@ -125,6 +186,7 @@ export const CartProvider = ({ children }) => {
 
     const removeDiscount = () => setDiscount(null);
     const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
+    
     const addToCart = useCallback((product, quantityToAdd = 1) => {
         setCartItems(prevItems => {
             const existingItem = prevItems.find(item => item.id === product.id);

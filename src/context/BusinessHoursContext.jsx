@@ -41,20 +41,20 @@ export const BusinessHoursProvider = ({ children }) => {
     }, []); // <-- Array vacío para una función estable
 
     useEffect(() => {
-        // Carga desde caché si existe y no está expirado
-        const { data: cachedStatus, isStale } = getCache(CACHE_KEYS.BUSINESS_STATUS, CACHE_TTL.BUSINESS_STATUS);
+        // 1. Carga inicial desde caché para velocidad
+        const { data: cachedStatus } = getCache(CACHE_KEYS.BUSINESS_STATUS, CACHE_TTL.BUSINESS_STATUS);
 
         if (cachedStatus) {
             setBusinessStatus({ ...cachedStatus, loading: false });
         }
 
-        // Si el caché está expirado o no existe, busca datos frescos
-        if (isStale) {
-            checkBusinessHours();
-        }
+        // 2. SIEMPRE verifica con el servidor en segundo plano al montar el componente
+        // Esto asegura que si acabas de cerrar, el usuario se entere en milisegundos
+        // aunque su caché diga que está abierto.
+        checkBusinessHours();
 
-        // Verifica periódicamente (cada minuto)
-        const interval = setInterval(checkBusinessHours, 60000);
+        // 3. Verifica periódicamente
+        const interval = setInterval(checkBusinessHours, 60000); // Cada 1 minuto
         return () => clearInterval(interval);
     }, [checkBusinessHours]);
 
@@ -62,6 +62,7 @@ export const BusinessHoursProvider = ({ children }) => {
         // Escucha cambios en tiempo real en las tablas de horarios y excepciones
         const handleChanges = () => {
             console.log('Cambio detectado en los horarios, actualizando instantáneamente...');
+            localStorage.removeItem(CACHE_KEYS.BUSINESS_STATUS); // Elimina caché de estado de negocio
             checkBusinessHours(); // Vuelve a verificar inmediatamente si hay cambios
         };
 

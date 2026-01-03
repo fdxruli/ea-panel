@@ -4,7 +4,7 @@
  */
 export const CACHE_TTL = {
   PRODUCTS: 10 * 60 * 1000, // 10 minutos
-  BUSINESS_STATUS: 5 * 60 * 1000, // 5 minutos
+  BUSINESS_STATUS: 1 * 60 * 1000, // 5 minutos
   USER_DATA: 15 * 60 * 1000, // 15 minutos (ahora para perfil y direcciones)
   USER_ORDERS: 10 * 60 * 1000, // 10 minutos para órdenes
   PRODUCT_EXTRAS: 10 * 60 * 1000, // 10 minutos para favoritos y reseñas

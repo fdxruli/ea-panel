@@ -155,7 +155,7 @@ export const UserDataProvider = ({ children }) => {
              fetchAndCacheUserData(phone); // Refetch completo
         };
 
-        // --- HANDLER PARA CAMBIOS EN CUSTOMER (Actualización local MERGE) ---
+        // --- HANDLER PARA CAMBIOS EN CUSTOMER (UPDATE local) ---
         const handleCustomerUpdate = (payload) => {
             console.log('[UserDataContext] Cambio detectado en customers (UPDATE):', payload);
             if (payload.new && payload.new.id === customerId) {
@@ -221,8 +221,26 @@ export const UserDataProvider = ({ children }) => {
 
     }, [userData.customer?.id, phone, fetchAndCacheUserData, INFO_CACHE_KEY, ORDERS_CACHE_KEY]); // Dependencias
 
+    const logout = useCallback(() => {
+        // 1. Borrar explícitamente el caché de localStorage para este usuario
+        // Es importante hacerlo AQUÍ porque todavía tenemos acceso a 'INFO_CACHE_KEY' con el teléfono actual
+        if (phone) {
+            console.log(`[UserDataContext] Cerrando sesión y limpiando caché para: ${phone}`);
+            localStorage.removeItem(INFO_CACHE_KEY);
+            localStorage.removeItem(ORDERS_CACHE_KEY);
+        }
 
-    const value = { ...userData, loading, error, refetch: () => fetchAndCacheUserData(phone) };
+        // 2. Resetear el estado local inmediatamente
+        setUserData({
+            customer: null,
+            addresses: [],
+            orders: [],
+        });
+        
+        // 3. Opcional: Limpiar cualquier otro rastro si es necesario
+    }, [phone, INFO_CACHE_KEY, ORDERS_CACHE_KEY]);
+
+    const value = { ...userData, loading, error, refetch: () => fetchAndCacheUserData(phone), logout };
 
     return (
         <UserDataContext.Provider value={value}>
