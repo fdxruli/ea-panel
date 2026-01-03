@@ -6,9 +6,7 @@ import styles from "./Orders.module.css";
 import DeliveryInfoModal from "../components/DeliveryInfoModal";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import EditOrderModal from "../components/EditOrderModal";
-
-// 🆔 ID del Cliente Invitado (Debe coincidir con el de la BD)
-const GUEST_CUSTOMER_ID = '68491ec0-3198-4aca-89e4-8034ebe1e35f';
+import { GUEST_CUSTOMER_ID } from "../config/constantes";
 
 // ==================== CUSTOM HOOKS ====================
 

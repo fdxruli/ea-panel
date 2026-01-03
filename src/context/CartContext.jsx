@@ -185,6 +185,9 @@ export const CartProvider = ({ children }) => {
     };
 
     const removeDiscount = () => setDiscount(null);
+    const closeCart = useCallback(() => {
+        setIsCartOpen(false);
+    }, []);
     const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
     
     const addToCart = useCallback((product, quantityToAdd = 1) => {
@@ -226,7 +229,7 @@ export const CartProvider = ({ children }) => {
     const value = {
         cartItems, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, total,
         discount: discount ? { ...discount, amount: discountAmount } : null,
-        applyDiscount, removeDiscount, isCartOpen, toggleCart, cartNotification,
+        applyDiscount, removeDiscount, isCartOpen, toggleCart, closeCart, cartNotification,
         clearCartNotification: () => setCartNotification(''),
         toast, showToast,
         replaceCart,

@@ -63,8 +63,8 @@ export default function MyProfile() {
         else {
             showAlert("Información actualizada con éxito.");
             if (editForm.phone !== phone) {
-                 localStorage.setItem('customer_phone', editForm.phone);
-                 window.location.reload();
+                localStorage.setItem('customer_phone', editForm.phone);
+                window.location.reload();
             } else {
                 refetch();
             }
@@ -88,17 +88,17 @@ export default function MyProfile() {
     const handleSaveAddress = async (addressData, shouldSave, addressId) => {
         let response;
         const dataToSave = {
-             customer_id: customer.id,
-             label: DOMPurify.sanitize(addressData.label),
-             address_reference: DOMPurify.sanitize(addressData.address_reference),
-             latitude: addressData.latitude,
-             longitude: addressData.longitude
-         };
+            customer_id: customer.id,
+            label: DOMPurify.sanitize(addressData.label),
+            address_reference: DOMPurify.sanitize(addressData.address_reference),
+            latitude: addressData.latitude,
+            longitude: addressData.longitude
+        };
 
         if (addressId) {
             response = await supabase.from('customer_addresses').update(dataToSave).eq('id', addressId).select().single();
         } else {
-             dataToSave.is_default = addresses.length === 0;
+            dataToSave.is_default = addresses.length === 0;
             response = await supabase.from('customer_addresses').insert(dataToSave).select().single();
         }
 
@@ -121,13 +121,13 @@ export default function MyProfile() {
     const confirmLogout = () => {
         // 1. Limpiamos datos del usuario (caché de UserDataContext)
         logout();
-        
+
         // 2. Limpiamos el teléfono (CustomerContext)
         clearPhone();
-        
+
         // 3. Cerramos el modal
         setLogoutModalOpen(false);
-        
+
         // 4. ✅ CRÍTICO: Recargamos la página para desmontar TODOS los contextos
         // Esto asegura que no queden datos residuales en memoria
         window.location.href = '/'; // Redirige al inicio y fuerza recarga completa
@@ -170,7 +170,7 @@ export default function MyProfile() {
                             <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
                             <small> Puedes cambiar tu nombre las veces que quieras</small>
                             <label htmlFor="phone">Número de WhatsApp:</label>
-                            <input id="phone" type="tel" value={editForm.phone} readOnly disabled title="Para cambiar tu número, cierra sesión e ingresa con el nuevo."/>
+                            <input id="phone" type="tel" value={editForm.phone} readOnly disabled title="Para cambiar tu número, cierra sesión e ingresa con el nuevo." />
                             <small>Para cambiar de numero, cierra sesión e ingresa con el nuevo. </small>
                             <button type="submit" className={styles.actionButton}>Guardar Cambios de Nombre</button>
                         </form>
@@ -201,14 +201,14 @@ export default function MyProfile() {
                             <div className={styles.addressCarousel}>
                                 {addresses.map((addr) => (
                                     <div key={addr.id} className={`${styles.addressItem} ${addr.is_default ? styles.defaultAddress : ''}`}>
-                                        
+
                                         {/* --- 👇 OPTIMIZACIÓN AQUÍ --- */}
                                         {/* Este div faltaba en tu CSS, lo añadiremos en el siguiente paso */}
                                         <div className={styles.addressMapContainer}>
                                             <StaticMap latitude={addr.latitude} longitude={addr.longitude} />
                                         </div>
                                         {/* --- FIN OPTIMIZACIÓN --- */}
-                                        
+
                                         <div>
                                             <div className={styles.addressLabelContainer}>
                                                 <strong>{addr.label}</strong>
@@ -265,7 +265,7 @@ export default function MyProfile() {
                     address={editingAddress}
                     customerId={customer?.id}
                     showSaveOption={true}
-                 />
+                />
                 <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
                     Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.
                 </ConfirmModal>
