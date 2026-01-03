@@ -245,13 +245,19 @@
   }
 }
 
+/* Botón flotante cuando HAY barra de navegación inferior */
 .floating-cart-container {
   position: fixed;
   bottom: 115px; 
   left: 50%;
   transform: translateX(-50%);
   z-index: 1010;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Botón flotante cuando NO HAY barra de navegación inferior */
+.floating-cart-container.no-navbar {
+  bottom: 20px; /* Más cerca del borde inferior */
 }
 
 .floating-cart-button {
@@ -351,4 +357,5 @@
   .floating-cart-container {
     display: none;
   }
+
 }
