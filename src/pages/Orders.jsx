@@ -1,3 +1,4 @@
+// src/pages/Orders.jsx
 import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -5,6 +6,9 @@ import styles from "./Orders.module.css";
 import DeliveryInfoModal from "../components/DeliveryInfoModal";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import EditOrderModal from "../components/EditOrderModal";
+
+// 🆔 ID del Cliente Invitado (Debe coincidir con el de la BD)
+const GUEST_CUSTOMER_ID = '68491ec0-3198-4aca-89e4-8034ebe1e35f';
 
 // ==================== CUSTOM HOOKS ====================
 
@@ -28,6 +32,9 @@ function useDebounce(value, delay = 300) {
 const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder }) => {
   const { hasPermission } = useAdminAuth();
   const canEdit = hasPermission('pedidos.edit');
+
+  // Detectar si es pedido de invitado
+  const isGuest = order.customer_id === GUEST_CUSTOMER_ID;
 
   // Memoizar formato de fecha
   const scheduledTimeFormatted = useMemo(() => {
@@ -57,7 +64,19 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
         <div className={styles.infoSection}>
           <h4>Cliente</h4>
           <p className={styles.customerInfo}>
-            <span>{order.customers?.name || 'N/A'}</span> ({order.customers?.phone || 'N/A'})
+            {/* ✅ Lógica visual diferenciada para Invitados */}
+            {isGuest ? (
+               <span>
+                 <strong style={{ color: '#25D366' }}>👋 Invitado (WhatsApp)</strong>
+                 <br/>
+                 <small style={{ color: '#666' }}>Revisar chat para dirección</small>
+               </span>
+            ) : (
+                <>
+                    <span>{order.customers?.name || 'N/A'}</span> 
+                    ({order.customers?.phone || 'N/A'})
+                </>
+            )}
           </p>
         </div>
 
@@ -386,10 +405,28 @@ export default function Orders() {
     });
   }, [orders, debouncedSearchTerm, statusFilter]);
 
-  // ✅ OPTIMIZACIÓN: Caché de direcciones
+  // ✅ OPTIMIZACIÓN: Caché de direcciones (CON SOPORTE PARA GUEST)
   const handleShowDeliveryInfo = useCallback(async (order) => {
     try {
-      // Verificar caché primero
+      // 1. CASO INVITADO: No buscamos en BD, creamos info manual.
+      if (order.customer_id === GUEST_CUSTOMER_ID) {
+        setDeliveryInfo({
+          customer: { 
+            name: "Invitado (Vía WhatsApp)", 
+            phone: "Ver WhatsApp" 
+          },
+          address: {
+            street: "Dirección a coordinar por WhatsApp",
+            city: "Revisar chat",
+            postal_code: "---",
+            reference: "Este es un pedido rápido de invitado. La dirección se encuentra en el mensaje de confirmación de WhatsApp."
+          }
+        });
+        setIsDeliveryModalOpen(true);
+        return;
+      }
+
+      // 2. CASO USUARIO REGISTRADO: Verificar caché primero
       if (addressCache.current.has(order.customer_id)) {
         setDeliveryInfo({
           customer: order.customers,

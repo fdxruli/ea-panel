@@ -1,13 +1,15 @@
+// src/pages/Cart.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
-// --- ✅ 1. IMPORTAR useUserData ---
 import { useUserData } from '../context/UserDataContext';
 import styles from './Cart.module.css';
-import CheckoutModal from '../components/CheckoutModal';
 import { useAlert } from '../context/AlertContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
 import ImageWithFallback from '../components/ImageWithFallback';
+
+// Nota: Ya NO importamos CheckoutModal aquí
+// import CheckoutModal from '../components/CheckoutModal'; 
 
 const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -26,11 +28,13 @@ export default function Cart() {
         cartNotification, clearCartNotification
     } = useCart();
 
-    const { phone, setPhoneModalOpen } = useCustomer();
-    // --- ✅ 2. OBTENER CUSTOMER DE useUserData Y SU ESTADO DE CARGA ---
-    const { customer, loading: userLoading } = useUserData(); // <-- Añadir loading
+    // ✅ Traemos setCheckoutModalOpen del contexto global
+    const { setCheckoutModalOpen } = useCustomer();
+    const { customer, loading: userLoading } = useUserData();
 
-    const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
+    // ❌ Ya no necesitamos estado local para el modal
+    // const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
+    
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
@@ -41,46 +45,32 @@ export default function Cart() {
             const timer = setTimeout(() => setIsAnimating(true), 10);
             return () => clearTimeout(timer);
         } else {
-             setIsAnimating(false); // Reset animation state on close
-             setDiscountVisible(false); // Hide discount input on close
+             setIsAnimating(false);
+             setDiscountVisible(false);
         }
     }, [isCartOpen]);
 
-
     const handleClose = useCallback(() => {
         setIsAnimating(false);
-        setTimeout(toggleCart, 600); // Wait for animation
+        setTimeout(toggleCart, 600);
     }, [toggleCart]);
-
 
     const handleApplyDiscount = async () => {
         if (!discountCode.trim()) return;
-
-        // --- ✅ 3. VALIDACIÓN ANTES DE LLAMAR A applyDiscount ---
-        // Verificar si la información del cliente aún está cargando o no existe
         if (userLoading) {
-            setDiscountMessage('Espera, estamos cargando tu información...');
-            setTimeout(() => setDiscountMessage(''), 3000);
+            setDiscountMessage('Cargando información...');
             return;
         }
         if (!customer?.id) {
-            // Este caso es más probable si el usuario no ha iniciado sesión
             setDiscountMessage('Debes iniciar sesión para usar un código.');
-            // No limpiar este mensaje automáticamente
             return;
         }
-        // --- FIN VALIDACIÓN ---
-
-        // Se usa el ID del cliente del contexto UserData, que es la fuente principal de datos del cliente logueado.
-        const result = await applyDiscount(discountCode, customer.id); // Ahora sabemos que customer.id existe
+        const result = await applyDiscount(discountCode, customer.id);
         setDiscountMessage(result.message);
-
-        // Limpiar mensaje después de 3 segundos solo si fue exitoso o inválido, no si requiere login
         if (result.success || result.message !== 'Debes iniciar sesión para usar un código.') {
             setTimeout(() => setDiscountMessage(''), 3000);
         }
     };
-
 
     const handleRemoveDiscount = () => {
         removeDiscount(); setDiscountCode(''); setDiscountMessage('');
@@ -89,34 +79,28 @@ export default function Cart() {
     const handleProceedToCheckout = () => {
         if (cartItems.length === 0) { showAlert("Tu carrito está vacío."); return; }
         if (cartItems.some(item => !item.quantity || item.quantity <= 0)) {
-            showAlert("Por favor, revisa que todos los productos tengan una cantidad válida."); return;
+            showAlert("Revisa las cantidades de tus productos."); return;
         }
-        if (!phone) {
-             // If phone is missing, open phone modal. On success, it will open checkout.
-            setPhoneModalOpen(() => { setCheckoutModalOpen(true); }); return;
-        }
-         // If phone exists, proceed directly to checkout.
+        
+        // ✅ 1. Cerramos el carrito para que no estorbe visualmente
+        toggleCart();
+        
+        // ✅ 2. Abrimos el Checkout Modal GLOBAL (que vive en ClientLayout)
         setCheckoutModalOpen(true);
     };
 
-    // Use isCartOpen directly for rendering check
     if (!isCartOpen) return null;
-
 
     return (
         <>
-            {/* Overlay */}
             <div className={`${styles.overlay} ${isCartOpen && isAnimating ? styles.open : ''}`} onClick={handleClose}></div>
 
-            {/* Sidebar */}
             <div className={`${styles.cartSidebar} ${isCartOpen && isAnimating ? styles.open : ''}`}>
-                {/* Header */}
                 <div className={styles.cartHeader}>
                     <h2 className={styles.cartTitle}><ShoppingCartIcon /> Tu Pedido</h2>
                     <button onClick={handleClose} className={styles.closeButton}>×</button>
                 </div>
 
-                 {/* Notification Area */}
                  {cartNotification && (
                     <div className={styles.cartNotification}>
                         <p>{cartNotification}</p>
@@ -124,10 +108,9 @@ export default function Cart() {
                     </div>
                 )}
 
-                {/* Cart Body */}
                 {cartItems.length === 0 ? (
                     <div className={styles.cartBody}>
-                        <p className={styles.emptyMessage}>Tu carrito está vacío. ¡Añade unas alitas!</p>
+                        <p className={styles.emptyMessage}>Tu carrito está vacío.</p>
                     </div>
                 ) : (
                     <>
@@ -145,16 +128,16 @@ export default function Cart() {
                                         </div>
                                         <div className={styles.itemActions}>
                                             {item.quantity === 1 ? (
-                                                <button onClick={() => removeFromCart(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`} aria-label="Eliminar producto">
+                                                <button onClick={() => removeFromCart(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
                                                     <TrashIcon />
                                                 </button>
                                             ) : (
-                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton} aria-label="Disminuir cantidad">
+                                                <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton}>
                                                     -
                                                 </button>
                                             )}
                                             <span className={styles.quantityDisplay}>{item.quantity}</span>
-                                            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton} aria-label="Aumentar cantidad">
+                                            <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton}>
                                                 +
                                             </button>
                                         </div>
@@ -163,32 +146,25 @@ export default function Cart() {
                             </div>
                         </div>
 
-                        {/* Cart Footer */}
                         <div className={styles.cartFooter}>
                              <div className={styles.discountAccordion}>
                                 {!discount && (
-                                    <button
-                                        onClick={() => setDiscountVisible(!isDiscountVisible)}
-                                        className={styles.discountToggleButton}
-                                    >
-                                        ¿Tienes un código? Haz clic aquí {isDiscountVisible ? '▲' : '▼'}
+                                    <button onClick={() => setDiscountVisible(!isDiscountVisible)} className={styles.discountToggleButton}>
+                                        ¿Tienes un código? {isDiscountVisible ? '▲' : '▼'}
                                     </button>
                                 )}
-
                                 <div className={`${styles.discountAccordionContent} ${isDiscountVisible || discount ? styles.open : ''}`}>
                                     {!discount && (
                                         <div className={styles.discountSection}>
-                                            <input type="text" placeholder="Código de descuento" value={discountCode} onChange={(e) => setDiscountCode(e.target.value.toUpperCase())} className={styles.discountInput} />
+                                            <input type="text" placeholder="Código" value={discountCode} onChange={(e) => setDiscountCode(e.target.value.toUpperCase())} className={styles.discountInput} />
                                             <button onClick={handleApplyDiscount} className={styles.applyButton}>Aplicar</button>
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Discount Message */}
                             {discountMessage && <p className={styles.discountMessage}>{discountMessage}</p>}
 
-                            {/* Totals */}
                             <div className={styles.totals}>
                                 <p>Subtotal: <span>${subtotal.toFixed(2)}</span></p>
                                 {discount && (
@@ -200,22 +176,15 @@ export default function Cart() {
                                 <h3 className={styles.total}>Total: <span>${total.toFixed(2)}</span></h3>
                             </div>
 
-                            {/* Checkout Button */}
                             <button onClick={handleProceedToCheckout} className={styles.whatsappButton}>
-                                {phone ? 'Continuar con mi Pedido' : 'Ingresa tu número para continuar'}
+                                Realizar Pedido
                             </button>
                         </div>
                     </>
                 )}
             </div>
-
-            {/* Checkout Modal */}
-            {isCheckoutModalOpen && (
-                <CheckoutModal
-                    phone={phone}
-                    onClose={() => setCheckoutModalOpen(false)}
-                />
-            )}
+            
+            {/* ❌ ELIMINADO: Ya no renderizamos el modal localmente */}
         </>
     );
 }
