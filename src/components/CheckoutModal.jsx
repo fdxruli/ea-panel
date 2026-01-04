@@ -35,6 +35,13 @@ const CheckIcon = () => (
     </svg>
 );
 
+const getLocalYYYYMMDD = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export default function CheckoutModal({ phone, onClose }) {
     const { showAlert } = useAlert();
     const { cartItems, total, subtotal, discount, clearCart, toggleCart, closeCart } = useCart();
@@ -46,7 +53,7 @@ export default function CheckoutModal({ phone, onClose }) {
 
     const [rememberGuest, setRememberGuest] = useState(false);
     const [isAutoDispatching, setIsAutoDispatching] = useState(false);
-    
+
     // ✅ NUEVO: Ref para evitar doble ejecución del auto-despacho
     const hasAutoDispatchedRef = useRef(false);
 
@@ -54,12 +61,12 @@ export default function CheckoutModal({ phone, onClose }) {
     useEffect(() => {
         const guestPref = localStorage.getItem('guest_preference');
 
-        if (!customer && 
-            guestPref === 'true' && 
-            !isSubmitting && 
+        if (!customer &&
+            guestPref === 'true' &&
+            !isSubmitting &&
             !isAutoDispatching &&
             !hasAutoDispatchedRef.current) { // ← Verificar que no se haya ejecutado
-            
+
             console.log('🔄 Detectado modo invitado recurrente. Enviando pedido...');
             setIsAutoDispatching(true);
             hasAutoDispatchedRef.current = true; // ← Marcar como ejecutado
@@ -155,13 +162,34 @@ export default function CheckoutModal({ phone, onClose }) {
 
     const handleToggleScheduling = (shouldSchedule) => {
         setIsScheduling(shouldSchedule);
-        if (shouldSchedule && !scheduleDetails.date) {
+
+        if (shouldSchedule) {
             const now = new Date();
-            if (now.getHours() >= 19) {
-                now.setDate(now.getDate() + 1);
+            const defaultDate = getLocalYYYYMMDD(now);
+
+            // CAMBIO: Sugerir por defecto 2 horas después en lugar de 1
+            let nextHour = now.getHours() + 2;
+            let period = 'am';
+
+            // Ajuste para cambio de día (ej: 23:00 + 2 = 25 -> 01:00)
+            if (nextHour >= 24) {
+                nextHour -= 24;
             }
-            const defaultDate = now.toISOString().split('T')[0];
-            setScheduleDetails(prev => ({ ...prev, date: defaultDate }));
+
+            if (nextHour >= 12) {
+                period = 'pm';
+                if (nextHour > 12) nextHour -= 12;
+            } else if (nextHour === 0) {
+                nextHour = 12; // 12 AM
+            }
+
+            setScheduleDetails(prev => ({
+                ...prev,
+                date: defaultDate,
+                hour: nextHour.toString().padStart(2, '0'),
+                minute: '00',
+                period: period
+            }));
         }
     };
 
@@ -297,9 +325,25 @@ export default function CheckoutModal({ phone, onClose }) {
                 return;
             }
 
-            if (isScheduling && !scheduledTime) {
-                showAlert("Por favor, selecciona una fecha y hora válidas para programar tu pedido.");
-                return;
+            if (isScheduling) {
+                if (!scheduledTime) {
+                    showAlert("Por favor, selecciona una fecha y hora válidas para programar tu pedido.");
+                    return;
+                }
+
+                const scheduledDate = new Date(scheduledTime);
+                const now = new Date();
+
+                const diffInMs = scheduledDate - now;
+                const minTimeInMs = 2 * 60 * 60 * 1000;
+
+                if (diffInMs < minTimeInMs) {
+                    showAlert(
+                        "Para pedidos inmediatos, es mejor elegir la opción 'Lo antes posible'. La programación requiere al menos 2 horas de anticipación.",
+                        "warning"
+                    );
+                    return;
+                }
             }
         }
 
@@ -311,7 +355,7 @@ export default function CheckoutModal({ phone, onClose }) {
                 console.log('💾 Guardando preferencia de invitado (desde clic manual)');
                 localStorage.setItem('guest_preference', 'true');
             }
-            
+
             const targetCustomerId = isGuest ? GUEST_CUSTOMER_ID : customer.id;
 
             const p_cart_items = cartItems.map(item => ({
@@ -623,7 +667,7 @@ export default function CheckoutModal({ phone, onClose }) {
                                         className={styles.datePicker}
                                         value={scheduleDetails.date}
                                         onChange={handleScheduleChange}
-                                        min={new Date().toISOString().split('T')[0]}
+                                        min={getLocalYYYYMMDD(new Date())}
                                     />
                                     <div className={styles.timePicker}>
                                         <select name="hour" value={scheduleDetails.hour} onChange={handleScheduleChange}>
