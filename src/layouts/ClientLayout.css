@@ -22,9 +22,10 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 1rem;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 1rem;
 }
 
 .mobile-login-btn {
@@ -32,21 +33,18 @@
   align-items: center;
   gap: 6px;
   background: transparent;
-
-  /* ✅ CORREGIDO: Usar las variables de tu tema */
   color: var(--color-primary);
-  /* Se vuelve oscuro en tema claro y BLANCO en tema oscuro */
   border: 1px solid var(--border-color);
-  /* Borde gris suave que se adapta al tema */
-
   border-radius: 20px;
   padding: 6px 12px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-
-  margin-left: auto;
-  /* Mantiene el botón a la derecha */
+  
+  /* ✅ Posicionar en la tercera columna (derecha) */
+  grid-column: 3;
+  justify-self: end;
+  
   transition: all 0.3s ease;
 }
 
@@ -72,6 +70,8 @@
 .logo {
   display: flex;
   align-items: center;
+  justify-content: center;
+  grid-column: 2;
 }
 
 .logo h1 {
@@ -198,6 +198,8 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    grid-column: 3;
+    justify-self: end;
   }
 
   .desktop-nav-link {
