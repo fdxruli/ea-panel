@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react'; // Agregamos useRef
 import { supabase } from '../lib/supabaseClient';
 import styles from './EditOrderModal.module.css';
 import LoadingSpinner from './LoadingSpinner';
@@ -6,19 +6,24 @@ import { useAlert } from '../context/AlertContext';
 import ImageWithFallback from './ImageWithFallback';
 import DeliveryInfoModal from './DeliveryInfoModal';
 
-const TrashIcon = () => ( /* ... (icono sin cambios) ... */
+const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
 );
-// --- NUEVO ÍCONO ---
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
 
+// Función auxiliar para fecha local (Misma corrección anterior)
+const getLocalYYYYMMDD = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
-// --- Funciones auxiliares para formato de fecha/hora ---
 const formatDateForInput = (isoString) => {
     if (!isoString) return '';
     try {
         const date = new Date(isoString);
-        return date.toISOString().split('T')[0];
+        return getLocalYYYYMMDD(date);
     } catch (e) { return ''; }
 };
 
@@ -31,8 +36,17 @@ const formatTimeForInput = (isoString) => {
         return `${hours}:${minutes}`;
     } catch (e) { return ''; }
 };
-// --- FIN FUNCIONES AUXILIARES ---
 
+// --- HELPER PARA DETECTAR CAMBIOS EN PRODUCTOS ---
+// Genera una "firma" única de los items para saber si cambiaron
+const getItemsSignature = (items) => {
+    if (!items || items.length === 0) return '';
+    // Ordenamos y concatenamos ID-CANTIDAD-PRECIO para comparar
+    return items
+        .map(i => `${i.product_id || i.id}-${i.quantity}-${i.price}`)
+        .sort()
+        .join('|');
+};
 
 export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     const { showAlert } = useAlert();
@@ -46,22 +60,22 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [activeTab, setActiveTab] = useState('current'); // 'current' o 'add'
+    const [activeTab, setActiveTab] = useState('current');
     const [searchTerm, setSearchTerm] = useState('');
 
     const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
     const [deliveryInfo, setDeliveryInfo] = useState(null);
 
-    // --- NUEVO ESTADO PARA PROGRAMACIÓN EN EDICIÓN ---
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
-    // --- FIN NUEVO ESTADO ---
+
+    // Estado para guardar la "firma" original de los items
+    const [originalItemsSignature, setOriginalItemsSignature] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Fetch products, addresses (sin cambios)
                 const productsPromise = supabase.from('products').select('*').eq('is_active', true);
                 const addressesPromise = supabase.from('customer_addresses').select('*').eq('customer_id', order.customer_id);
 
@@ -73,27 +87,25 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 setAllProducts(productsRes.data || []);
                 setCustomerAddresses(addressesRes.data || []);
 
-                // Set initial address (sin cambios)
                 const defaultAddress = addressesRes.data.find(a => a.is_default) || addressesRes.data[0];
                 const currentAddressId = defaultAddress?.id || '';
                 setSelectedAddressId(currentAddressId);
                 setInitialAddressId(currentAddressId);
 
-                // Set initial items (sin cambios)
                 const initialItems = order.order_items.map(item => ({
-                    ...item.products, // Cuidado: esto podría sobreescribir 'id' si products tiene 'id'
-                    original_item_id: item.id, // Guardar el id original del item
-                    product_id: item.product_id,
+                    ...item.products,
+                    original_item_id: item.id,
+                    product_id: item.product_id, // Importante: asegurar este ID
                     quantity: item.quantity,
                     price: item.price,
                 }));
+                
                 setOrderItems(initialItems);
+                // Guardamos la firma inicial para comparar después
+                setOriginalItemsSignature(getItemsSignature(initialItems));
 
-                // --- INICIALIZAR ESTADO DE PROGRAMACIÓN ---
                 setScheduleDate(formatDateForInput(order.scheduled_for));
                 setScheduleTime(formatTimeForInput(order.scheduled_for));
-                // --- FIN INICIALIZACIÓN ---
-
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -103,21 +115,19 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 setLoading(false);
             }
         };
-        if (order) { // Asegurarse de que 'order' exista antes de fetchear
+        if (order) {
             fetchData();
         }
-    }, [order, onClose, showAlert]); // Dependencia 'order'
+    }, [order, onClose, showAlert]);
 
-    // Calcular total (sin cambios)
     useEffect(() => {
         const newTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         setTotal(newTotal);
     }, [orderItems]);
 
-    // Mostrar info de entrega (sin cambios)
     const handleShowDeliveryInfo = () => {
         const selectedAddress = customerAddresses.find(addr => addr.id === selectedAddressId);
-        if (selectedAddress && order.customers) { // Asegurar que customers exista
+        if (selectedAddress && order.customers) {
             setDeliveryInfo({
                 customer: order.customers,
                 address: selectedAddress
@@ -128,8 +138,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
         }
     };
 
-    // Manejo de items del carrito (updateQuantity, removeItem, addProduct) - sin cambios
-    const updateQuantity = (productId, newQuantity) => { /* ... lógica existente ... */
+    const updateQuantity = (productId, newQuantity) => {
          const numQuantity = parseInt(newQuantity, 10);
         if (isNaN(numQuantity) || numQuantity <= 0) {
             removeItem(productId);
@@ -139,10 +148,12 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             item.id === productId ? { ...item, quantity: numQuantity } : item
         ));
     };
-    const removeItem = (productId) => { /* ... lógica existente ... */
+    
+    const removeItem = (productId) => {
          setOrderItems(prevItems => prevItems.filter(item => item.id !== productId));
     };
-    const addProduct = (product) => { /* ... lógica existente ... */
+    
+    const addProduct = (product) => {
          const existingItem = orderItems.find(item => item.id === product.id);
         if (existingItem) {
             setOrderItems(prevItems =>
@@ -151,74 +162,97 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 )
             );
         } else {
-            // Asegurarse de añadir 'product_id' correctamente
+            // Aseguramos que product_id se guarde correctamente
             setOrderItems(prevItems => [...prevItems, { ...product, quantity: 1, product_id: product.id }]);
             showAlert(`${product.name} añadido al pedido.`);
         }
-        setActiveTab('current'); // Cambiar a la pestaña actual después de añadir
+        setActiveTab('current');
     };
 
-    // --- ACTUALIZAR ORDEN (MODIFICADO) ---
     const handleUpdateOrder = async () => {
         if (orderItems.length === 0) {
             showAlert("No puedes dejar el pedido vacío. Cancélalo si es necesario.");
             return;
         }
 
-        // --- VALIDACIÓN Y FORMATO DE FECHA/HORA ---
+        // --- VALIDACIÓN FECHA/HORA (Misma lógica corregida) ---
         let scheduledTimestamp = null;
         if (scheduleDate || scheduleTime) {
-            const datePart = scheduleDate || new Date().toISOString().split('T')[0];
-            const timePart = scheduleTime || '00:00';
-            const dateTimeString = `${datePart}T${timePart}:00`;
+            if (!scheduleDate || !scheduleTime) {
+                showAlert("Debes seleccionar tanto fecha como hora si deseas programar.");
+                return;
+            }
+
+            const dateTimeString = `${scheduleDate}T${scheduleTime}:00`;
             const scheduledDateObj = new Date(dateTimeString);
 
             if (isNaN(scheduledDateObj.getTime())) {
                 showAlert('La fecha u hora de programación no es válida.');
                 return;
             }
-            // Opcional: Validación de fecha pasada (descomentar si es necesario)
-            // const now = new Date();
-            // if (scheduledDateObj < now) {
-            //     showAlert('No puedes programar un pedido para una fecha/hora pasada.');
-            //     return;
-            // }
+
+            const now = new Date();
+            if (scheduledDateObj <= now) {
+                showAlert('La hora programada debe ser posterior a la hora actual.');
+                return;
+            }
             scheduledTimestamp = scheduledDateObj.toISOString();
         } else {
-            // Si ambos campos están vacíos, nos aseguramos de que sea null
             scheduledTimestamp = null;
         }
-        // --- FIN VALIDACIÓN Y FORMATO ---
 
         setIsSubmitting(true);
         try {
-            // Actualizar dirección por defecto si cambió (sin cambios)
+            // 1. Actualizar dirección si cambió
             if (selectedAddressId && selectedAddressId !== initialAddressId) {
                 await supabase.from('customer_addresses').update({ is_default: false }).eq('customer_id', order.customer_id);
                 await supabase.from('customer_addresses').update({ is_default: true }).eq('id', selectedAddressId);
-                 // Actualizar la dirección por defecto visualmente para el modal de delivery si se abre de nuevo
-                 setInitialAddressId(selectedAddressId);
+                setInitialAddressId(selectedAddressId);
             }
 
-            // Reemplazar items de la orden (sin cambios)
-            await supabase.from('order_items').delete().eq('order_id', order.id);
-            const newOrderItems = orderItems.map(item => ({
-                order_id: order.id,
-                product_id: item.product_id, // Usar product_id guardado
-                quantity: item.quantity,
-                price: item.price,
-            }));
-            await supabase.from('order_items').insert(newOrderItems);
+            // 2. DETECCIÓN INTELIGENTE DE CAMBIOS EN PRODUCTOS
+            const currentSignature = getItemsSignature(orderItems);
+            const itemsChanged = currentSignature !== originalItemsSignature;
 
-            // Actualizar la orden principal con total y scheduled_for
+            if (itemsChanged) {
+                console.log('📦 Cambios detectados en productos. Actualizando items...');
+                
+                // Borrar items anteriores
+                await supabase.from('order_items').delete().eq('order_id', order.id);
+                
+                // Preparar nuevos items con protección de IDs
+                const newOrderItems = orderItems.map(item => {
+                    const finalProductId = item.product_id || item.id;
+                    if (!finalProductId) {
+                         throw new Error(`Error de integridad: Producto sin ID detectado (${item.name})`);
+                    }
+                    return {
+                        order_id: order.id,
+                        product_id: finalProductId, 
+                        quantity: item.quantity,
+                        price: item.price,
+                    };
+                });
+                
+                // Insertar nuevos items
+                const { error: insertError } = await supabase.from('order_items').insert(newOrderItems);
+                if (insertError) throw insertError;
+                
+            } else {
+                console.log('⚡ Sin cambios en productos. Saltando actualización de items.');
+            }
+
+            // 3. Actualizar datos de la cabecera (Total y Horario)
+            // Siempre actualizamos esto por si cambió el horario o el total
             await supabase.from('orders').update({
                 total_amount: total,
-                scheduled_for: scheduledTimestamp // <-- AÑADIDO AQUÍ
+                scheduled_for: scheduledTimestamp
             }).eq('id', order.id);
 
-            showAlert("¡Pedido actualizado con éxito!");
-            onOrderUpdated(); // Refrescar la lista de pedidos
-            onClose(); // Cerrar el modal
+            showAlert("¡Pedido actualizado con éxito!", 'success'); // Agregado tipo success
+            onOrderUpdated();
+            onClose();
+
         } catch (error) {
             console.error("Error al actualizar el pedido:", error);
             showAlert(`Error al actualizar: ${error.message}`);
@@ -226,9 +260,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             setIsSubmitting(false);
         }
     };
-    // --- FIN ACTUALIZAR ORDEN ---
 
-    // Productos disponibles para añadir (sin cambios)
     const availableProducts = useMemo(() => {
         const currentIds = new Set(orderItems.map(i => i.id));
         return allProducts
@@ -239,7 +271,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     return (
         <>
             <div className={styles.modalOverlay}>
-                <div className={`${styles.modalContent} ${activeTab === 'add' ? styles.addMode : ''}`}> {/* Aplicar clase addMode aquí */}
+                <div className={`${styles.modalContent} ${activeTab === 'add' ? styles.addMode : ''}`}>
                     <div className={styles.header}>
                         <h2>Editando Pedido #{order.order_code}</h2>
                         <button onClick={onClose} className={styles.closeButton}>×</button>
@@ -247,7 +279,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
                     {loading ? <LoadingSpinner /> : (
                         <>
-                            {/* Sección Info Cliente y Dirección (sin cambios) */}
                              <div className={styles.deliveryInfoSection}>
                                 <label htmlFor="address-select">Dirección de Entrega</label>
                                 <div className={styles.deliveryInfoControls}>
@@ -273,7 +304,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                 </div>
                             </div>
 
-                            {/* --- NUEVA SECCIÓN PARA PROGRAMACIÓN --- */}
                             <div className={styles.scheduleSection}>
                                 <label><ClockIcon/> Programar Entrega (Opcional)</label>
                                 <div className={styles.scheduleInputs}>
@@ -281,7 +311,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                         type="date"
                                         value={scheduleDate}
                                         onChange={e => setScheduleDate(e.target.value)}
-                                        min={new Date().toISOString().split('T')[0]} // Opcional: mínimo hoy
+                                        min={getLocalYYYYMMDD(new Date())} 
                                         aria-label="Fecha de programación"
                                     />
                                     <input
@@ -291,17 +321,13 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                         aria-label="Hora de programación"
                                     />
                                 </div>
-                                {/* Botón para limpiar */}
                                 {(scheduleDate || scheduleTime) && (
                                      <button type="button" onClick={() => { setScheduleDate(''); setScheduleTime(''); }} className={styles.clearScheduleButton}>
                                          Limpiar Programación
                                      </button>
                                 )}
                             </div>
-                            {/* --- FIN SECCIÓN PROGRAMACIÓN --- */}
 
-
-                            {/* Tabs y Contenido (sin cambios visuales mayores) */}
                             <div className={styles.tabs}>
                                 <button onClick={() => setActiveTab('current')} className={activeTab === 'current' ? styles.active : ''}>
                                     Pedido Actual ({orderItems.length})
@@ -310,11 +336,10 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                     Añadir Productos
                                 </button>
                             </div>
-                            <div className={`${styles.contentBody}`}> {/* No necesita addMode aquí */}
-                                {/* Lista de items actuales */}
+                            <div className={`${styles.contentBody}`}>
                                 <div className={styles.itemsList}>
                                     {orderItems.length > 0 ? orderItems.map(item => (
-                                        <div key={item.id || item.original_item_id} className={styles.cartItem}> {/* Usar ID original como fallback */}
+                                        <div key={item.id || item.original_item_id} className={styles.cartItem}>
                                             <ImageWithFallback src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
                                             <div className={styles.itemInfo}>
                                                 <span className={styles.itemName}>{item.name}</span>
@@ -335,7 +360,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                     )) : <p className={styles.emptyMessage}>Añade productos al pedido.</p>}
                                 </div>
 
-                                {/* Sección para añadir productos */}
                                 <div className={styles.addProductSection}>
                                     <input type="text" placeholder="Buscar producto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
                                     <div className={styles.productList}>
@@ -353,7 +377,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                 </div>
                             </div>
 
-                            {/* Footer (sin cambios) */}
                             <div className={styles.footer}>
                                 <div className={styles.totalContainer}>
                                     <span>Total</span>
@@ -367,7 +390,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                     )}
                 </div>
             </div>
-            {/* Modal Info Entrega (sin cambios) */}
             {isDeliveryModalOpen && (
                 <DeliveryInfoModal
                     isOpen={isDeliveryModalOpen}
