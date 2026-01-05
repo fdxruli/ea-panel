@@ -5,10 +5,10 @@ import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from 'workbox-strategi
 import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
+cleanupOutdatedCaches();
 // Eventos de lifecycle (Sin cambios)
 self.addEventListener('activate', (event) => {
   console.log('[SW] Service Worker activado');
-  cleanupOutdatedCaches();
   event.waitUntil(clientsClaim());
 });
 
@@ -134,4 +134,5 @@ registerRoute(
       },
     ],
   })
+
 );
