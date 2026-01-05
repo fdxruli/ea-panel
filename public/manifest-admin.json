@@ -6,7 +6,7 @@
   "background_color": "#FFFFFF",
   "display": "standalone",
   "scope": "/admin/",
-  "start_url": "/admin?source=pwa-admin",
+  "start_url": "/admin/?source=pwa-admin",
   "id": "/admin-app",
   "orientation": "any",
   "icons": [
