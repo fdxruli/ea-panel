@@ -8,7 +8,7 @@ import { useBusinessHours } from '../context/BusinessHoursContext';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO, { restaurantSchema } from '../components/SEO';
 import { getThumbnailUrl } from '../utils/imageUtils';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 
 // ==================== ICONOS PARA CAMBIO DE VISTA ====================
 
@@ -18,16 +18,16 @@ const GridIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 const LAYOUT_STORAGE_KEY = 'product-layout-preference';
 
 const createSlug = (text) => {
-    return text
-      .toString()
-      .toLowerCase()
-      .normalize("NFD") // Descompone acentos (á -> a)
-      .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
-      .trim()
-      .replace(/\s+/g, '-') // Reemplaza espacios con guiones
-      .replace(/[^\w\-]+/g, '') // Elimina caracteres no alfanuméricos
-      .replace(/\-\-+/g, '-'); // Reemplaza múltiples guiones por uno solo
-  };
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD") // Descompone acentos (á -> a)
+    .replace(/[\u0300-\u036f]/g, "") // Elimina los acentos
+    .trim()
+    .replace(/\s+/g, '-') // Reemplaza espacios con guiones
+    .replace(/[^\w\-]+/g, '') // Elimina caracteres no alfanuméricos
+    .replace(/\-\-+/g, '-'); // Reemplaza múltiples guiones por uno solo
+};
 // ==================== COMPONENTE PRODUCT CARD MEMOIZADO (MODIFICADO) ====================
 const MemoizedProductCard = memo(({
   product,
@@ -35,7 +35,7 @@ const MemoizedProductCard = memo(({
   isBusinessOpen,
   handleAddToCart,
   setSelectedProduct,
-  priority // <-- 1. ACEPTAR NUEVA PROP 'priority'
+  priority
 }) => {
 
   // --- 2. DEFINIR TAMAÑOS PARA IMÁGENES DEL GRID ---
@@ -45,22 +45,25 @@ const MemoizedProductCard = memo(({
   // - En pantallas < 767px de ancho, la imagen debe llenar el 45% del ancho de la pantalla.
   // - En pantallas > 768px de ancho, la imagen tendrá un ancho fijo de 280px.
   const cardSizes = "(max-width: 767px) 45vw, 280px";
+  const productSlug = createSlug(product.name);
 
   return (
     <div className={styles.productCard}>
-      <div onClick={() => setSelectedProduct(product)} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+      <Link
+        to={`/producto/${productSlug}`}
+        style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', flexGrow: 1 }}
+      >
         <div className={styles.imageContainer}>
           <ImageWithFallback
             src={getThumbnailUrl(product.image_url, 110, 110)} // Usar la función para obtener thumbnail
             alt={`Imagen de ${product.name}`}
-            // --- 3. APLICAR NUEVAS PROPS ---
-            priority={priority} // <-- Pasar la prop
+            priority={priority}
           />
         </div>
         <div className={styles.cardContent}>
-          <h3>{product.name}</h3>
+          <h3>{product.name}</h3> {/* Aquí está bien que sea H3 porque es una lista */}
         </div>
-      </div>
+      </Link>
       <div className={styles.cardFooter}>
         <div className={styles.priceContainer}>
           {product.original_price && product.original_price !== product.price ? (
@@ -86,7 +89,9 @@ MemoizedProductCard.displayName = 'MemoizedProductCard';
 export default function Menu() {
   const { products, categories, loading, error } = useProducts();
   const { addToCart, showToast } = useCart();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { productSlug } = useParams();
+  const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'grid');
@@ -94,12 +99,9 @@ export default function Menu() {
   const { isOpen: isBusinessOpen } = useBusinessHours();
 
   useEffect(() => {
-    const productParam = searchParams.get('product'); // Esto ahora puede ser un ID o un Slug
-
-    if (productParam && products.length > 0) {
-      // Intentamos encontrar por ID (compatibilidad antigua) O por Slug (nuevo nombre bonito)
+    if (productSlug && products.length > 0) {
       const productFound = products.find(p =>
-        p.id.toString() === productParam || createSlug(p.name) === productParam
+        createSlug(p.name) === productSlug
       );
 
       if (productFound) {
@@ -107,28 +109,20 @@ export default function Menu() {
           setSelectedProduct(productFound);
         }
       }
-    } else if (!productParam && selectedProduct) {
+    } else if (!productSlug && selectedProduct) {
       setSelectedProduct(null);
     }
-  }, [searchParams, products]);
+  }, [productSlug, products]);
 
   const handleOpenProduct = useCallback((product) => {
-    setSelectedProduct(product);
-
-    // Aquí usamos el SLUG en lugar del ID para la URL
-    setSearchParams(prev => {
-      prev.set('product', createSlug(product.name)); // <--- CAMBIO CLAVE
-      return prev;
-    });
-  }, [setSearchParams]);
+    const slug = createSlug(product.name);
+    // Esto cambia la URL a /producto/alitas-bbq sin recargar la página
+    navigate(`/producto/${slug}`);
+  }, [navigate]);
 
   const handleCloseProduct = useCallback(() => {
-    setSelectedProduct(null);
-    setSearchParams(prev => {
-      prev.delete('product');
-      return prev;
-    });
-  }, [setSearchParams]);
+    navigate('/');
+  }, [navigate]);
 
   useEffect(() => {
     localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
@@ -172,17 +166,53 @@ export default function Menu() {
     );
   }, [products, selectedCategory]);
 
+  const currentUrl = window.location.href;
+  const canonicalUrl = selectedProduct
+    ? `https://ea-panel.vercel.app/producto/${createSlug(selectedProduct.name)}`
+    : `https://ea-panel.vercel.app/`;
+  const reviewCount = 0;
+  const reviewAverage = 0;
+  const currentSchema = selectedProduct ? {
+    "@context": "http://schema.org",
+    "@type": "Product",
+    "name": selectedProduct.name,
+    "image": selectedProduct.image_url,
+    "description": selectedProduct.description || `Delicioso ${selectedProduct.name} en Entre Alas.`,
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "MXN",
+      "price": selectedProduct.price,
+      "availability": "http://schema.org/InStock",
+      "url": canonicalUrl
+    },
+    ...(reviewCount > 0 && {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": reviewAverage,
+        "reviewCount": reviewCount,
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    })
+  } : restaurantSchema;
+
+  const pageTitle = selectedProduct
+    ? `${selectedProduct.name} - Entre Alas`
+    : 'Menú de Alitas y Boneless - Entre Alas';
+
   if (loading) return <LoadingSpinner />;
   if (error) return <p className={styles.error}>Error: {error}</p>;
 
   return (
     <>
       <SEO
-        title="Menú de Alitas y Boneless - Entre Alas"
+        title={pageTitle}
         description="Explora nuestro delicioso menú de alitas, boneless, hamburguesas, papas y más. Pide ahora y disfruta del mejor sabor en La Trinitaria, Chiapas."
         name="Entre Alas"
-        type="website"
-        schemaMarkup={restaurantSchema}
+        type={selectedProduct ? "product" : "website"}
+        schemaMarkup={currentSchema}
+        canonicalUrl={currentUrl.split('?')[0]}
+        image={selectedProduct ? selectedProduct.image_url : null}
       />
       <div className={styles.menuContainer}>
         {flyingImages.map(img => (

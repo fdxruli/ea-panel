@@ -126,6 +126,7 @@ function App() {
                       }
                     >
                       <Route index element={<Menu />} />
+                      <Route path="producto/:productSlug" element={<Menu />} />
                       <Route path="mis-pedidos" element={<MyOrders />} />
                       <Route path="mis-pedidos/:orderCode" element={<OrderDetailPage />} />
                       <Route path="mi-perfil" element={<MyProfile />} />
