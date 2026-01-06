@@ -1,0 +1,231 @@
+/* Mobile first! */
+
+/* == Overlay and Modal == */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.70);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 12px;
+}
+.modalBox {
+  background: var(--bg-secondary, #fff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 18px;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.20);
+}
+
+/* == Mobile typography == */
+.modalBox h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+.modalBox h4 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+/* == Cierre == */
+.closeButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  color: var(--text-primary, #333);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.closeButton:hover {
+  background: var(--color-error, #c00);
+  color: var(--text-light, #fff);
+  border-color: var(--color-error, #c00);
+}
+
+/* == Formulario de creación y edición de niveles == */
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.formSection input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 6px;
+  font-size: 16px;
+  background: var(--bg-secondary, #fafafa);
+  color: var(--text-primary, #222);
+  margin-bottom: 8px;
+}
+.formSection button {
+  padding: 10px 0;
+  background: var(--color-primary, #1346af);
+  color: var(--text-light, #fff);
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+.formSection button:hover:not(:disabled) {
+  background: var(--color-primary-dark, #0d347a);
+}
+.formSection button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* == Nivel == */
+.levelCard {
+  background: var(--bg-primary, #f9fafb);
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 13px;
+}
+.levelCard > div {
+  margin-bottom: 8px;
+  font-size: 17px;
+  color: var(--color-primary, #1346af);
+  font-weight: 700;
+}
+
+/* == Botones de nivel == */
+.levelCard button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: all .2s;
+}
+.levelCard button:first-of-type { background: var(--color-accent, #bfd8f9); color: var(--text-primary, #1346af); }
+.levelCard button:last-of-type { background: var(--color-error, #c00); color: #fff; }
+.levelCard button:hover { opacity: 0.85; }
+
+/* == Recompensas de nivel == */
+.rewardsSection {
+  background: var(--bg-highlight);
+  border: 1.5px solid var(--border-highlight);
+  border-radius: 9px;
+  padding: 13px;
+  margin-top: 8px;
+  color: var(--text-primary);
+}
+
+.addRewardForm {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.addRewardForm input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border-input);
+  border-radius: 5px;
+  font-size: 15px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border 0.18s, background 0.18s;
+}
+
+.addRewardForm button {
+  background: var(--color-primary);
+  color: var(--text-light);
+  padding: 10px 0;
+  border: none;
+  font-weight: 600;
+  border-radius: 5px;
+  cursor: pointer;
+  box-shadow: 0 1px 5px var(--shadow-light);
+  transition: background 0.18s;
+}
+.addRewardForm button:hover {
+  background: var(--color-primary-dark);
+}
+
+.rewardsSection ul {
+  padding-left: 20px;
+  margin: 0;
+}
+.rewardsSection li {
+  margin-bottom: 6px;
+  font-size: 15px;
+  color: var(--color-primary);
+  list-style: disc inside;
+}
+.rewardsSection b {
+  color: var(--color-highlight);
+}
+
+/* == Eliminar recompensa == */
+.rewardsSection button {
+  margin-left: 8px;
+  background: var(--bg-secondary,);
+  color: var(--color-highlight);
+  border: 1px solid var(--border-highlight);
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, color 0.2s;
+}
+.rewardsSection button:hover {
+  background: var(--color-highlight);
+  color: #fff;
+}
+/* == Spinner/Cargando == */
+.spinner {
+  margin: 27px auto;
+  display: block;
+  width: 38px;
+  height: 38px;
+  border: 4px solid #e2e5ea;
+  border-top: 4px solid #1346af;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* == Empty == */
+.emptyState {
+  text-align: center;
+  padding: 28px 6px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #dedede;
+  margin-top: 20px;
+}
+
+/* == Mobile == */
+@media (min-width: 769px) {
+  .modalBox { padding: 30px; }
+  .formSection { flex-direction: row; gap: 18px; align-items: center; }
+  .formSection input { width: 240px; margin-bottom: 0; }
+  .formSection button { width: auto; min-width: 135px; }
+  .levelCard { padding: 20px; font-size: 18px; }
+  .rewardsSection { margin-top: 14px; }
+  .addRewardForm { flex-direction: row; gap: 11px; }
+  .addRewardForm input { width: 220px; }
+  .addRewardForm button { width: 140px; }
+}

@@ -1,0 +1,88 @@
+.menuContainer {
+    position: relative;
+}
+
+.avatarButton {
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.avatarButton:hover, .avatarButton:focus {
+    border-color: var(--color-primary);
+}
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+    width: 280px;
+    z-index: 1100;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.links {
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdownLink {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.dropdownLink:hover {
+    background-color: var(--bg-primary);
+}
+
+.dropdownLink svg {
+    color: var(--text-secondary);
+}
+
+.prompt {
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.prompt h4 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.prompt p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.actionButton {
+    width: 100%;
+    padding: 0.8rem;
+    background-color: var(--color-primary);
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+}

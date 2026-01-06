@@ -1,0 +1,104 @@
+/* src/components/Sidebar.module.css */
+
+/* Estilos generales del grupo */
+.sidebarGroup {
+  margin-bottom: 0.5rem; /* Menor espacio entre grupos */
+  border-bottom: 1px solid var(--border-color); /* Separador sutil */
+}
+.sidebarGroup:last-of-type {
+    border-bottom: none; /* Sin borde en el último */
+}
+
+
+/* Botón para abrir/cerrar el grupo */
+.groupTitleButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.9rem 0.5rem; /* Ajusta el padding */
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease; /* Añade transición al hover */
+}
+/* Hover effect for the button */
+.groupTitleButton:hover {
+    background-color: var(--bg-primary); /* Ligero fondo al pasar el mouse */
+}
+
+/* Texto del título del grupo */
+.groupTitleText {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  /* Evita que el texto se parta al cerrar */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Icono de chevron */
+.chevronIcon {
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+  flex-shrink: 0; /* Evita que se encoja */
+}
+
+.chevronIcon.open {
+  transform: rotate(180deg);
+}
+
+/* Contenedor de los enlaces dentro del grupo */
+.groupContent {
+  max-height: 0;
+  overflow: hidden;
+  /* Transición suave y consistente para altura y padding */
+  transition: max-height 0.35s ease-in-out, padding 0.35s ease-in-out;
+  padding: 0 0.5rem; /* Padding horizontal para los enlaces */
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem; /* Espacio entre enlaces del grupo */
+}
+
+/* Estilos cuando el grupo está abierto */
+.groupContent.open {
+  max-height: 500px; /* Altura máxima suficiente para los enlaces */
+  padding: 0.5rem 0.5rem 1rem 0.5rem; /* Padding vertical al abrir */
+  /* La transición ya está definida arriba */
+}
+
+/* Estilos para los enlaces dentro del grupo */
+.groupContent a {
+  /* Hereda estilos base de App.css */
+  padding: 0.6rem 0.8rem; /* Padding más específico para enlaces internos */
+  margin-bottom: 0; /* Quitamos margen inferior si existía */
+  font-size: 0.9rem; /* Ligeramente más pequeños */
+  /* Evita que el texto se parta al cerrar */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0; /* Empieza invisible */
+  transform: translateY(-5px); /* Empieza ligeramente arriba */
+  transition: opacity 0.3s ease-out 0.1s, transform 0.3s ease-out 0.1s; /* Transición con retraso */
+}
+
+/* Estilos de los enlaces cuando el grupo está abierto */
+.groupContent.open a {
+    opacity: 1; /* Se hace visible */
+    transform: translateY(0); /* Vuelve a su posición */
+}
+
+.activeLink {
+  background-color: var(--color-primary-light) !important; /* Usa !important si es necesario para sobrescribir */
+  color: var(--color-primary-dark) !important;
+  font-weight: 700 !important;
+}
+/* Opcional: Si quieres que el hover sea diferente en el activo */
+.activeLink:hover {
+    background-color: var(--color-primary-light) !important; /* Mantiene el color de fondo activo */
+    /* Puedes ajustar otros estilos si quieres */
+}

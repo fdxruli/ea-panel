@@ -1,0 +1,28 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.instruction {
+  text-align: center;
+  padding-bottom: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.mapContainer {
+  width: 100%;
+  flex-grow: 1;
+  position: relative;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    display: none;
+}

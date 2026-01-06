@@ -1,0 +1,39 @@
+.prompt {
+    padding: 2.5rem;
+    margin: auto;
+    max-width: 450px;
+    width: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    justify-content: center; 
+    min-height: 50vh;
+}
+
+.prompt h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.actionButton {
+    padding: 0.8rem 1.5rem;
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    width: 100%; 
+    max-width: 250px;
+}
+
+.actionButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+}

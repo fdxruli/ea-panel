@@ -1,0 +1,33 @@
+/* src/components/MaintenancePage.module.css */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh; /* Ocupa toda la altura de la pantalla */
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--bg-primary); /* Usa tus variables de color */
+  color: var(--text-primary);
+}
+
+.icon {
+  width: 250px; /* Ajusta el tamaño según necesites */
+  height: auto;
+  margin-bottom: 2rem;
+  max-width: 80%;
+  color: var(--color-primary); /* Puedes darle color al SVG si es adaptable */
+}
+
+.container h1 {
+  color: var(--color-primary);
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+.container p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 500px;
+  line-height: 1.6;
+}

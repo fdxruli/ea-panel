@@ -1,0 +1,72 @@
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000;
+}
+
+.modalContent {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.header h3 { margin: 0; }
+.closeButton {
+    background: none; border: none; font-size: 2.5rem;
+    cursor: pointer; color: var(--text-secondary);
+}
+
+.body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.customerDetails, .addressDetails {
+    background-color: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.customerDetails h4, .addressDetails h4 {
+    margin: 0 0 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.customerDetails p, .addressDetails p {
+    margin: 0.5rem 0;
+}
+
+.mapContainer {
+    height: 300px;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.noMap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+}
