@@ -6,21 +6,6 @@
     <changefreq>weekly</changefreq>
   </url>
   <url>
-    <loc>https://ea-panel.vercel.app/mis-pedidos</loc>
-    <priority>0.8</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/mi-perfil</loc>
-    <priority>0.7</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/mi-actividad</loc>
-    <priority>0.6</priority>
-    <changefreq>monthly</changefreq>
-  </url>
-  <url>
     <loc>https://ea-panel.vercel.app/terminos</loc>
     <priority>0.3</priority>
     <changefreq>yearly</changefreq>
