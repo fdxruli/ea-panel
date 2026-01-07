@@ -270,42 +270,48 @@ export default function Menu() {
         )}
         <footer className={styles.seoFooter}>
           <div className={styles.footerContent}>
-            {/* Texto simplificado: Solo marca y ubicación */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Entre Alas</h2>
-              <p style={{ fontSize: '1rem', margin: 0 }}>
-                El mejor sabor a domicilio en <strong>Chamic y Ejido 20 de Abril</strong>.
+            <div className={styles.footerBrand}>
+              <h2>Entre Alas</h2>
+              <p className={styles.footerTagline}>
+                Alitas, boneless y más. Directo a tu puerta.
               </p>
             </div>
 
-            <div className={styles.socialSection}>
-              {/* Se eliminó el texto "¡Síguenos y haz tu pedido!" porque los botones ya son obvios */}
-              <div className={styles.socialButtons}>
-                <a
-                  href="https://www.facebook.com/EntreAlasDarkitchen"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${styles.socialBtn} ${styles.facebook}`}
-                >
-                  <FacebookIcon />
-                  Facebook
-                </a>
-
-                <a
-                  href={`https://wa.me/${BUSINESS_PHONE}?text=Hola!%20Vengo%20de%20su%20página%20web%20y%20quiero%20hacer%20un%20pedido.`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${styles.socialBtn} ${styles.whatsapp}`}
-                >
-                  <WhatsappIcon />
-                  WhatsApp
-                </a>
-              </div>
+            <div className={styles.footerLocation}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              <span>Chamic y Ejido 20 de Abril, Chiapas</span>
             </div>
 
-            <p style={{ fontSize: '0.75rem', marginTop: '1.5rem', opacity: 0.6 }}>
-              &copy; {new Date().getFullYear()} Entre Alas.
-            </p>
+            <div className={styles.socialButtons}>
+              <a
+                href={`https://wa.me/${BUSINESS_PHONE}?text=Hola!%20Vengo%20de%20su%20página%20web%20y%20quiero%20hacer%20un%20pedido.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${styles.socialBtn} ${styles.whatsapp}`}
+                aria-label="Hacer pedido por WhatsApp"
+              >
+                <WhatsappIcon />
+                <span>Hacer pedido</span>
+              </a>
+
+              <a
+                href="https://www.facebook.com/EntreAlasDarkitchen"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${styles.socialBtn} ${styles.facebook}`}
+                aria-label="Seguir en Facebook"
+              >
+                <FacebookIcon />
+                <span>Síguenos</span>
+              </a>
+            </div>
+
+            <div className={styles.footerBottom}>
+              <p>&copy; {new Date().getFullYear()} Entre Alas. Todos los derechos reservados.</p>
+            </div>
           </div>
         </footer>
       </div>

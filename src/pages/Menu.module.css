@@ -262,57 +262,57 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-/* === NUEVO FOOTER PROFESIONAL === */
+/* === FOOTER PROFESIONAL Y MODERNO === */
 .seoFooter {
   background-color: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
-  margin-top: 3rem;
-  padding: 3rem 1.5rem;
+  margin-top: 4rem;
+  padding: 2.5rem 1.5rem 1.5rem;
   border-radius: var(--border-radius) var(--border-radius) 0 0;
-  text-align: center;
 }
 
 .footerContent {
-  max-width: 800px;
+  max-width: 600px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
-.seoFooter h2 {
+.footerBrand {
+  text-align: center;
+}
+
+.footerBrand h2 {
   color: var(--color-primary);
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   margin-bottom: 0.5rem;
+  font-weight: 700;
 }
 
-.seoFooter p {
+.footerTagline {
   color: var(--text-secondary);
-  line-height: 1.6;
   font-size: 0.95rem;
+  line-height: 1.4;
   margin: 0;
 }
 
-.seoFooter strong, .seoFooter em {
-  color: var(--text-primary);
-}
-
-.socialSection {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+.footerLocation {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
-.socialLabel {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.footerLocation svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.footerLocation span {
+  text-align: center;
 }
 
 .socialButtons {
@@ -325,35 +325,71 @@
 .socialBtn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
+  gap: 0.6rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 50px;
   font-weight: 600;
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .socialBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Estilos específicos para cada red */
+.socialBtn svg {
+  flex-shrink: 0;
+}
+
 .whatsapp {
   background-color: #25D366;
   color: white;
-  border: 1px solid #25D366;
+}
+
+.whatsapp:hover {
+  background-color: #20BA5A;
 }
 
 .facebook {
   background-color: #1877F2;
   color: white;
-  border: 1px solid #1877F2;
 }
 
+.facebook:hover {
+  background-color: #0C63D4;
+}
+
+.footerBottom {
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.footerBottom p {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin: 0;
+  opacity: 0.7;
+}
+
+/* === RESPONSIVE PARA ESCRITORIO === */
 @media (min-width: 768px) {
   .seoFooter {
-    padding: 4rem 2rem;
+    padding: 3rem 2rem 2rem;
+  }
+
+  .footerContent {
+    max-width: 700px;
+  }
+
+  .footerBrand h2 {
+    font-size: 2rem;
+  }
+
+  .socialButtons {
+    gap: 1.5rem;
   }
 }
