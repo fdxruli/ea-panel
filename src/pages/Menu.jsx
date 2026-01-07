@@ -264,6 +264,18 @@ export default function Menu() {
             onAddToCart={handleAddToCart}
           />
         )}
+        <footer className={styles.seoFooter} style={{ padding: '40px 20px', textAlign: 'center', color: '#666', fontSize: '0.9rem' }}>
+          <h2>Dark Kitchen de Alitas en Chamic</h2>
+          <p>
+            En <strong>Entre Alas</strong> nos especializamos en llevar el mejor sabor hasta la puerta de tu casa.
+            Somos la mejor opción de <em>comida rápida a domicilio en el ejido 20 de abril y Chamic, Chiapas</em>.
+            Nuestro menú incluye alitas con 5 salsas diferentes, boneless crujientes y las hamburguesas más jugosas de la región.
+          </p>
+          <p>
+            Atendemos pedidos en Ejido 20 de Abril y zonas cercanas.
+            ¡Haz tu pedido en línea sin instalar aplicaciones!
+          </p>
+        </footer>
       </div>
     </>
   );
