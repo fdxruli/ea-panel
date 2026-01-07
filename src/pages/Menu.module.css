@@ -261,3 +261,99 @@
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
+
+/* === NUEVO FOOTER PROFESIONAL === */
+.seoFooter {
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  margin-top: 3rem;
+  padding: 3rem 1.5rem;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  text-align: center;
+}
+
+.footerContent {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.seoFooter h2 {
+  color: var(--color-primary);
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.seoFooter p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.seoFooter strong, .seoFooter em {
+  color: var(--text-primary);
+}
+
+.socialSection {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.socialLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.socialButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.socialBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-size: 0.95rem;
+}
+
+.socialBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Estilos específicos para cada red */
+.whatsapp {
+  background-color: #25D366;
+  color: white;
+  border: 1px solid #25D366;
+}
+
+.facebook {
+  background-color: #1877F2;
+  color: white;
+  border: 1px solid #1877F2;
+}
+
+@media (min-width: 768px) {
+  .seoFooter {
+    padding: 4rem 2rem;
+  }
+}
