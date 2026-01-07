@@ -12,7 +12,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // --- CONFIGURACIÓN ---
 const BASE_URL = 'https://ea-panel.vercel.app';
-// Asegúrate de que estas variables se llamen igual que en tu .env local y en Vercel
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY; 
 
@@ -23,7 +22,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Tu función exacta de creación de Slugs para asegurar consistencia
 const createSlug = (text) => {
   return text
     .toString()
@@ -40,11 +38,11 @@ async function generateSitemap() {
   console.log('🔄 Iniciando generación de Sitemap...');
 
   // 1. Obtener productos de Supabase
-  // Asumo que tu tabla se llama 'products'. Si tienes un campo 'is_active', úsalo.
+  // CORRECCIÓN: Cambiado 'updated_at' por 'created_at' porque 'updated_at' no existe en tu tabla.
   const { data: products, error } = await supabase
     .from('products')
-    .select('name, updated_at') // Necesitamos nombre y fecha de actualización
-    .eq('is_active', true);    // Opcional: Solo productos activos
+    .select('name, created_at') 
+    .eq('is_active', true);
 
   if (error) {
     console.error('❌ Error conectando con Supabase:', error.message);
@@ -53,9 +51,9 @@ async function generateSitemap() {
 
   console.log(`📦 Se encontraron ${products?.length || 0} productos activos.`);
 
-  // 2. Definir rutas estáticas (Home, Términos, etc.)
+  // 2. Definir rutas estáticas
   const staticRoutes = [
-    { url: '', priority: '1.0', changefreq: 'weekly' },       // Home
+    { url: '', priority: '1.0', changefreq: 'weekly' },
     { url: '/terminos', priority: '0.3', changefreq: 'yearly' }
   ];
 
@@ -77,9 +75,10 @@ async function generateSitemap() {
   if (products) {
     products.forEach(product => {
       const slug = createSlug(product.name);
-      // Si tienes updated_at úsalo, si no, usa la fecha de hoy
-      const lastMod = product.updated_at 
-        ? new Date(product.updated_at).toISOString().split('T')[0] 
+      
+      // CORRECCIÓN: Usamos created_at como fallback para lastmod
+      const lastMod = product.created_at 
+        ? new Date(product.created_at).toISOString().split('T')[0] 
         : new Date().toISOString().split('T')[0];
       
       xml += `
