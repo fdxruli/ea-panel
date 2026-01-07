@@ -1,28 +1,43 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 
-const SEO = ({ title, description, name, type, schemaMarkup }) => {
+const SEO = ({ title, description, name, type, schemaMarkup, canonicalUrl, image }) => {
+  const siteUrl = 'https://ea-panel.vercel.app';
+  const metaImage = image 
+    ? (image.startsWith('http') ? image : `${siteUrl}${image}`) 
+    : `${siteUrl}/banner-social.png`;
+
   return (
-    <Helmet>
+    <>
       <title>{title}</title>
-      <meta name='description' content={description} />
-      <meta property="og:type" content={type} />
+      <meta name="description" content={description} />
+      
+      {/* Open Graph */}
+      <meta property="og:type" content={type || 'website'} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta name="twitter:creator" content={name} />
-      <meta name="twitter:card" content={type} />
+      <meta property="og:image" content={metaImage} />
+      <meta property="og:url" content={canonicalUrl || siteUrl} />
+      
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" /> 
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={metaImage} />
+
+      {/* Canonical URL */}
+      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
       
+      {/* Schema Markup (JSON-LD) */}
       {schemaMarkup && (
         <script type="application/ld+json">
           {JSON.stringify(schemaMarkup)}
         </script>
       )}
-    </Helmet>
+    </>
   );
 };
 
+// Mantén tu objeto restaurantSchema igual que antes
 export const restaurantSchema = {
     "@context": "http://schema.org",
     "@type": "Restaurant",
@@ -45,13 +60,7 @@ export const restaurantSchema = {
         {
             "@type": "OpeningHoursSpecification",
             "dayOfWeek": [
-                "Monday",
-                "Tuesday",
-                "Wednesday",
-                "Thursday",
-                "Friday",
-                "Saturday",
-                "Sunday"
+                "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
             ],
             "opens": "06:00",
             "closes": "22:00"

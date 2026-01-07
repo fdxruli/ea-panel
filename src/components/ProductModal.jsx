@@ -280,7 +280,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                 <div className={styles.productDetails}>
                     <div className={styles.header}>
                         <div className={styles.headerInfo}>
-                            <h2 className={styles.productName}>{product.name}</h2>
+                            <h1 className={styles.productName}>{product.name}</h1>
                             <AverageRating reviews={productReviews} />
                         </div>
 
