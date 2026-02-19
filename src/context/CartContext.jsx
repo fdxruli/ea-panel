@@ -26,7 +26,7 @@ export const CartProvider = ({ children }) => {
     const [subtotal, setSubtotal] = useState(0);
     const [discount, setDiscount] = useState(null);
     const [total, setTotal] = useState(0);
-    
+
     // Notificaciones
     const [cartNotification, setCartNotification] = useState(''); // Para modales de alerta (items eliminados)
     const [toast, setToast] = useState({ message: '', key: 0 });  // Para mensajes discretos (precios actualizados)
@@ -53,7 +53,7 @@ export const CartProvider = ({ children }) => {
 
         // Mapa para búsqueda rápida O(1)
         const liveProductsMap = new Map(liveProducts.map(p => [p.id, p]));
-        
+
         let shouldUpdateCart = false;
         let pricesChanged = false;
         let itemsRemoved = false;
@@ -72,16 +72,16 @@ export const CartProvider = ({ children }) => {
             }
 
             // CASO B: El producto existe, pero verifiquemos si el PRECIO cambió
-            if (Number(liveProduct.price) !== Number(item.price)) {
+            if (Math.abs(Number(liveProduct.price) - Number(item.price)) > 0.01) {
                 pricesChanged = true;
                 shouldUpdateCart = true;
                 // Actualizamos el precio al valor actual de la DB
-                acc.push({ ...item, price: liveProduct.price });
+                acc.push({ ...item, price: Number(liveProduct.price) });
             } else {
                 // CASO C: Todo igual, lo dejamos como está
                 acc.push(item);
             }
-            
+
             return acc;
         }, []);
 
@@ -108,12 +108,12 @@ export const CartProvider = ({ children }) => {
                 }
             }
         }
-        
-    // NOTA: Quitamos 'cartItems' de las dependencias para evitar que este efecto
-    // se dispare cíclicamente cuando 'setCartItems' se ejecute dentro de él.
-    // Solo queremos que corra cuando llegue nueva información de la DB ('liveProducts').
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [liveProducts, productsLoading]); 
+
+        // NOTA: Quitamos 'cartItems' de las dependencias para evitar que este efecto
+        // se dispare cíclicamente cuando 'setCartItems' se ejecute dentro de él.
+        // Solo queremos que corra cuando llegue nueva información de la DB ('liveProducts').
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [liveProducts, productsLoading]);
     // --- 👆 FIN DE LA MEJORA 👆 ---
 
 
@@ -149,7 +149,7 @@ export const CartProvider = ({ children }) => {
             const { data: discountData, error } = await supabase.from('discounts').select('*').eq('code', upperCaseCode).single();
             if (error || !discountData) return { success: false, message: 'El código no es válido.' };
 
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
             if (!discountData.is_active || (discountData.end_date && discountData.end_date < today) || (discountData.start_date && discountData.start_date > today)) {
                 return { success: false, message: 'Este código ha expirado o no está activo.' };
             }
@@ -189,7 +189,7 @@ export const CartProvider = ({ children }) => {
         setIsCartOpen(false);
     }, []);
     const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
-    
+
     const addToCart = useCallback((product, quantityToAdd = 1) => {
         setCartItems(prevItems => {
             const existingItem = prevItems.find(item => item.id === product.id);
@@ -218,7 +218,7 @@ export const CartProvider = ({ children }) => {
         setDiscount(null);
         window.localStorage.removeItem(CART_STORAGE_KEY);
     }, []);
-    
+
     const replaceCart = useCallback((newItems) => {
         clearCart();
         setCartItems(newItems);
