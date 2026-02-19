@@ -142,7 +142,7 @@ export default function CreateOrder() {
         }
         setLoadingSpecialPrices(true); // <-- CAMBIADO
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
             const { data: specialPrices, error: specialPricesError } = await supabase
                 .from('special_prices')
@@ -219,8 +219,8 @@ export default function CreateOrder() {
             showAlert('El nombre y el teléfono son obligatorios.');
             return;
         }
-        if (cleanPhone.length !== 10) {
-            showAlert('El teléfono debe tener 10 dígitos.');
+        if (cleanPhone.length < 8 || cleanPhone.length > 15) {
+            showAlert('El teléfono debe tener entre 8 y 15 dígitos válidos.');
             return;
         }
 
@@ -564,7 +564,7 @@ export default function CreateOrder() {
                                             id="schedule-date"
                                             value={scheduleDate}
                                             onChange={(e) => setScheduleDate(e.target.value)}
-                                            min={new Date().toISOString().split('T')[0]}
+                                            min={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
                                         />
                                     </div>
                                     <div className={styles.formGroup}>
@@ -643,10 +643,10 @@ export default function CreateOrder() {
                                     <input
                                         id="new-customer-phone"
                                         type="tel"
-                                        maxLength="10"
-                                        pattern="\d{10}"
-                                        placeholder="10 dígitos"
-                                        title="Ingresa 10 dígitos numéricos"
+                                        maxLength="15"
+                                        pattern="\d{8,15}"
+                                        placeholder="Ej. 9631234567"
+                                        title="Ingresa entre 8 y 15 dígitos numéricos"
                                         value={newCustomer.phone}
                                         onChange={e => setNewCustomer({
                                             ...newCustomer,
