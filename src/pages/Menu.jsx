@@ -277,7 +277,7 @@ export default function Menu() {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                   <circle cx="12" cy="10" r="3"></circle>
                 </svg>
-                <span>Chamic y Ejido 20 de Abril, Chiapas</span>
+                <span>Chamic, VillaFlores, Juan Sabines, Paraiso y Ejido 20 de Abril, Chiapas</span>
               </div>
 
               <div className={styles.socialButtons}>
