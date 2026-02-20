@@ -339,12 +339,20 @@ export default function CreateOrder() {
                 throw new Error('La RPC no devolvió la información del pedido creado.');
             }
 
-            // --- FIN DE LA MODIFICACIÓN ---
+            // 3. El resto de la lógica (notificación por WhatsApp)
+            let message = `Te confirmamos tu pedido en *ENTRE ALAS*:\n\n*Pedido N°: ${newOrder.order_code}*\n\n*Detalle del pedido:*\n`;
+            
+            cart.forEach(item => { 
+                const subtotal = item.quantity * item.price;
+                message += `• ${item.name}\n`;
+                message += `  ${item.quantity} x $${item.price.toFixed(2)} = $${subtotal.toFixed(2)}\n`; 
+            });
 
-            // 3. El resto de la lógica (notificación por WhatsApp) sigue igual
-            let message = `Te confirmamos tu pedido en ENTRE ALAS:\n\n*Pedido N°: ${newOrder.order_code}*\n\n`;
-            cart.forEach(item => { message += `• ${item.quantity}x ${item.name}\n`; });
-            message += `\n*Total a pagar: $${cartTotal.toFixed(2)}*`;
+            // Cálculo de la comisión de Clip (3.6% + 16% IVA = 4.176%)
+            const clipCommission = cartTotal * 0.04176;
+            const totalWithCard = cartTotal + clipCommission;
+
+            message += `\n*Total en Efectivo / Transferencia: $${cartTotal.toFixed(2)}*`;
 
             if (scheduledTimestamp) {
                 const scheduledDateObj = new Date(scheduledTimestamp);
@@ -353,6 +361,13 @@ export default function CreateOrder() {
                 const formattedDate = `${scheduledDateObj.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDateObj.toLocaleTimeString('es-MX', timeOptions)}`;
                 message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
             }
+
+            // Leyenda clara y objetiva al final
+            message += `\n\n*Métodos de pago aceptados:*\n`;
+            message += `💵 Efectivo\n`;
+            message += `📱 Transferencia\n`;
+            message += `💳 Tarjeta (Incluye 4.18% de cargo por servicio).`;
+            message += `\n*Total pagando con Tarjeta: $${totalWithCard.toFixed(2)}*`;
 
             const clientSpecificOrderUrl = `https://ea-panel.vercel.app/mis-pedidos/${newOrder.order_code}`;
             message += `\n\nPuedes ver el estado de tu pedido aquí:\n${clientSpecificOrderUrl}`;
