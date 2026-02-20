@@ -64,16 +64,16 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
           <p className={styles.customerInfo}>
             {/* ✅ Lógica visual diferenciada para Invitados */}
             {isGuest ? (
-               <span>
-                 <strong style={{ color: '#25D366' }}>👋 Invitado (WhatsApp)</strong>
-                 <br/>
-                 <small style={{ color: '#666' }}>Revisar chat para dirección</small>
-               </span>
+              <span>
+                <strong style={{ color: '#25D366' }}>👋 Invitado (WhatsApp)</strong>
+                <br />
+                <small style={{ color: '#666' }}>Revisar chat para dirección</small>
+              </span>
             ) : (
-                <>
-                    <span>{order.customers?.name || 'N/A'}</span> 
-                    ({order.customers?.phone || 'N/A'})
-                </>
+              <>
+                <span>{order.customers?.name || 'N/A'}</span>
+                ({order.customers?.phone || 'N/A'})
+              </>
             )}
           </p>
         </div>
@@ -237,44 +237,63 @@ export default function Orders() {
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
   // ✅ OPTIMIZACIÓN: Fetch con paginación
-  const fetchOrders = useCallback(async (page = 1, append = false) => {
+  const fetchOrders = useCallback(async (page = 1, append = false, search = "", status = "activos") => {
     try {
       if (!append) setLoading(true);
       else setLoadingMore(true);
 
-      // Calcular rango para paginación
       const from = (page - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
       let query = supabase
         .from("orders")
         .select(`
-                    id,
-                    order_code,
-                    customer_id,
-                    status,
-                    total_amount,
-                    scheduled_for,
-                    created_at,
-                    updated_at,
-                    cancellation_reason,
-                    customers(id, name, phone),
-                    order_items(id, quantity, price, products(name))
-                `, { count: 'exact' })
-        .order("created_at", { ascending: false })
-        .range(from, to);
+          id,
+          order_code,
+          customer_id,
+          status,
+          total_amount,
+          scheduled_for,
+          created_at,
+          updated_at,
+          cancellation_reason,
+          customers!inner(id, name, phone),
+          order_items(id, quantity, price, products(name))
+      `, { count: 'exact' });
+
+      // 1. Filtrado por Estado en el Servidor
+      if (status === 'activos') {
+        query = query.in('status', ['pendiente', 'en_proceso', 'en_envio']);
+      } else if (status !== 'todos') {
+        query = query.eq('status', status);
+      }
+
+      // 2. Filtrado por Búsqueda en el Servidor
+      if (search) {
+        // Nota: Para buscar en una tabla unida (customers.name), requieres un inner join y sintaxis específica
+        // O buscar por el código de orden.
+        const cleanSearch = search.trim().toLowerCase();
+        // Asumiendo que order_code es texto:
+        query = query.ilike('order_code', `%${cleanSearch}%`);
+        // Si necesitas buscar por nombre de cliente, la forma más limpia en Supabase es usar una View o RPC.
+      }
+
+      query = query.order("created_at", { ascending: false }).range(from, to);
 
       const { data, error, count } = await query;
 
       if (error) throw error;
 
       if (append) {
-        setOrders(prev => [...prev, ...(data || [])]);
+        setOrders(prev => {
+          // Evitar duplicados si realtime ya insertó el pedido
+          const newItems = data.filter(d => !prev.some(p => p.id === d.id));
+          return [...prev, ...newItems];
+        });
       } else {
         setOrders(data || []);
       }
 
-      // Verificar si hay más páginas
       setHasMore(count ? (page * ITEMS_PER_PAGE) < count : false);
       currentPage.current = page;
 
@@ -362,25 +381,24 @@ export default function Orders() {
 
   // Handler de confirmación de cancelación
   const handleCancelConfirm = useCallback(async (reason) => {
-    if (!cancellingOrderId) return;
+  if (!cancellingOrderId) return;
 
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          status: 'cancelado',
-          cancellation_reason: reason
-        })
-        .eq("id", cancellingOrderId);
+  try {
+    // Reemplazar la actualización directa por una llamada RPC atómica
+    const { error } = await supabase.rpc('cancel_order_and_restore_stock', {
+      p_order_id: cancellingOrderId,
+      p_reason: reason || 'Cancelado por administrador.'
+    });
 
-      if (error) throw error;
-
-      setCancellingOrderId(null);
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      alert('Error al cancelar el pedido');
-    }
-  }, [cancellingOrderId]);
+    if (error) throw error;
+    setCancellingOrderId(null);
+    
+    // El realtime de Supabase (el evento UPDATE) se encargará de actualizar la UI
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    alert('Error al cancelar el pedido y restaurar stock. Revisa tu conexión.');
+  }
+}, [cancellingOrderId]);
 
   // ✅ OPTIMIZACIÓN: Filtrado en el cliente con búsqueda debounced
   const filteredOrders = useMemo(() => {
@@ -409,9 +427,9 @@ export default function Orders() {
       // 1. CASO INVITADO: No buscamos en BD, creamos info manual.
       if (order.customer_id === GUEST_CUSTOMER_ID) {
         setDeliveryInfo({
-          customer: { 
-            name: "Invitado (Vía WhatsApp)", 
-            phone: "Ver WhatsApp" 
+          customer: {
+            name: "Invitado (Vía WhatsApp)",
+            phone: "Ver WhatsApp"
           },
           address: {
             street: "Dirección a coordinar por WhatsApp",
