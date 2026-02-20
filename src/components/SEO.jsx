@@ -53,6 +53,20 @@ export const restaurantSchema = {
         "postalCode": "30165",
         "addressCountry": "MX"
     },
+    "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "15.852133", 
+        "longitude": "-91.977518"
+    },
+    "areaServed": {
+        "@type": "GeoCircle",
+        "geoMidpoint": {
+            "@type": "GeoCoordinates",
+            "latitude": "15.852133",
+            "longitude": "-91.977518"
+        },
+        "geoRadius": "5000"
+    },
     "servesCuisine": "Alitas, Boneless, Hamburguesas, Papas a la francesa",
     "keywords": "alitas, boneless, papas, hamburguesas, restaurante, comida rapida, La Trinitaria, Chiapas",
     "priceRange": "$$",
@@ -62,8 +76,8 @@ export const restaurantSchema = {
             "dayOfWeek": [
                 "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
             ],
-            "opens": "06:00",
-            "closes": "22:00"
+            "opens": "09:00",
+            "closes": "20:00"
         }
     ],
     "hasMenu": {

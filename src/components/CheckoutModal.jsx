@@ -502,7 +502,7 @@ export default function CheckoutModal({ phone, onClose }) {
                         </div>
 
                         <div className={styles.dividerText}>
-                            <span>o continúa como invitado</span>
+                            <span>o ingresa tu numero</span>
                         </div>
 
                         <div className={`${styles.optionCard} ${styles.memberCard}`}>
