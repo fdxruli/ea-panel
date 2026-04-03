@@ -1,106 +1,129 @@
-import React from 'react';
+import { useEffect } from 'react';
+import {
+  defaultSeoImageAlt,
+  normalizeCanonicalUrl,
+  resolveSeoImage,
+  siteLocale,
+  siteName,
+  siteUrl,
+} from '../seo/config';
 
-const SEO = ({ title, description, name, type, schemaMarkup, canonicalUrl, image }) => {
-  const siteUrl = 'https://ea-panel.vercel.app';
-  const metaImage = image 
-    ? (image.startsWith('http') ? image : `${siteUrl}${image}`) 
-    : `${siteUrl}/banner-social.png`;
+const DEFAULT_ROBOTS = 'index, follow, max-image-preview:large';
+const NOINDEX_ROBOTS = 'noindex, nofollow, noarchive';
+const MANAGED_SCHEMA_SELECTOR = 'script[data-seo-schema="true"]';
 
-  return (
-    <>
-      <title>{title}</title>
-      <meta name="description" content={description} />
-      
-      {/* Open Graph */}
-      <meta property="og:type" content={type || 'website'} />
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={metaImage} />
-      <meta property="og:url" content={canonicalUrl || siteUrl} />
-      
-      {/* Twitter */}
-      <meta name="twitter:card" content="summary_large_image" /> 
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={metaImage} />
+const ensureHeadElement = (selector, createElement) => {
+  const existing = document.head.querySelector(selector);
 
-      {/* Canonical URL */}
-      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-      
-      {/* Schema Markup (JSON-LD) */}
-      {schemaMarkup && (
-        <script type="application/ld+json">
-          {JSON.stringify(schemaMarkup)}
-        </script>
-      )}
-    </>
-  );
+  if (existing) {
+    return existing;
+  }
+
+  const nextElement = createElement();
+  document.head.appendChild(nextElement);
+  return nextElement;
 };
 
-// Mantén tu objeto restaurantSchema igual que antes
-export const restaurantSchema = {
-    "@context": "http://schema.org",
-    "@type": "Restaurant",
-    "name": "Entre Alas",
-    "description": "El mejor lugar para disfrutar alitas, boneless, hamburguesas y papas. Ofrecemos una variedad de sabores y un trato acogedor para toda la familia.",
-    "url": "https://ea-panel.vercel.app",
-    "telephone": "+529631834700",
-    "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Ejido 20 de Abril",
-        "addressLocality": "La Trinitaria",
-        "addressRegion": "Chiapas",
-        "postalCode": "30165",
-        "addressCountry": "MX"
-    },
-    "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": "15.852133", 
-        "longitude": "-91.977518"
-    },
-    "areaServed": {
-        "@type": "GeoCircle",
-        "geoMidpoint": {
-            "@type": "GeoCoordinates",
-            "latitude": "15.852133",
-            "longitude": "-91.977518"
-        },
-        "geoRadius": "5000"
-    },
-    "servesCuisine": "Alitas, Boneless, Hamburguesas, Papas a la francesa",
-    "keywords": "alitas, boneless, papas, hamburguesas, restaurante, comida rapida, La Trinitaria, Chiapas",
-    "priceRange": "$$",
-    "openingHoursSpecification": [
-        {
-            "@type": "OpeningHoursSpecification",
-            "dayOfWeek": [
-                "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-            ],
-            "opens": "09:00",
-            "closes": "20:00"
-        }
-    ],
-    "hasMenu": {
-        "@type": "Menu",
-        "name": "Menú Principal",
-        "url": "https://ea-panel.vercel.app"
-    },
-    "potentialAction": {
-      "@type": "OrderAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://ea-panel.vercel.app",
-        "inLanguage": "es-MX",
-        "actionPlatform": [
-          "http://schema.org/DesktopWebPlatform",
-          "http://schema.org/IOSPlatform",
-          "http://schema.org/AndroidPlatform"
-        ]
-      },
-      "deliveryMethod": [
-        "http://purl.org/goodrelations/v1#DeliveryModeOwnFleet"
-      ]
-    }
+const setMetaTag = (selector, attributes, content) => {
+  const element = ensureHeadElement(selector, () => {
+    const meta = document.createElement('meta');
+    Object.entries(attributes).forEach(([key, value]) => {
+      meta.setAttribute(key, value);
+    });
+    return meta;
+  });
+
+  Object.entries(attributes).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+
+  element.setAttribute('content', content);
+  return element;
 };
 
-export default SEO;
+const setLinkTag = (selector, attributes) => {
+  const element = ensureHeadElement(selector, () => {
+    const link = document.createElement('link');
+    Object.entries(attributes).forEach(([key, value]) => {
+      link.setAttribute(key, value);
+    });
+    return link;
+  });
+
+  Object.entries(attributes).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+
+  return element;
+};
+
+const removeManagedSchemas = () => {
+  document.head.querySelectorAll(MANAGED_SCHEMA_SELECTOR).forEach((node) => node.remove());
+};
+
+const appendSchemas = (schemaMarkup) => {
+  const entries = Array.isArray(schemaMarkup) ? schemaMarkup : [schemaMarkup];
+
+  entries.filter(Boolean).forEach((schema) => {
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.dataset.seoSchema = 'true';
+    script.textContent = JSON.stringify(schema);
+    document.head.appendChild(script);
+  });
+};
+
+export default function SEO({
+  title,
+  description,
+  type = 'website',
+  schemaMarkup,
+  canonicalUrl,
+  image,
+  imageAlt,
+  noindex = false,
+}) {
+  useEffect(() => {
+    const resolvedTitle = title || siteName;
+    const resolvedDescription = description || '';
+    const resolvedCanonicalUrl = normalizeCanonicalUrl(
+      canonicalUrl || window.location.pathname || siteUrl
+    );
+    const resolvedImage = resolveSeoImage(image);
+    const resolvedImageAlt = imageAlt || defaultSeoImageAlt;
+    const robotsValue = noindex ? NOINDEX_ROBOTS : DEFAULT_ROBOTS;
+
+    document.title = resolvedTitle;
+
+    setMetaTag('meta[name="description"]', { name: 'description' }, resolvedDescription);
+    setMetaTag('meta[property="og:site_name"]', { property: 'og:site_name' }, siteName);
+    setMetaTag('meta[property="og:locale"]', { property: 'og:locale' }, siteLocale);
+    setMetaTag('meta[property="og:type"]', { property: 'og:type' }, type);
+    setMetaTag('meta[property="og:title"]', { property: 'og:title' }, resolvedTitle);
+    setMetaTag('meta[property="og:description"]', { property: 'og:description' }, resolvedDescription);
+    setMetaTag('meta[property="og:url"]', { property: 'og:url' }, resolvedCanonicalUrl);
+    setMetaTag('meta[property="og:image"]', { property: 'og:image' }, resolvedImage);
+    setMetaTag('meta[property="og:image:alt"]', { property: 'og:image:alt' }, resolvedImageAlt);
+    setMetaTag('meta[property="og:image:width"]', { property: 'og:image:width' }, '1200');
+    setMetaTag('meta[property="og:image:height"]', { property: 'og:image:height' }, '630');
+
+    setMetaTag('meta[name="twitter:card"]', { name: 'twitter:card' }, 'summary_large_image');
+    setMetaTag('meta[name="twitter:title"]', { name: 'twitter:title' }, resolvedTitle);
+    setMetaTag('meta[name="twitter:description"]', { name: 'twitter:description' }, resolvedDescription);
+    setMetaTag('meta[name="twitter:image"]', { name: 'twitter:image' }, resolvedImage);
+    setMetaTag('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt' }, resolvedImageAlt);
+
+    setMetaTag('meta[name="robots"]', { name: 'robots' }, robotsValue);
+    setMetaTag('meta[name="googlebot"]', { name: 'googlebot' }, robotsValue);
+    setLinkTag('link[rel="canonical"]', { rel: 'canonical', href: resolvedCanonicalUrl });
+
+    removeManagedSchemas();
+    appendSchemas(schemaMarkup);
+
+    return () => {
+      removeManagedSchemas();
+    };
+  }, [canonicalUrl, description, image, imageAlt, noindex, schemaMarkup, title, type]);
+
+  return null;
+}
