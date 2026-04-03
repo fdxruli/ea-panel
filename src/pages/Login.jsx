@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../components/SEO';
 import styles from './Login.module.css';
 import PasswordResetModal from '../components/PasswordResetModal.jsx';
 
@@ -97,7 +98,14 @@ export default function Login() {
   };
 
   return (
-    <div className={styles.container}>
+    <>
+      <SEO
+        title="Acceso Administrativo | Entre Alas"
+        description="Inicio de sesión para el panel administrativo de Entre Alas."
+        type="website"
+        noindex
+      />
+      <div className={styles.container}>
       {/* Fondo animado con círculos */}
       <div className={styles.background}>
         <div className={`${styles.circle} ${styles.circle1}`}></div>
@@ -211,6 +219,7 @@ export default function Login() {
       {isResetModalOpen && (
         <PasswordResetModal onClose={() => setIsResetModalOpen(false)} />
       )}
-    </div>
+      </div>
+    </>
   );
 }

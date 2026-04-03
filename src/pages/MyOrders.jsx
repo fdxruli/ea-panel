@@ -278,7 +278,7 @@ export default function MyOrders() {
 
     return (
         <>
-            <SEO title="Mis Pedidos - Entre Alas" description="Consulta el estado de tus pedidos, edítalos o vuelve a pedir tus favoritos en Entre Alas." name="Entre Alas" type="website" />
+            <SEO title="Mis Pedidos - Entre Alas" description="Consulta el estado de tus pedidos, editalos o vuelve a pedir tus favoritos en Entre Alas." type="website" noindex />
             <div className={styles.container}>
                 {renderContent()}
                 {editingOrder && <EditOrderModal order={editingOrder} onClose={handleCloseModal} onOrderUpdated={handleOrderUpdated} />}

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import LoadingSpinner from '../components/LoadingSpinner';
-import styles from './TermsPage.module.css';
+import React, { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { supabase } from '../lib/supabaseClient';
+import { joinSiteUrl } from '../seo/config';
+import { notifySeoReady } from '../seo/prerender';
+import styles from './TermsPage.module.css';
 
 export default function TermsPage() {
     const [terms, setTerms] = useState(null);
@@ -23,10 +25,18 @@ export default function TermsPage() {
             } else {
                 setTerms(data);
             }
+
             setLoading(false);
         };
+
         fetchLatestTerms();
     }, []);
+
+    useEffect(() => {
+        if (!loading) {
+            notifySeoReady();
+        }
+    }, [loading]);
 
     if (loading) return <LoadingSpinner />;
 
@@ -35,10 +45,10 @@ export default function TermsPage() {
     return (
         <>
             <SEO
-                title="Términos y Condiciones - Entre Alas"
-                description="Lee los términos y condiciones de servicio y uso de la plataforma de Entre Alas."
-                name="Entre Alas"
+                title="Términos y Condiciones | Entre Alas"
+                description="Lee los términos y condiciones de servicio, compra y uso de la plataforma de Entre Alas."
                 type="website"
+                canonicalUrl={joinSiteUrl('/terminos')}
             />
             <div className={styles.container}>
                 <h1>Términos y Condiciones</h1>

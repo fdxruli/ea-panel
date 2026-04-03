@@ -14,10 +14,21 @@ import styles from './Menu.module.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ProductModal from '../components/ProductModal';
 import ImageWithFallback from '../components/ImageWithFallback';
-import SEO, { restaurantSchema } from '../components/SEO';
+import SEO from '../components/SEO';
 import { getThumbnailUrl } from '../utils/imageUtils';
 import BaseProductCard from '../components/BaseProductCard';
 import { animateToCart } from '../utils/cartAnimation';
+import {
+  defaultSeoImageAlt,
+  homeDescription,
+  homeTitle,
+  joinSiteUrl,
+  restaurantSchema,
+  resolveSeoImage,
+  siteName,
+  websiteSchema,
+} from '../seo/config';
+import { notifySeoReady } from '../seo/prerender';
 
 const ListIcon = () => (
   <svg
@@ -111,22 +122,29 @@ export default function Menu() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'grid');
   const shouldShowLeadCapture = !customer;
+  const routeSelectedProduct = useMemo(() => (
+    productSlug ? products.find((product) => product.slug === productSlug) || null : null
+  ), [productSlug, products]);
+  const activeSeoProduct = routeSelectedProduct;
 
   useEffect(() => {
-    if (productSlug && products.length > 0) {
-      const productFound = products.find((product) => product.slug === productSlug);
-
-      if (productFound && (!selectedProduct || selectedProduct.id !== productFound.id)) {
-        setSelectedProduct(productFound);
+    if (productSlug && routeSelectedProduct) {
+      if (!selectedProduct || selectedProduct.id !== routeSelectedProduct.id) {
+        setSelectedProduct(routeSelectedProduct);
       }
 
+      return;
+    }
+
+    if (productSlug && !routeSelectedProduct && selectedProduct) {
+      setSelectedProduct(null);
       return;
     }
 
     if (!productSlug && selectedProduct) {
       setSelectedProduct(null);
     }
-  }, [productSlug, products, selectedProduct]);
+  }, [productSlug, routeSelectedProduct, selectedProduct]);
 
   useEffect(() => {
     localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
@@ -282,39 +300,71 @@ export default function Menu() {
     </button>
   ), [isBusinessOpen, handleAddToCart]);
 
-  const currentUrl = window.location.href;
-  const canonicalUrl = selectedProduct
-    ? `https://ea-panel.vercel.app/producto/${selectedProduct.slug}`
-    : 'https://ea-panel.vercel.app/';
-  const reviewCount = 0;
-  const reviewAverage = 0;
-  const currentSchema = selectedProduct ? {
-    '@context': 'http://schema.org',
+  const isProductRoute = Boolean(productSlug);
+  const isMissingProductRoute = isProductRoute && !loading && !error && !routeSelectedProduct;
+  const selectedProductCategoryName = activeSeoProduct
+    ? categories.find((category) => category.id === activeSeoProduct.category_id)?.name
+    : null;
+  const productDescription = activeSeoProduct?.description?.trim()
+    || (activeSeoProduct
+      ? `Pide ${activeSeoProduct.name} de ${selectedProductCategoryName?.toLowerCase() || 'nuestro menu'} en ${siteName}. Servicio a domicilio en La Trinitaria, Chiapas.`
+      : '');
+  const canonicalUrl = activeSeoProduct
+    ? joinSiteUrl(`/producto/${activeSeoProduct.slug}`)
+    : isMissingProductRoute
+      ? joinSiteUrl(`/producto/${productSlug}`)
+      : joinSiteUrl('/');
+  const seoImage = resolveSeoImage(
+    activeSeoProduct ? getProductDisplayImage(activeSeoProduct) : getProductDisplayImage(products[0])
+  );
+  const seoImageAlt = activeSeoProduct
+    ? `${activeSeoProduct.name} de ${siteName}`
+    : defaultSeoImageAlt;
+  const currentSchema = activeSeoProduct ? {
+    '@context': 'https://schema.org',
     '@type': 'Product',
-    name: selectedProduct.name,
-    image: selectedProduct.image_url,
-    description: selectedProduct.description || `Delicioso ${selectedProduct.name} en Entre Alas.`,
+    name: activeSeoProduct.name,
+    description: productDescription,
+    image: [seoImage],
+    category: selectedProductCategoryName || undefined,
+    seller: {
+      '@type': 'Restaurant',
+      name: siteName,
+      url: joinSiteUrl('/'),
+    },
     offers: {
       '@type': 'Offer',
       priceCurrency: 'MXN',
-      price: selectedProduct.price,
-      availability: 'http://schema.org/InStock',
+      price: Number(activeSeoProduct.price || 0).toFixed(2),
+      availability: 'https://schema.org/InStock',
       url: canonicalUrl,
-    },
-    ...(reviewCount > 0 && {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: reviewAverage,
-        reviewCount,
-        bestRating: '5',
-        worstRating: '1',
+      seller: {
+        '@type': 'Organization',
+        name: siteName,
       },
-    }),
-  } : restaurantSchema;
+    },
+  } : isMissingProductRoute ? null : [restaurantSchema, websiteSchema];
 
-  const pageTitle = selectedProduct
-    ? `${selectedProduct.name} - Entre Alas`
-    : 'Menu de Alitas y Boneless - Entre Alas';
+  const pageTitle = activeSeoProduct
+    ? `${activeSeoProduct.name} | ${siteName}`
+    : isMissingProductRoute
+      ? `Producto no encontrado | ${siteName}`
+      : homeTitle;
+  const pageDescription = activeSeoProduct
+    ? productDescription
+    : isMissingProductRoute
+      ? 'El producto que buscas no existe o ya no esta disponible en Entre Alas.'
+      : homeDescription;
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (!productSlug || routeSelectedProduct || isMissingProductRoute || error) {
+      notifySeoReady();
+    }
+  }, [error, isMissingProductRoute, loading, productSlug, routeSelectedProduct]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -351,16 +401,58 @@ export default function Menu() {
     );
   }
 
+  if (isMissingProductRoute) {
+    return (
+      <>
+        <SEO
+          title={pageTitle}
+          description={pageDescription}
+          type="website"
+          canonicalUrl={canonicalUrl}
+          image={seoImage}
+          imageAlt={seoImageAlt}
+          noindex
+        />
+        <div className={styles.errorContainer}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="64"
+            height="64"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={styles.errorIcon}
+          >
+            <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"></path>
+            <path d="M9 9l6 6"></path>
+            <path d="M15 9l-6 6"></path>
+          </svg>
+          <h2 className={styles.errorTitle}>Producto no disponible</h2>
+          <p className={styles.errorMessage}>
+            El producto que buscas ya no esta disponible o fue retirado del menu publico.
+          </p>
+          <Link to="/" className={styles.errorRetryButton}>
+            Volver al menu
+          </Link>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <SEO
         title={pageTitle}
-        description="Explora nuestro delicioso menu de alitas, boneless, hamburguesas, papas y mas. Pide ahora y disfruta del mejor sabor en La Trinitaria, Chiapas."
-        name="Entre Alas"
-        type={selectedProduct ? 'product' : 'website'}
+        description={pageDescription}
+        type={activeSeoProduct ? 'product' : 'website'}
         schemaMarkup={currentSchema}
-        canonicalUrl={currentUrl.split('?')[0]}
-        image={selectedProduct ? selectedProduct.image_url : null}
+        canonicalUrl={canonicalUrl}
+        image={seoImage}
+        imageAlt={seoImageAlt}
+        noindex={isMissingProductRoute}
       />
 
       <div className={`${styles.menuContainer} ${shouldShowLeadCapture ? styles.menuContainerWithLeadCapture : ''}`}>

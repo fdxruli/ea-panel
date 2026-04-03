@@ -13,6 +13,7 @@ import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
 import { clearAsyncCache } from '../lib/db';
 import { useUserData } from './UserDataContext';
+import { createSlug } from '../seo/config';
 // 1. Importar el contexto de Alertas
 import { useAlert } from './AlertContext';
 
@@ -25,18 +26,6 @@ const normalizeBaseCatalog = (catalog) => ({
 });
 
 const serializeBaseCatalog = (catalog) => JSON.stringify(normalizeBaseCatalog(catalog));
-
-const createSlug = (text) => {
-    return text
-        .toString()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w\-]+/g, '')
-        .replace(/\-\-+/g, '-');
-};
 
 export const useProducts = () => useContext(ProductContext);
 

@@ -359,8 +359,8 @@ export default function MyStuff() {
             <SEO
                 title="Mi Actividad y Recompensas - Entre Alas"
                 description="Revisa tus productos favoritos, gestiona tus reseñas y sigue tu progreso en el sistema de recompensas."
-                name="Entre Alas"
                 type="website"
+                noindex
             />
             <div className={styles.container}>
                 {renderContent()}

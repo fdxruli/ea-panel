@@ -253,8 +253,8 @@ export default function MyProfile() {
             <SEO
                 title="Mi Perfil - Entre Alas"
                 description="Administra tus datos personales, direcciones de entrega y preferencias de la aplicación."
-                name="Entre Alas"
                 type="website"
+                noindex
             />
             <div className={styles.container}>
                 {renderContent()}

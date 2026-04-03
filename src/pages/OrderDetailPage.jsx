@@ -95,6 +95,7 @@ export default function OrderDetailPage() {
                 <SEO
                     title="Error al Cargar Pedido"
                     description="No se pudo cargar la información del pedido"
+                    noindex
                 />
                 <div className={styles.errorContainer}>
                     <div className={styles.errorBox}>
@@ -115,6 +116,7 @@ export default function OrderDetailPage() {
                 <SEO
                     title="Pedido No Encontrado"
                     description="El pedido solicitado no existe"
+                    noindex
                 />
                 <div className={styles.errorContainer}>
                     <div className={styles.errorBox}>
@@ -150,8 +152,8 @@ export default function OrderDetailPage() {
             <SEO
                 title={`Detalles Pedido #${order.order_code} - Entre Alas`}
                 description={`Consulta el estado y los detalles de tu pedido #${order.order_code} en Entre Alas.`}
-                name="Entre Alas"
                 type="website"
+                noindex
             />
             <div className={styles.container}>
                 <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Detalles del Pedido</h1>
