@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ea-panel.vercel.app/</loc>
+    <loc>https://ea-panel.vercel.app</loc>
     <priority>1.0</priority>
     <changefreq>weekly</changefreq>
   </url>
@@ -9,5 +9,59 @@
     <loc>https://ea-panel.vercel.app/terminos</loc>
     <priority>0.3</priority>
     <changefreq>yearly</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/alitas-bbq</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/alitas-estilo-brayan</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/alitas-lemon-pepper</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-10-09</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/alitas-mango-habanero</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/alitas-queso-parmesano</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/alitas-buffalo</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/salsa-extra-5oz</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-12-13</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/aderezo-ranch-2oz</loc>
+    <priority>0.8</priority>
+    <lastmod>2025-11-01</lastmod>
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://ea-panel.vercel.app/producto/10-alitas-crunchy-coleslaw</loc>
+    <priority>0.8</priority>
+    <lastmod>2026-03-15</lastmod>
+    <changefreq>daily</changefreq>
   </url>
 </urlset>
