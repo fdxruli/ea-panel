@@ -1,15 +1,15 @@
 User-agent: *
 Allow: /
 
-# Bloqueamos el panel de administración
+# Bloquear el panel de administracion
 Disallow: /admin
 Disallow: /admin/
 
-# Bloqueamos áreas privadas de usuario
+# Bloquear areas privadas de cliente
+Disallow: /login
 Disallow: /mis-pedidos
+Disallow: /mis-pedidos/
 Disallow: /mi-perfil
 Disallow: /mi-actividad
-Disallow: /login
 
-# Indica dónde está el mapa válido
 Sitemap: https://ea-panel.vercel.app/sitemap.xml

@@ -1,108 +1,44 @@
-import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { fetchPublicSeoRoutes } from './seo-routes.js';
 
-// Cargar variables de entorno (.env)
-dotenv.config();
-
-// Configurar rutas para ES Modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// --- CONFIGURACIÓN ---
-const BASE_URL = 'https://ea-panel.vercel.app';
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY; 
-
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('❌ Error: No se encontraron VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en las variables de entorno.');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const createSlug = (text) => {
-  return text
-    .toString()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-');
-};
-
 async function generateSitemap() {
-  console.log('🔄 Iniciando generación de Sitemap...');
+  console.log('Iniciando generacion de sitemap...');
 
-  // 1. Obtener productos de Supabase
-  // CORRECCIÓN: Cambiado 'updated_at' por 'created_at' porque 'updated_at' no existe en tu tabla.
-  const { data: products, error } = await supabase
-    .from('products')
-    .select('name, created_at') 
-    .eq('is_active', true);
+  const { siteUrl, productRoutes, allRoutes } = await fetchPublicSeoRoutes();
 
-  if (error) {
-    console.error('❌ Error conectando con Supabase:', error.message);
-    process.exit(1);
-  }
+  console.log(`Se encontraron ${productRoutes.length} rutas publicas de producto.`);
 
-  console.log(`📦 Se encontraron ${products?.length || 0} productos activos.`);
-
-  // 2. Definir rutas estáticas
-  const staticRoutes = [
-    { url: '', priority: '1.0', changefreq: 'weekly' },
-    { url: '/terminos', priority: '0.3', changefreq: 'yearly' }
-  ];
-
-  // 3. Construir el XML
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
 
-  // -> Agregar estáticas
-  staticRoutes.forEach(route => {
+  allRoutes.forEach((route) => {
     xml += `
   <url>
-    <loc>${BASE_URL}${route.url}</loc>
+    <loc>${siteUrl}${route.path === '/' ? '' : route.path}</loc>
     <priority>${route.priority}</priority>
     <changefreq>${route.changefreq}</changefreq>
-  </url>`;
+${route.lastmod ? `    <lastmod>${route.lastmod}</lastmod>\n` : ''}  </url>`;
   });
-
-  // -> Agregar productos dinámicos
-  if (products) {
-    products.forEach(product => {
-      const slug = createSlug(product.name);
-      
-      // CORRECCIÓN: Usamos created_at como fallback para lastmod
-      const lastMod = product.created_at 
-        ? new Date(product.created_at).toISOString().split('T')[0] 
-        : new Date().toISOString().split('T')[0];
-      
-      xml += `
-  <url>
-    <loc>${BASE_URL}/producto/${slug}</loc>
-    <priority>0.8</priority>
-    <lastmod>${lastMod}</lastmod>
-    <changefreq>daily</changefreq>
-  </url>`;
-    });
-  }
 
   xml += `
 </urlset>`;
 
-  // 4. Guardar el archivo en la carpeta public
-  const publicPath = path.resolve(__dirname, '../public/sitemap.xml');
-  
+  const sitemapPath = path.resolve(__dirname, '../public/sitemap.xml');
+
   try {
-    fs.writeFileSync(publicPath, xml);
-    console.log(`✅ Sitemap generado con éxito en: ${publicPath}`);
-  } catch (err) {
-    console.error('❌ Error escribiendo el archivo:', err);
+    fs.writeFileSync(sitemapPath, xml);
+    console.log(`Sitemap generado con exito en: ${sitemapPath}`);
+  } catch (error) {
+    console.error('Error escribiendo el sitemap:', error);
+    globalThis.process.exit(1);
   }
 }
 
-generateSitemap();
+generateSitemap().catch((error) => {
+  console.error(error.message);
+  globalThis.process.exit(1);
+});
