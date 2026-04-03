@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import DOMPurify from 'dompurify';
 import ImageWithFallback from './ImageWithFallback';
+import { animateToCart } from '../utils/cartAnimation';
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -186,7 +187,20 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             handleClose();
             return;
         }
-        onAddToCart(product, quantity, event);
+        
+        // Bloquea explícitamente la propagación del evento hacia Menu.jsx
+        onAddToCart(product, quantity, null);
+        
+        // Usa el botón actual como origen estricto y la clase CSS correcta
+        if (event?.currentTarget) {
+            animateToCart({
+                originElement: event.currentTarget,
+                imgSrc: galleryImages[currentImageIndex],
+                className: 'global-fly-to-cart', // Debe coincidir con tu CSS general
+                flySize: 48 // Tamaño reducido temporalmente para mitigar el desbordamiento en el botón
+            });
+        }
+        
         setWasAdded(true);
         setTimeout(() => setWasAdded(false), 2000);
     };
@@ -263,6 +277,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     )}
                     {galleryImages.map((src, index) => (
                         <ImageWithFallback
+                            id={`modal-img-${product.id}-${index}`}
                             key={index}
                             src={src || 'https://placehold.co/400'}
                             alt={`${product.name} ${index + 1}`}

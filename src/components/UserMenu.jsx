@@ -8,11 +8,13 @@ const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
 const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
 const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
+// Icono de Cerrar Sesión
+const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
 
 export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
-    const { phone, setPhoneModalOpen, setCheckoutModalOpen } = useCustomer();
-    const { customer } = useUserData();
+    const { phone, setPhoneModalOpen, setCheckoutModalOpen, clearPhone } = useCustomer();
+    const { customer, logout } = useUserData();
     const menuRef = useRef(null);
     const location = useLocation();
 
@@ -31,8 +33,14 @@ export default function UserMenu() {
     }, [menuRef]);
 
     const renderDropdownContent = () => {
+        const handleLogout = () => {
+            logout();
+            clearPhone();
+            setIsOpen(false);
+            window.location.href = '/'; // Limpia el estado y redirige al inicio
+        };
         if (!phone) {
-             return (
+            return (
                 <div className={styles.prompt}>
                     <h4>Identifícate</h4>
                     <p>Ingresa tu número para ver tu perfil y pedidos.</p>
@@ -61,7 +69,7 @@ export default function UserMenu() {
         ];
 
         const isUserOnMenuPage = navLinks.some(link => link.to === location.pathname);
-        
+
         let finalLinks = navLinks.filter(link => link.to !== location.pathname);
 
         if (isUserOnMenuPage) {
@@ -69,13 +77,23 @@ export default function UserMenu() {
         }
 
         return (
-            <nav className={styles.links}>
-                {finalLinks.map(link => (
-                    <NavLink key={link.to} to={link.to} replace={link.replace} className={styles.dropdownLink} onClick={() => setIsOpen(false)}>
-                        {link.icon}<span>{link.label}</span>
-                    </NavLink>
-                ))}
-            </nav>
+            <div className={styles.menuContentWrapper}>
+                <nav className={styles.links}>
+                    {finalLinks.map(link => (
+                        <NavLink key={link.to} to={link.to} replace={link.replace} className={styles.dropdownLink} onClick={() => setIsOpen(false)}>
+                            {link.icon}<span>{link.label}</span>
+                        </NavLink>
+                    ))}
+                </nav>
+
+                {/* Nuevo botón de Cerrar Sesión */}
+                <div className={styles.logoutSection}>
+                    <button className={styles.logoutButton} onClick={handleLogout}>
+                        <LogOutIcon />
+                        <span>Cerrar Sesión</span>
+                    </button>
+                </div>
+            </div>
         );
     };
 
