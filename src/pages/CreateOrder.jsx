@@ -11,7 +11,7 @@ import DOMPurify from 'dompurify';
 
 // --- (PASO A) AÑADIR IMPORTS ---
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
-import { useProductsBasicCache } from '../hooks/useProductsBasicCache';
+import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 // --- FIN PASO A ---
 
@@ -90,7 +90,7 @@ export default function CreateOrder() {
     const {
         data: allProductsData,
         isLoading: loadingProducts
-    } = useProductsBasicCache();
+    } = useAdminProductsBasic();
 
     const {
         data: customersData,

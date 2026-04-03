@@ -1,4 +1,3 @@
-// src/pages/Cart.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';

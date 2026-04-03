@@ -1,85 +1,125 @@
-// src/context/ProductContext.jsx
-import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, {
+    createContext,
+    useState,
+    useContext,
+    useEffect,
+    useCallback,
+    useMemo,
+    useRef,
+} from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { getCache, setCache } from '../utils/cache';
-// --- ✅ 1. Importar CACHE_KEYS y CACHE_TTL ---
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
+import { clearAsyncCache } from '../lib/db';
 import { useUserData } from './UserDataContext';
+// 1. Importar el contexto de Alertas
+import { useAlert } from './AlertContext';
 
 const ProductContext = createContext();
+const EMPTY_BASE_CATALOG = { products: [], categories: [] };
+
+const normalizeBaseCatalog = (catalog) => ({
+    products: Array.isArray(catalog?.products) ? catalog.products : [],
+    categories: Array.isArray(catalog?.categories) ? catalog.categories : [],
+});
+
+const serializeBaseCatalog = (catalog) => JSON.stringify(normalizeBaseCatalog(catalog));
+
+const createSlug = (text) => {
+    return text
+        .toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w\-]+/g, '')
+        .replace(/\-\-+/g, '-');
+};
 
 export const useProducts = () => useContext(ProductContext);
 
 export const ProductProvider = ({ children }) => {
-    // --- ESTADOS (sin cambios) ---
     const [baseProducts, setBaseProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [specialPrices, setSpecialPrices] = useState([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [loadingPrices, setLoadingPrices] = useState(false);
     const [error, setError] = useState(null);
-    const [notification, setNotification] = useState('');
+    
+    // 2. Extraer showAlert del AlertContext superior
+    const { showAlert } = useAlert();
     const { customer } = useUserData();
     const customerId = customer?.id;
 
-    // --- FETCH PRODUCTOS BASE (sin cambios) ---
-    const fetchBaseProductsAndCategories = useCallback(async () => {
-        console.log("🔄 Fetching base products and categories...");
-        setLoadingProducts(true);
+    const baseCatalogSignatureRef = useRef(serializeBaseCatalog(EMPTY_BASE_CATALOG));
+    const debounceBaseRef = useRef(null);
+    const debouncePricesRef = useRef(null);
+    // Eliminado: notificationTimerRef
+
+    const applyBaseCatalog = useCallback((nextCatalog) => {
+        const normalizedCatalog = normalizeBaseCatalog(nextCatalog);
+        const nextSignature = serializeBaseCatalog(normalizedCatalog);
+        const hasChanged = nextSignature !== baseCatalogSignatureRef.current;
+
+        baseCatalogSignatureRef.current = nextSignature;
+
+        if (hasChanged) {
+            setBaseProducts(normalizedCatalog.products);
+            setCategories(normalizedCatalog.categories);
+        }
+
+        return normalizedCatalog;
+    }, []);
+
+    const fetchBaseProductsAndCategories = useCallback(async ({ background = false } = {}) => {
+        if (!background) setLoadingProducts(true);
         setError(null);
+
         try {
-            const { data: cachedData, isStale } = getCache(CACHE_KEYS.PRODUCTS, CACHE_TTL.PRODUCTS);
-            if (cachedData && !isStale) {
-                console.log("📦 Using cached base products and categories.");
-                setBaseProducts(cachedData.products);
-                setCategories(cachedData.categories);
-                setLoadingProducts(false);
-                return;
-            }
             const [productsRes, categoriesRes] = await Promise.all([
-                supabase.from('products').select(`*, product_images ( id, image_url )`).eq('is_active', true),
-                supabase.from('categories').select('*')
+                supabase
+                    .from('products')
+                    .select('*, product_images ( id, image_url )')
+                    .eq('is_active', true),
+                supabase.from('categories').select('*'),
             ]);
+
             if (productsRes.error) throw productsRes.error;
             if (categoriesRes.error) throw categoriesRes.error;
-            const fetchedProducts = productsRes.data || [];
-            const fetchedCategories = categoriesRes.data || [];
-            setBaseProducts(fetchedProducts);
-            setCategories(fetchedCategories);
-            setCache(CACHE_KEYS.PRODUCTS, { products: fetchedProducts, categories: fetchedCategories });
-            console.log("✅ Fresh base products and categories saved to state and cache.");
+
+            const nextCatalog = {
+                products: productsRes.data || [],
+                categories: categoriesRes.data || [],
+            };
+
+            applyBaseCatalog(nextCatalog);
+            setCache(CACHE_KEYS.PRODUCTS, nextCatalog);
         } catch (err) {
-            console.error("Error fetching base data:", err);
-            setError(err.message);
+            console.error('Error fetching base data:', err);
+            if (!background) setError(err.message);
         } finally {
             setLoadingProducts(false);
         }
-    }, []);
+    }, [applyBaseCatalog]);
 
-    // --- ✅ 2. FETCH PRECIOS ESPECIALES (MODIFICADO CON CACHÉ) ---
     const fetchSpecialPrices = useCallback(async (currentCustomerId) => {
-        console.log("💲 Fetching special prices for customer:", currentCustomerId);
         setLoadingPrices(true);
         setError(null);
 
-        // --- 👇 CACHÉ PARA SPECIAL PRICES ---
-        // Clave dinámica: usa el ID del cliente o 'global' si no hay cliente
         const cacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${currentCustomerId || 'global'}`;
-        // Usar un TTL adecuado, por ejemplo, el mismo que PRODUCT_EXTRAS o uno propio
         const cacheTTL = CACHE_TTL.PRODUCT_EXTRAS;
 
         try {
-            // Intentar cargar desde caché
             const { data: cachedPrices, isStale } = getCache(cacheKey, cacheTTL);
+
             if (cachedPrices && !isStale) {
-                console.log("💰 Using cached special prices for:", currentCustomerId || 'global');
                 setSpecialPrices(cachedPrices);
                 setLoadingPrices(false);
-                return; // Salir si el caché es válido
+                return;
             }
-            // --- FIN LÓGICA DE CACHÉ ---
 
-            // Si no hay caché válido, fetchear desde DB
             const today = new Date().toISOString().split('T')[0];
             let query = supabase
                 .from('special_prices')
@@ -98,146 +138,156 @@ export const ProductProvider = ({ children }) => {
 
             const fetchedPrices = data || [];
             setSpecialPrices(fetchedPrices);
-            // Guardar en caché
             setCache(cacheKey, fetchedPrices);
-            console.log("💰 Fresh special prices updated and cached for:", currentCustomerId || 'global', fetchedPrices);
-
         } catch (err) {
-            console.error("Error fetching special prices:", err);
+            console.error('Error fetching special prices:', err);
             setError(err.message);
             setSpecialPrices([]);
         } finally {
             setLoadingPrices(false);
         }
-        // --- Añadir CACHE_KEYS.SPECIAL_PRICES a dependencias si lo usas directamente ---
-    }, [/* Dependencias originales si las había */]); // Mantener dependencias estables si es posible
+    }, []);
 
-    // --- Efecto carga inicial productos base (sin cambios) ---
     useEffect(() => {
-        fetchBaseProductsAndCategories();
-    }, [fetchBaseProductsAndCategories]);
+        const { data: cachedData } = getCache(CACHE_KEYS.PRODUCTS, CACHE_TTL.PRODUCTS);
 
-    // --- Efecto carga precios especiales (sin cambios) ---
+        if (cachedData) {
+            applyBaseCatalog(cachedData);
+            setLoadingProducts(false);
+            fetchBaseProductsAndCategories({ background: true }).catch(() => { });
+            return;
+        }
+
+        fetchBaseProductsAndCategories();
+    }, [applyBaseCatalog, fetchBaseProductsAndCategories]);
+
     useEffect(() => {
         if (!loadingProducts) {
             fetchSpecialPrices(customerId);
         }
     }, [customerId, fetchSpecialPrices, loadingProducts]);
 
-    // src/context/ProductContext.jsx
-
-    // --- COMBINAR PRECIOS (CON ORDENAMIENTO CORREGIDO) ---
     const productsWithAppliedPrices = useMemo(() => {
-        console.log("🛠️ Applying special prices to base products...");
         if (baseProducts.length === 0) return [];
 
+        const categoryMap = new Map();
+        for (let i = 0; i < categories.length; i++) {
+            categoryMap.set(categories[i].id, categories[i].name);
+        }
+
+        const productPricesMap = new Map();
+        const categoryPricesMap = new Map();
+        for (let i = 0; i < specialPrices.length; i++) {
+            const sp = specialPrices[i];
+            if (sp.product_id) {
+                productPricesMap.set(sp.product_id, sp);
+            } else if (sp.category_id) {
+                categoryPricesMap.set(sp.category_id, sp);
+            }
+        }
+
         const pricedProducts = baseProducts.map(product => {
-            const productSpecificPrice = specialPrices.find(p => p.product_id === product.id);
-            const categorySpecificPrice = !productSpecificPrice && specialPrices.find(
-                p => p.category_id === product.category_id && !p.product_id
-            );
+            const productSpecificPrice = productPricesMap.get(product.id);
+            const categorySpecificPrice = !productSpecificPrice ? categoryPricesMap.get(product.category_id) : undefined;
             const specialPriceInfo = productSpecificPrice || categorySpecificPrice;
+
+            const slug = createSlug(product.name);
+
             if (specialPriceInfo) {
                 return {
                     ...product,
+                    slug,
                     original_price: product.price,
-                    price: parseFloat(specialPriceInfo.override_price)
+                    price: parseFloat(specialPriceInfo.override_price),
                 };
             }
-            const { original_price, ...restOfProduct } = product;
-            return restOfProduct;
+
+            const productWithoutOriginalPrice = { ...product, slug };
+            delete productWithoutOriginalPrice.original_price;
+            return productWithoutOriginalPrice;
         });
 
-        // --- 👇 LÓGICA DE ORDENAMIENTO MULTI-NIVEL ---
         return pricedProducts.sort((a, b) => {
-            // 1. Obtener nombres de categorías (usar 'Z' como fallback para ordenar al final)
-            const categoryA = categories.find(c => c.id === a.category_id)?.name || 'Z';
-            const categoryB = categories.find(c => c.id === b.category_id)?.name || 'Z';
+            const categoryA = categoryMap.get(a.category_id) || 'Z';
+            const categoryB = categoryMap.get(b.category_id) || 'Z';
 
             const isAlitasA = categoryA === 'Alitas';
             const isAlitasB = categoryB === 'Alitas';
 
-            // 2. Ordenamiento Primario: Categoría "Alitas" siempre primero.
-            if (isAlitasA && !isAlitasB) {
-                return -1; // A (Alitas) va antes que B (No Alitas)
-            }
-            if (!isAlitasA && isAlitasB) {
-                return 1; // B (Alitas) va antes que A (No Alitas)
-            }
+            if (isAlitasA && !isAlitasB) return -1;
+            if (!isAlitasA && isAlitasB) return 1;
 
-            // 3. Ordenamiento Secundario: Si ambos son "Alitas" o ambos "No Alitas",
-            //    ordenar por NOMBRE DE CATEGORÍA.
             const categoryCompare = categoryA.localeCompare(categoryB);
-            if (categoryCompare !== 0) {
-                // "Bebidas" (B) vendrá antes que "Extras" (E)
-                return categoryCompare;
-            }
+            if (categoryCompare !== 0) return categoryCompare;
 
-            // 4. Ordenamiento Terciario: Si las categorías son iguales,
-            //    ordenar por NOMBRE DE PRODUCTO.
             return a.name.localeCompare(b.name);
         });
-        // --- 👆 FIN DE LA MODIFICACIÓN ---
+    }, [baseProducts, specialPrices, categories]);
 
-    }, [baseProducts, specialPrices, categories]); // <-- 'categories' debe estar aquí
-
-    // --- CATEGORÍAS VISIBLES (sin cambios) ---
     const visibleCategories = useMemo(() => {
         if (productsWithAppliedPrices.length === 0 || categories.length === 0) return [];
+
         const uniqueCategoryIdsInProducts = new Set(productsWithAppliedPrices.map(p => p.category_id));
         return categories.filter(c => uniqueCategoryIdsInProducts.has(c.id));
     }, [productsWithAppliedPrices, categories]);
 
-
-    // --- LISTENER REALTIME (sin cambios) ---
     useEffect(() => {
         const baseChannel = supabase.channel('public:products_categories');
+
         const handleBaseChanges = (payload) => {
-            console.log('⚡ Cambio detectado en productos/categorías base!', payload);
-            setNotification('¡El menú se ha actualizado!');
-            setTimeout(() => setNotification(''), 4000);
-            localStorage.removeItem(CACHE_KEYS.PRODUCTS); // Elimina caché de productos base
-            localStorage.removeItem('products:basic');
-            localStorage.removeItem('ea-categories-cache');
-            fetchBaseProductsAndCategories();
+            if (debounceBaseRef.current) clearTimeout(debounceBaseRef.current);
+
+            debounceBaseRef.current = setTimeout(() => {
+                // 3. Disparar alerta externa en lugar de mutar estado local
+                showAlert('¡El menu se ha actualizado!', 'info');
+
+                localStorage.removeItem(CACHE_KEYS.PRODUCTS);
+                localStorage.removeItem(CACHE_KEYS.PRODUCTS_BASIC);
+                clearAsyncCache(CACHE_KEYS.PRODUCTS_BASIC).catch(() => { });
+                fetchBaseProductsAndCategories();
+            }, 1500);
         };
+
         baseChannel
             .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleBaseChanges)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleBaseChanges)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleBaseChanges)
-            .subscribe((status) => console.log(`Base Channel Status: ${status}`));
+            .subscribe();
 
         const pricesChannel = supabase.channel('public:special_prices');
+
         const handlePriceChanges = (payload) => {
-            console.log('⚡ Cambio detectado en precios especiales!', payload);
-            setNotification('¡Promociones actualizadas!');
-            setTimeout(() => setNotification(''), 4000);
-            // --- ✅ Invalidar caché al detectar cambios ---
-            // Construir la clave de caché que podría verse afectada (puede ser la global o la específica del cliente actual)
-            const affectedCacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${customerId || 'global'}`;
-            localStorage.removeItem(affectedCacheKey); // Elimina el caché para forzar refetch
-            // Podrías intentar ser más selectivo aquí si el payload te da información útil
-            fetchSpecialPrices(customerId);
+            if (debouncePricesRef.current) clearTimeout(debouncePricesRef.current);
+
+            debouncePricesRef.current = setTimeout(() => {
+                // 3. Disparar alerta externa en lugar de mutar estado local
+                showAlert('¡Promociones actualizadas!', 'info');
+
+                const affectedCacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${customerId || 'global'}`;
+                localStorage.removeItem(affectedCacheKey);
+                fetchSpecialPrices(customerId);
+            }, 1500);
         };
+
         pricesChannel
             .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handlePriceChanges)
-            .subscribe((status) => console.log(`Prices Channel Status: ${status}`));
+            .subscribe();
 
         return () => {
-            console.log("🔌 Desconectando listeners de productos.");
+            if (debounceBaseRef.current) clearTimeout(debounceBaseRef.current);
+            if (debouncePricesRef.current) clearTimeout(debouncePricesRef.current);
+
             supabase.removeChannel(baseChannel);
             supabase.removeChannel(pricesChannel);
         };
-    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices]); // Añadir CACHE_KEYS si es necesario
+    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices, showAlert]);
 
-
-    // Context value (sin cambios)
     const value = {
         products: productsWithAppliedPrices,
         categories: visibleCategories,
         loading: loadingProducts || loadingPrices,
         error,
-        notification,
+        // Eliminado: notification
     };
 
     return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

@@ -17,8 +17,7 @@ import { CacheAdminProvider } from "./context/CacheAdminContext.jsx";
 // Layouts (Se cargan de inmediato, correcto)
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import ClientLayout from "./layouts/ClientLayout.jsx";
-
-// --- PÁGINAS (TODAS CON LAZY LOADING) ---
+import AdminRoute from "./components/AdminRoute.jsx";
 
 // --- Páginas de Cliente ---
 const Menu = lazy(() => import("./pages/Menu.jsx"));
@@ -140,20 +139,24 @@ function App() {
                     <Route path="/login" element={<Login />} />
 
                     {/* --- Admin Routes --- */}
-                    <Route element={<ProtectedRoute />}>
-                      <Route
-                        path="/admin"
-                        element={
-                          /* El Suspense aquí también es correcto */
-                          <Suspense fallback={<FullscreenLoader />}>
-                            <AdminAuthProvider>
-                              <CacheAdminProvider>
-                                <AdminLayout />
-                              </CacheAdminProvider>
-                            </AdminAuthProvider>
-                          </Suspense>
-                        }
-                      >
+                    <Route
+                      path="/admin"
+                      element={
+                        <Suspense fallback={<FullscreenLoader />}>
+                          {/* 1. El Provider realiza la petición y guarda el estado absoluto */}
+                          <AdminAuthProvider>
+                            {/* 2. La ruta evalúa el estado y bloquea/deja pasar */}
+                            <AdminRoute />
+                          </AdminAuthProvider>
+                        </Suspense>
+                      }
+                    >
+                      {/* 3. Si AdminRoute permite el paso (Renderiza Outlet), se cargan el Layout y su caché */}
+                      <Route element={
+                        <CacheAdminProvider>
+                          <AdminLayout />
+                        </CacheAdminProvider>
+                      }>
                         <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
                         <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
                         <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
@@ -167,7 +170,6 @@ function App() {
                         <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
                         <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
                         <Route path="ingredientes" element={<PermissionWrapper permissionKey="productos.view" element={<Ingredients />} />} />
-                        <Route path="*" element={<NotFoundPage />} />
                       </Route>
                     </Route>
 

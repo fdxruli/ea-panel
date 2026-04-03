@@ -1,6 +1,4 @@
-// src/context/CartContext.jsx
-
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useProducts } from './ProductContext';
 
@@ -46,76 +44,65 @@ export const CartProvider = ({ children }) => {
         }
     }, [cartItems]);
 
-    // --- 👇 LÓGICA DE SINCRONIZACIÓN MEJORADA 👇 ---
+    const cartItemsRef = useRef(cartItems);
     useEffect(() => {
-        // Solo ejecutamos si los productos "en vivo" ya cargaron y si hay algo en el carrito local
-        if (productsLoading || cartItems.length === 0) return;
+        cartItemsRef.current = cartItems;
+    }, [cartItems]);
 
-        // Mapa para búsqueda rápida O(1)
+    useEffect(() => {
+        const currentCart = cartItemsRef.current;
+
+        // Usamos la referencia silenciosa en lugar del estado reactivo
+        if (productsLoading || currentCart.length === 0) return;
+
         const liveProductsMap = new Map(liveProducts.map(p => [p.id, p]));
 
-        let shouldUpdateCart = false;
+        let hasChanges = false;
         let pricesChanged = false;
         let itemsRemoved = false;
         const removedNames = [];
+        const validatedItems = [];
 
-        // Validamos cada item del carrito contra la base de datos actual
-        const validatedItems = cartItems.reduce((acc, item) => {
+        // Evaluamos en O(N) la referencia actual, no el estado renderizado
+        for (let i = 0; i < currentCart.length; i++) {
+            const item = currentCart[i];
             const liveProduct = liveProductsMap.get(item.id);
 
-            // CASO A: El producto ya no existe en la DB (o está deshabilitado si useProducts filtra eso)
             if (!liveProduct) {
                 itemsRemoved = true;
+                hasChanges = true;
                 removedNames.push(item.name);
-                shouldUpdateCart = true;
-                return acc; // No lo agregamos al acumulador
+                continue;
             }
 
-            // CASO B: El producto existe, pero verifiquemos si el PRECIO cambió
-            if (Math.abs(Number(liveProduct.price) - Number(item.price)) > 0.01) {
+            const livePrice = Number(liveProduct.price);
+            const itemPrice = Number(item.price);
+
+            if (Math.abs(livePrice - itemPrice) > 0.01) {
                 pricesChanged = true;
-                shouldUpdateCart = true;
-                // Actualizamos el precio al valor actual de la DB
-                acc.push({ ...item, price: Number(liveProduct.price) });
+                hasChanges = true;
+                validatedItems.push({ ...item, price: livePrice });
             } else {
-                // CASO C: Todo igual, lo dejamos como está
-                acc.push(item);
-            }
-
-            return acc;
-        }, []);
-
-        // Si hubo cambios (eliminaciones o cambios de precio), actualizamos el estado
-        if (shouldUpdateCart) {
-            // Verificamos si realmente cambió el contenido para evitar loops infinitos
-            // (JSON.stringify es una forma rápida de comparar arrays de objetos simples)
-            const currentCartString = JSON.stringify(cartItems);
-            const newCartString = JSON.stringify(validatedItems);
-
-            if (currentCartString !== newCartString) {
-                setCartItems(validatedItems);
-
-                if (itemsRemoved) {
-                    const names = removedNames.join(', ');
-                    const singularOrPlural = removedNames.length > 1;
-                    setCartNotification(
-                        `Se ${singularOrPlural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por no estar disponible(s).`
-                    );
-                }
-
-                if (pricesChanged) {
-                    showToast("Algunos precios en tu carrito se han actualizado a su valor actual.");
-                }
+                validatedItems.push(item);
             }
         }
 
-        // NOTA: Quitamos 'cartItems' de las dependencias para evitar que este efecto
-        // se dispare cíclicamente cuando 'setCartItems' se ejecute dentro de él.
-        // Solo queremos que corra cuando llegue nueva información de la DB ('liveProducts').
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [liveProducts, productsLoading]);
-    // --- 👆 FIN DE LA MEJORA 👆 ---
+        if (hasChanges) {
+            setCartItems(validatedItems);
 
+            if (itemsRemoved) {
+                const names = removedNames.join(', ');
+                const plural = removedNames.length > 1;
+                setCartNotification(
+                    `Se ${plural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por no estar disponible(s).`
+                );
+            }
+
+            if (pricesChanged) {
+                showToast("Algunos precios en tu carrito se han actualizado a su valor actual.");
+            }
+        }
+    }, [liveProducts, productsLoading]);
 
     // 3. Cálculos de Totales y Descuentos (Sin cambios mayores)
     const calculateDiscount = useCallback((currentSubtotal, items, discountDetails) => {

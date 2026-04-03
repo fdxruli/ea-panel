@@ -9,7 +9,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 
 // --- (PASO A) AÑADIR IMPORTS ---
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
-import { useProductsBasicCache } from '../hooks/useProductsBasicCache';
+import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 // --- FIN PASO A ---
 
 // ==================== COMPONENTES MEMOIZADOS (Sin cambios) ====================
@@ -76,7 +76,7 @@ export default function Discounts() {
 
     // --- (PASO B) REEMPLAZAR ESTADO DE PRODUCTOS ---
     // const [products, setProducts] = useState([]); // <-- Eliminado
-    const { data: productsData, isLoading: loadingProducts } = useProductsBasicCache();
+    const { data: productsData, isLoading: loadingProducts } = useAdminProductsBasic();
     // Corrección para evitar error en null.find
     const products = useMemo(() => productsData || [], [productsData]);
     // --- FIN PASO B ---

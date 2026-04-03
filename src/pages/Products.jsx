@@ -15,7 +15,10 @@ import ImageWithFallback from '../components/ImageWithFallback';
 // --- (PASO A) NUEVAS IMPORTACIONES ---
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
-import { useProductsBasicCache } from '../hooks/useProductsBasicCache';
+import {
+    ADMIN_PRODUCTS_BASIC_CACHE_KEY,
+    useAdminProductsBasic
+} from '../hooks/useAdminProductsBasic';
 
 // --- (PASO B) IMPORTAR COMPONENTES EXTRAÍDOS ---
 import ProductCard from '../components/ProductCard';
@@ -52,7 +55,7 @@ export default function Products() {
         data: basicProductsData,
         isLoading: loadingBasic,
         refetch: refetchProducts // <-- Incluido como pediste
-    } = useProductsBasicCache();
+    } = useAdminProductsBasic();
     // Fix para evitar error en .slice() si basicProductsData es null
     const basicProducts = useMemo(() => basicProductsData || [], [basicProductsData]);
 
@@ -173,11 +176,11 @@ export default function Products() {
 
                     if (payload.eventType === 'INSERT') {
                         // Invalidar caché para que refetch incluya el nuevo
-                        invalidate('products:basic');
+                        invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
 
                     } else if (payload.eventType === 'UPDATE') {
                         // Actualización quirúrgica del caché
-                        const cached = getCached('products:basic');
+                        const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
 
                         if (cached) {
                             const updatedProducts = cached.data.map(p =>
@@ -185,7 +188,7 @@ export default function Products() {
                                     ? { ...p, ...payload.new }
                                     : p
                             );
-                            setCached('products:basic', updatedProducts);
+                            setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, updatedProducts);
                         }
 
                         // Si es un producto visible con stats, actualizar también
@@ -197,11 +200,11 @@ export default function Products() {
 
                     } else if (payload.eventType === 'DELETE') {
                         // Remover del caché
-                        const cached = getCached('products:basic');
+                        const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
 
                         if (cached) {
                             const filteredProducts = cached.data.filter(p => p.id !== payload.old.id);
-                            setCached('products:basic', filteredProducts);
+                            setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, filteredProducts);
                         }
 
                         // Remover de products con stats
@@ -288,7 +291,7 @@ export default function Products() {
             showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`, 'success');
 
             // Invalidar cachés para forzar recarga de datos frescos
-            invalidate('products:basic');
+            invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
             invalidate(new RegExp('^product_stats')); // Invalidar todos los stats de productos
 
             setFormModalOpen(false);
@@ -324,12 +327,12 @@ export default function Products() {
             if (error) throw error;
 
             // Actualización optimista en caché
-            const cached = getCached('products:basic');
+            const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
             if (cached) {
                 const updated = cached.data.map(p =>
                     p.id === id ? { ...p, is_active: !isActive } : p
                 );
-                setCached('products:basic', updated);
+                setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, updated);
             }
 
             // También actualizar en productsWithStats
@@ -478,7 +481,7 @@ export default function Products() {
                     }}
                     onImagesUpdate={() => {
                         // Invalidar caché básico, los stats se recargarán
-                        invalidate('products:basic');
+                        invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
                     }}
                 />
             )}
@@ -488,8 +491,8 @@ export default function Products() {
                 onClose={() => setCategoriesModalOpen(false)}
                 onCategoriesUpdate={() => {
                     // El modal ya invalida 'categories'
-                    // Invalidamos 'products:basic' por si una categoría cambió de nombre
-                    invalidate('products:basic');
+                    // Invalidamos la lista básica admin por si una categoría cambió de nombre
+                    invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
                 }}
             />
         </div>
