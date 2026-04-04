@@ -2,8 +2,6 @@ import fs from 'fs';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import puppeteer from 'puppeteer';
-import { fetchPublicSeoRoutes } from './seo-routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, '../dist');
@@ -121,8 +119,17 @@ async function prerenderRoute(page, baseUrl, routePath) {
 }
 
 async function prerenderPublicRoutes() {
+  if (process.env.VERCEL === '1') {
+    console.log('Entorno Vercel detectado. Se omite el prerender publico.');
+    return;
+  }
+
   console.log('Iniciando prerender de rutas publicas...');
 
+  const [{ default: puppeteer }, { fetchPublicSeoRoutes }] = await Promise.all([
+    import('puppeteer'),
+    import('./seo-routes.js'),
+  ]);
   const { allRoutes } = await fetchPublicSeoRoutes();
   const { server, baseUrl } = await startStaticServer();
   const browser = await puppeteer.launch({
