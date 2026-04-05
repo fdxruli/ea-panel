@@ -1,3 +1,11 @@
+/* Normalización de Z-Index para evitar colisiones de modales/barras */
+:root {
+  --z-header: 100;
+  --z-bottom-nav: 100;
+  --z-floating-cart: 110;
+  --z-toast: 120;
+}
+
 .client-layout {
   --bottom-nav-height: 62px;
   --bottom-nav-safe-area: env(safe-area-inset-bottom, 0px);
@@ -12,20 +20,18 @@
   padding-bottom: var(--bottom-nav-total-height);
 }
 
+/* ERROR CORREGIDO: Eliminación de Glassmorphism. Fondo sólido obligatorio para e-commerce de comida. */
 .client-header {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 0.7rem 1rem;
-  /* Efecto Glassmorphism */
-  background-color: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
-  z-index: 1100;
+  z-index: var(--z-header);
   transition: transform 0.28s ease, padding 0.28s ease;
   will-change: transform;
 }
@@ -121,31 +127,21 @@
   width: 100%;
   height: var(--bottom-nav-total-height);
   box-sizing: border-box;
-  padding: 0 max(12px, env(safe-area-inset-left, 0px)) var(--bottom-nav-safe-area) max(12px, env(safe-area-inset-right, 0px));
-
-  /* Glassmorphism idéntico al header */
-  background-color: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
-  /* Sombra más sutil y premium */
-  border-top: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
+  padding: 0 max(16px, env(safe-area-inset-left, 0px)) var(--bottom-nav-safe-area) max(16px, env(safe-area-inset-right, 0px));
+  background-color: var(--bg-secondary); 
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--border-color);
   border-top-left-radius: 24px;
-  /* Curvatura más pronunciada */
   border-top-right-radius: 24px;
-
   display: flex;
-  /* Cambiado de grid a flex para evitar asimetrías */
   justify-content: space-between;
   align-items: center;
-  z-index: 1050;
+  z-index: var(--z-bottom-nav);
 }
 
 .bottom-nav-group {
   display: flex;
   flex: 1;
-  /* Ambos grupos ocupan el mismo espacio siempre */
   justify-content: space-around;
   align-items: center;
   height: 100%;
@@ -156,47 +152,56 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   height: 100%;
-  padding: 0 8px;
+  padding: 0 12px;
   color: var(--text-secondary);
   background: none;
   border: none;
   cursor: pointer;
   text-decoration: none;
-  font-size: 0.7rem;
-  /* Ligeramente más legible */
-  font-weight: 500;
-  position: relative;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.3s ease;
 }
 
-.bottom-nav-link svg {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), stroke-width 0.3s ease;
+.bottom-nav-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+  transform: translateY(10px);
 }
 
 .bottom-nav-link.active {
   color: var(--color-primary);
-  font-weight: 700;
+}
+
+.bottom-nav-link.active .bottom-nav-label {
+  max-height: 20px; 
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.bottom-nav-link svg {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .bottom-nav-link.active svg {
-  transform: translateY(-2px) scale(1.15);
-  stroke-width: 2.5px;
-  /* Hace el ícono más "bold" al activarse */
+  transform: translateY(-2px);
 }
 
 .bottom-nav-link.cart-button {
   flex: 0 0 auto;
   position: relative;
-  top: -16px;
+  transform: translateY(-24px); 
   z-index: 10;
-  min-width: 82px;
-  padding-inline: 0.35rem;
+  min-width: 70px;
+  padding: 0;
 }
 
 .bottom-nav-link:focus-visible {
@@ -205,25 +210,16 @@
   border-radius: 16px;
 }
 
-.bottom-nav-label {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .bottom-nav-cart-icon {
-  width: 52px;
-  /* Más grande para ser un target táctil claro */
-  height: 52px;
+  width: 56px;
+  height: 56px;
   display: grid;
   place-items: center;
   border-radius: 999px;
   background-color: var(--color-primary);
   color: var(--text-light);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 40%, transparent);
-  border: 4px solid var(--bg-secondary);
-  /* Simula el recorte contra el fondo */
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 50%, transparent);
+  border: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -232,28 +228,28 @@
   box-shadow: 0 4px 10px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
-
 .bottom-nav-cart-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .cart-badge {
   position: absolute;
-  top: 0px;
-  right: -2px; /* Posicionamiento ajustado al nuevo diseño del botón */
-  min-width: 22px;
-  height: 22px;
-  padding: 0 4px;
-  background-color: var(--color-accent);
-  color: var(--text-light);
+  top: -4px;
+  right: 0px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  background-color: var(--text-primary); 
+  color: var(--bg-primary);
   border-radius: 999px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   border: 2px solid var(--bg-secondary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .client-main {
@@ -276,11 +272,11 @@
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--color-accent);
-  color: white;
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
   padding: 12px 24px;
   border-radius: 8px;
-  z-index: 2100;
+  z-index: var(--z-toast);
   pointer-events: none;
   opacity: 0;
   animation: toast-fade-in-out 3s ease forwards;
@@ -293,25 +289,10 @@
 }
 
 @keyframes toast-fade-in-out {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, 10px);
-  }
-
-  15% {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-
-  85% {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, 10px);
-  }
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 10px); }
 }
 
 .update-toast {
@@ -319,26 +300,19 @@
   top: calc(68px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--color-accent);
-  color: var(--text-light);
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
   padding: 12px 24px;
   border-radius: 50px;
-  z-index: 2000;
+  z-index: var(--z-toast);
   font-weight: 500;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   animation: slide-down 0.5s ease forwards;
 }
 
 @keyframes slide-down {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+  from { opacity: 0; transform: translate(-50%, -20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .floating-cart-container {
@@ -346,7 +320,7 @@
   bottom: calc(var(--bottom-nav-total-height) + 14px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1010;
+  z-index: var(--z-floating-cart);
   transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -358,26 +332,26 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #28a745;
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--text-light);
   padding: 12px 20px;
   border-radius: 50px;
   font-size: 1rem;
   font-weight: 600;
   font-family: var(--font-family);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 15px color-mix(in srgb, var(--color-primary) 30%, transparent);
   cursor: pointer;
   border: none;
 }
 
 .floating-cart-button:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 
 .floating-cart-badge {
-  background-color: white;
-  color: #28a745;
+  background-color: var(--text-light);
+  color: var(--color-primary);
   min-width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -387,10 +361,6 @@
   font-size: 0.9rem;
   font-weight: bold;
   padding: 0 4px;
-}
-
-.floating-cart-button svg {
-  stroke: white;
 }
 
 .desktop-cart-button {
@@ -417,8 +387,8 @@
   position: absolute;
   top: 0;
   right: 0;
-  background-color: var(--color-accent);
-  color: var(--text-light);
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -431,7 +401,6 @@
 }
 
 @media (min-width: 768px) {
-
   .client-layout,
   .client-layout.has-bottom-nav {
     padding-bottom: 0;
@@ -487,9 +456,7 @@
     align-items: center;
     gap: 0.5rem;
     background-color: var(--color-primary);
-    /* Color principal para llamar a la acción */
-    color: white;
-    /* Asumiendo que tu texto sobre primario es blanco */
+    color: var(--text-light);
     padding: 8px 18px;
     border-radius: 8px;
     border: none;
