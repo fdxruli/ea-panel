@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
 import { useUserData } from '../context/UserDataContext';
@@ -29,6 +29,7 @@ import {
   websiteSchema,
 } from '../seo/config';
 import { notifySeoReady } from '../seo/prerender';
+import fallbackImage from '../assets/images/fallback-product.svg';
 
 const ListIcon = () => (
   <svg
@@ -70,33 +71,16 @@ const GridIcon = () => (
   </svg>
 );
 
-const GiftIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="8" width="18" height="4" rx="1.5"></rect>
-    <path d="M12 8v13"></path>
-    <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"></path>
-    <path d="M7.5 8a2.5 2.5 0 1 1 0-5c2 0 4.5 2.3 4.5 5"></path>
-    <path d="M16.5 8a2.5 2.5 0 1 0 0-5c-2 0-4.5 2.3-4.5 5"></path>
-  </svg>
-);
-
 const LAYOUT_STORAGE_KEY = 'product-layout-preference';
-const FALLBACK_FLY_IMAGE = 'https://placehold.co/240x240?text=Entre+Alas';
 const MOBILE_BREAKPOINT = 768;
 
 const getProductDisplayImage = (product) =>
   product?.image_url || product?.product_images?.[0]?.image_url || '';
+
+const getFirstAvailableProductImage = (productList = []) => {
+  const productWithImage = productList.find((product) => Boolean(getProductDisplayImage(product)));
+  return getProductDisplayImage(productWithImage);
+};
 
 const getCategoryFallback = (name) => {
   const compactName = name?.trim() || 'EA';
@@ -109,73 +93,87 @@ const getCategoryFallback = (name) => {
   return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
 };
 
+const formatPrice = (value) => `$${Number(value || 0).toFixed(2)}`;
+
+const renderClientOverlay = (p) => {
+  const hasSpecialPrice = p.original_price && p.original_price !== p.price;
+  return hasSpecialPrice ? <span className={styles.offerBadge}>Oferta</span> : null;
+};
+
+const renderClientDescription = (p) => {
+  const hasDescription = Boolean(p.description?.trim());
+  return hasDescription ? <p className={styles.productDescription}>{p.description}</p> : null;
+};
+
+const renderClientPrice = (p) => {
+  const hasSpecialPrice = p.original_price && p.original_price !== p.price;
+  return (
+    <div className={styles.priceContainer}>
+      {hasSpecialPrice ? (
+        <>
+          <span className={styles.originalPrice}>{formatPrice(p.original_price)}</span>
+          <span className={styles.specialPrice}>{formatPrice(p.price)}</span>
+        </>
+      ) : (
+        <span className={styles.price}>{formatPrice(p.price)}</span>
+      )}
+    </div>
+  );
+};
+
 export default function Menu() {
   const { products, categories, loading, error } = useProducts();
   const { addToCart, showToast } = useCart();
   const { customer } = useUserData();
   const { isOpen: isBusinessOpen, message: businessStatusMessage } = useBusinessHours();
+  const location = useLocation();
   const navigate = useNavigate();
   const { productSlug } = useParams();
   const categoryRailRef = useRef(null);
+  const pathnameRef = useRef(location.pathname);
 
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'grid');
   const shouldShowLeadCapture = !customer;
   const routeSelectedProduct = useMemo(() => (
     productSlug ? products.find((product) => product.slug === productSlug) || null : null
   ), [productSlug, products]);
-  const activeSeoProduct = routeSelectedProduct;
+  const selectedProduct = routeSelectedProduct;
+  const activeSeoProduct = selectedProduct;
 
   useEffect(() => {
-    if (productSlug && routeSelectedProduct) {
-      if (!selectedProduct || selectedProduct.id !== routeSelectedProduct.id) {
-        setSelectedProduct(routeSelectedProduct);
-      }
-
-      return;
-    }
-
-    if (productSlug && !routeSelectedProduct && selectedProduct) {
-      setSelectedProduct(null);
-      return;
-    }
-
-    if (!productSlug && selectedProduct) {
-      setSelectedProduct(null);
-    }
-  }, [productSlug, routeSelectedProduct, selectedProduct]);
+    pathnameRef.current = location.pathname;
+  }, [location.pathname]);
 
   useEffect(() => {
     localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
   }, [layout]);
 
+  const defaultCatalogImage = useMemo(() => getFirstAvailableProductImage(products), [products]);
+
   const categoryVisuals = useMemo(() => {
-    const allProductsImage = getProductDisplayImage(products.find((product) => getProductDisplayImage(product)));
     const allEntry = {
       id: null,
       key: 'all',
       name: 'Todos',
-      imageUrl: allProductsImage,
+      imageUrl: defaultCatalogImage,
       fallback: 'EA',
     };
 
     const visualCategories = categories.map((category) => {
-      const categoryProduct = products.find(
-        (product) => product.category_id === category.id && getProductDisplayImage(product)
-      );
-
       return {
         id: category.id,
         key: category.id,
         name: category.name,
-        imageUrl: getProductDisplayImage(categoryProduct),
+        imageUrl: getFirstAvailableProductImage(
+          products.filter((product) => product.category_id === category.id)
+        ),
         fallback: getCategoryFallback(category.name),
       };
     });
 
     return [allEntry, ...visualCategories];
-  }, [categories, products]);
+  }, [categories, defaultCatalogImage, products]);
 
   useEffect(() => {
     const activeElement = categoryRailRef.current?.querySelector('[data-active-category="true"]');
@@ -208,18 +206,20 @@ export default function Menu() {
 
     const category = categories.find((c) => c.id === selectedCategory);
 
-    // Validación para evitar renderizar nulos o strings vacíos
     if (category?.description && category.description.trim() !== '') {
       return category.description.trim();
     }
 
-    // Fallback seguro si la categoría en BD no tiene descripción
     return `Descubre nuestra selección de ${selectedCategoryLabel.toLowerCase()}. Elige tus favoritos y nosotros nos encargamos del resto.`;
   }, [selectedCategory, selectedCategoryLabel, categories]);
 
   const handleCloseProduct = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+    const closingPath = location.pathname;
+
+    if (pathnameRef.current === closingPath) {
+      navigate('/');
+    }
+  }, [location.pathname, navigate]);
 
   const handleSelectCategory = useCallback((categoryId) => {
     setSelectedCategory(categoryId);
@@ -230,18 +230,30 @@ export default function Menu() {
   }, []);
 
   const handleAddToCart = useCallback((product, quantity, event) => {
+    if (!product?.id) {
+      showToast('Este producto no esta disponible en este momento.');
+      return;
+    }
+
+    const parsedQuantity = Number.parseInt(quantity, 10);
+    const safeQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
+      ? parsedQuantity
+      : 1;
+
+    // TODO: Revalidate business hours and product availability on the server,
+    // or at the final checkout step. Client-side guards are UX only.
     if (!isBusinessOpen) {
       showToast('🕒 Estamos cerrados ahora mismo, no se pueden añadir productos al carrito.');
       return;
     }
 
-    addToCart(product, quantity);
+    addToCart(product, safeQuantity);
 
-    const quantityAdded = quantity || 1;
+    const quantityAdded = safeQuantity;
     const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
 
     if (isMobile && event?.currentTarget) {
-      const imgSrc = getProductDisplayImage(product) || FALLBACK_FLY_IMAGE;
+      const imgSrc = getProductDisplayImage(product) || fallbackImage;
 
       const animationTriggered = animateToCart({
         originElement: event.currentTarget,
@@ -249,7 +261,6 @@ export default function Menu() {
         motionProfile: 'compact-mobile',
       });
 
-      // Si la animación fue bloqueada (ej. accesibilidad), aseguramos el feedback visual estándar
       if (animationTriggered) {
         return;
       }
@@ -258,40 +269,12 @@ export default function Menu() {
     showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito.`);
   }, [isBusinessOpen, addToCart, showToast]);
 
-  const formatPrice = (value) => `$${Number(value || 0).toFixed(2)}`;
-
-  const renderClientOverlay = useCallback((p) => {
-    const hasSpecialPrice = p.original_price && p.original_price !== p.price;
-    return hasSpecialPrice ? <span className={styles.offerBadge}>Oferta</span> : null;
-  }, []);
-
-  const renderClientDescription = useCallback((p) => {
-    const hasDescription = Boolean(p.description?.trim());
-    return hasDescription ? <p className={styles.productDescription}>{p.description}</p> : null;
-  }, []);
-
-  const renderClientPrice = useCallback((p) => {
-    const hasSpecialPrice = p.original_price && p.original_price !== p.price;
-    return (
-      <div className={styles.priceContainer}>
-        {hasSpecialPrice ? (
-          <>
-            <span className={styles.originalPrice}>{formatPrice(p.original_price)}</span>
-            <span className={styles.specialPrice}>{formatPrice(p.price)}</span>
-          </>
-        ) : (
-          <span className={styles.price}>{formatPrice(p.price)}</span>
-        )}
-      </div>
-    );
-  }, []);
-
   const renderClientActions = useCallback((p) => (
     <button
       type="button"
       className={`${styles.cardActionButton} ${!isBusinessOpen ? styles.cardActionButtonClosed : ''}`}
       onClick={(event) => {
-        event.preventDefault(); // Por si interfiere con el Link del contenedor
+        event.preventDefault();
         handleAddToCart(p, 1, event);
       }}
       disabled={!isBusinessOpen}
@@ -315,7 +298,7 @@ export default function Menu() {
       ? joinSiteUrl(`/producto/${productSlug}`)
       : joinSiteUrl('/');
   const seoImage = resolveSeoImage(
-    activeSeoProduct ? getProductDisplayImage(activeSeoProduct) : getProductDisplayImage(products[0])
+    getProductDisplayImage(activeSeoProduct) || defaultCatalogImage || fallbackImage
   );
   const seoImageAlt = activeSeoProduct
     ? `${activeSeoProduct.name} de ${siteName}`
@@ -459,19 +442,16 @@ export default function Menu() {
 
         <section className={styles.menuHero}>
           <div className={styles.heroCopy}>
-            {/* Eliminamos el 'eyebrow' para ganar espacio vertical en móviles */}
             <h1>{selectedCategory ? selectedCategoryLabel : '¿Qué se te antoja hoy?'}</h1>
             <p>{heroDescription}</p>
           </div>
 
           <div className={styles.heroStats}>
-            {/* Etiqueta de estado simplificada con indicador visual (punto de color) */}
             <span className={`${styles.heroStatus} ${isBusinessOpen ? styles.heroStatusOpen : styles.heroStatusClosed}`}>
               <span className={styles.statusDot}></span>
               {isBusinessOpen ? 'Abierto • Recibe en minutos' : 'Cerrado por ahora'}
             </span>
 
-            {/* Se eliminó el conteo de productos. Solo mantenemos el mensaje de negocio si existe. */}
             {businessStatusMessage && <span className={styles.heroMessage}>{businessStatusMessage}</span>}
           </div>
         </section>
@@ -556,6 +536,7 @@ export default function Menu() {
 
         {selectedProduct && (
           <ProductModal
+            key={selectedProduct.id ?? selectedProduct.slug}
             product={selectedProduct}
             onClose={handleCloseProduct}
             onAddToCart={handleAddToCart}

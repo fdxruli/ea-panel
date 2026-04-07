@@ -161,55 +161,54 @@ export default function MyProfile() {
 
         return (
             <>
-                {/* --- (Sección Mis Datos y Apariencia sin cambios) --- */}
-                {visibilitySettings.profile_my_data !== false && (
-                    <div className={styles.card}>
-                        <h2>Mis Datos</h2>
-                        <form onSubmit={handleInfoSubmit} className={styles.form}>
-                            <label htmlFor="name">Nombre:</label>
-                            <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
-                            <small> Puedes cambiar tu nombre las veces que quieras</small>
-                            <label htmlFor="phone">Número de WhatsApp:</label>
-                            <input id="phone" type="tel" value={editForm.phone} readOnly disabled title="Para cambiar tu número, cierra sesión e ingresa con el nuevo." />
-                            <small>Para cambiar de numero, cierra sesión e ingresa con el nuevo. </small>
-                            <button type="submit" className={styles.actionButton}>Guardar Cambios de Nombre</button>
-                        </form>
-                    </div>
-                )}
+                <div className={styles.settingsGroup}>
+                    {visibilitySettings.profile_my_data !== false && (
+                        <div className={styles.section}>
+                            <h2>Información Personal</h2>
+                            <form onSubmit={handleInfoSubmit} className={styles.form}>
+                                <div className={styles.inputGroup}>
+                                    <label htmlFor="name">Nombre</label>
+                                    <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
+                                </div>
+                                <div className={styles.inputGroup}>
+                                    <label htmlFor="phone">Número de WhatsApp</label>
+                                    <input id="phone" type="tel" value={editForm.phone} readOnly disabled />
+                                    <small>Para cambiar de número, debes cerrar sesión.</small>
+                                </div>
+                                <button type="submit" className={styles.actionButton}>Guardar Nombre</button>
+                            </form>
+                        </div>
+                    )}
 
-                <div className={styles.card}>
-                    <h2>Apariencia</h2>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="theme-select">Tema de la aplicación</label>
-                        <select id="theme-select" value={theme} onChange={(e) => changeTheme(e.target.value)} className={styles.themeSelector}>
-                            <option value="light">Claro</option>
-                            <option value="dark">Oscuro</option>
-                            <option value="system">Automático (definido por el sistema)</option>
-                        </select>
+                    <div className={styles.section}>
+                        <h2>Preferencias</h2>
+                        <div className={styles.inputGroup}>
+                            <label htmlFor="theme-select">Tema de la aplicación</label>
+                            <select id="theme-select" value={theme} onChange={(e) => changeTheme(e.target.value)} className={styles.themeSelector}>
+                                <option value="light">Claro</option>
+                                <option value="dark">Oscuro</option>
+                                <option value="system">Automático</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                {/* --- (Fin Secciones Mis Datos y Apariencia) --- */}
-
 
                 {visibilitySettings.profile_my_addresses !== false && (
-                    <div className={styles.card}>
-                        <div className={styles.addressHeader}>
+                    <div className={styles.addressSection}>
+                        <div className={styles.sectionHeader}>
                             <h2>Mis Direcciones</h2>
-                            <button onClick={() => openAddressModal()} className={styles.addButton}> + Añadir Nueva </button>
+                            <button onClick={() => openAddressModal()} className={styles.addButton}>+ Añadir</button>
                         </div>
+
                         {addresses.length > 0 ? (
-                            <div className={styles.addressCarousel}>
+                            /* ELIMINADO EL CARRUSEL, AHORA ES UNA LISTA (GRID) */
+                            <div className={styles.addressGrid}>
                                 {addresses.map((addr) => (
                                     <div key={addr.id} className={`${styles.addressItem} ${addr.is_default ? styles.defaultAddress : ''}`}>
-
-                                        {/* --- 👇 OPTIMIZACIÓN AQUÍ --- */}
-                                        {/* Este div faltaba en tu CSS, lo añadiremos en el siguiente paso */}
                                         <div className={styles.addressMapContainer}>
                                             <StaticMap latitude={addr.latitude} longitude={addr.longitude} />
                                         </div>
-                                        {/* --- FIN OPTIMIZACIÓN --- */}
-
-                                        <div>
+                                        <div className={styles.addressContent}>
                                             <div className={styles.addressLabelContainer}>
                                                 <strong>{addr.label}</strong>
                                                 {addr.is_default && <span className={styles.defaultBadge}>Predeterminada</span>}
@@ -222,20 +221,21 @@ export default function MyProfile() {
                                                 onClick={() => setAddressToDelete(addr)}
                                                 className={styles.deleteButton}
                                                 disabled={addresses.length <= 1}
-                                                title={addresses.length <= 1 ? "No puedes eliminar tu única dirección" : "Eliminar dirección"}
                                             >
                                                 Eliminar
                                             </button>
                                             {!addr.is_default && (
                                                 <button onClick={() => handleSetDefaultAddress(addr.id)} className={styles.setDefaultButton}>
-                                                    Hacer Predeterminada
+                                                    Fijar como predeterminada
                                                 </button>
                                             )}
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        ) : <p>No tienes direcciones guardadas.</p>}
+                        ) : (
+                            <p className={styles.emptyState}>No tienes direcciones guardadas.</p>
+                        )}
                     </div>
                 )}
 

@@ -9,23 +9,49 @@ import React, {
     useRef,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
-import { clearAsyncCache } from '../lib/db';
+import { getAsyncCache, setAsyncCache } from '../lib/db';
 import { useUserData } from './UserDataContext';
 import { createSlug } from '../seo/config';
-// 1. Importar el contexto de Alertas
 import { useAlert } from './AlertContext';
 
 const ProductContext = createContext();
+
 const EMPTY_BASE_CATALOG = { products: [], categories: [] };
+const EMPTY_SPECIAL_PRICES = [];
+const PRODUCTS_WITH_IMAGES_SELECT = '*, product_images ( id, image_url )';
+const CLIENT_CACHE_SCOPE = 'client';
+const BASE_ALERT_DELAY_MS = 400;
+const PRICES_ALERT_DELAY_MS = 400;
 
 const normalizeBaseCatalog = (catalog) => ({
     products: Array.isArray(catalog?.products) ? catalog.products : [],
     categories: Array.isArray(catalog?.categories) ? catalog.categories : [],
 });
 
+const normalizeSpecialPrices = (prices) => (
+    Array.isArray(prices) ? prices : EMPTY_SPECIAL_PRICES
+);
+
 const serializeBaseCatalog = (catalog) => JSON.stringify(normalizeBaseCatalog(catalog));
+
+const toBasicProduct = (product) => ({
+    id: product?.id ?? null,
+    name: product?.name ?? '',
+    description: product?.description ?? '',
+    price: product?.price ?? 0,
+    image_url: product?.image_url ?? null,
+    category_id: product?.category_id ?? null,
+    is_active: Boolean(product?.is_active),
+});
+
+const toBasicProducts = (products) => (
+    Array.isArray(products) ? products.map(toBasicProduct) : []
+);
+
+const buildSpecialPricesCacheKey = (customerId) => (
+    `${CACHE_KEYS.SPECIAL_PRICES}-${customerId || 'global'}`
+);
 
 export const useProducts = () => useContext(ProductContext);
 
@@ -36,25 +62,52 @@ export const ProductProvider = ({ children }) => {
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [loadingPrices, setLoadingPrices] = useState(false);
     const [error, setError] = useState(null);
-    
-    // 2. Extraer showAlert del AlertContext superior
+
     const { showAlert } = useAlert();
     const { customer } = useUserData();
     const customerId = customer?.id;
 
+    const catalogRef = useRef(normalizeBaseCatalog(EMPTY_BASE_CATALOG));
+    const alertRef = useRef(showAlert);
+    const isMountedRef = useRef(false);
     const baseCatalogSignatureRef = useRef(serializeBaseCatalog(EMPTY_BASE_CATALOG));
-    const debounceBaseRef = useRef(null);
-    const debouncePricesRef = useRef(null);
-    // Eliminado: notificationTimerRef
+    const baseAlertTimerRef = useRef(null);
+    const priceAlertTimerRef = useRef(null);
+    const baseRealtimeTimerRef = useRef(null);
+    const priceRealtimeTimerRef = useRef(null);
+    const baseFetchSequenceRef = useRef(0);
+    const pricesFetchSequenceRef = useRef(0);
+
+    useEffect(() => {
+        isMountedRef.current = true;
+
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        alertRef.current = showAlert;
+    }, [showAlert]);
+
+    const scheduleAlert = useCallback((timerRef, message, type = 'info', delayMs = BASE_ALERT_DELAY_MS) => {
+        if (timerRef.current) return;
+
+        timerRef.current = window.setTimeout(() => {
+            timerRef.current = null;
+            alertRef.current?.(message, type);
+        }, delayMs);
+    }, []);
 
     const applyBaseCatalog = useCallback((nextCatalog) => {
         const normalizedCatalog = normalizeBaseCatalog(nextCatalog);
         const nextSignature = serializeBaseCatalog(normalizedCatalog);
-        const hasChanged = nextSignature !== baseCatalogSignatureRef.current;
+        const hasCatalogChanged = nextSignature !== baseCatalogSignatureRef.current;
 
+        catalogRef.current = normalizedCatalog;
         baseCatalogSignatureRef.current = nextSignature;
 
-        if (hasChanged) {
+        if (hasCatalogChanged) {
             setBaseProducts(normalizedCatalog.products);
             setCategories(normalizedCatalog.categories);
         }
@@ -62,15 +115,40 @@ export const ProductProvider = ({ children }) => {
         return normalizedCatalog;
     }, []);
 
+    const persistBaseCatalogCache = useCallback(async (catalog) => {
+        // Solo sobrescribimos la cache cuando Supabase respondio correctamente.
+        await Promise.all([
+            setAsyncCache(
+                {
+                    key: CACHE_KEYS.PRODUCTS,
+                    scope: CLIENT_CACHE_SCOPE,
+                    ttl: CACHE_TTL.PRODUCTS,
+                },
+                catalog
+            ),
+            setAsyncCache(
+                {
+                    key: CACHE_KEYS.PRODUCTS_BASIC,
+                    scope: CLIENT_CACHE_SCOPE,
+                    ttl: CACHE_TTL.PRODUCTS,
+                },
+                toBasicProducts(catalog.products)
+            ),
+        ]);
+    }, []);
+
     const fetchBaseProductsAndCategories = useCallback(async ({ background = false } = {}) => {
-        if (!background) setLoadingProducts(true);
-        setError(null);
+        const requestSequence = ++baseFetchSequenceRef.current;
+
+        if (!background && isMountedRef.current) {
+            setLoadingProducts(true);
+        }
 
         try {
             const [productsRes, categoriesRes] = await Promise.all([
                 supabase
                     .from('products')
-                    .select('*, product_images ( id, image_url )')
+                    .select(PRODUCTS_WITH_IMAGES_SELECT)
                     .eq('is_active', true),
                 supabase.from('categories').select('*'),
             ]);
@@ -78,37 +156,50 @@ export const ProductProvider = ({ children }) => {
             if (productsRes.error) throw productsRes.error;
             if (categoriesRes.error) throw categoriesRes.error;
 
-            const nextCatalog = {
-                products: productsRes.data || [],
-                categories: categoriesRes.data || [],
-            };
-
-            applyBaseCatalog(nextCatalog);
-            setCache(CACHE_KEYS.PRODUCTS, nextCatalog);
-        } catch (err) {
-            console.error('Error fetching base data:', err);
-            if (!background) setError(err.message);
-        } finally {
-            setLoadingProducts(false);
-        }
-    }, [applyBaseCatalog]);
-
-    const fetchSpecialPrices = useCallback(async (currentCustomerId) => {
-        setLoadingPrices(true);
-        setError(null);
-
-        const cacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${currentCustomerId || 'global'}`;
-        const cacheTTL = CACHE_TTL.PRODUCT_EXTRAS;
-
-        try {
-            const { data: cachedPrices, isStale } = getCache(cacheKey, cacheTTL);
-
-            if (cachedPrices && !isStale) {
-                setSpecialPrices(cachedPrices);
-                setLoadingPrices(false);
-                return;
+            if (requestSequence !== baseFetchSequenceRef.current) {
+                return null;
             }
 
+            const nextCatalog = normalizeBaseCatalog({
+                products: productsRes.data || [],
+                categories: categoriesRes.data || [],
+            });
+
+            if (isMountedRef.current) {
+                applyBaseCatalog(nextCatalog);
+                setError(null);
+            }
+
+            await persistBaseCatalogCache(nextCatalog);
+            return nextCatalog;
+        } catch (err) {
+            console.error('Error fetching base data:', err);
+
+            if (
+                requestSequence === baseFetchSequenceRef.current
+                && isMountedRef.current
+                && !background
+            ) {
+                setError(err.message);
+            }
+
+            return null;
+        } finally {
+            if (requestSequence === baseFetchSequenceRef.current && isMountedRef.current) {
+                setLoadingProducts(false);
+            }
+        }
+    }, [applyBaseCatalog, persistBaseCatalogCache]);
+
+    const fetchSpecialPrices = useCallback(async (currentCustomerId, { background = false } = {}) => {
+        const requestSequence = ++pricesFetchSequenceRef.current;
+        const cacheKey = buildSpecialPricesCacheKey(currentCustomerId);
+
+        if (!background && isMountedRef.current) {
+            setLoadingPrices(true);
+        }
+
+        try {
             const today = new Date().toISOString().split('T')[0];
             let query = supabase
                 .from('special_prices')
@@ -125,36 +216,189 @@ export const ProductProvider = ({ children }) => {
             const { data, error: priceError } = await query;
             if (priceError) throw priceError;
 
-            const fetchedPrices = data || [];
-            setSpecialPrices(fetchedPrices);
-            setCache(cacheKey, fetchedPrices);
+            if (requestSequence !== pricesFetchSequenceRef.current) {
+                return null;
+            }
+
+            const fetchedPrices = normalizeSpecialPrices(data || []);
+
+            if (isMountedRef.current) {
+                setSpecialPrices(fetchedPrices);
+                setError(null);
+            }
+
+            await setAsyncCache(
+                {
+                    key: cacheKey,
+                    scope: CLIENT_CACHE_SCOPE,
+                    ttl: CACHE_TTL.PRODUCT_EXTRAS,
+                },
+                fetchedPrices
+            );
+
+            return fetchedPrices;
         } catch (err) {
             console.error('Error fetching special prices:', err);
-            setError(err.message);
-            setSpecialPrices([]);
+
+            if (
+                requestSequence === pricesFetchSequenceRef.current
+                && isMountedRef.current
+                && !background
+            ) {
+                setError(err.message);
+            }
+
+            return null;
         } finally {
-            setLoadingPrices(false);
+            if (requestSequence === pricesFetchSequenceRef.current && isMountedRef.current) {
+                setLoadingPrices(false);
+            }
         }
     }, []);
 
-    useEffect(() => {
-        const { data: cachedData } = getCache(CACHE_KEYS.PRODUCTS, CACHE_TTL.PRODUCTS);
-
-        if (cachedData) {
-            applyBaseCatalog(cachedData);
-            setLoadingProducts(false);
-            fetchBaseProductsAndCategories({ background: true }).catch(() => { });
-            return;
+    const handleBaseChanges = useCallback(() => {
+        if (baseRealtimeTimerRef.current) {
+            clearTimeout(baseRealtimeTimerRef.current);
         }
 
-        fetchBaseProductsAndCategories();
+        // El realtime solo debouncea y refetch; no invalida cache antes de la red.
+        baseRealtimeTimerRef.current = window.setTimeout(() => {
+            baseRealtimeTimerRef.current = null;
+            scheduleAlert(baseAlertTimerRef, 'El menu se ha actualizado!', 'info', 0);
+            fetchBaseProductsAndCategories({ background: true }).catch(() => {});
+        }, BASE_ALERT_DELAY_MS);
+    }, [fetchBaseProductsAndCategories, scheduleAlert]);
+
+    useEffect(() => {
+        const baseChannel = supabase.channel('public:products_categories');
+
+        baseChannel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleBaseChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleBaseChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleBaseChanges)
+            .subscribe();
+
+        return () => {
+            if (baseAlertTimerRef.current) {
+                clearTimeout(baseAlertTimerRef.current);
+                baseAlertTimerRef.current = null;
+            }
+
+            if (baseRealtimeTimerRef.current) {
+                clearTimeout(baseRealtimeTimerRef.current);
+                baseRealtimeTimerRef.current = null;
+            }
+
+            supabase.removeChannel(baseChannel);
+        };
+    }, [handleBaseChanges]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const initBaseCatalog = async () => {
+            const { data: cachedCatalog, isStale } = await getAsyncCache(CACHE_KEYS.PRODUCTS);
+
+            if (cancelled || !isMountedRef.current) return;
+
+            if (cachedCatalog !== null) {
+                applyBaseCatalog(cachedCatalog);
+                setLoadingProducts(false);
+
+                if (isStale) {
+                    // Con SWR mostramos cache stale primero y revalidamos en segundo plano.
+                    fetchBaseProductsAndCategories({ background: true }).catch(() => {});
+                }
+
+                return;
+            }
+
+            setLoadingProducts(true);
+            fetchBaseProductsAndCategories().catch(() => {});
+        };
+
+        initBaseCatalog();
+
+        return () => {
+            cancelled = true;
+        };
     }, [applyBaseCatalog, fetchBaseProductsAndCategories]);
 
     useEffect(() => {
-        if (!loadingProducts) {
-            fetchSpecialPrices(customerId);
-        }
+        if (loadingProducts) return undefined;
+
+        let cancelled = false;
+        const cacheKey = buildSpecialPricesCacheKey(customerId);
+        const initSequence = ++pricesFetchSequenceRef.current;
+
+        const initSpecialPrices = async () => {
+            setLoadingPrices(true);
+
+            const { data: cachedPrices, isStale } = await getAsyncCache(cacheKey);
+
+            if (
+                cancelled
+                || !isMountedRef.current
+                || initSequence !== pricesFetchSequenceRef.current
+            ) {
+                return;
+            }
+
+            if (cachedPrices !== null) {
+                setSpecialPrices(normalizeSpecialPrices(cachedPrices));
+                setLoadingPrices(false);
+
+                if (isStale) {
+                    fetchSpecialPrices(customerId, { background: true }).catch(() => {});
+                }
+
+                return;
+            }
+
+            setSpecialPrices([]);
+            fetchSpecialPrices(customerId).catch(() => {});
+        };
+
+        initSpecialPrices();
+
+        return () => {
+            cancelled = true;
+        };
     }, [customerId, fetchSpecialPrices, loadingProducts]);
+
+    useEffect(() => {
+        const pricesChannel = supabase.channel(`public:special_prices:${customerId || 'global'}`);
+
+        const handlePriceChanges = () => {
+            if (priceRealtimeTimerRef.current) {
+                clearTimeout(priceRealtimeTimerRef.current);
+            }
+
+            priceRealtimeTimerRef.current = window.setTimeout(() => {
+                priceRealtimeTimerRef.current = null;
+                scheduleAlert(priceAlertTimerRef, 'Promociones actualizadas!', 'info', 0);
+                fetchSpecialPrices(customerId, { background: true }).catch(() => {});
+            }, PRICES_ALERT_DELAY_MS);
+        };
+
+        pricesChannel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handlePriceChanges)
+            .subscribe();
+
+        return () => {
+            if (priceAlertTimerRef.current) {
+                clearTimeout(priceAlertTimerRef.current);
+                priceAlertTimerRef.current = null;
+            }
+
+            if (priceRealtimeTimerRef.current) {
+                clearTimeout(priceRealtimeTimerRef.current);
+                priceRealtimeTimerRef.current = null;
+            }
+
+            supabase.removeChannel(pricesChannel);
+        };
+    }, [customerId, fetchSpecialPrices, scheduleAlert]);
 
     const productsWithAppliedPrices = useMemo(() => {
         if (baseProducts.length === 0) return [];
@@ -175,11 +419,12 @@ export const ProductProvider = ({ children }) => {
             }
         }
 
-        const pricedProducts = baseProducts.map(product => {
+        const pricedProducts = baseProducts.map((product) => {
             const productSpecificPrice = productPricesMap.get(product.id);
-            const categorySpecificPrice = !productSpecificPrice ? categoryPricesMap.get(product.category_id) : undefined;
+            const categorySpecificPrice = !productSpecificPrice
+                ? categoryPricesMap.get(product.category_id)
+                : undefined;
             const specialPriceInfo = productSpecificPrice || categorySpecificPrice;
-
             const slug = createSlug(product.name);
 
             if (specialPriceInfo) {
@@ -216,67 +461,15 @@ export const ProductProvider = ({ children }) => {
     const visibleCategories = useMemo(() => {
         if (productsWithAppliedPrices.length === 0 || categories.length === 0) return [];
 
-        const uniqueCategoryIdsInProducts = new Set(productsWithAppliedPrices.map(p => p.category_id));
-        return categories.filter(c => uniqueCategoryIdsInProducts.has(c.id));
+        const uniqueCategoryIdsInProducts = new Set(productsWithAppliedPrices.map((product) => product.category_id));
+        return categories.filter((category) => uniqueCategoryIdsInProducts.has(category.id));
     }, [productsWithAppliedPrices, categories]);
-
-    useEffect(() => {
-        const baseChannel = supabase.channel('public:products_categories');
-
-        const handleBaseChanges = (payload) => {
-            if (debounceBaseRef.current) clearTimeout(debounceBaseRef.current);
-
-            debounceBaseRef.current = setTimeout(() => {
-                // 3. Disparar alerta externa en lugar de mutar estado local
-                showAlert('¡El menu se ha actualizado!', 'info');
-
-                localStorage.removeItem(CACHE_KEYS.PRODUCTS);
-                localStorage.removeItem(CACHE_KEYS.PRODUCTS_BASIC);
-                clearAsyncCache(CACHE_KEYS.PRODUCTS_BASIC).catch(() => { });
-                fetchBaseProductsAndCategories();
-            }, 1500);
-        };
-
-        baseChannel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleBaseChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'product_images' }, handleBaseChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleBaseChanges)
-            .subscribe();
-
-        const pricesChannel = supabase.channel('public:special_prices');
-
-        const handlePriceChanges = (payload) => {
-            if (debouncePricesRef.current) clearTimeout(debouncePricesRef.current);
-
-            debouncePricesRef.current = setTimeout(() => {
-                // 3. Disparar alerta externa en lugar de mutar estado local
-                showAlert('¡Promociones actualizadas!', 'info');
-
-                const affectedCacheKey = `${CACHE_KEYS.SPECIAL_PRICES}-${customerId || 'global'}`;
-                localStorage.removeItem(affectedCacheKey);
-                fetchSpecialPrices(customerId);
-            }, 1500);
-        };
-
-        pricesChannel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handlePriceChanges)
-            .subscribe();
-
-        return () => {
-            if (debounceBaseRef.current) clearTimeout(debounceBaseRef.current);
-            if (debouncePricesRef.current) clearTimeout(debouncePricesRef.current);
-
-            supabase.removeChannel(baseChannel);
-            supabase.removeChannel(pricesChannel);
-        };
-    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices, showAlert]);
 
     const value = {
         products: productsWithAppliedPrices,
         categories: visibleCategories,
         loading: loadingProducts || loadingPrices,
         error,
-        // Eliminado: notification
     };
 
     return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCustomer } from '../context/CustomerContext';
+import { useUserData } from '../context/UserDataContext';
 import { supabase } from '../lib/supabaseClient';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ImageWithFallback from '../components/ImageWithFallback';
@@ -10,76 +11,66 @@ import styles from '../pages/MyOrders.module.css';
 export default function OrderDetailPage() {
     const { orderCode } = useParams();
     const [order, setOrder] = useState(null);
-    const [loading, setLoading] = useState(true); 
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     const { phone, setPhoneModalOpen, isCustomerLoading } = useCustomer();
 
-    useEffect(() => {
-        const fetchOrderDetails = async () => {
-            setLoading(true);
-            setError(null);
-            setOrder(null);
+    const { orders, loading: userLoading } = useUserData();
+    const [localOrder, setLocalOrder] = useState(null);
+    const [localLoading, setLocalLoading] = useState(true);
 
+    const contextOrder = useMemo(() => {
+        return orders?.find(o => o.order_code === orderCode);
+    }, [orders, orderCode]);
+
+    useEffect(() => {
+        // 2. Fallback para conexiones directas o invitados
+        const fetchOrderStandalone = async () => {
             try {
+                setLocalLoading(true);
                 const { data, error: fetchError } = await supabase
                     .from('orders')
-                    .select(`
-                        id,
-                        order_code,
-                        created_at,
-                        status,
-                        total_amount,
-                        cancellation_reason,
-                        scheduled_for,
-                        order_items (
-                            id,
-                            quantity,
-                            price,
-                            products (
-                                id,
-                                name,
-                                image_url
-                            )
-                        )
-                    `)
+                    // ... tu select actual ...
                     .eq('order_code', orderCode)
-                    .maybeSingle(); 
+                    .maybeSingle();
 
-                if (fetchError) {
-                    console.error("Error fetching order:", fetchError);
-                    throw new Error('Hubo un problema al buscar tu pedido.');
+                if (fetchError) throw fetchError;
+                if (!data) throw new Error('Pedido no encontrado.');
+
+                setLocalOrder(data);
+
+                // Si es un invitado, suscribirse localmente a ESTE pedido específico
+                if (!phone) {
+                    const channel = supabase.channel(`guest-order-${data.id}`)
+                        .on('postgres_changes',
+                            { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${data.id}` },
+                            (payload) => setLocalOrder(prev => ({ ...prev, ...payload.new }))
+                        ).subscribe();
+
+                    return () => supabase.removeChannel(channel);
                 }
-
-                if (!data) {
-                    throw new Error(`No se encontró ningún pedido con el código ${orderCode}. Verifica el enlace.`);
-                }
-                
-                setOrder(data);
-
             } catch (err) {
                 setError(err.message);
             } finally {
-                setLoading(false);
+                setLocalLoading(false);
             }
         };
 
-        if (isCustomerLoading) {
-            setLoading(true);
-            return;
-        }
+        if (isCustomerLoading || userLoading) return;
 
         if (phone) {
-            navigate('/mis-pedidos', { replace: true });
+            // Si está autenticado, el contexto mandará
+            if (!contextOrder && !userLoading) {
+                setError('Pedido no encontrado en tu historial.');
+            }
+            setLocalLoading(false);
         } else if (orderCode) {
-            fetchOrderDetails();
-        } else {
-            setError('No se proporcionó un código de pedido en el enlace.');
-            setLoading(false);
+            // Si es invitado o entró por URL directa sin sesión activa
+            fetchOrderStandalone();
         }
-
-    }, [orderCode, phone, isCustomerLoading, navigate]); // 4. Depende de la carga del cliente
+    }, [orderCode, phone, isCustomerLoading, userLoading, contextOrder]);
 
     if (isCustomerLoading || loading) {
         return <LoadingSpinner />;
@@ -157,9 +148,9 @@ export default function OrderDetailPage() {
             />
             <div className={styles.container}>
                 <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>Detalles del Pedido</h1>
-                
+
                 <div className={`${styles.orderCard} ${styles.open}`}>
-                    
+
                     <div className={styles.cardHeader}>
                         <span>Pedido #{order.order_code}</span>
                         <div className={styles.headerInfo}>
@@ -210,7 +201,7 @@ export default function OrderDetailPage() {
                         </div>
                     </div>
                 </div>
-                
+
                 {!phone && (
                     <div className={styles.loginPrompt}>
                         <h4>¡Crea tu cuenta con solo tu número!</h4>
@@ -221,7 +212,7 @@ export default function OrderDetailPage() {
                             <li>Recibir notificaciones de tus pedidos.</li>
                             <li>Guardar tus direcciones, favoritos y reseñas a nuestros productos.</li>
                         </ul>
-                        <button 
+                        <button
                             onClick={() => setPhoneModalOpen(true)}
                             className={styles.promptActionButton}
                         >

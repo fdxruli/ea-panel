@@ -1,6 +1,6 @@
+/* Base Container - Mobile First */
 .container {
-    max-width: 700px;
-    margin: 2rem auto;
+    width: 100%;
     padding: 1rem;
     font-family: 'Poppins', sans-serif;
     display: flex;
@@ -8,216 +8,298 @@
     gap: 2rem;
 }
 
-
-.card {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-    border-radius: var(--border-radius);
-    padding: 2rem;
-    box-shadow: 0 2px 8px var(--shadow-color);
-    border: 1px solid var(--border-color);
+/* Solo en pantallas más grandes centramos y limitamos el ancho */
+@media (min-width: 768px) {
+    .container {
+        max-width: 700px;
+        margin: 2rem auto;
+        gap: 2.5rem;
+    }
 }
 
-/* --- ESTILOS PARA EL FORMULARIO "MIS DATOS" --- */
+/* Agrupación visual (reemplazo de tarjetas) */
+.settingsGroup {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.section {
+    padding: 1.2rem 1rem;
+}
+
+@media (min-width: 768px) {
+    .section {
+        padding: 1.5rem 2rem;
+    }
+}
+
+.section:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section h2, .sectionHeader h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1.2rem;
+    color: var(--text-primary);
+}
+
+/* Formularios estructurados */
 .form {
     display: flex;
     flex-direction: column;
+    gap: 1.2rem;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
-    /* Espacio entre la etiqueta y su campo */
-    margin-top: 1.5rem;
 }
 
-.form label {
-    font-weight: 500;
+.inputGroup label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.inputGroup input,
+.themeSelector {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.inputGroup input:focus,
+.themeSelector:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.inputGroup input:disabled {
+    background-color: var(--bg-disabled, rgba(0,0,0,0.05));
     color: var(--text-secondary);
+    cursor: not-allowed;
+    border-color: transparent;
 }
 
-/* Añade espacio superior a las etiquetas que no sean la primera para separar los pares */
-.form label:not(:first-of-type) {
-    margin-top: 1rem;
+.inputGroup small {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
 }
 
+/* Botones de acción general */
 .actionButton {
-    padding: 0.8rem 1.5rem;
+    width: 100%; /* En móvil, los botones principales ocupan el 100% para mejor área de toque */
+    padding: 0.9rem;
     background-color: var(--color-primary);
     color: var(--text-light);
     border: none;
     border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: bold;
-    font-size: 1rem;
-    margin-top: 1rem;
-    align-self: flex-start;
+    text-align: center;
 }
 
-/* --- ESTILOS PARA LA SECCIÓN "APARIENCIA" --- */
-.formGroup {
+@media (min-width: 768px) {
+    .actionButton {
+        width: auto; /* En escritorio, regresan a su tamaño natural */
+        padding: 0.8rem 1.5rem;
+        align-self: flex-start;
+    }
+}
+
+/* Sección de Direcciones */
+.addressSection {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
-    /* Espacio vertical entre la etiqueta y el selector */
-    margin-top: 1.5rem;
+    gap: 1.5rem;
 }
 
-.formGroup label {
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-align: left;
-}
-
-.themeSelector {
-    width: 100%;
-    font-size: 1rem;
-}
-
-/* --- ESTILOS PARA LA SECCIÓN "MIS DIRECCIONES" --- */
-.addressHeader {
+.sectionHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
 }
 
 .addButton {
     background-color: var(--color-accent);
     color: var(--text-light);
     border: none;
-    padding: 0.7rem 1.2rem;
-    border-radius: 50px;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: 500;
 }
 
-.addressCarousel {
-    display: flex;
-    overflow-x: auto;
-    gap: 1.5rem;
-    padding: 0.5rem 0;
-    scroll-snap-type: x mandatory;
+/* Grid Mobile-First: 1 columna por defecto */
+.addressGrid {
+    display: grid;
+    grid-template-columns: 1fr; 
+    gap: 1rem;
 }
 
-.addressCarousel::-webkit-scrollbar {
-    display: none;
-}
-
-.addressCarousel {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* Tablet y Desktop: Se expande a 2 columnas */
+@media (min-width: 768px) {
+    .addressGrid {
+        grid-template-columns: repeat(2, 1fr); 
+    }
 }
 
 .addressItem {
-    flex: 0 0 280px;
-    scroll-snap-align: start;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    padding: 1.5rem;
+    padding: 1.2rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    background-color: var(--bg-primary);
-
+    background-color: var(--bg-secondary);
     position: relative;
-    border: 2px solid var(--border-color); /* Borde por defecto */
-    transition: border-color 0.3s ease;
 }
 
 .defaultAddress {
-    border-color: var(--color-primary); /* Borde destacado para la dirección por defecto */
+    border: 2px solid var(--color-primary);
+}
+
+.addressMapContainer {
+    height: 120px;
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    background-color: var(--border-color);
+}
+
+.addressContent {
+    flex-grow: 1;
 }
 
 .addressLabelContainer {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 0.5rem;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+}
+
+.addressLabelContainer strong {
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%; /* Evita que textos largos rompan el flex y empujen el badge */
 }
 
 .defaultBadge {
     background-color: var(--color-primary);
     color: var(--text-light);
-    padding: 0.2rem 0.6rem;
-    border-radius: 50px;
-    font-size: 0.8rem;
-    font-weight: 500;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
-.addressItem p {
-    margin: 0;
+.addressContent p {
     color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
+/* Botones dentro de la tarjeta de dirección */
 .addressActions {
-    display: flex;
-    gap: 0.8rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
     margin-top: 1rem;
-    flex-wrap: wrap;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
 }
 
-.setDefaultButton {
-    background: none;
-    border: 1px solid var(--color-accent);
-    color: var(--color-accent);
-    padding: 0.6rem 1rem;
-    border-radius: 50px;
+.addressActions button {
+    padding: 0.8rem 0.5rem; /* Botones más altos en móvil para la regla del pulgar */
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
     cursor: pointer;
-    flex-grow: 1;
-    width: 100%; 
-    margin-top: 0.5rem;
+    text-align: center;
+}
+
+@media (min-width: 768px) {
+    .addressActions button {
+        padding: 0.6rem; /* En escritorio no necesitan ser tan altos */
+    }
 }
 
 .editButton {
-    background: none;
+    background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 0.6rem 1rem;
-    border-radius: 50px;
-    cursor: pointer;
-    flex-grow: 1;
 }
 
 .deleteButton {
-    background-color: var(--color-error);
-    color: var(--text-light);
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 50px;
-    cursor: pointer;
-    flex-grow: 1;
+    background-color: transparent;
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
 }
 
-.prompt {
+.deleteButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.setDefaultButton {
+    grid-column: span 2;
+    background-color: transparent;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+}
+
+/* Mensajes de estado (Prompt / Vacío) */
+.prompt, .emptyState {
     text-align: center;
-    padding: 2rem;
+    padding: 2rem 1rem;
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
+    border: 1px dashed var(--border-color);
 }
 
+@media (min-width: 768px) {
+    .prompt {
+        padding: 3rem 2rem;
+    }
+}
+
+/* Botón de Cerrar Sesión */
 .logoutSection {
-    margin-top: 2rem;
+    margin-top: 1rem;
+    padding-top: 2rem;
+    border-top: 1px dashed var(--border-color);
     text-align: center;
 }
 
 .logoutButton {
-    background: none;
+    width: 100%; /* Ocupa todo el ancho en móvil */
+    background: transparent;
     color: var(--color-error);
     border: 1px solid var(--color-error);
-    padding: 0.8rem 1.5rem;
-    border-radius: 50px;
+    padding: 1rem;
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
 }
 
-.logoutButton:hover {
-    background-color: var(--color-error);
-    color: var(--text-light);
-}
-
-.addressMapContainer {
-  height: 150px; /* Altura fija para el mapa en el carrusel */
-  width: 100%;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 1rem; /* Espacio entre el mapa y el texto */
-  background-color: #f0f0f0; /* Color de fondo mientras carga */
+@media (min-width: 768px) {
+    .logoutButton {
+        width: auto;
+        padding: 0.8rem 2rem;
+    }
 }

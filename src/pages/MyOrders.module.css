@@ -1,5 +1,5 @@
 .container {
-    max-width: 700px;
+    max-width: 768px;
     margin: 2rem auto;
     padding: 1rem;
     font-family: 'Poppins', sans-serif;
@@ -8,477 +8,409 @@
     gap: 2rem;
 }
 
-.container h1, .container h2, .container h3 {
+.pageTitle {
     text-align: left;
     color: var(--text-primary);
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     padding: 0 0.5rem;
+    font-size: 2rem;
+    font-weight: 700;
 }
 
-.ordersContainer {
+.sectionContainer {
     display: flex;
-    overflow-x: auto;
-    gap: 1.5rem;
-    padding: 0.5rem; /* Add some padding so cards don't touch edges */
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    align-items: flex-start; /* <--- FIX HERE */
+    flex-direction: column;
+    gap: 1rem;
 }
 
-/* Ocultar la barra de scroll */
-.ordersContainer::-webkit-scrollbar { display: none; }
-.ordersContainer { -ms-overflow-style: none; scrollbar-width: none; }
+.sectionTitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
+.ordersListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* --- TARJETAS MODERNAS --- */
 .orderCard {
-    flex: 0 0 320px; /* Base width for cards */
-    scroll-snap-align: start;
     background-color: var(--bg-secondary);
-    border-radius: var(--border-radius);
+    border-radius: 16px;
     border: 1px solid var(--border-color);
-    overflow: hidden; /* Keep hidden on the main card */
-    transition: border-color 0.3s ease, box-shadow 0.3s ease; /* Transition only border and shadow */
-    display: flex; /* Use flexbox for vertical layout */
-    flex-direction: column; /* Stack header, details, footer */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.orderCard:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    border-color: var(--color-primary-light);
+    transform: translateY(-2px);
 }
 
 .orderCard.open {
     border-color: var(--color-primary);
-    box-shadow: 0 4px 15px var(--shadow-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
+/* --- ENCABEZADO DE TARJETA --- */
 .cardHeader {
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    background: none;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
     border: none;
     cursor: pointer;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    border-bottom: 1px solid var(--border-color); /* Keep border here */
-    flex-shrink: 0; /* Prevent header from shrinking */
+    text-align: left;
 }
 
-.headerInfo {
+.headerMain {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.orderId {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+}
+
+.orderDate {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.headerRight {
     display: flex;
     align-items: center;
     gap: 1rem;
-    flex-shrink: 0; /* Prevent status/icon shrinking */
 }
 
-.toggleIcon {
-    font-size: 1.5rem;
+.chevronIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-secondary);
-    transition: transform 0.3s ease, color 0.3s ease; /* Added color transition */
+    transition: transform 0.3s ease, color 0.3s ease;
 }
 
-.orderCard.open .toggleIcon {
-    transform: rotate(45deg); /* Keep rotation */
-    color: var(--color-error); /* Keep error color for 'x' */
+.orderCard.open .chevronIcon {
+    transform: rotate(180deg);
+    color: var(--color-primary);
 }
 
+.scheduledBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-primary); /* Destaca usando el color principal */
+    background-color: var(--color-primary-light); /* Fondo sutil */
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    width: fit-content;
+    border: 1px solid rgba(var(--color-primary-rgb), 0.2); /* Borde opcional si usas variables rgb */
+}
+
+/* --- INSIGNIAS DE ESTADO (BADGES) --- */
+.statusBadge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Usamos colores con opacidad para el fondo y colores sólidos para el texto */
+.pendiente {
+    background-color: rgba(240, 173, 78, 0.15);
+    color: #d68910;
+    border: 1px solid rgba(240, 173, 78, 0.3);
+}
+
+.en_proceso, .en_envio {
+    background-color: rgba(52, 152, 219, 0.15);
+    color: #2980b9;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.completado {
+    background-color: rgba(46, 204, 113, 0.15);
+    color: #27ae60;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.cancelado {
+    background-color: rgba(231, 76, 60, 0.15);
+    color: #c0392b;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* --- DETALLES DEL PEDIDO (Desplegable) --- */
 .orderDetails {
-    max-height: 0;
-    overflow: hidden; /* Keep overflow hidden */
-    /* Define transition primarily on max-height */
-    transition: max-height 0.4s ease-out;
-    /* Padding will appear instantly when open */
-    padding: 0 1.5rem;
-    flex-grow: 1; /* Allow details to take available space */
-    min-height: 0; /* Needed for flex-grow */
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .orderCard.open .orderDetails {
-    max-height: 1500px; /* Increased max-height */
-    padding: 1.5rem; /* Apply padding only when open */
-    overflow-y: auto; /* Allow internal scroll if content is VERY tall */
-    border-top: 1px solid var(--border-color); /* Add border only when open */
-    /* Transition for max-height happens from definition above */
+    grid-template-rows: 1fr;
 }
 
-/* Style paragraphs inside details for better wrapping */
-.orderDetails p {
-    margin: 0.5rem 0;
-    line-height: 1.5; /* Improve readability */
-    word-break: break-word; /* Allow long words/dates to break */
-}
-.orderDetails p strong {
-    color: var(--text-primary); /* Ensure labels are clearly visible */
-    margin-right: 0.5em;
+.detailsInner {
+    overflow: hidden;
+    padding: 0 1.5rem; /* El padding vertical se aplica en los hijos */
 }
 
-/* Styling for the scheduled time specifically */
-.scheduledTime {
-    color: var(--color-primary); /* Make it stand out */
-    font-weight: 500;
+.orderCard.open .detailsInner {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
 }
 
-
-/* Product list inside details */
-.orderDetails ul {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0;
-}
-
-.orderDetails li {
-    padding: 0.6rem 0; /* Slightly reduced padding */
-    border-bottom: 1px solid var(--border-color);
-    display: flex; /* Use flexbox for alignment */
-    justify-content: space-between; /* Space out name and price */
-    align-items: center; /* Vertically align */
-    gap: 1rem; /* Space between elements */
-}
-.orderDetails li:last-child {
-    border-bottom: none;
-}
-
-.orderDetails li span:first-child { /* Product name part */
-    flex-grow: 1; /* Allow name to take space */
-    word-break: break-word; /* Allow name to wrap */
-}
-.orderDetails li span:last-child { /* Price part */
-    flex-shrink: 0; /* Prevent price from shrinking */
-    font-weight: 500;
-    white-space: nowrap; /* Keep price on one line */
-}
-
-
-.activeOrdersContainer,
-.historyContainer {
-    margin-top: 1rem;
-}
-
-.status {
-    padding: 0.3rem 0.8rem;
-    border-radius: 15px;
-    color: var(--text-light);
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-transform: capitalize;
-}
-
-.pendiente { background-color: #f0ad4e; }
-.en_proceso { background-color: #3498db; }
-.en_envio { background-color: #3498db; }
-.completado { background-color: var(--color-success); }
-.cancelado { background-color: var(--color-error); }
-
-
-.orderFooter {
+/* --- LISTA DE PRODUCTOS (TIPO TICKET) --- */
+.itemList {
     display: flex;
     flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.itemRow {
+    display: flex;
     align-items: flex-start;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    font-size: 1.2rem;
-    flex-shrink: 0; /* Prevent footer from shrinking */
-    border-top: 1px solid var(--border-color); /* Add separator */
-    padding-top: 1.5rem; /* Space above total */
-}
-.orderFooter strong {
-    align-self: flex-end; /* Align total to the right */
-}
-
-.actionsContainer {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    width: 100%;
-}
-
-.editButton, .cancelButton, .reorderButton {
-    color: var(--text-light);
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 50px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    flex-grow: 1;
-    text-align: center;
-}
-
-.editButton { background-color: #3498db; }
-.cancelButton { background-color: var(--color-error); }
-.reorderButton { background-color: var(--color-success); }
-
-.prompt {
-    text-align: center;
-    padding: 3rem 1.5rem; /* Aumentar padding vertical */
-    margin: 2rem auto; /* Añadir margen superior/inferior y centrar horizontalmente */
-    max-width: 500px; /* Limitar ancho máximo */
-}
-
-.prompt h2 {
-    margin-bottom: 1rem; /* Más espacio bajo el título */
-    color: var(--color-error); /* Color rojo para el título del error */
-}
-
-.prompt p {
-    color: var(--text-secondary); /* Color secundario para el mensaje */
-    line-height: 1.6; /* Mejorar legibilidad */
-}
-
-.errorContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  padding: 2rem;
-  text-align: center;
-}
-
-.errorTitle {
-  color: var(--color-error);
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 1rem 0;
-}
-
-.errorMessage {
-  color: var(--text-secondary);
-  font-size: 1rem;
-  line-height: 1.6;
-  margin: 0 0 2rem 0;
-}
-
-.errorButton {
-  display: inline-block;
-  background-color: var(--color-primary);
-  color: white;
-  padding: 0.9rem 2rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 1rem;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.errorButton:hover {
-  background-color: var(--color-primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-
-.cancellationReason {
-    margin-top: 1rem;
-    padding: 0.8rem 1rem;
-    background-color: var(--color-primary-light);
-    border-left: 4px solid var(--color-error);
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    border-radius: 4px;
-}
-
-.carouselWrapper {
-    position: relative;
-}
-
-.scrollButton {
-    display: none; /* Keep hidden by default */
-}
-
-/* --- Media Queries remain the same --- */
-@media (min-width: 768px) {
-    /* ... (existing desktop scroll button styles) ... */
-     .scrollButton {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-        background-color: var(--bg-secondary);
-        color: var(--color-primary);
-        border: 2px solid var(--border-color);
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        font-size: 2rem;
-        cursor: pointer;
-        box-shadow: 0 2px 8px var(--shadow-color);
-        transition: all 0.2s ease;
-    }
-
-    .scrollButton:hover {
-        background-color: var(--color-primary);
-        color: var(--text-light);
-        border-color: var(--color-primary);
-        transform: translateY(-50%) scale(1.1);
-    }
-
-    .scrollButton.prev {
-        left: -22px;
-    }
-
-    .scrollButton.next {
-        right: -22px;
-    }
-
-    .ordersContainer {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-}
-
-
-@media (min-width: 1024px) {
-    .ordersContainer {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        overflow-x: visible; /* Disable horizontal scroll on large screens */
-        padding-left: 0;
-        padding-right: 0;
-    }
-
-    .orderCard {
-        flex: 1 1 auto; /* Let grid control the sizing */
-        min-width: 350px; /* Ensure a minimum width */
-    }
-
-    .scrollButton {
-        display: none; /* Hide scroll buttons on grid layout */
-    }
-}
-
-.ordersListContainer {
-    display: flex; /* O grid */
-    flex-direction: column;
-    gap: 1.5rem; /* Espacio entre tarjetas */
-    margin-bottom: 1rem; /* Espacio antes de los controles de paginación */
-}
-
-.paginationControls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 1.5rem; /* Espacio sobre los controles */
-    padding: 1rem 0;
-    border-top: 1px solid var(--border-color);
-}
-
-.paginationControls button {
-    padding: 0.5rem 1rem;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--color-primary);
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-}
-
-.paginationControls button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background-color: var(--bg-primary);
-    color: var(--text-secondary);
-}
-
-.paginationControls span {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-/* --- (Opcional) ---
-   Si quieres que en desktop se muestren en columnas, puedes usar media queries
-   para cambiar .ordersListContainer a grid en pantallas grandes */
-@media (min-width: 768px) {
-    .ordersListContainer {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1.5rem;
-    }
-}
-
-.cancellationReason {
-    margin-top: 1rem;
-    padding: 0.8rem 1rem;
-    background-color: var(--color-primary-light);
-    border-left: 4px solid var(--color-error);
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    border-radius: 4px;
-}
-
-/* --- ✅ NUEVOS ESTILOS AÑADIDOS --- */
-.loginPrompt {
-    margin-top: 1.5rem;
-    padding: 1.5rem; /* Un poco más de padding */
-    background-color: var(--color-primary-light);
-    border-left: 4px solid var(--color-primary);
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    border-radius: 8px;
-    line-height: 1.5;
-    text-align: center; /* Centrar título y botón */
-}
-
-.loginPrompt p { /* Estilo para el párrafo introductorio */
-    margin: 0;
-    padding: 0;
-    text-align: left;
+    gap: 0.75rem;
     font-size: 0.95rem;
     color: var(--text-primary);
 }
 
-.loginPrompt h4 {
-    margin: 0 0 0.75rem 0;
-    color: var(--text-primary);
-    font-size: 1.2rem; /* Más grande */
-    font-weight: 600;
-    padding: 0; /* Asegurar que no tenga padding de h4 general */
-    text-align: center; /* Asegurar centrado del h4 */
+.itemQuantity {
+    font-weight: 700;
+    color: var(--color-primary);
+    min-width: 24px;
 }
 
-.loginPrompt ul {
-    margin: 0.75rem 0 1rem 1.2rem; /* Margen para la lista */
-    padding: 0;
-    text-align: left; /* Alinear beneficios a la izquierda */
+.itemName {
+    flex-grow: 1;
+    line-height: 1.4;
+}
+
+/* --- MOTIVO DE CANCELACIÓN --- */
+.cancellationReason {
+    background-color: rgba(231, 76, 60, 0.05);
+    border-left: 4px solid var(--color-error);
+    padding: 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 1.5rem;
+}
+
+.cancellationReason strong {
+    display: block;
+    color: var(--color-error);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.cancellationReason p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* --- FOOTER DEL PEDIDO (TOTAL Y BOTONES) --- */
+.orderFooter {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem; /* Espacio entre beneficios */
+    gap: 1.25rem;
 }
 
-.loginPrompt li {
-    list-style-type: '✅ '; /* Usar un checkmark como viñeta */
-    padding-left: 0.5rem; /* Espacio después del checkmark */
-    font-size: 0.9rem; /* Mantener el tamaño de fuente */
-}
-
-.loginPrompt .promptActionButton {
-    /* Un botón para la acción principal */
-    display: inline-block;
-    width: 100%;
-    padding: 0.8rem 1.5rem;
-    background-color: var(--color-primary);
-    color: var(--text-light);
-    border: none;
+.totalRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-primary);
+    padding: 1rem;
     border-radius: 8px;
+}
+
+.totalRow span {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.totalRow strong {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.actionsContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.actionBtn {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: bold;
-    font-size: 1rem;
     text-align: center;
-    text-decoration: none; /* Quitar subrayado */
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.editBtn {
+    background-color: transparent;
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.editBtn:hover {
+    background-color: var(--color-primary-light);
+}
+
+.cancelBtn {
+    background-color: transparent;
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.cancelBtn:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
+.reorderBtn {
+    background-color: var(--color-primary);
+    color: #fff;
+    grid-column: 1 / -1; /* Ocupa todo el ancho si está solo */
+}
+
+.reorderBtn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+/* --- CONTROLES DE PAGINACIÓN --- */
+.paginationControls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
     margin-top: 1rem;
-    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.loginPrompt .promptActionButton:hover {
-    background-color: var(--color-primary-dark);
+.pageBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--color-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pageBtn:not(:disabled):hover {
+    background-color: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+.pageBtn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.paginationControls span {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* --- ESTADOS VACÍOS (EMPTY STATES) --- */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    border: 1px dashed var(--border-color);
+    margin-top: 1rem;
+}
+
+.emptyIcon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
+}
+
+.emptyState h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.emptyState p {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+.primaryBtn {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 0.8rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.primaryBtn:hover {
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
-/* --- FIN NUEVOS ESTILOS --- */
 
-
-.carouselWrapper {
-    position: relative;
+/* Responsive extra */
+@media (max-width: 480px) {
+    .cardHeader {
+        padding: 1rem;
+    }
+    .headerMain {
+        max-width: 60%;
+    }
+    .orderId {
+        font-size: 1rem;
+    }
+    .statusBadge {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+    }
 }
