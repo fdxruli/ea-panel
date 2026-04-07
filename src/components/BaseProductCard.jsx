@@ -11,9 +11,15 @@ import styles from './BaseProductCard.module.css';
  */
 const areEqual = (prevProps, nextProps) => {
   return prevProps.product.id === nextProps.product.id &&
-         prevProps.product.updated_at === nextProps.product.updated_at && // Opcional si tienes este campo
-         prevProps.layout === nextProps.layout &&
-         prevProps.inactive === nextProps.inactive;
+    prevProps.product.updated_at === nextProps.product.updated_at &&
+    prevProps.layout === nextProps.layout &&
+    prevProps.inactive === nextProps.inactive &&
+    // Debes comparar las render props para reaccionar a los cambios de estado global
+    prevProps.renderActions === nextProps.renderActions &&
+    prevProps.renderPriceSection === nextProps.renderPriceSection &&
+    prevProps.renderImageOverlay === nextProps.renderImageOverlay &&
+    prevProps.renderContentBody === nextProps.renderContentBody &&
+    prevProps.renderContentTop === nextProps.renderContentTop;
 };
 
 const BaseProductCard = memo(({
