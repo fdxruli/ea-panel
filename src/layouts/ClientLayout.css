@@ -121,22 +121,45 @@
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 32px);
-  max-width: 420px; /* Evita que sea absurdamente ancha en tablets */
-  height: 68px; /* Ligeramente más alta para mejor área táctil */
+  max-width: 420px;
+  height: 68px;
   padding: 0 8px;
   
-  background-color: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
+  /* Hacemos el fondo apenas un poco más sólido (de 85% a 92%) para tapar mejor el fondo blanco */
+  background-color: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.12);
-  border: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
-  border-radius: 34px; /* Forma de píldora completa */
+  /* Sombras multicapa para separar claramente el componente del fondo en modo claro */
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),    /* Sombra dura y cercana: define el límite exacto */
+    0 12px 32px rgba(0, 0, 0, 0.12);  /* Sombra difusa y lejana: da el efecto de flotabilidad */
+    
+  /* Aumentamos la opacidad del borde (de 40% a 75%) para que no se mezcle con el blanco */
+  border: 1px solid color-mix(in srgb, var(--border-color) 75%, transparent);
+  border-radius: 34px;
   
   display: flex;
   justify-content: space-between;
   align-items: center;
   z-index: 1050;
+}
+
+[data-theme="dark"] .bottom-nav,
+@media (prefers-color-scheme: dark) {
+  /* En dark mode necesitamos el fondo un poco más transparente para que luzca el blur */
+  .bottom-nav {
+    background-color: color-mix(in srgb, var(--bg-secondary) 75%, transparent);
+    
+    /* El borde puede ser más sutil en oscuro, simulando un reflejo de luz */
+    border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.15) 100%, transparent);
+    
+    /* Las sombras necesitan ser más densas y oscuras sobre fondos grises/negros */
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 12px 32px rgba(0, 0, 0, 0.6),
+      inset 0 1px 1px rgba(255, 255, 255, 0.05); /* Pequeño brillo superior interno */
+  }
 }
 
 .bottom-nav-group {
