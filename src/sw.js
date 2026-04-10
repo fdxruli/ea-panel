@@ -16,13 +16,13 @@ import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
 // ─── Constantes de nombres de caché ───────────────────────────────────────────
 const CACHE_NAMES = {
-  SHELL:           'app-shell-v1',        // HTML/CSS/JS — App Shell
-  SUPABASE_DATA:   'supabase-data-v1',    // REST API (menú, categorías, etc.)
-  SUPABASE_STORAGE:'supabase-storage-v1', // Imágenes del menú en Storage
-  IMAGES:          'local-images-v1',     // Imágenes estáticas del bundle
-  MANIFESTS:       'manifests-v1',        // manifest-client.json, manifest-admin.json
-  ADMIN:           'admin-pages-v1',      // Rutas del panel de administración
-  CLIENT_PAGES:    'client-pages-v1',     // Rutas del cliente (navegación)
+  SHELL: 'app-shell-v1',        // HTML/CSS/JS — App Shell
+  SUPABASE_DATA: 'supabase-data-v1',    // REST API (menú, categorías, etc.)
+  SUPABASE_STORAGE: 'supabase-storage-v1', // Imágenes del menú en Storage
+  IMAGES: 'local-images-v1',     // Imágenes estáticas del bundle
+  MANIFESTS: 'manifests-v1',        // manifest-client.json, manifest-admin.json
+  ADMIN: 'admin-pages-v1',      // Rutas del panel de administración
+  CLIENT_PAGES: 'client-pages-v1',     // Rutas del cliente (navegación)
 };
 
 // ─── Dominio de Supabase (inyectado en build, disponible en SW via injectManifest) ─
@@ -50,6 +50,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clientsClaim());
 });
 
+// ─── Escuchar orden de actualización manual ───────────────────────────────────
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // ─── Notificaciones Push (click) ──────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
@@ -74,12 +81,12 @@ if (!import.meta.env.DEV) {
   console.log('[SW] Producción: Inicializando Firebase Messaging...');
 
   const firebaseConfig = {
-    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId:             import.meta.env.VITE_FIREBASE_APP_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
   };
 
   try {
@@ -90,11 +97,11 @@ if (!import.meta.env.DEV) {
       console.log('[SW] Mensaje FCM recibido:', payload);
       const notificationTitle = payload.notification?.title || 'Nueva Notificación';
       const notificationOptions = {
-        body:             payload.notification?.body || '',
-        icon:             '/pwa-192x192.png',
-        badge:            '/pwa-192x192.png',
-        data:             { url: payload.data?.url || '/' },
-        tag:              'notification-' + Date.now(),
+        body: payload.notification?.body || '',
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+        data: { url: payload.data?.url || '/' },
+        tag: 'notification-' + Date.now(),
         requireInteraction: false,
       };
       return self.registration.showNotification(notificationTitle, notificationOptions);
@@ -128,7 +135,7 @@ if (SUPABASE_HOST) {
     ({ url }) =>
       url.hostname === SUPABASE_HOST &&
       (url.pathname.startsWith('/rest/v1/') ||
-       url.pathname.startsWith('/auth/v1/')),
+        url.pathname.startsWith('/auth/v1/')),
     new NetworkFirst({
       cacheName: CACHE_NAMES.SUPABASE_DATA,
       networkTimeoutSeconds: 8,
