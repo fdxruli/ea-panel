@@ -465,11 +465,18 @@ export const ProductProvider = ({ children }) => {
         return categories.filter((category) => uniqueCategoryIdsInProducts.has(category.id));
     }, [productsWithAppliedPrices, categories]);
 
+    const refetch = useCallback(() => {
+        setError(null);
+        fetchBaseProductsAndCategories({ background: false }).catch(() => {});
+        fetchSpecialPrices(customerId, { background: false }).catch(() => {});
+    }, [fetchBaseProductsAndCategories, fetchSpecialPrices, customerId]);
+
     const value = {
         products: productsWithAppliedPrices,
         categories: visibleCategories,
         loading: loadingProducts || loadingPrices,
         error,
+        refetch,
     };
 
     return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

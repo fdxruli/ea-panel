@@ -8,6 +8,7 @@ import React, {
     useRef,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 import { useCustomer } from './CustomerContext';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL, CACHE_LIMITS } from '../config/cacheConfig';
@@ -297,12 +298,12 @@ export const UserDataProvider = ({ children }) => {
             }
         };
 
-        window.addEventListener('visibilitychange', handleReconnection);
-        window.addEventListener('online', handleReconnection);
+        document.addEventListener('visibilitychange', handleReconnection);
+        window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, handleReconnection);
 
         return () => {
-            window.removeEventListener('visibilitychange', handleReconnection);
-            window.removeEventListener('online', handleReconnection);
+            document.removeEventListener('visibilitychange', handleReconnection);
+            window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, handleReconnection);
         };
     }, [phone, fetchOrders, ORDERS_CACHE_KEY]);
 

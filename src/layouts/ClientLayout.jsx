@@ -1,5 +1,5 @@
 // src/layouts/ClientLayout.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
@@ -7,6 +7,8 @@ import { useCustomer } from "../context/CustomerContext";
 import { useUserData } from "../context/UserDataContext";
 import { useSettings } from "../context/SettingsContext";
 import { useBusinessHours } from "../context/BusinessHoursContext";
+import useNetworkState from "../hooks/useNetworkState";
+import { NETWORK_STATUS } from "../lib/networkState";
 import { supabase } from "../lib/supabaseClient";
 
 // Componentes
@@ -41,6 +43,11 @@ const LoginIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" heigh
 export default function ClientLayout() {
   const { toast, cartItems, toggleCart } = useCart();
   const { notification } = useProducts();
+  const {
+    status: networkStatus,
+    latencyMs,
+    hasResolvedOnce,
+  } = useNetworkState();
 
   const {
     isCheckoutModalOpen,
@@ -64,6 +71,12 @@ export default function ClientLayout() {
   const maintenanceMessage = maintenanceSetting?.message;
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const showNetworkBanner = hasResolvedOnce && networkStatus !== NETWORK_STATUS.ONLINE;
+  const isOffline = networkStatus === NETWORK_STATUS.OFFLINE;
+  const networkBannerMessage = isOffline
+    ? 'Estás navegando sin conexión. Estás viendo una versión guardada del menú. Precios y disponibilidad pueden variar.'
+    : `Conexión lenta con el servidor${latencyMs ? ` (${latencyMs} ms)` : ''}. Algunas acciones pueden tardar más de lo habitual.`;
+  const networkBannerLabel = isOffline ? 'Sin conexión' : 'Conexión lenta';
 
   useEffect(() => {
     if (isFirstAddressRequired && customer) {
@@ -136,8 +149,45 @@ export default function ClientLayout() {
   ));
 
   return (
-    <div className={customer ? "client-layout has-bottom-nav" : "client-layout"}>
+    <div
+      className={customer ? "client-layout has-bottom-nav" : "client-layout"}
+      style={{
+        '--network-banner-height': showNetworkBanner
+          ? 'calc(56px + env(safe-area-inset-top, 0px))'
+          : '0px',
+      }}
+    >
       {!isBusinessOpen && <ClosedMessage />}
+
+      {showNetworkBanner && (
+        <div
+          className={`network-status-banner network-status-banner-${networkStatus}`}
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          {isOffline ? (
+            // Ícono de nube-sin-wifi para offline
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+              <line x1="1" y1="1" x2="23" y2="23" />
+              <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+              <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+              <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+              <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+              <line x1="12" y1="20" x2="12.01" y2="20" />
+            </svg>
+          ) : (
+            // Ícono de reloj para conexión lenta
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          )}
+          <span className="network-status-badge">{networkBannerLabel}</span>
+          <span>{networkBannerMessage}</span>
+        </div>
+      )}
 
       <PhoneModal />
       <AlertModal />

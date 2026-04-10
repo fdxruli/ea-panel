@@ -176,6 +176,20 @@
   border: none; border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; margin-top: 1rem; cursor: pointer;
 }
 .whatsappButton:hover { background: #388e3c; }
+.whatsappButton:disabled {
+  cursor: not-allowed;
+}
+
+.whatsappButtonBlocked {
+  background: #8a9098;
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 0.8;
+  box-shadow: none;
+}
+
+.whatsappButtonBlocked:hover {
+  background: #8a9098;
+}
 
 @media (min-width: 768px) {
   .cartSidebar {

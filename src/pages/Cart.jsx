@@ -6,6 +6,8 @@ import styles from './Cart.module.css';
 import { useAlert } from '../context/AlertContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
 import ImageWithFallback from '../components/ImageWithFallback';
+import useNetworkState from '../hooks/useNetworkState';
+import { NETWORK_STATUS } from '../lib/networkState';
 
 // Nota: Ya NO importamos CheckoutModal aquí
 // import CheckoutModal from '../components/CheckoutModal'; 
@@ -30,6 +32,10 @@ export default function Cart() {
     // ✅ Traemos setCheckoutModalOpen del contexto global
     const { setCheckoutModalOpen } = useCustomer();
     const { customer, loading: userLoading } = useUserData();
+    const {
+        status: networkStatus,
+        hasResolvedOnce,
+    } = useNetworkState();
 
     // ❌ Ya no necesitamos estado local para el modal
     // const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -38,6 +44,10 @@ export default function Cart() {
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDiscountVisible, setDiscountVisible] = useState(false);
+    const isNetworkBlocked = !hasResolvedOnce || networkStatus !== NETWORK_STATUS.ONLINE;
+    const checkoutButtonLabel = isNetworkBlocked
+        ? 'Esperando conexión estable...'
+        : 'Realizar Pedido';
 
     useEffect(() => {
         if (isCartOpen) {
@@ -76,6 +86,10 @@ export default function Cart() {
     };
 
     const handleProceedToCheckout = () => {
+        if (isNetworkBlocked) {
+            return;
+        }
+
         if (cartItems.length === 0) { showAlert("Tu carrito está vacío."); return; }
         if (cartItems.some(item => !item.quantity || item.quantity <= 0)) {
             showAlert("Revisa las cantidades de tus productos."); return;
@@ -175,8 +189,12 @@ export default function Cart() {
                                 <h3 className={styles.total}>Total: <span>${total.toFixed(2)}</span></h3>
                             </div>
 
-                            <button onClick={handleProceedToCheckout} className={styles.whatsappButton}>
-                                Realizar Pedido
+                            <button
+                                onClick={handleProceedToCheckout}
+                                className={`${styles.whatsappButton} ${isNetworkBlocked ? styles.whatsappButtonBlocked : ''}`}
+                                disabled={isNetworkBlocked}
+                            >
+                                {checkoutButtonLabel}
                             </button>
                         </div>
                     </>

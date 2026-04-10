@@ -11,9 +11,9 @@ import { useCart } from '../context/CartContext';
 import { useUserData } from '../context/UserDataContext';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import styles from './Menu.module.css';
-import LoadingSpinner from '../components/LoadingSpinner';
 import ProductModal from '../components/ProductModal';
 import ImageWithFallback from '../components/ImageWithFallback';
+import ProductSkeleton from '../components/ProductSkeleton';
 import SEO from '../components/SEO';
 import { getThumbnailUrl } from '../utils/imageUtils';
 import BaseProductCard from '../components/BaseProductCard';
@@ -122,7 +122,7 @@ const renderClientPrice = (p) => {
 };
 
 export default function Menu() {
-  const { products, categories, loading, error } = useProducts();
+  const { products, categories, loading, error, refetch } = useProducts();
   const { addToCart, showToast } = useCart();
   const { customer } = useUserData();
   const { isOpen: isBusinessOpen, message: businessStatusMessage } = useBusinessHours();
@@ -349,40 +349,7 @@ export default function Menu() {
     }
   }, [error, isMissingProductRoute, loading, productSlug, routeSelectedProduct]);
 
-  if (loading) return <LoadingSpinner />;
 
-  if (error) {
-    return (
-      <div className={styles.errorContainer}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="64"
-          height="64"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={styles.errorIcon}
-        >
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-          <line x1="12" y1="9" x2="12" y2="13"></line>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-        <h2 className={styles.errorTitle}>¡Ups! Tuvimos un pequeño contratiempo</h2>
-        <p className={styles.errorMessage}>
-          No pudimos cargar el menú en este momento. Puede deberse a una interrupción momentánea de internet.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className={styles.errorRetryButton}
-        >
-          Intentar nuevamente
-        </button>
-      </div>
-    );
-  }
 
   if (isMissingProductRoute) {
     return (
@@ -513,7 +480,22 @@ export default function Menu() {
         </div>
 
         <div className={`${styles.productList} ${styles[layout]}`}>
-          {filteredProducts.length > 0 ? (
+          {loading ? (
+             Array.from({ length: 8 }).map((_, i) => (
+               <ProductSkeleton key={`skeleton-${i}`} layout={layout} />
+             ))
+          ) : error ? (
+            <div className={`${styles.emptyState} ${styles.errorState}`}>
+              <p>Tardó demasiado en cargar. Verifica tu conexión.</p>
+              <button 
+                type="button" 
+                onClick={refetch} 
+                className={styles.errorRetryButtonInline}
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product, index) => (
               <BaseProductCard
                 key={product.id}
