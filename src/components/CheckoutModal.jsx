@@ -1,5 +1,5 @@
 // src/components/CheckoutModal.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCart } from '../context/CartContext';
 import styles from './CheckoutModal.module.css';
@@ -9,7 +9,9 @@ import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import { GUEST_CUSTOMER_ID, BUSINESS_PHONE } from '../config/constantes';
-import DOMPurify from 'dompurify';
+import useNetworkState from '../hooks/useNetworkState';
+import { TimeoutError } from '../lib/fetchWithTimeout';
+import { NETWORK_STATUS } from '../lib/networkState';
 
 // Iconos (sin cambios)
 const MapPinIcon = () => (
@@ -42,50 +44,60 @@ const getLocalYYYYMMDD = (date) => {
     return `${year}-${month}-${day}`;
 };
 
-export default function CheckoutModal({ phone, onClose }) {
+const NETWORK_BLOCKED_MESSAGE = 'Se necesita una conexión estable para continuar con tu pedido.';
+const NETWORK_SUBMIT_ERROR_MESSAGE = 'La conexión falló o es muy lenta. Tu pedido NO se procesó. Por favor, intenta de nuevo.';
+
+const isNetworkRequestError = (error) => {
+    if (!error) {
+        return false;
+    }
+
+    if (
+        error instanceof TimeoutError ||
+        error?.name === 'TimeoutError' ||
+        error?.code === 'TIMEOUT_ERROR'
+    ) {
+        return true;
+    }
+
+    const message = typeof error?.message === 'string' ? error.message : '';
+
+    return (
+        error instanceof TypeError ||
+        /failed to fetch|networkerror|network request failed|load failed|fetch/i.test(message)
+    );
+};
+
+export default function CheckoutModal({ onClose }) {
     const { showAlert } = useAlert();
-    const { cartItems, total, subtotal, discount, clearCart, toggleCart, closeCart } = useCart();
+    const { cartItems, total, subtotal, discount, clearCart, closeCart } = useCart();
     const { customer, addresses, refetch: refetchUserData } = useUserData();
     const { isOpen: isBusinessOpen } = useBusinessHours();
+    const {
+        status: networkStatus,
+        hasResolvedOnce,
+    } = useNetworkState();
 
     // Estados de flujo
     const [mode, setMode] = useState('selection');
-
     const [rememberGuest, setRememberGuest] = useState(false);
     const [isAutoDispatching, setIsAutoDispatching] = useState(false);
-
-    // ✅ NUEVO: Ref para evitar doble ejecución del auto-despacho
-    const hasAutoDispatchedRef = useRef(false);
-
-    // ✅ CORREGIDO: useEffect con protección contra doble ejecución
-    useEffect(() => {
-        const guestPref = localStorage.getItem('guest_preference');
-
-        if (!customer &&
-            guestPref === 'true' &&
-            !isSubmitting &&
-            !isAutoDispatching &&
-            !hasAutoDispatchedRef.current) { // ← Verificar que no se haya ejecutado
-
-            console.log('🔄 Detectado modo invitado recurrente. Enviando pedido...');
-            setIsAutoDispatching(true);
-            hasAutoDispatchedRef.current = true; // ← Marcar como ejecutado
-
-            handlePlaceOrder(true)
-                .catch(err => {
-                    console.error("Error en auto-despacho:", err);
-                    setIsAutoDispatching(false);
-                    hasAutoDispatchedRef.current = false; // ← Resetear en caso de error
-                });
-        }
-    }, [customer]);
 
     // Estados para usuarios logueados
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitErrorMessage, setSubmitErrorMessage] = useState('');
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
     const [addressToEdit, setAddressToEdit] = useState(null);
     const [justSavedAddressId, setJustSavedAddressId] = useState(null);
+    const hasAutoDispatchedRef = useRef(false);
+    const initialNetworkAllowsAutoDispatchRef = useRef(
+        hasResolvedOnce && networkStatus === NETWORK_STATUS.ONLINE
+    );
+    const isNetworkBlocked = !hasResolvedOnce || networkStatus !== NETWORK_STATUS.ONLINE;
+    const isSubmitLocked = isSubmitting || isNetworkBlocked;
+    const isGuestPreferenceRemembered = typeof window !== 'undefined'
+        && localStorage.getItem('guest_preference') === 'true';
 
     // Scheduling
     const [isScheduling, setIsScheduling] = useState(false);
@@ -134,7 +146,7 @@ export default function CheckoutModal({ phone, onClose }) {
             console.log('⚠️ Usuario sin direcciones guardadas');
             setSelectedAddress(null);
         }
-    }, [customer, addresses, justSavedAddressId]);
+    }, [customer, addresses, justSavedAddressId, selectedAddress]);
 
     useEffect(() => {
         if (isScheduling) {
@@ -159,6 +171,13 @@ export default function CheckoutModal({ phone, onClose }) {
             setScheduledTime(null);
         }
     }, [isScheduling, scheduleDetails]);
+
+    useEffect(() => {
+        if (isNetworkBlocked && isAddressModalOpen) {
+            setAddressModalOpen(false);
+            setAddressToEdit(null);
+        }
+    }, [isAddressModalOpen, isNetworkBlocked]);
 
     const handleToggleScheduling = (shouldSchedule) => {
         setIsScheduling(shouldSchedule);
@@ -212,6 +231,10 @@ export default function CheckoutModal({ phone, onClose }) {
         });
 
         try {
+            if (isNetworkBlocked) {
+                throw new Error(NETWORK_BLOCKED_MESSAGE);
+            }
+
             if (shouldSave) {
                 if (!customer?.id) {
                     throw new Error('No se detectó tu sesión de usuario.');
@@ -295,24 +318,22 @@ export default function CheckoutModal({ phone, onClose }) {
         }
     };
 
-    const handleGuestSelection = () => {
-        if (rememberGuest) {
-            localStorage.setItem('guest_preference', 'true');
-        }
-        handlePlaceOrder(true);
-    };
-
     const resetGuestPreference = () => {
         localStorage.removeItem('guest_preference');
         setMode('selection');
     };
 
-    // ✅ CORREGIDO: Función de pedido con protección contra guardado duplicado
-    const handlePlaceOrder = async (isGuest) => {
+    const handlePlaceOrder = useCallback(async (isGuest) => {
+        if (isSubmitting || isNetworkBlocked) {
+            return;
+        }
+
         if (!isBusinessOpen) {
             showAlert("Lo sentimos, el negocio está cerrado y no podemos procesar tu pedido ahora.");
             return;
         }
+
+        setSubmitErrorMessage('');
 
         if (!isGuest) {
             if (!customer) {
@@ -350,7 +371,6 @@ export default function CheckoutModal({ phone, onClose }) {
         setIsSubmitting(true);
 
         try {
-            // ✅ CORREGIDO: Solo guardar preferencia si NO está en auto-despacho
             if (isGuest && rememberGuest && !isAutoDispatching) {
                 console.log('💾 Guardando preferencia de invitado (desde clic manual)');
                 localStorage.setItem('guest_preference', 'true');
@@ -373,6 +393,11 @@ export default function CheckoutModal({ phone, onClose }) {
             });
 
             if (rpcError) throw rpcError;
+
+            if (!orderData?.[0]) {
+                throw new Error('No se pudo crear el pedido en este momento.');
+            }
+
             const newOrder = orderData[0];
 
             if (!isGuest && discount && discount.details?.is_single_use) {
@@ -438,19 +463,117 @@ export default function CheckoutModal({ phone, onClose }) {
         } catch (error) {
             console.error("Error al procesar el pedido:", error);
             setIsSubmitting(false);
+
+            if (isNetworkRequestError(error)) {
+                setSubmitErrorMessage(NETWORK_SUBMIT_ERROR_MESSAGE);
+                showAlert(NETWORK_SUBMIT_ERROR_MESSAGE, 'error');
+                return;
+            }
+
             if (error.message && error.message.includes('Stock insuficiente')) {
                 showAlert(`¡Oops! Algo se agotó mientras pedías.`, 'error');
             } else {
                 showAlert(`Error: ${error.message}`, 'error');
             }
         }
+    }, [
+        cartItems,
+        clearCart,
+        closeCart,
+        customer,
+        discount,
+        isAutoDispatching,
+        isBusinessOpen,
+        isNetworkBlocked,
+        isScheduling,
+        isSubmitting,
+        onClose,
+        refetchUserData,
+        rememberGuest,
+        scheduledTime,
+        selectedAddress,
+        showAlert,
+        subtotal,
+        total,
+    ]);
+
+    useEffect(() => {
+        const guestPref = localStorage.getItem('guest_preference');
+
+        if (customer || guestPref !== 'true' || hasAutoDispatchedRef.current) {
+            return;
+        }
+
+        hasAutoDispatchedRef.current = true;
+
+        if (!initialNetworkAllowsAutoDispatchRef.current) {
+            return;
+        }
+
+        setIsAutoDispatching(true);
+
+        void handlePlaceOrder(true).finally(() => {
+            setIsAutoDispatching(false);
+        });
+    }, [customer, handlePlaceOrder]);
+
+    const handleModalClose = () => {
+        if (isSubmitting) {
+            return;
+        }
+
+        onClose();
     };
+
+    const getSubmitButtonLabel = (defaultLabel) => {
+        if (isNetworkBlocked) {
+            return 'Esperando conexión estable...';
+        }
+
+        if (isSubmitting) {
+            return 'Procesando pedido...';
+        }
+
+        return defaultLabel;
+    };
+
+    const getActionButtonClassName = (baseClass) => (
+        [
+            baseClass,
+            isNetworkBlocked ? styles.networkBlockedButton : '',
+            isSubmitting ? styles.submittingButton : '',
+        ]
+            .filter(Boolean)
+            .join(' ')
+    );
+
+    const networkWarningMessage = !hasResolvedOnce
+        ? 'Estamos verificando la conexión antes de continuar con tu pedido.'
+        : networkStatus === NETWORK_STATUS.SLOW
+            ? 'La conexión está demasiado lenta. Espera a que vuelva a ser estable para continuar.'
+            : 'No hay conexión con el servidor. Cuando se recupere podrás continuar con tu pedido.';
+
+    const renderStatusNotices = () => (
+        <>
+            {submitErrorMessage && (
+                <div className={`${styles.statusNotice} ${styles.submitError}`} role="alert">
+                    {submitErrorMessage}
+                </div>
+            )}
+            {isNetworkBlocked && (
+                <div className={`${styles.statusNotice} ${styles.networkWarning}`} role="status" aria-live="polite">
+                    <strong>{NETWORK_BLOCKED_MESSAGE}</strong>
+                    <span>{networkWarningMessage}</span>
+                </div>
+            )}
+        </>
+    );
 
     // RENDERIZADO DEL CONTENIDO
     const renderContent = () => {
         if (isAutoDispatching) {
             return (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                <div className={styles.autoDispatchState}>
                     <div className={styles.spinner} style={{ margin: '0 auto 20px' }}></div>
                     <h3>Conectando con WhatsApp...</h3>
                     <p>Estamos generando tu pedido automáticamente.</p>
@@ -463,10 +586,18 @@ export default function CheckoutModal({ phone, onClose }) {
                 <div className={styles.selectionRoot}>
                     <div className={styles.header}>
                         <h3>¿Cómo prefieres pedir?</h3>
-                        <button onClick={() => onClose()} className={styles.closeButton}>×</button>
+                        <button
+                            onClick={handleModalClose}
+                            className={styles.closeButton}
+                            disabled={isSubmitting}
+                        >
+                            ×
+                        </button>
                     </div>
 
-                    <div className={styles.selectionContainer}>
+                    <div className={`${styles.selectionContainer} ${isNetworkBlocked ? styles.blockedContent : ''}`}>
+                        {renderStatusNotices()}
+
                         <div className={`${styles.optionCard} ${styles.guestCard}`}>
                             <div className={styles.guestContent}>
                                 <div className={styles.guestInfo}>
@@ -474,30 +605,28 @@ export default function CheckoutModal({ phone, onClose }) {
                                     <span className={styles.guestTotal}>Total: ${total.toFixed(2)}</span>
                                 </div>
 
-                                {/* ✅ CORREGIDO: Botón con protección contra doble clic */}
                                 <button
-                                    className={styles.btnGuest}
-                                    onClick={() => {
-                                        if (isSubmitting) return; // ← Prevenir doble clic
-                                        handlePlaceOrder(true);
-                                    }}
-                                    disabled={isSubmitting}
+                                    className={getActionButtonClassName(styles.btnGuest)}
+                                    onClick={() => handlePlaceOrder(true)}
+                                    disabled={isSubmitLocked}
                                 >
-                                    {isSubmitting ? 'Procesando...' : 'Pedir sin registrarse'}
+                                    {getSubmitButtonLabel('Pedir sin registrarse')}
                                 </button>
 
-                                <div style={{ margin: '10px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: '#555' }}>
-                                    <input
-                                        type="checkbox"
-                                        id="chkRememberGuest"
-                                        checked={rememberGuest}
-                                        onChange={(e) => setRememberGuest(e.target.checked)}
-                                        style={{ cursor: 'pointer', accentColor: 'var(--primary-color)' }}
-                                    />
-                                    <label htmlFor="chkRememberGuest" style={{ cursor: 'pointer', userSelect: 'none' }}>
-                                        Recordar mi elección
-                                    </label>
-                                </div>
+                                {!isNetworkBlocked && (
+                                    <div className={styles.rememberChoice}>
+                                        <input
+                                            type="checkbox"
+                                            id="chkRememberGuest"
+                                            checked={rememberGuest}
+                                            onChange={(e) => setRememberGuest(e.target.checked)}
+                                            disabled={isSubmitting}
+                                        />
+                                        <label htmlFor="chkRememberGuest">
+                                            Recordar mi elección
+                                        </label>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -521,12 +650,15 @@ export default function CheckoutModal({ phone, onClose }) {
                                 </li>
                             </ul>
 
-                            <button
-                                className={styles.btnAuth}
-                                onClick={() => onClose(true)}
-                            >
-                                Ingresar con mi número
-                            </button>
+                            {!isNetworkBlocked && (
+                                <button
+                                    className={styles.btnAuth}
+                                    onClick={() => onClose(true)}
+                                    disabled={isSubmitting}
+                                >
+                                    Ingresar con mi número
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -538,10 +670,17 @@ export default function CheckoutModal({ phone, onClose }) {
                 <div className={styles.confirmContainer}>
                     <div className={styles.header}>
                         <h3>Confirmar Pedido Rápido</h3>
-                        <button onClick={onClose} className={styles.closeButton}>×</button>
+                        <button
+                            onClick={handleModalClose}
+                            className={styles.closeButton}
+                            disabled={isSubmitting}
+                        >
+                            ×
+                        </button>
                     </div>
 
-                    <div className={styles.summaryCompact}>
+                    <div className={`${styles.summaryCompact} ${isNetworkBlocked ? styles.blockedContent : ''}`}>
+                        {renderStatusNotices()}
                         <p>Total a pagar: <strong>${total.toFixed(2)}</strong></p>
                         <p className={styles.helperText}>
                             Al enviar, se abrirá WhatsApp con los detalles de tu pedido.
@@ -550,34 +689,34 @@ export default function CheckoutModal({ phone, onClose }) {
 
                     <div className={styles.footer}>
                         <button
-                            className={styles.confirmButton}
+                            className={getActionButtonClassName(styles.confirmButton)}
                             onClick={() => handlePlaceOrder(true)}
-                            disabled={isSubmitting}
+                            disabled={isSubmitLocked}
                         >
-                            {isSubmitting ? 'Procesando...' : 'Enviar Pedido por WhatsApp'}
+                            {getSubmitButtonLabel('Enviar Pedido por WhatsApp')}
                         </button>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '100%' }}>
-                            <button className={styles.backButton} onClick={() => setMode('selection')}>
-                                Atrás
-                            </button>
-
-                            {localStorage.getItem('guest_preference') === 'true' && (
+                        {!isNetworkBlocked && (
+                            <div className={styles.secondaryActions}>
                                 <button
-                                    onClick={resetGuestPreference}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#666',
-                                        textDecoration: 'underline',
-                                        fontSize: '0.85rem',
-                                        cursor: 'pointer'
-                                    }}
+                                    className={styles.backButton}
+                                    onClick={() => setMode('selection')}
+                                    disabled={isSubmitting}
                                 >
-                                    ¿Quieres registrarte o iniciar sesión?
+                                    Atrás
                                 </button>
-                            )}
-                        </div>
+
+                                {isGuestPreferenceRemembered && (
+                                    <button
+                                        onClick={resetGuestPreference}
+                                        className={styles.textButton}
+                                        disabled={isSubmitting}
+                                    >
+                                        ¿Quieres registrarte o iniciar sesión?
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -590,7 +729,13 @@ export default function CheckoutModal({ phone, onClose }) {
                 <div className={styles.robustContainer}>
                     <div className={styles.header}>
                         <h3>Confirmar Pedido</h3>
-                        <button onClick={() => onClose()} className={styles.closeButton}>×</button>
+                        <button
+                            onClick={handleModalClose}
+                            className={styles.closeButton}
+                            disabled={isSubmitting}
+                        >
+                            ×
+                        </button>
                     </div>
 
                     {mapInitialPosition && (
@@ -604,7 +749,9 @@ export default function CheckoutModal({ phone, onClose }) {
                         </div>
                     )}
 
-                    <div className={styles.scrollableContent}>
+                    <div className={`${styles.scrollableContent} ${isNetworkBlocked ? styles.blockedContent : ''}`}>
+                        {renderStatusNotices()}
+
                         <div className={styles.detailsGroup}>
                             <div className={styles.detailItem}>
                                 <MapPinIcon />
@@ -628,6 +775,7 @@ export default function CheckoutModal({ phone, onClose }) {
                                     className={styles.addressSelector}
                                     onChange={(e) => setSelectedAddress(addresses.find(a => a.id === e.target.value))}
                                     value={selectedAddress?.id || ''}
+                                    disabled={isSubmitLocked}
                                 >
                                     {addresses.map(addr => (
                                         <option key={addr.id} value={addr.id}>
@@ -636,12 +784,25 @@ export default function CheckoutModal({ phone, onClose }) {
                                     ))}
                                 </select>
                             )}
-                            <button onClick={() => openAddressModal(selectedAddress)} className={styles.editAddressButton}>
-                                <EditIcon /> Editar
-                            </button>
-                            <button onClick={() => openAddressModal(null)} className={styles.addNewAddressButton}>
-                                + Añadir Nueva
-                            </button>
+
+                            {!isNetworkBlocked && (
+                                <>
+                                    <button
+                                        onClick={() => openAddressModal(selectedAddress)}
+                                        className={styles.editAddressButton}
+                                        disabled={isSubmitting}
+                                    >
+                                        <EditIcon /> Editar
+                                    </button>
+                                    <button
+                                        onClick={() => openAddressModal(null)}
+                                        className={styles.addNewAddressButton}
+                                        disabled={isSubmitting}
+                                    >
+                                        + Añadir Nueva
+                                    </button>
+                                </>
+                            )}
                         </div>
 
                         <div className={styles.detailsGroup}>
@@ -649,12 +810,16 @@ export default function CheckoutModal({ phone, onClose }) {
                             <div className={styles.deliveryOptions}>
                                 <button
                                     className={!isScheduling ? styles.activeOption : ''}
-                                    onClick={() => handleToggleScheduling(false)}>
+                                    onClick={() => handleToggleScheduling(false)}
+                                    disabled={isSubmitLocked}
+                                >
                                     Lo antes posible
                                 </button>
                                 <button
                                     className={isScheduling ? styles.activeOption : ''}
-                                    onClick={() => handleToggleScheduling(true)}>
+                                    onClick={() => handleToggleScheduling(true)}
+                                    disabled={isSubmitLocked}
+                                >
                                     Programar
                                 </button>
                             </div>
@@ -668,20 +833,36 @@ export default function CheckoutModal({ phone, onClose }) {
                                         value={scheduleDetails.date}
                                         onChange={handleScheduleChange}
                                         min={getLocalYYYYMMDD(new Date())}
+                                        disabled={isSubmitLocked}
                                     />
                                     <div className={styles.timePicker}>
-                                        <select name="hour" value={scheduleDetails.hour} onChange={handleScheduleChange}>
+                                        <select
+                                            name="hour"
+                                            value={scheduleDetails.hour}
+                                            onChange={handleScheduleChange}
+                                            disabled={isSubmitLocked}
+                                        >
                                             {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
                                                 <option key={h} value={h < 10 ? `0${h}` : h}>{h}</option>
                                             ))}
                                         </select>
                                         <span>:</span>
-                                        <select name="minute" value={scheduleDetails.minute} onChange={handleScheduleChange}>
+                                        <select
+                                            name="minute"
+                                            value={scheduleDetails.minute}
+                                            onChange={handleScheduleChange}
+                                            disabled={isSubmitLocked}
+                                        >
                                             {['00', '15', '30', '45'].map(m => (
                                                 <option key={m} value={m}>{m}</option>
                                             ))}
                                         </select>
-                                        <select name="period" value={scheduleDetails.period} onChange={handleScheduleChange}>
+                                        <select
+                                            name="period"
+                                            value={scheduleDetails.period}
+                                            onChange={handleScheduleChange}
+                                            disabled={isSubmitLocked}
+                                        >
                                             <option value="am">AM</option>
                                             <option value="pm">PM</option>
                                         </select>
@@ -706,19 +887,23 @@ export default function CheckoutModal({ phone, onClose }) {
                     <div className={styles.footer}>
                         <button
                             onClick={() => handlePlaceOrder(false)}
-                            className={styles.confirmButton}
-                            disabled={isSubmitting || !isBusinessOpen}
+                            className={getActionButtonClassName(styles.confirmButton)}
+                            disabled={isSubmitLocked || !isBusinessOpen}
                         >
-                            {isSubmitting ? 'Procesando...' : (isBusinessOpen ? `Confirmar y Pagar $${(total || 0).toFixed(2)}` : 'Estamos Cerrados')}
+                            {getSubmitButtonLabel(
+                                isBusinessOpen ? `Confirmar y Pagar $${(total || 0).toFixed(2)}` : 'Estamos Cerrados'
+                            )}
                         </button>
                     </div>
                 </div>
             );
         }
+
+        return null;
     };
 
     return (
-        <div className={styles.modalOverlay} onClick={() => onClose()}>
+        <div className={styles.modalOverlay} onClick={handleModalClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 {renderContent()}
             </div>

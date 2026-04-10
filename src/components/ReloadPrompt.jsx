@@ -1,19 +1,24 @@
-// src/components/ReloadPrompt.jsx (MODIFICADO)
-import React, { useState, useEffect } from 'react';
+// src/components/ReloadPrompt.jsx
+// Anti-App Zombie: el prompt de actualización NO tiene botón cerrar.
+// El usuario DEBE actualizarse al detectar una nueva versión.
+// Además, si el SW tiene una actualización pendiente y el usuario
+// recupera la conexión, se le muestra el prompt de forma prominente.
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 import styles from './ReloadPrompt.module.css';
 
 function ReloadPrompt() {
   const [installPrompt, setInstallPrompt] = useState(null);
 
+  // Capturar el evento de instalación PWA (añadir a pantalla de inicio)
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
@@ -21,60 +26,111 @@ function ReloadPrompt() {
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
-    needRefresh: [needRefresh, setNeedRefresh],
+    needRefresh:  [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
-      console.log('SW Registered: ' + r);
+      console.log('[ReloadPrompt] SW registrado:', r);
     },
     onRegisterError(error) {
-      console.log('SW registration error', error);
+      console.error('[ReloadPrompt] Error al registrar SW:', error);
     },
   });
 
-  const close = () => {
-    setOfflineReady(false);
-    setNeedRefresh(false);
-  };
+  // ── Auto-actualizar cuando el usuario vuelve a tener conexión ──────────────
+  // Si el SW ya detectó una nueva versión (needRefresh=true) y el usuario
+  // recupera la conexión, aplicamos la actualización automáticamente.
+  // Esto previene que el usuario se quede atascado en caché vieja indefinidamente
+  // después de una sesión offline.
+  const handleNetworkRestored = useCallback(() => {
+    if (needRefresh) {
+      console.log('[ReloadPrompt] Conexión restaurada + update pendiente → aplicando SW.');
+      updateServiceWorker(true);
+    }
+  }, [needRefresh, updateServiceWorker]);
 
-  const handleInstall = async () => {
-    if (!installPrompt) return;
-    const result = await installPrompt.prompt();
-    console.log(`Install prompt result: ${result.outcome}`);
-    setInstallPrompt(null); // El prompt solo se puede usar una vez
-  };
+  useEffect(() => {
+    window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, handleNetworkRestored);
+    return () => {
+      window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, handleNetworkRestored);
+    };
+  }, [handleNetworkRestored]);
 
+  // ── Prompt de instalación PWA ──────────────────────────────────────────────
   if (installPrompt) {
     return (
-      <div className={styles.toast}>
+      <div className={styles.toast} role="dialog" aria-label="Instalar aplicación">
+        <div className={styles.toastIcon} aria-hidden="true">📲</div>
         <div className={styles.message}>
-          <span>¿Quieres instalar esta aplicación en tu dispositivo?</span>
+          <strong>¿Instalar la app?</strong>
+          <span>Accede más rápido desde tu pantalla de inicio.</span>
         </div>
-        <button className={styles.actionButton} onClick={handleInstall}>Instalar</button>
-        <button className={styles.closeButton} onClick={() => setInstallPrompt(null)}>Ahora no</button>
+        <div className={styles.actions}>
+          <button
+            className={styles.actionButton}
+            onClick={async () => {
+              await installPrompt.prompt();
+              setInstallPrompt(null);
+            }}
+          >
+            Instalar
+          </button>
+          <button
+            className={styles.closeButton}
+            onClick={() => setInstallPrompt(null)}
+          >
+            Ahora no
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Primera vez listo para funcionar offline ───────────────────────────────
   if (offlineReady) {
     return (
-      <div className={styles.toast}>
+      <div className={styles.toast} role="status">
+        <div className={styles.toastIcon} aria-hidden="true">✅</div>
         <div className={styles.message}>
-          <span>¡Aplicación lista para funcionar sin conexión!</span>
+          <strong>¡App lista para offline!</strong>
+          <span>Podrás ver el menú aunque pierdas conexión.</span>
         </div>
-        <button className={styles.closeButton} onClick={() => close()}>Cerrar</button>
+        <div className={styles.actions}>
+          <button
+            className={styles.closeButton}
+            onClick={() => setOfflineReady(false)}
+          >
+            Entendido
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Nueva versión disponible ─────────────────────────────────────────────
+  // ⚠️  SIN botón "Cerrar" — el usuario DEBE actualizar para evitar
+  // quedarse atascado en una versión zombie del caché.
   if (needRefresh) {
     return (
-      <div className={styles.toast}>
+      <div
+        className={`${styles.toast} ${styles.updateToast}`}
+        role="alertdialog"
+        aria-label="Actualización disponible"
+        aria-live="assertive"
+      >
+        <div className={styles.toastIcon} aria-hidden="true">🔄</div>
         <div className={styles.message}>
-          <span>Hay una nueva versión disponible, ¡recarga para actualizar!</span>
+          <strong>Nueva versión disponible</strong>
+          <span>Actualiza para ver el menú más reciente con los últimos precios y productos.</span>
         </div>
-        <button className={styles.actionButton} onClick={() => updateServiceWorker(true)}>Recargar</button>
-        <button className={styles.closeButton} onClick={() => close()}>Cerrar</button>
+        <div className={styles.actions}>
+          <button
+            className={styles.actionButton}
+            onClick={() => updateServiceWorker(true)}
+          >
+            Actualizar ahora
+          </button>
+        </div>
       </div>
     );
   }
