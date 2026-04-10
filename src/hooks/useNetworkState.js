@@ -23,6 +23,23 @@ const initialState = {
   lastCheckedAt: null,
 };
 
+const getRequestMeta = (value) => (
+  value && typeof value === 'object' ? value.requestMeta ?? null : null
+);
+
+const getAttemptSummary = (requestMeta) => {
+  const attempt = Number.isFinite(requestMeta?.attempt) ? requestMeta.attempt : 1;
+  const totalAttempts = Number.isFinite(requestMeta?.totalAttempts) ? requestMeta.totalAttempts : 1;
+
+  return `${attempt}/${totalAttempts}`;
+};
+
+const isTimeoutRequestError = (error) => (
+  error instanceof TimeoutError ||
+  error?.name === 'TimeoutError' ||
+  error?.code === 'TIMEOUT_ERROR'
+);
+
 export default function useNetworkState() {
   const [networkState, setNetworkState] = useState(initialState);
   const resolvedStatusRef = useRef(null);
@@ -61,6 +78,13 @@ export default function useNetworkState() {
       }));
     }
   }, []);
+
+  const commitImmediateOffline = useCallback(() => {
+    clearTimeout(debounceTimeoutRef.current);
+    abortControllerRef.current?.abort();
+    pendingProbeRef.current = null;
+    commitProbeResult(NETWORK_STATUS.OFFLINE, null);
+  }, [commitProbeResult]);
 
   const performProbe = useCallback(async ({ allowHidden = false } = {}) => {
     if (
@@ -101,8 +125,23 @@ export default function useNetworkState() {
             cache: 'no-store',
             signal: probeController.signal,
           },
-          { timeoutMs: NETWORK_TIMEOUT_MS },
+          {
+            timeoutMs: NETWORK_TIMEOUT_MS,
+            maxRetries: 2,
+          },
         );
+        const requestMeta = getRequestMeta(response);
+
+        if (import.meta.env.DEV) {
+          console.debug(
+            `[useNetworkState] Health check response after ${getAttemptSummary(requestMeta)} attempts.`,
+            {
+              ok: response.ok,
+              status: response.status,
+              requestMeta,
+            },
+          );
+        }
 
         if (!response.ok) {
           commitProbeResult(NETWORK_STATUS.OFFLINE, null);
@@ -117,8 +156,29 @@ export default function useNetworkState() {
 
         commitProbeResult(nextStatus, latencyMs);
       } catch (error) {
-        if (probeController.signal.aborted && !(error instanceof TimeoutError)) {
+        const isTimeoutFailure = isTimeoutRequestError(error);
+
+        if (probeController.signal.aborted && !isTimeoutFailure) {
           return;
+        }
+
+        const requestMeta = getRequestMeta(error);
+
+        if (import.meta.env.DEV) {
+          if (isTimeoutFailure) {
+            console.debug(
+              `[useNetworkState] Health check timeout exhausted after ${getAttemptSummary(requestMeta)} attempts.`,
+              requestMeta,
+            );
+          } else {
+            console.debug(
+              `[useNetworkState] Health check failed after ${getAttemptSummary(requestMeta)} attempts.`,
+              {
+                requestMeta,
+                error,
+              },
+            );
+          }
         }
 
         commitProbeResult(NETWORK_STATUS.OFFLINE, null);
@@ -127,11 +187,15 @@ export default function useNetworkState() {
           abortControllerRef.current = null;
         }
 
-        pendingProbeRef.current = null;
+        if (pendingProbeRef.current === probePromise) {
+          pendingProbeRef.current = null;
+        }
 
         if (mountedRef.current) {
           setNetworkState((prevState) => (
-            prevState.isChecking ? { ...prevState, isChecking: false } : prevState
+            prevState.isChecking && !pendingProbeRef.current
+              ? { ...prevState, isChecking: false }
+              : prevState
           ));
         }
       }
@@ -166,13 +230,17 @@ export default function useNetworkState() {
       }
     };
 
-    const handleNativeNetworkChange = () => {
+    const handleOnline = () => {
       scheduleDebouncedProbe();
     };
 
+    const handleOffline = () => {
+      commitImmediateOffline();
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('online', handleNativeNetworkChange);
-    window.addEventListener('offline', handleNativeNetworkChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
       mountedRef.current = false;
@@ -182,10 +250,10 @@ export default function useNetworkState() {
       abortControllerRef.current?.abort();
 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleNativeNetworkChange);
-      window.removeEventListener('offline', handleNativeNetworkChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
-  }, [performProbe, scheduleDebouncedProbe]);
+  }, [commitImmediateOffline, performProbe, scheduleDebouncedProbe]);
 
   return {
     status: networkState.status,

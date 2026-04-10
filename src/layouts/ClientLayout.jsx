@@ -46,6 +46,7 @@ export default function ClientLayout() {
   const {
     status: networkStatus,
     latencyMs,
+    isChecking,
     hasResolvedOnce,
   } = useNetworkState();
 
@@ -71,6 +72,12 @@ export default function ClientLayout() {
   const maintenanceMessage = maintenanceSetting?.message;
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+  const networkState = {
+    status: networkStatus,
+    latencyMs,
+    isChecking,
+    hasResolvedOnce,
+  };
   const showNetworkBanner = hasResolvedOnce && networkStatus !== NETWORK_STATUS.ONLINE;
   const isOffline = networkStatus === NETWORK_STATUS.OFFLINE;
   const networkBannerMessage = isOffline
@@ -253,7 +260,7 @@ export default function ClientLayout() {
       </header>
 
       {/* Carrito Lateral */}
-      <Cart />
+      <Cart networkState={networkState} />
 
       {/* Modal de Checkout */}
       {isCheckoutModalOpen && (
@@ -261,6 +268,7 @@ export default function ClientLayout() {
           phone={phone}
           onClose={handleCheckoutClose}
           mode={checkoutMode}
+          networkState={networkState}
         />
       )}
 

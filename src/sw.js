@@ -3,7 +3,7 @@
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { clientsClaim } from 'workbox-core';
-import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { registerRoute } from 'workbox-routing';
 import {
   NetworkFirst,
   StaleWhileRevalidate,
@@ -129,13 +129,13 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 // Estrategia: NetworkFirst con timeout 8s → fallback a caché guardada.
 // Si hay red → sirve datos frescos y actualiza caché.
 // Si no hay red → sirve la última versión guardada del menú.
+// No cacheamos /auth/v1 para evitar falsos positivos del health check.
 // TTL: 24 horas | Max entradas: 60 (para no explotar el almacenamiento)
 if (SUPABASE_HOST) {
   registerRoute(
     ({ url }) =>
       url.hostname === SUPABASE_HOST &&
-      (url.pathname.startsWith('/rest/v1/') ||
-        url.pathname.startsWith('/auth/v1/')),
+      url.pathname.startsWith('/rest/v1/'),
     new NetworkFirst({
       cacheName: CACHE_NAMES.SUPABASE_DATA,
       networkTimeoutSeconds: 8,

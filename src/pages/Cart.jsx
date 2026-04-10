@@ -6,7 +6,6 @@ import styles from './Cart.module.css';
 import { useAlert } from '../context/AlertContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
 import ImageWithFallback from '../components/ImageWithFallback';
-import useNetworkState from '../hooks/useNetworkState';
 import { NETWORK_STATUS } from '../lib/networkState';
 
 // Nota: Ya NO importamos CheckoutModal aquí
@@ -21,7 +20,7 @@ const TrashIcon = () => (
     </svg>
 );
 
-export default function Cart() {
+export default function Cart({ networkState }) {
     const { showAlert } = useAlert();
     const {
         cartItems, updateQuantity, removeFromCart, subtotal, total, discount,
@@ -34,8 +33,9 @@ export default function Cart() {
     const { customer, loading: userLoading } = useUserData();
     const {
         status: networkStatus,
+        isChecking,
         hasResolvedOnce,
-    } = useNetworkState();
+    } = networkState;
 
     // ❌ Ya no necesitamos estado local para el modal
     // const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -44,10 +44,13 @@ export default function Cart() {
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDiscountVisible, setDiscountVisible] = useState(false);
+    const isInitialVerification = !hasResolvedOnce && isChecking;
     const isNetworkBlocked = !hasResolvedOnce || networkStatus !== NETWORK_STATUS.ONLINE;
-    const checkoutButtonLabel = isNetworkBlocked
-        ? 'Esperando conexión estable...'
-        : 'Realizar Pedido';
+    const checkoutButtonLabel = isInitialVerification
+        ? 'Verificando conexión...'
+        : isNetworkBlocked
+            ? 'Esperando conexión estable...'
+            : 'Realizar Pedido';
 
     useEffect(() => {
         if (isCartOpen) {
