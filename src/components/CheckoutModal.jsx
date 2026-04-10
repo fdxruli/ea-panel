@@ -9,7 +9,6 @@ import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import { GUEST_CUSTOMER_ID, BUSINESS_PHONE } from '../config/constantes';
-import useNetworkState from '../hooks/useNetworkState';
 import { TimeoutError } from '../lib/fetchWithTimeout';
 import { NETWORK_STATUS } from '../lib/networkState';
 
@@ -68,15 +67,16 @@ const isNetworkRequestError = (error) => {
     );
 };
 
-export default function CheckoutModal({ onClose }) {
+export default function CheckoutModal({ onClose, networkState }) {
     const { showAlert } = useAlert();
     const { cartItems, total, subtotal, discount, clearCart, closeCart } = useCart();
     const { customer, addresses, refetch: refetchUserData } = useUserData();
     const { isOpen: isBusinessOpen } = useBusinessHours();
     const {
         status: networkStatus,
+        isChecking,
         hasResolvedOnce,
-    } = useNetworkState();
+    } = networkState;
 
     // Estados de flujo
     const [mode, setMode] = useState('selection');
@@ -94,6 +94,7 @@ export default function CheckoutModal({ onClose }) {
     const initialNetworkAllowsAutoDispatchRef = useRef(
         hasResolvedOnce && networkStatus === NETWORK_STATUS.ONLINE
     );
+    const isInitialVerification = !hasResolvedOnce && isChecking;
     const isNetworkBlocked = !hasResolvedOnce || networkStatus !== NETWORK_STATUS.ONLINE;
     const isSubmitLocked = isSubmitting || isNetworkBlocked;
     const isGuestPreferenceRemembered = typeof window !== 'undefined'
@@ -526,6 +527,10 @@ export default function CheckoutModal({ onClose }) {
     };
 
     const getSubmitButtonLabel = (defaultLabel) => {
+        if (isInitialVerification) {
+            return 'Verificando conexión...';
+        }
+
         if (isNetworkBlocked) {
             return 'Esperando conexión estable...';
         }
@@ -547,11 +552,9 @@ export default function CheckoutModal({ onClose }) {
             .join(' ')
     );
 
-    const networkWarningMessage = !hasResolvedOnce
-        ? 'Estamos verificando la conexión antes de continuar con tu pedido.'
-        : networkStatus === NETWORK_STATUS.SLOW
-            ? 'La conexión está demasiado lenta. Espera a que vuelva a ser estable para continuar.'
-            : 'No hay conexión con el servidor. Cuando se recupere podrás continuar con tu pedido.';
+    const networkWarningMessage = networkStatus === NETWORK_STATUS.SLOW
+        ? 'La conexión está demasiado lenta. Espera a que vuelva a ser estable para continuar.'
+        : 'No hay conexión con el servidor. Cuando se recupere podrás continuar con tu pedido.';
 
     const renderStatusNotices = () => (
         <>
@@ -560,7 +563,12 @@ export default function CheckoutModal({ onClose }) {
                     {submitErrorMessage}
                 </div>
             )}
-            {isNetworkBlocked && (
+            {isInitialVerification && (
+                <div className={`${styles.statusNotice} ${styles.networkWarning}`} role="status" aria-live="polite">
+                    <span>Estamos verificando la conexión antes de continuar con tu pedido.</span>
+                </div>
+            )}
+            {!isInitialVerification && isNetworkBlocked && (
                 <div className={`${styles.statusNotice} ${styles.networkWarning}`} role="status" aria-live="polite">
                     <strong>{NETWORK_BLOCKED_MESSAGE}</strong>
                     <span>{networkWarningMessage}</span>
