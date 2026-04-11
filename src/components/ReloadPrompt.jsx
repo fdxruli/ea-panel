@@ -118,7 +118,6 @@ function ReloadPrompt() {
         aria-label="Actualización disponible"
         aria-live="assertive"
       >
-        <div className={styles.toastIcon} aria-hidden="true">🔄</div>
         <div className={styles.message}>
           <strong>Nueva versión disponible</strong>
           <span>Actualiza para ver el menú más reciente con los últimos precios y productos.</span>

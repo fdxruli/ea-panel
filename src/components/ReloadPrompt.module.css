@@ -34,27 +34,6 @@
       var(--bg-secondary));
 }
 
-/* ── Ícono decorativo ────────────────────────────────────────────────────── */
-.toastIcon {
-  font-size: 1.5rem;
-  line-height: 1;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-}
-
-/* Ícono destacado para la actualización */
-.updateToast .toastIcon {
-  background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
-}
-
 /* ── Bloque de texto ─────────────────────────────────────────────────────── */
 .message {
   flex: 1;
