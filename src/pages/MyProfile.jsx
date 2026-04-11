@@ -12,6 +12,7 @@ import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
 import { useSettings } from '../context/SettingsContext';
+import { Navigate } from 'react-router-dom';
 
 // --- 👇 OPTIMIZACIÓN: Cambiamos los imports del mapa ---
 import StaticMap from '../components/StaticMap'; // <-- AÑADIDO
@@ -130,11 +131,11 @@ export default function MyProfile() {
 
         // 4. ✅ CRÍTICO: Recargamos la página para desmontar TODOS los contextos
         // Esto asegura que no queden datos residuales en memoria
-        window.location.href = '/'; // Redirige al inicio y fuerza recarga completa
+        window.location.replace('/'); // Redirige al inicio y fuerza recarga completa
     };
 
     const renderContent = () => {
-        if (!phone) return <AuthPrompt />;
+        if (!phone) return <Navigate to="/" replace />;
         if (loading) return <LoadingSpinner />;
         if (error) return <div className={styles.prompt}><h2>Error Inesperado</h2><p>No pudimos cargar tus datos.</p></div>;
         if (!customer) {

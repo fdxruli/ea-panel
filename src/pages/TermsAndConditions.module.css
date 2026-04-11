@@ -267,20 +267,19 @@
   color: var(--text-secondary, #666666);
 }
 
-.versionInput {
-  padding: 0.75rem;
-  border: 1px solid var(--border-color, #e5e5e5);
-  border-radius: 6px;
-  font-size: 1rem;
-  width: 100%;
-  max-width: 150px;
-  background-color: var(--bg-secondary, #ffffff);
+.newVersionNotice {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid var(--color-primary, #3b82f6);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.versionInput:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.newVersionNotice p {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary, #3b82f6);
 }
 
 .contentTextarea {

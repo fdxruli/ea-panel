@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 const CustomerContext = createContext();
@@ -6,6 +6,7 @@ const CustomerContext = createContext();
 const CUSTOMER_PHONE_KEY = 'customer_phone';
 const CUSTOMER_DATA_KEY = 'customer_data';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useCustomer = () => useContext(CustomerContext);
 
 const generateUniqueReferralCode = async (name, phone) => {
@@ -25,7 +26,7 @@ const generateUniqueReferralCode = async (name, phone) => {
       .maybeSingle();
 
     if (error) {
-      console.error("Error checking for unique code:", error);
+      console.error('Error checking for unique code:', error);
       return `EA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     }
 
@@ -36,93 +37,171 @@ const generateUniqueReferralCode = async (name, phone) => {
       finalCode = `${baseCode}-${counter}`;
     }
   }
+
   return finalCode;
 };
 
-
 export const CustomerProvider = ({ children }) => {
-  const [phone, setPhone] = useState(localStorage.getItem(CUSTOMER_PHONE_KEY) || '');
+  const [phone, setPhone] = useState('');
   const [customer, setCustomer] = useState(null);
+  const [activeTermsId, setActiveTermsId] = useState(null);
   const [isPhoneModalOpen, setPhoneModalOpen] = useState(false);
   const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [checkoutMode, setCheckoutMode] = useState('checkout'); // 'checkout' o 're-order'
+  const [checkoutMode, setCheckoutMode] = useState('checkout');
   const [onSuccessCallback, setOnSuccessCallback] = useState(null);
-
   const [isCustomerLoading, setIsCustomerLoading] = useState(true);
 
-  const checkAndLogin = async (phoneToLogin) => {
-    if (!phoneToLogin || phoneToLogin.length < 10) {
-      return null; // Cambiado a null en lugar de false
+  const fetchActiveTermsId = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('terms_and_conditions')
+        .select('id')
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error buscando terminos vigentes:', error);
+        return null;
+      }
+
+      if (!data?.id) {
+        console.error('No hay una version vigente de terminos publicada.');
+        return null;
+      }
+
+      setActiveTermsId(data.id);
+      return data.id;
+    } catch (error) {
+      console.error('Error buscando terminos vigentes:', error);
+      return null;
+    }
+  };
+
+  const resolveActiveTermsId = async (currentTermsId = null) => {
+    if (currentTermsId) {
+      return { ok: true, termsId: currentTermsId };
+    }
+
+    if (activeTermsId) {
+      return { ok: true, termsId: activeTermsId };
+    }
+
+    const fetchedTermsId = await fetchActiveTermsId();
+    if (!fetchedTermsId) {
+      return { ok: false, code: 'terms_unavailable' };
+    }
+
+    return { ok: true, termsId: fetchedTermsId };
+  };
+
+  const verifyCustomer = async (phoneToVerify, currentTermsId = null) => {
+    if (!phoneToVerify || phoneToVerify.length < 10) {
+      return { status: 'error', code: 'invalid_phone' };
+    }
+
+    const termsResolution = await resolveActiveTermsId(currentTermsId);
+    if (!termsResolution.ok) {
+      return { status: 'error', code: termsResolution.code };
     }
 
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('*')
-        .eq('phone', phoneToLogin)
+        .select(`
+          *,
+          customer_terms_acceptances ( terms_version_id )
+        `)
+        .eq('phone', phoneToVerify)
         .maybeSingle();
 
       if (error) {
-        console.error('Error de red o DB en checkAndLogin:', error);
-        // NO HAGAS clearPhone() AQUÍ. Si es error de red, mantenemos la sesión cacheada intacta.
-        return null;
+        console.error('Error de red o DB en verifyCustomer:', error);
+        return { status: 'error', code: 'customer_lookup_failed' };
       }
 
-      if (data) {
-        setCustomer(data);
-        localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToLogin);
-        localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(data)); // Actualizar caché
-        setPhone(phoneToLogin);
-
-        if (isPhoneModalOpen) setPhoneModalOpen(false);
-        if (onSuccessCallback) {
-          onSuccessCallback();
-          setOnSuccessCallback(null);
-        }
-        return data; // Retorna la data en lugar de true
-      } else {
-        // Solo aquí sabemos CON CERTEZA que la DB respondió pero el usuario no existe.
-        console.log("Cliente explícitamente no encontrado, limpiando sesión.");
-        clearPhone();
-        return null;
+      if (!data) {
+        return { status: 'not_found' };
       }
 
+      const hasAcceptedCurrent = data.customer_terms_acceptances?.some(
+        acceptance => acceptance.terms_version_id === termsResolution.termsId
+      );
+
+      const customerData = {
+        ...data,
+        terms_accepted: !!hasAcceptedCurrent
+      };
+
+      delete customerData.customer_terms_acceptances;
+
+      return { status: 'found', customer: customerData };
     } catch (error) {
-      console.error('Error inesperado en checkAndLogin:', error);
-      // NO HAGAS clearPhone() AQUÍ TAMPOCO.
-      return null;
+      console.error('Error inesperado verificando cliente:', error);
+      return { status: 'error', code: 'unexpected_customer_lookup_error' };
     }
   };
 
+  const executeLogin = (customerData) => {
+    setCustomer(customerData);
+    setPhone(customerData.phone);
+    localStorage.setItem(CUSTOMER_PHONE_KEY, customerData.phone);
+    localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(customerData));
+
+    if (isPhoneModalOpen) {
+      setPhoneModalOpen(false);
+    }
+
+    if (onSuccessCallback) {
+      onSuccessCallback();
+      setOnSuccessCallback(null);
+    }
+  };
+
+  const clearCachedCustomerData = () => {
+    localStorage.removeItem(CUSTOMER_DATA_KEY);
+    setCustomer(null);
+    setPhone('');
+  };
+
+  const checkAndLogin = async (phoneToLogin) => {
+    const result = await verifyCustomer(phoneToLogin);
+
+    if (result.status === 'found' && result.customer.terms_accepted) {
+      executeLogin(result.customer);
+      return result;
+    }
+
+    if (result.status === 'found') {
+      clearCachedCustomerData();
+      return result;
+    }
+
+    if (result.status === 'not_found') {
+      clearPhone();
+    }
+
+    return result;
+  };
+
+  const initializeSession = useCallback(async () => {
+    const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
+
+    await fetchActiveTermsId();
+
+    if (savedPhone) {
+      await checkAndLogin(savedPhone);
+    }
+
+    setIsCustomerLoading(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    const initializeSession = async () => {
-      const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
-      const savedCustomerData = localStorage.getItem(CUSTOMER_DATA_KEY);
-
-      // 1. Hidratar el estado local inmediatamente si hay caché, sin esperar a la red
-      if (savedCustomerData) {
-        try {
-          setCustomer(JSON.parse(savedCustomerData));
-        } catch (e) {
-          console.error('Error leyendo la caché del cliente:', e);
-        }
-      }
-
-      // 2. Intentar validar en segundo plano. Si no hay internet, simplemente fallará sin borrar la caché.
-      if (savedPhone) {
-        await checkAndLogin(savedPhone);
-      }
-
-      setIsCustomerLoading(false);
-    };
-
     initializeSession();
-  }, []);
+  }, [initializeSession]);
 
-
-  const registerNewCustomer = async (phone, name, inviterCode = null) => {
-
-    const newClientReferralCode = await generateUniqueReferralCode(name, phone);
+  const registerNewCustomer = async (customerPhone, name, inviterCode = null) => {
+    const newClientReferralCode = await generateUniqueReferralCode(name, customerPhone);
 
     let referrerId = null;
 
@@ -141,8 +220,8 @@ export const CustomerProvider = ({ children }) => {
     const { data: newCustomer, error } = await supabase
       .from('customers')
       .insert({
-        name: name,
-        phone: phone,
+        name,
+        phone: customerPhone,
         referral_code: newClientReferralCode,
         referrer_id: referrerId,
         referral_count: 0,
@@ -159,37 +238,75 @@ export const CustomerProvider = ({ children }) => {
     return newCustomer;
   };
 
+  const acceptTerms = async (customerId) => {
+    if (!customerId) {
+      return { ok: false, code: 'invalid_customer_id' };
+    }
+
+    const termsResolution = await resolveActiveTermsId();
+    if (!termsResolution.ok) {
+      console.error('Intento de aceptar terminos sin una version vigente cargada.');
+      return { ok: false, code: termsResolution.code };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('customer_terms_acceptances')
+        .insert({
+          customer_id: customerId,
+          terms_version_id: termsResolution.termsId
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          console.warn('El usuario ya habia aceptado esta version.');
+          return { ok: true, code: 'already_accepted', termsId: termsResolution.termsId };
+        }
+
+        console.error('Error aceptando terminos relacionales:', error);
+        return { ok: false, code: 'acceptance_failed' };
+      }
+
+      return { ok: true, code: 'accepted', termsId: termsResolution.termsId };
+    } catch (error) {
+      console.error('Error inesperado aceptando terminos:', error);
+      return { ok: false, code: 'unexpected_acceptance_error' };
+    }
+  };
+
   const savePhoneAndContinue = async (phoneToSave, name = null) => {
-    let customerData = await checkAndLogin(phoneToSave); // Usa los datos retornados directamente
+    const loginResult = await checkAndLogin(phoneToSave);
 
-    if (!customerData && name) {
-      customerData = await registerNewCustomer(phoneToSave, name);
-      if (customerData) {
-        setCustomer(customerData);
-        setPhone(phoneToSave);
-        localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
-        localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(customerData)); // Cachear registro nuevo
-      }
-    } else if (!customerData && !name) {
-      // Escenario fallback si solo se guardaba el teléfono sin nombre
-      setPhone(phoneToSave);
+    if (loginResult.status === 'found') {
+      return loginResult.customer.terms_accepted;
+    }
+
+    if (loginResult.status === 'error') {
+      return false;
+    }
+
+    if (!name) {
       localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
+      return false;
     }
 
-    if (customerData && isPhoneModalOpen) {
-      setPhoneModalOpen(false);
-      if (onSuccessCallback) {
-        onSuccessCallback();
-        setOnSuccessCallback(null);
-      }
-      return true;
+    const customerData = await registerNewCustomer(phoneToSave, name);
+    if (!customerData) {
+      return false;
     }
-    return false;
+
+    const acceptanceResult = await acceptTerms(customerData.id);
+    if (!acceptanceResult.ok) {
+      return false;
+    }
+
+    executeLogin({ ...customerData, terms_accepted: true });
+    return true;
   };
 
   const clearPhone = () => {
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
-    localStorage.removeItem(CUSTOMER_DATA_KEY); // Limpiar caché también
+    localStorage.removeItem(CUSTOMER_DATA_KEY);
     setPhone('');
     setCustomer(null);
   };
@@ -207,14 +324,17 @@ export const CustomerProvider = ({ children }) => {
   const toggleCheckoutModal = (isOpen, mode = 'checkout') => {
     setCheckoutMode(mode);
     setCheckoutModalOpen(isOpen);
-  }
+  };
 
   const value = {
     phone,
     customer,
     isCustomerLoading,
     checkAndLogin,
+    verifyCustomer,
+    executeLogin,
     registerNewCustomer,
+    acceptTerms,
     savePhoneAndContinue,
     clearPhone,
     isPhoneModalOpen,

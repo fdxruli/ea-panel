@@ -45,30 +45,32 @@ export default function TermsAndConditions() {
   // OPTIMIZACIÓN 3: Memoizar función de guardado
   const handleSave = useCallback(async () => {
     if (!canEdit) return;
-    
-    if (!editingTerm?.content?.trim() || !editingTerm?.version) {
-      showAlert('La versión y el contenido no pueden estar vacíos.');
+
+    if (!editingTerm?.content?.trim()) {
+      showAlert('El contenido no puede estar vacío.');
       return;
     }
 
     try {
       if (!editingTerm.id) {
-        // Crear nueva versión
+        // Crear nueva versión: auto-incremento forzado en el cliente
+        const latestVersion = terms.length > 0 ? terms[0].version : 0;
+        const newVersion = latestVersion + 1;
+
         const { error } = await supabase
           .from('terms_and_conditions')
           .insert({
-            version: editingTerm.version,
+            version: newVersion,
             content: editingTerm.content.trim()
           });
 
         if (error) throw error;
-        showAlert('Nueva versión creada exitosamente.');
+        showAlert(`Versión ${newVersion} creada exitosamente.`);
       } else {
-        // Actualizar versión existente
+        // Actualizar versión existente (solo contenido, no versión)
         const { error } = await supabase
           .from('terms_and_conditions')
           .update({
-            version: editingTerm.version,
             content: editingTerm.content.trim()
           })
           .eq('id', editingTerm.id);
@@ -83,7 +85,7 @@ export default function TermsAndConditions() {
     } catch (error) {
       showAlert(`Error: ${error.message}`);
     }
-  }, [canEdit, editingTerm, fetchTerms, showAlert]);
+  }, [canEdit, editingTerm, terms, fetchTerms, showAlert]);
 
   // OPTIMIZACIÓN 4: Memoizar función de apertura de modal
   const openModal = useCallback((term = null) => {
@@ -140,13 +142,6 @@ export default function TermsAndConditions() {
     setEditingTerm(prev => ({
       ...prev,
       content: e.target.value
-    }));
-  }, []);
-
-  const handleVersionChange = useCallback((e) => {
-    setEditingTerm(prev => ({
-      ...prev,
-      version: parseInt(e.target.value, 10) || 0
     }));
   }, []);
 
@@ -250,17 +245,11 @@ export default function TermsAndConditions() {
             </div>
 
             <div className={styles.modalBody}>
-              <div className={styles.formGroup}>
-                <label htmlFor="version">Versión:</label>
-                <input
-                  id="version"
-                  type="number"
-                  min="1"
-                  value={editingTerm.version}
-                  onChange={handleVersionChange}
-                  className={styles.versionInput}
-                />
-              </div>
+              {!editingTerm.id && (
+                <div className={styles.newVersionNotice}>
+                  <p>Se creará la versión {terms.length > 0 ? terms[0].version + 1 : 1} automáticamente.</p>
+                </div>
+              )}
 
               <div className={styles.formGroup}>
                 <label htmlFor="content">Contenido:</label>
