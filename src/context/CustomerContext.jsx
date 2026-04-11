@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 const CustomerContext = createContext();
 
 const CUSTOMER_PHONE_KEY = 'customer_phone';
+const CUSTOMER_DATA_KEY = 'customer_data';
 
 export const useCustomer = () => useContext(CustomerContext);
 
@@ -51,8 +52,7 @@ export const CustomerProvider = ({ children }) => {
 
   const checkAndLogin = async (phoneToLogin) => {
     if (!phoneToLogin || phoneToLogin.length < 10) {
-      console.warn("Intento de login con número inválido.");
-      return false;
+      return null; // Cambiado a null en lugar de false
     }
 
     try {
@@ -63,41 +63,52 @@ export const CustomerProvider = ({ children }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error en checkAndLogin (buscando cliente):', error);
-        clearPhone();
-        return false;
+        console.error('Error de red o DB en checkAndLogin:', error);
+        // NO HAGAS clearPhone() AQUÍ. Si es error de red, mantenemos la sesión cacheada intacta.
+        return null;
       }
 
       if (data) {
         setCustomer(data);
         localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToLogin);
+        localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(data)); // Actualizar caché
         setPhone(phoneToLogin);
 
-        if (isPhoneModalOpen) {
-          setPhoneModalOpen(false);
-        }
+        if (isPhoneModalOpen) setPhoneModalOpen(false);
         if (onSuccessCallback) {
           onSuccessCallback();
           setOnSuccessCallback(null);
         }
-        return true;
+        return data; // Retorna la data en lugar de true
       } else {
-        console.log("Cliente no encontrado, limpiando sesión.");
+        // Solo aquí sabemos CON CERTEZA que la DB respondió pero el usuario no existe.
+        console.log("Cliente explícitamente no encontrado, limpiando sesión.");
         clearPhone();
-        return false;
+        return null;
       }
 
     } catch (error) {
       console.error('Error inesperado en checkAndLogin:', error);
-      clearPhone();
-      return false;
+      // NO HAGAS clearPhone() AQUÍ TAMPOCO.
+      return null;
     }
   };
 
   useEffect(() => {
     const initializeSession = async () => {
       const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
+      const savedCustomerData = localStorage.getItem(CUSTOMER_DATA_KEY);
 
+      // 1. Hidratar el estado local inmediatamente si hay caché, sin esperar a la red
+      if (savedCustomerData) {
+        try {
+          setCustomer(JSON.parse(savedCustomerData));
+        } catch (e) {
+          console.error('Error leyendo la caché del cliente:', e);
+        }
+      }
+
+      // 2. Intentar validar en segundo plano. Si no hay internet, simplemente fallará sin borrar la caché.
       if (savedPhone) {
         await checkAndLogin(savedPhone);
       }
@@ -149,19 +160,18 @@ export const CustomerProvider = ({ children }) => {
   };
 
   const savePhoneAndContinue = async (phoneToSave, name = null) => {
-    let customerData = null;
-    const existingCustomer = await checkAndLogin(phoneToSave);
+    let customerData = await checkAndLogin(phoneToSave); // Usa los datos retornados directamente
 
-    if (existingCustomer) {
-      customerData = customer;
-    } else if (name) {
+    if (!customerData && name) {
       customerData = await registerNewCustomer(phoneToSave, name);
       if (customerData) {
         setCustomer(customerData);
         setPhone(phoneToSave);
         localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
+        localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(customerData)); // Cachear registro nuevo
       }
-    } else {
+    } else if (!customerData && !name) {
+      // Escenario fallback si solo se guardaba el teléfono sin nombre
       setPhone(phoneToSave);
       localStorage.setItem(CUSTOMER_PHONE_KEY, phoneToSave);
     }
@@ -175,10 +185,11 @@ export const CustomerProvider = ({ children }) => {
       return true;
     }
     return false;
-  }
+  };
 
   const clearPhone = () => {
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
+    localStorage.removeItem(CUSTOMER_DATA_KEY); // Limpiar caché también
     setPhone('');
     setCustomer(null);
   };

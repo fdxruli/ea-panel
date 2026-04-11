@@ -81,8 +81,8 @@ export default function ClientLayout() {
   const showNetworkBanner = hasResolvedOnce && networkStatus !== NETWORK_STATUS.ONLINE;
   const isOffline = networkStatus === NETWORK_STATUS.OFFLINE;
   const networkBannerMessage = isOffline
-    ? 'Estás navegando sin conexión. Estás viendo una versión guardada del menú. Precios y disponibilidad pueden variar.'
-    : `Conexión lenta con el servidor${latencyMs ? ` (${latencyMs} ms)` : ''}. Algunas acciones pueden tardar más de lo habitual.`;
+    ? 'Viendo menú guardado. Precios y disponibilidad pueden variar.'
+    : `Conexión lenta${latencyMs ? ` (${latencyMs} ms)` : ''}. Las acciones pueden tardar.`;
   const networkBannerLabel = isOffline ? 'Sin conexión' : 'Conexión lenta';
 
   useEffect(() => {
@@ -166,98 +166,102 @@ export default function ClientLayout() {
     >
       {!isBusinessOpen && <ClosedMessage />}
 
-      {showNetworkBanner && (
-        <div
-          className={`network-status-banner network-status-banner-${networkStatus}`}
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
-        >
-          {isOffline ? (
-            // Ícono de nube-sin-wifi para offline
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-              <line x1="1" y1="1" x2="23" y2="23" />
-              <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
-              <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
-              <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
-              <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
-              <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-              <line x1="12" y1="20" x2="12.01" y2="20" />
-            </svg>
-          ) : (
-            // Ícono de reloj para conexión lenta
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          )}
-          <span className="network-status-badge">{networkBannerLabel}</span>
-          <span>{networkBannerMessage}</span>
-        </div>
-      )}
+      <div className="sticky-top-container">
 
-      <PhoneModal />
-      <AlertModal />
-      <NotificationManager />
-      {notification && <div className="update-toast">{notification}</div>}
-      {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}
-
-      {isAddressModalOpen && customer && (
-        <AddressModal
-          isOpen={isAddressModalOpen}
-          onClose={() => setAddressModalOpen(false)}
-          onSave={handleSaveFirstAddress}
-          address={null}
-          customerId={customer.id}
-        />
-      )}
-
-      <header className="client-header">
-        <div className="header-content-container">
-          <Link to="/" className="logo">
-            <div className="logo-icon-wrapper">
-              <FlameIcon />
-            </div>
-            <h1>
-              <span className="logo-text-entre">ENTRE</span>
-              <span className="logo-text-alas">ALAS</span>
-            </h1>
-          </Link>
-
-          {/* --- BOTÓN DE INGRESO MANUAL (Solo visible si NO hay cliente logueado) --- */}
-          {!customer && (
-            <button
-              className="mobile-login-btn"
-              onClick={() => setPhoneModalOpen(true)}
-              aria-label="Ingresar número"
-            >
-              <LoginIcon />
-
-            </button>
-          )}
-
-          <nav className="desktop-nav">
-            <button onClick={toggleCart} className="desktop-cart-button">
-              <ShoppingCartIcon />
-              <span>Carrito</span>
-              {totalItems > 0 && <span className="desktop-cart-badge">{totalItems}</span>}
-            </button>
-
-            {/* Lógica corregida: Botón directo si no está logueado */}
-            {customer ? (
-              <UserMenu />
+        {showNetworkBanner && (
+          <div
+            className={`network-status-banner network-status-banner-${networkStatus}`}
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            {isOffline ? (
+              // Ícono de nube-sin-wifi para offline
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                <line x1="1" y1="1" x2="23" y2="23" />
+                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+                <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+                <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+                <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                <line x1="12" y1="20" x2="12.01" y2="20" />
+              </svg>
             ) : (
+              // Ícono de reloj para conexión lenta
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            )}
+            <span className="network-status-badge">{networkBannerLabel}</span>
+            <span>{networkBannerMessage}</span>
+          </div>
+        )}
+
+        <PhoneModal />
+        <AlertModal />
+        <NotificationManager />
+        {notification && <div className="update-toast">{notification}</div>}
+        {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}
+
+        {isAddressModalOpen && customer && (
+          <AddressModal
+            isOpen={isAddressModalOpen}
+            onClose={() => setAddressModalOpen(false)}
+            onSave={handleSaveFirstAddress}
+            address={null}
+            customerId={customer.id}
+          />
+        )}
+
+        <header className="client-header">
+          <div className="header-content-container">
+            <Link to="/" className="logo">
+              <div className="logo-icon-wrapper">
+                <FlameIcon />
+              </div>
+              <h1>
+                <span className="logo-text-entre">ENTRE</span>
+                <span className="logo-text-alas">ALAS</span>
+              </h1>
+            </Link>
+
+            {/* --- BOTÓN DE INGRESO MANUAL (Solo visible si NO hay cliente logueado) --- */}
+            {!customer && (
               <button
-                className="desktop-login-btn"
+                className="mobile-login-btn"
                 onClick={() => setPhoneModalOpen(true)}
+                aria-label="Ingresar número"
               >
-                <LoginIcon /> {/* Usamos el icono que ya tienes importado */}
-                <span>Iniciar Sesión</span>
+                <LoginIcon />
+
               </button>
             )}
-          </nav>
-        </div>
-      </header>
+
+            <nav className="desktop-nav">
+              <button onClick={toggleCart} className="desktop-cart-button">
+                <ShoppingCartIcon />
+                <span>Carrito</span>
+                {totalItems > 0 && <span className="desktop-cart-badge">{totalItems}</span>}
+              </button>
+
+              {/* Lógica corregida: Botón directo si no está logueado */}
+              {customer ? (
+                <UserMenu />
+              ) : (
+                <button
+                  className="desktop-login-btn"
+                  onClick={() => setPhoneModalOpen(true)}
+                >
+                  <LoginIcon /> {/* Usamos el icono que ya tienes importado */}
+                  <span>Iniciar Sesión</span>
+                </button>
+              )}
+            </nav>
+          </div>
+        </header>
+
+      </div>
 
       {/* Carrito Lateral */}
       <Cart networkState={networkState} />

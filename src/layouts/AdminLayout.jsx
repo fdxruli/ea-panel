@@ -14,19 +14,27 @@ export default function AdminLayout() {
 
   const toggleSidebar = useCallback(() => {
     if (isDesktop) {
-      setIsSidebarOpen(!isSidebarOpen);
+      // Usa el valor previo para evitar que la función dependa del estado actual
+      setIsSidebarOpen(prev => !prev);
     }
-  }, [isDesktop, isSidebarOpen]);
+  }, [isDesktop]);
 
   const closeSidebar = useCallback(() => {
-    if (isDesktop && isSidebarOpen) {
-      setIsSidebarOpen(false);
-    }
-  }, [isDesktop, isSidebarOpen]);
+    // Igual aquí, actualiza basado en el estado previo sin meterlo en el arreglo de dependencias
+    setIsSidebarOpen(prev => {
+      if (isDesktop && prev) return false;
+      return prev;
+    });
+  }, [isDesktop]);
 
   useEffect(() => {
-    closeSidebar();
-  }, [closeSidebar, location.pathname]);
+    // Solo debes cerrar el menú automáticamente al navegar si estás en móvil.
+    // Si realmente quieres cerrarlo también en desktop al navegar (mala idea), 
+    // al menos ahora no causará un bucle infinito.
+    if (!isDesktop) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname, isDesktop]);
 
   useEffect(() => {
     const handleResize = () => {
