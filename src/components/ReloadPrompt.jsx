@@ -1,3 +1,9 @@
+// src/components/ReloadPrompt.jsx
+// Anti-App Zombie: el prompt de actualización NO tiene botón cerrar.
+// El usuario DEBE actualizarse al detectar una nueva versión.
+// Además, si el SW tiene una actualización pendiente y el usuario
+// recupera la conexión, se le muestra el prompt de forma prominente.
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
@@ -20,7 +26,7 @@ function ReloadPrompt() {
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
-    needRefresh: [needRefresh, setNeedRefresh],
+    needRefresh:  [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegistered(r) {
@@ -106,13 +112,24 @@ function ReloadPrompt() {
   // quedarse atascado en una versión zombie del caché.
   if (needRefresh) {
     return (
-      <div className={`${styles.toast} ${styles.updateToast}`} role="alertdialog">
+      <div
+        className={`${styles.toast} ${styles.updateToast}`}
+        role="alertdialog"
+        aria-label="Actualización de la aplicación"
+        aria-live="assertive"
+      >
         <div className={styles.message}>
-          <strong>Nueva versión disponible</strong>
+          <strong>Actualización disponible</strong>
+          <span>Hay una nueva versión de la aplicación con mejoras y correcciones de rendimiento.</span>
         </div>
-        <button className={styles.actionButton} onClick={() => updateServiceWorker(true)}>
-          Actualizar
-        </button>
+        <div className={styles.actions}>
+          <button
+            className={styles.actionButton}
+            onClick={() => updateServiceWorker(true)}
+          >
+            Actualizar app
+          </button>
+        </div>
       </div>
     );
   }
