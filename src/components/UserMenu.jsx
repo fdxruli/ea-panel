@@ -37,7 +37,7 @@ export default function UserMenu() {
             logout();
             clearPhone();
             setIsOpen(false);
-            window.location.href = '/'; // Limpia el estado y redirige al inicio
+            window.location.replace('/'); // Limpia el estado y redirige al inicio
         };
         if (!phone) {
             return (

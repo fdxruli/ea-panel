@@ -1,25 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { useCustomer } from '../context/CustomerContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAlert } from '../context/AlertContext';
 import styles from './PhoneModal.module.css';
-import DOMPurify from 'dompurify';
+
+const getVerificationErrorMessage = (code) => {
+  if (code === 'terms_unavailable') return 'No pudimos cargar los términos. Inténtalo de nuevo.';
+  if (code === 'customer_lookup_failed' || code === 'unexpected_customer_lookup_error') return 'Error al verificar tu número. Inténtalo de nuevo.';
+  return 'Verifica los datos e inténtalo de nuevo.';
+};
+
+const getAcceptanceErrorMessage = (code) => {
+  if (code === 'terms_unavailable') return 'No pudimos cargar los términos. Inténtalo de nuevo.';
+  return 'No se pudo guardar la aceptación de los términos.';
+};
 
 export default function PhoneModal() {
   const {
     isPhoneModalOpen,
     setPhoneModalOpen,
-    checkAndLogin,
+    verifyCustomer,
+    executeLogin,
     registerNewCustomer,
     acceptTerms,
-    savePhoneAndContinue
   } = useCustomer();
 
   const { getSetting } = useSettings();
   const { showAlert } = useAlert();
 
   const [inputValue, setInputValue] = useState('');
-  const [countryCode, setCountryCode] = useState('+52'); // <--- Nuevo estado para la Lada
+  const [countryCode, setCountryCode] = useState('+52');
   const [name, setName] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
   const [error, setError] = useState('');
@@ -28,142 +39,146 @@ export default function PhoneModal() {
   const [referralCode, setReferralCode] = useState('');
   const [pendingCustomer, setPendingCustomer] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [hasBlockingError, setHasBlockingError] = useState(false);
 
   useEffect(() => {
-    if (isPhoneModalOpen) {
-      setInputValue('');
-      setCountryCode('+52'); // Resetear a México por defecto
-      setName('');
-      setIsNewUser(false);
-      setError('');
-      setAgreed(false);
-      setUserExistsButNoAcceptance(false);
-      setPendingCustomer(null);
-      setIsVerifying(false);
+    if (!isPhoneModalOpen) return;
+    setInputValue('');
+    setCountryCode('+52');
+    setName('');
+    setIsNewUser(false);
+    setError('');
+    setAgreed(false);
+    setUserExistsButNoAcceptance(false);
+    setPendingCustomer(null);
+    setIsVerifying(false);
+    setHasBlockingError(false);
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get('ref');
-      if (refCode) {
-        setReferralCode(refCode);
-      }
-    }
+    const urlParams = new URLSearchParams(window.location.search);
+    setReferralCode(urlParams.get('ref') || '');
   }, [isPhoneModalOpen]);
 
+  const handleLookupResult = useCallback((result) => {
+    if (result.status === 'found') {
+      if (result.customer.terms_accepted) {
+        executeLogin(result.customer);
+        return;
+      }
+      setPendingCustomer(result.customer);
+      setUserExistsButNoAcceptance(true);
+      return;
+    }
+
+    if (result.status === 'not_found') {
+      setIsNewUser(true);
+      return;
+    }
+
+    setHasBlockingError(true);
+    setError(getVerificationErrorMessage(result.code));
+  }, [executeLogin]);
+
   useEffect(() => {
-    // Resetear estados dependientes si el input cambia
     setIsNewUser(false);
     setUserExistsButNoAcceptance(false);
     setPendingCustomer(null);
     setError('');
+    setHasBlockingError(false);
+    setAgreed(false);
 
-    // Verificamos solo si son 10 dígitos
-    if (inputValue.length === 10) {
-      setIsVerifying(true);
-
-      const attemptAutoLoginOrDetectNewUser = async () => {
-        // --- CAMBIO: Combinamos Lada + Número ---
-        const fullPhone = `${countryCode}${inputValue}`;
-
-        const result = await checkAndLogin(fullPhone);
-        setIsVerifying(false);
-
-        if (result.exists) {
-          if (result.accepted) {
-            // Si ya existe y aceptó términos, entramos directo
-            savePhoneAndContinue(fullPhone, result.customer);
-          } else {
-            // Existe pero faltan términos
-            setPendingCustomer(result.customer);
-            setUserExistsButNoAcceptance(true);
-          }
-        } else {
-          // No existe en absoluto
-          setIsNewUser(true);
-        }
-      };
-
-      const debounceCheck = setTimeout(() => {
-        attemptAutoLoginOrDetectNewUser();
-      }, 300);
-
-      return () => clearTimeout(debounceCheck);
-    } else {
+    if (inputValue.length !== 10) {
       setIsVerifying(false);
+      return;
     }
 
-    // Agregamos countryCode a las dependencias para que si cambia la lada, vuelva a verificar
-  }, [inputValue, countryCode, checkAndLogin, savePhoneAndContinue]);
+    const fullPhone = `${countryCode}${inputValue}`;
+    let cancelled = false;
+    setIsVerifying(true);
+
+    const debounceCheck = setTimeout(async () => {
+      const result = await verifyCustomer(fullPhone);
+      if (!cancelled) {
+        setIsVerifying(false);
+        handleLookupResult(result);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceCheck);
+    };
+  }, [inputValue, countryCode, verifyCustomer, handleLookupResult]);
 
   const handleSubmit = async () => {
     setError('');
-    const fullPhone = `${countryCode}${inputValue}`; // --- CAMBIO: Usamos el número completo
 
     if (shouldShowSubmitButton && !agreed) {
-      setError('Debes aceptar los términos y condiciones para continuar.');
+      setError('Debes aceptar los términos para continuar.');
       return;
     }
 
     if (isNewUser) {
       if (!name.trim()) {
-        setError('Parece que eres nuevo, por favor ingresa tu nombre.');
+        setError('Por favor, ingresa tu nombre.');
         return;
       }
+
+      const fullPhone = `${countryCode}${inputValue}`;
       const cleanName = DOMPurify.sanitize(name.trim());
+      const registeredCustomer = await registerNewCustomer(fullPhone, cleanName, referralCode);
 
-      // --- CAMBIO: Registramos con lada incluida ---
-      const registered = await registerNewCustomer(fullPhone, cleanName, referralCode);
-
-      if (registered) {
-        if (referralCode) {
-          const welcomeReward = getSetting('welcome_reward');
-          if (welcomeReward && welcomeReward.enabled) {
-            const message = welcomeReward.message.replace('{CODE}', welcomeReward.discount_code);
-            showAlert(message);
-          }
-        }
-        // savePhoneAndContinue se llama dentro de registerNewCustomer (según tu contexto modificado anteriormente)
-        // pero para seguridad, ya el flujo está cubierto.
-
-        // NOTA IMPORTANTE: Si registerNewCustomer NO llama a savePhoneAndContinue internamente en tu versión final,
-        // deberías descomentar la siguiente línea:
-        await savePhoneAndContinue(fullPhone);
-
-      } else {
-        setError('Hubo un error al registrar tu cuenta. Inténtalo de nuevo.');
+      if (!registeredCustomer) {
+        setError('Error al registrar tu cuenta. Inténtalo de nuevo.');
+        return;
       }
 
-    } else if (userExistsButNoAcceptance) {
-      if (pendingCustomer) {
-        const accepted = await acceptTerms(pendingCustomer.id);
-        if (accepted) {
-          // --- CAMBIO: Guardamos sesión con lada incluida ---
-          savePhoneAndContinue(fullPhone, pendingCustomer);
-        } else {
-          setError('No se pudo guardar la aceptación de los términos.');
-        }
-      } else {
-        setError('Error: No se encontró la información del cliente para aceptar los términos.');
+      const acceptanceResult = await acceptTerms(registeredCustomer.id);
+      if (!acceptanceResult.ok) {
+        setPendingCustomer(registeredCustomer);
+        setIsNewUser(false);
+        setUserExistsButNoAcceptance(true);
+        setError(getAcceptanceErrorMessage(acceptanceResult.code));
+        return;
       }
+
+      executeLogin({ ...registeredCustomer, terms_accepted: true });
+
+      if (referralCode) {
+        const welcomeReward = getSetting('welcome_reward');
+        if (welcomeReward?.enabled) {
+          showAlert(welcomeReward.message.replace('{CODE}', welcomeReward.discount_code));
+        }
+      }
+      return;
     }
-  };
 
-  const handleClose = () => {
-    setPhoneModalOpen(false);
+    if (userExistsButNoAcceptance && pendingCustomer) {
+      const acceptanceResult = await acceptTerms(pendingCustomer.id);
+      if (!acceptanceResult.ok) {
+        setError(getAcceptanceErrorMessage(acceptanceResult.code));
+        return;
+      }
+      executeLogin({ ...pendingCustomer, terms_accepted: true });
+    }
   };
 
   if (!isPhoneModalOpen) return null;
 
-  const shouldShowSubmitButton = isNewUser || userExistsButNoAcceptance;
+  const shouldShowSubmitButton = !hasBlockingError && (isNewUser || userExistsButNoAcceptance);
+  const isComplete = inputValue.length === 10;
 
   return (
-    <div className={styles.overlay}>
+    <div className={styles.overlay} onMouseDown={(e) => e.target === e.currentTarget && setPhoneModalOpen(false)}>
       <div className={styles.modalContent}>
-        <h2>¡Bienvenido a ENTRE&nbsp;ALAS!</h2>
-        <p>
-          Ingresa tu número de WhatsApp para ver tus pedidos y facilitar tus compras.
-        </p>
+        <button className={styles.closeBtn} onClick={() => setPhoneModalOpen(false)} aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
 
-        {/* --- CAMBIO: Grupo de inputs con Select de Lada --- */}
+        <div className={styles.header}>
+          <h2>Ingresa a Entre Alas</h2>
+          <p>Usa tu WhatsApp para ver tus pedidos guardados y agilizar tu compra.</p>
+        </div>
+
         <div className={styles.phoneInputGroup}>
           <select
             className={styles.countrySelect}
@@ -174,70 +189,69 @@ export default function PhoneModal() {
             <option value="+1">🇺🇸 +1</option>
           </select>
 
-          <input
-            type="tel"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value.replace(/\D/g, ''))}
-            placeholder="10 dígitos"
-            className={styles.phoneInput}
-            maxLength="10"
-          />
+          <div className={styles.inputWrapper}>
+            <input
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="tel-national"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value.replace(/\D/g, ''))}
+              placeholder="Número a 10 dígitos"
+              className={styles.phoneInput}
+              maxLength="10"
+              autoFocus
+            />
+            {isVerifying && <div className={styles.spinner}></div>}
+          </div>
         </div>
 
-        <p className={styles.verifying}>{isVerifying ? 'Verificando número...' : ''}&nbsp;</p>
-
-        {isNewUser && (
-          <div className={styles.newUserSection}>
-            <p className={styles.newUserMessage}>
-              {referralCode ? '¡Genial! Estás aquí por una invitación. ' : '¡Qué bueno tenerte por aquí! '}
-              Parece que eres nuevo. ¿Cómo te llamas?
+        <div className={`${styles.expandableArea} ${isNewUser ? styles.expanded : ''}`}>
+          <div className={styles.expandableContent}>
+            <p className={styles.promptText}>
+              {referralCode ? '¡Vienes con invitación!' : 'Parece que eres nuevo.'} ¿Cómo te llamas?
             </p>
             <input
               type="text"
+              autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Tu nombre completo"
-              className={styles.nameInput}
+              className={styles.modernInput}
             />
+          </div>
+        </div>
+
+        {shouldShowSubmitButton && (
+          <div className={styles.termsWrapper}>
+            {userExistsButNoAcceptance && (
+              <p className={styles.updateNotice}>
+                Actualizamos nuestros Términos. Por favor acéptalos para continuar.
+              </p>
+            )}
+            <label className={styles.termsLabel}>
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className={styles.checkbox}
+              />
+              <span>
+                Acepto los <a href="/terminos" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a>
+              </span>
+            </label>
           </div>
         )}
 
-        {shouldShowSubmitButton && (
-          <>
-            {userExistsButNoAcceptance && (
-              <p className={styles.updateTermsMessage}>
-                Hemos actualizado nuestros Términos y Condiciones. Por favor, revísalos y acéptalos de nuevo para continuar.
-              </p>
-            )}
-
-            <div className={styles.terms}>
-              <input
-                type="checkbox"
-                id="terms"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-              />
-              <label htmlFor="terms">
-                He leído y acepto los <a href="/terminos" target="_blank" rel="noopener noreferrer">Términos y Condiciones</a>.
-              </label>
-            </div>
-          </>
-        )}
-
-        {error && <p className={styles.error}>{error}</p>}
-        <div className={styles.buttons}>
-          {shouldShowSubmitButton && (
-            <button onClick={handleSubmit} className={styles.saveButton}>
-              {isNewUser ? 'Crear mi cuenta y continuar' : 'Aceptar y Continuar'}
-            </button>
-          )}
-
-          {!isVerifying && (
-            <button onClick={handleClose} className={styles.laterButton}>
-              Quizás más tarde
-            </button>
-          )}
+        <div className={styles.feedbackArea}>
+          {error && <p className={styles.errorText}>{error}</p>}
         </div>
+
+        {shouldShowSubmitButton && (
+          <button onClick={handleSubmit} className={styles.primaryButton}>
+            {isNewUser ? 'Crear cuenta' : 'Continuar'}
+          </button>
+        )}
       </div>
     </div>
   );
