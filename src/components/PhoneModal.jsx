@@ -63,7 +63,12 @@ export default function PhoneModal() {
     if (result.status === 'found') {
       // Cliente YA EXISTE EN LA BD
 
-      // Si tiene sesión activa, mostrar advertencia sobre referral
+      // Si ya tiene sesión activa, no volver a verificar
+      if (customer?.phone === result.customer?.phone) {
+        return;
+      }
+
+      // Si tiene términos aceptados, iniciar sesión
       if (result.customer.terms_accepted) {
         // Ya inició sesión - no puede usar referral code
         if (referralCode && !localStorage.getItem('REFERRAL_SHOWN_WARNING')) {
@@ -81,8 +86,7 @@ export default function PhoneModal() {
       // Cliente existe pero NO ha iniciado sesión aún
       if (referralCode && !localStorage.getItem('REFERRAL_SHOWN_WARNING')) {
         setReferralWarning(
-          'Perfecto, te registraste con una invitación. ' +
-          'Acepta los términos y completa tu registro para obtener beneficios.'
+          '¡Invitación activada! Completa tu registro aceptando los términos para obtener tus beneficios.'
         );
         localStorage.setItem('REFERRAL_SHOWN_WARNING', 'true');
       }
@@ -100,7 +104,7 @@ export default function PhoneModal() {
 
     setHasBlockingError(true);
     setError(getVerificationErrorMessage(result.code));
-  }, [referralCode]);
+  }, [referralCode, executeLogin, customer?.phone]);
 
   useEffect(() => {
     setIsNewUser(false);
@@ -116,7 +120,13 @@ export default function PhoneModal() {
       return;
     }
 
+    // Skip verification if this phone is already the logged-in customer
     const fullPhone = `${countryCode}${inputValue}`;
+    if (customer?.phone === fullPhone) {
+      setIsVerifying(false);
+      return;
+    }
+
     let cancelled = false;
     setIsVerifying(true);
 
@@ -132,7 +142,7 @@ export default function PhoneModal() {
       cancelled = true;
       clearTimeout(debounceCheck);
     };
-  }, [inputValue, countryCode, verifyCustomer, handleLookupResult]);
+  }, [inputValue, countryCode, verifyCustomer, handleLookupResult, customer?.phone]);
 
   const handleSubmit = async () => {
     setError('');
@@ -283,7 +293,7 @@ export default function PhoneModal() {
 
         {shouldShowSubmitButton && (
           <div className={styles.termsWrapper}>
-            {userExistsButNoAcceptance && (
+            {userExistsButNoAcceptance && !referralWarning && (
               <p className={styles.updateNotice}>
                 Actualizamos nuestros Términos. Por favor acéptalos para continuar.
               </p>
