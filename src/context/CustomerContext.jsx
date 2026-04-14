@@ -97,7 +97,7 @@ export const CustomerProvider = ({ children }) => {
     return { ok: true, termsId: fetchedTermsId };
   };
 
-  const verifyCustomer = async (phoneToVerify, currentTermsId = null) => {
+  const verifyCustomer = useCallback(async (phoneToVerify, currentTermsId = null) => {
     if (!phoneToVerify || phoneToVerify.length < 10) {
       return { status: 'error', code: 'invalid_phone' };
     }
@@ -142,9 +142,9 @@ export const CustomerProvider = ({ children }) => {
       console.error('Error inesperado verificando cliente:', error);
       return { status: 'error', code: 'unexpected_customer_lookup_error' };
     }
-  };
+  }, [activeTermsId]);
 
-  const executeLogin = async (customerData) => {
+  const executeLogin = useCallback(async (customerData) => {
     // Si el usuario no tiene referral_code, generarlo
     if (!customerData.referral_code) {
       const newReferralCode = await generateUniqueReferralCode(customerData.name, customerData.phone);
@@ -173,7 +173,7 @@ export const CustomerProvider = ({ children }) => {
       onSuccessCallback();
       setOnSuccessCallback(null);
     }
-  };
+  }, [isPhoneModalOpen, onSuccessCallback]);
 
   const clearCachedCustomerData = () => {
     localStorage.removeItem(CUSTOMER_DATA_KEY);
