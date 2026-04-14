@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 const CustomerContext = createContext();
@@ -50,6 +50,8 @@ export const CustomerProvider = ({ children }) => {
   const [checkoutMode, setCheckoutMode] = useState('checkout');
   const [onSuccessCallback, setOnSuccessCallback] = useState(null);
   const [isCustomerLoading, setIsCustomerLoading] = useState(true);
+  const isMountedRef = useRef(false);
+  const sessionRestoreIdRef = useRef(0);
 
   const fetchActiveTermsId = async () => {
     try {
@@ -142,7 +144,22 @@ export const CustomerProvider = ({ children }) => {
     }
   };
 
-  const executeLogin = (customerData) => {
+  const executeLogin = async (customerData) => {
+    // Si el usuario no tiene referral_code, generarlo
+    if (!customerData.referral_code) {
+      const newReferralCode = await generateUniqueReferralCode(customerData.name, customerData.phone);
+      const { data: updated, error } = await supabase
+        .from('customers')
+        .update({ referral_code: newReferralCode })
+        .eq('id', customerData.id)
+        .select()
+        .single();
+
+      if (!error && updated) {
+        customerData.referral_code = newReferralCode;
+      }
+    }
+
     setCustomer(customerData);
     setPhone(customerData.phone);
     localStorage.setItem(CUSTOMER_PHONE_KEY, customerData.phone);
@@ -164,8 +181,22 @@ export const CustomerProvider = ({ children }) => {
     setPhone('');
   };
 
-  const checkAndLogin = async (phoneToLogin) => {
+  const checkAndLogin = async (phoneToLogin, options = {}) => {
+    const { requirePersistedSession = false, restoreId = null } = options;
     const result = await verifyCustomer(phoneToLogin);
+
+    if (!isMountedRef.current) {
+      return { status: 'cancelled' };
+    }
+
+    if (requirePersistedSession) {
+      const hasSamePersistedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY) === phoneToLogin;
+      const isSameRestoreAttempt = restoreId === null || sessionRestoreIdRef.current === restoreId;
+
+      if (!hasSamePersistedPhone || !isSameRestoreAttempt) {
+        return { status: 'cancelled' };
+      }
+    }
 
     if (result.status === 'found' && result.customer.terms_accepted) {
       executeLogin(result.customer);
@@ -185,19 +216,37 @@ export const CustomerProvider = ({ children }) => {
   };
 
   const initializeSession = useCallback(async () => {
+    const restoreId = sessionRestoreIdRef.current + 1;
+    sessionRestoreIdRef.current = restoreId;
     const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
 
     await fetchActiveTermsId();
 
-    if (savedPhone) {
-      await checkAndLogin(savedPhone);
+    const canContinueRestore =
+      isMountedRef.current &&
+      sessionRestoreIdRef.current === restoreId &&
+      localStorage.getItem(CUSTOMER_PHONE_KEY) === savedPhone;
+
+    if (savedPhone && canContinueRestore) {
+      await checkAndLogin(savedPhone, {
+        requirePersistedSession: true,
+        restoreId,
+      });
     }
 
-    setIsCustomerLoading(false);
+    if (isMountedRef.current && sessionRestoreIdRef.current === restoreId) {
+      setIsCustomerLoading(false);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    isMountedRef.current = true;
     initializeSession();
+
+    return () => {
+      isMountedRef.current = false;
+      sessionRestoreIdRef.current += 1;
+    };
   }, [initializeSession]);
 
   const registerNewCustomer = async (customerPhone, name, inviterCode = null) => {
@@ -305,6 +354,7 @@ export const CustomerProvider = ({ children }) => {
   };
 
   const clearPhone = () => {
+    sessionRestoreIdRef.current += 1;
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
     localStorage.removeItem(CUSTOMER_DATA_KEY);
     setPhone('');
