@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import AlertModal from '../components/AlertModal';
 import AdminMobileMenu from '../components/AdminMobileMenu';
 import Navbar from '../components/Navbar';
 import SEO from '../components/SEO';
@@ -58,7 +57,7 @@ export default function AdminLayout() {
         type="website"
         noindex
       />
-      <AlertModal />
+        
       <Navbar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       <div className={`container ${!isSidebarOpen && isDesktop ? 'sidebar-closed' : ''}`}>
         {isDesktop && <Sidebar isSidebarOpen={isSidebarOpen} closeSidebar={closeSidebar} />}

@@ -15,7 +15,6 @@ import { supabase } from "../lib/supabaseClient";
 import Cart from "../pages/Cart";
 import PhoneModal from "../components/PhoneModal";
 import CheckoutModal from "../components/CheckoutModal";
-import AlertModal from "../components/AlertModal";
 import FloatingCartButton from "../components/FloatingCartButton";
 import UserMenu from "../components/UserMenu";
 import AddressModal from "../components/AddressModal";
@@ -82,7 +81,7 @@ export default function ClientLayout() {
   const isOffline = networkStatus === NETWORK_STATUS.OFFLINE;
   const networkBannerMessage = isOffline
     ? 'Viendo menú guardado. Precios y disponibilidad pueden variar.'
-    : `Conexión lenta${latencyMs ? ` (${latencyMs} ms)` : ''}. Las acciones pueden tardar.`;
+    : `${latencyMs ? ` (${latencyMs} ms)` : ''}. Las acciones pueden tardar.`;
   const networkBannerLabel = isOffline ? 'Sin conexión' : 'Conexión lenta';
 
   useEffect(() => {
@@ -199,7 +198,6 @@ export default function ClientLayout() {
         )}
 
         <PhoneModal />
-        <AlertModal />
         <NotificationManager />
         {notification && <div className="update-toast">{notification}</div>}
         {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}

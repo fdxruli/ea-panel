@@ -49,6 +49,7 @@ const NotFoundPage = lazy(() => import("./components/NotFoundPage.jsx"));
 // --- Componentes (NO son páginas, se cargan de inmediato) ---
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
+import AlertModal from "./components/AlertModal.jsx";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
@@ -96,6 +97,7 @@ function App() {
     <>
       <ThemeProvider>
         <AlertProvider>
+          <AlertModal />
           <SettingsProvider>
             <BusinessHoursProvider>
               <ReloadPrompt />
