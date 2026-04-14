@@ -123,10 +123,26 @@ export const UserDataProvider = ({ children }) => {
             setCache(ORDERS_CACHE_KEY, limitedOrdersForCache, CACHE_TTL.USER_ORDERS);
         } catch (err) {
             console.error('Error fetching user data:', err);
-            setError(err.message);
-            resetUserData();
-            localStorage.removeItem(INFO_CACHE_KEY);
-            localStorage.removeItem(ORDERS_CACHE_KEY);
+
+            // Check if this is a network-related error
+            const isNetworkError = err instanceof TypeError ||
+                /failed to fetch|networkerror|network request failed|load failed|fetch|timeout/i.test(err.message || '');
+
+            if (!isNetworkError) {
+                // Non-network error (e.g., auth error, server logic error): clear everything
+                console.warn('Non-network error detected. Clearing user data.');
+                setError(err.message);
+                resetUserData();
+                localStorage.removeItem(INFO_CACHE_KEY);
+                localStorage.removeItem(ORDERS_CACHE_KEY);
+            } else {
+                // Network error: KEEP cached data, don't reset user data
+                // Just log a warning and show stale data gracefully
+                console.warn('Network error. Keeping cached data for offline fallback.');
+                // Do NOT call resetUserData() or clear cache — keep stale data visible
+                // Clear the error flag so UI doesn't show "Error Inesperado"
+                setError(null);
+            }
         } finally {
             setLoading(false);
         }
@@ -138,6 +154,8 @@ export const UserDataProvider = ({ children }) => {
             setLoading(false);
             return;
         }
+
+        let cancelled = false;
 
         const { data: cachedInfo, isStale: isInfoStale } = getCache(INFO_CACHE_KEY, CACHE_TTL.USER_DATA);
         const { data: cachedOrders, isStale: isOrdersStale } = getCache(ORDERS_CACHE_KEY, CACHE_TTL.USER_ORDERS);
@@ -161,11 +179,18 @@ export const UserDataProvider = ({ children }) => {
             }
         }
 
-        if (needsFreshFetch || !cachedInfo || !cachedOrders) {
+        if (needsFreshFetch) {
             fetchAndCacheUserData(phone);
         } else {
-            setLoading(false);
+            // Cache is fresh, stop loading spinner immediately
+            if (!cancelled) {
+                setLoading(false);
+            }
         }
+
+        return () => {
+            cancelled = true;
+        };
     }, [phone, fetchAndCacheUserData, INFO_CACHE_KEY, ORDERS_CACHE_KEY, resetUserData]);
 
     useEffect(() => {
@@ -175,10 +200,14 @@ export const UserDataProvider = ({ children }) => {
         console.log(`[UserDataContext] Configurando listeners para cliente: ${customerId}`);
 
         const handleOrderOrAddressChange = (payload) => {
-            console.log('[UserDataContext] Cambio detectado en orders/addresses, revalidando todo...', payload);
-            localStorage.removeItem(INFO_CACHE_KEY);
-            localStorage.removeItem(ORDERS_CACHE_KEY);
-            fetchAndCacheUserData(phone);
+            console.log('[UserDataContext] Cambio detectado en orders/addresses, revalidando...', payload);
+
+            // Don't invalidate cache immediately — try fresh fetch first
+            // Only clear cache if the fetch succeeds with different data
+            fetchAndCacheUserData(phone).catch(err => {
+                // Network error: keep cached data, don't clear
+                console.warn('[UserDataContext] No se pudo revalidar por red. Manteniendo cache.', err);
+            });
         };
 
         const handleCustomerUpdate = (payload) => {
