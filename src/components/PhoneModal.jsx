@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { useCustomer } from '../context/CustomerContext';
 import { useSettings } from '../context/SettingsContext';
 import { useAlert } from '../context/AlertContext';
+import { useReferralCode } from '../hooks/useReferralCode';
 import styles from './PhoneModal.module.css';
 
 const getVerificationErrorMessage = (code) => {
@@ -24,10 +25,12 @@ export default function PhoneModal() {
     executeLogin,
     registerNewCustomer,
     acceptTerms,
+    customer, // Para detectar si hay sesión activa
   } = useCustomer();
 
   const { getSetting } = useSettings();
   const { showAlert } = useAlert();
+  const { referralCode, clearReferralCode } = useReferralCode(isPhoneModalOpen);
 
   const [inputValue, setInputValue] = useState('');
   const [countryCode, setCountryCode] = useState('+52');
@@ -36,10 +39,10 @@ export default function PhoneModal() {
   const [error, setError] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [userExistsButNoAcceptance, setUserExistsButNoAcceptance] = useState(false);
-  const [referralCode, setReferralCode] = useState('');
   const [pendingCustomer, setPendingCustomer] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasBlockingError, setHasBlockingError] = useState(false);
+  const [referralWarning, setReferralWarning] = useState(''); // Nuevo: mensaje de advertencia referral
 
   useEffect(() => {
     if (!isPhoneModalOpen) return;
@@ -53,30 +56,51 @@ export default function PhoneModal() {
     setPendingCustomer(null);
     setIsVerifying(false);
     setHasBlockingError(false);
-
-    const urlParams = new URLSearchParams(window.location.search);
-    setReferralCode(urlParams.get('ref') || '');
+    setReferralWarning('');
   }, [isPhoneModalOpen]);
 
   const handleLookupResult = useCallback((result) => {
     if (result.status === 'found') {
+      // Cliente YA EXISTE EN LA BD
+
+      // Si tiene sesión activa, mostrar advertencia sobre referral
       if (result.customer.terms_accepted) {
+        // Ya inició sesión - no puede usar referral code
+        if (referralCode && !localStorage.getItem('REFERRAL_SHOWN_WARNING')) {
+          setReferralWarning(
+            'Como ya estás registrado, no puedes usar códigos de referidos. ' +
+            'Pero puedes compartir el tuyo para invitar a tus amigos: ' +
+            `${result.customer.referral_code}`
+          );
+          localStorage.setItem('REFERRAL_SHOWN_WARNING', 'true');
+        }
         executeLogin(result.customer);
         return;
       }
+
+      // Cliente existe pero NO ha iniciado sesión aún
+      if (referralCode && !localStorage.getItem('REFERRAL_SHOWN_WARNING')) {
+        setReferralWarning(
+          'Perfecto, te registraste con una invitación. ' +
+          'Acepta los términos y completa tu registro para obtener beneficios.'
+        );
+        localStorage.setItem('REFERRAL_SHOWN_WARNING', 'true');
+      }
+
       setPendingCustomer(result.customer);
       setUserExistsButNoAcceptance(true);
       return;
     }
 
     if (result.status === 'not_found') {
+      // Cliente NUEVO - puede usar referral code
       setIsNewUser(true);
       return;
     }
 
     setHasBlockingError(true);
     setError(getVerificationErrorMessage(result.code));
-  }, [executeLogin]);
+  }, [referralCode]);
 
   useEffect(() => {
     setIsNewUser(false);
@@ -85,6 +109,7 @@ export default function PhoneModal() {
     setError('');
     setHasBlockingError(false);
     setAgreed(false);
+    setReferralWarning('');
 
     if (inputValue.length !== 10) {
       setIsVerifying(false);
@@ -125,7 +150,11 @@ export default function PhoneModal() {
 
       const fullPhone = `${countryCode}${inputValue}`;
       const cleanName = DOMPurify.sanitize(name.trim());
-      const registeredCustomer = await registerNewCustomer(fullPhone, cleanName, referralCode);
+      const registeredCustomer = await registerNewCustomer(
+        fullPhone,
+        cleanName,
+        referralCode // Pasar el código de referral
+      );
 
       if (!registeredCustomer) {
         setError('Error al registrar tu cuenta. Inténtalo de nuevo.');
@@ -141,8 +170,11 @@ export default function PhoneModal() {
         return;
       }
 
+      // ✅ REGISTRO EXITOSO - Limpiar código de referral
       executeLogin({ ...registeredCustomer, terms_accepted: true });
+      clearReferralCode();
 
+      // Mostrar mensaje de bienvenida si vino con referido
       if (referralCode) {
         const welcomeReward = getSetting('welcome_reward');
         if (welcomeReward?.enabled) {
@@ -158,7 +190,18 @@ export default function PhoneModal() {
         setError(getAcceptanceErrorMessage(acceptanceResult.code));
         return;
       }
+
+      // ✅ ACEPTACIÓN COMPLETADA - Limpiar código de referral
       executeLogin({ ...pendingCustomer, terms_accepted: true });
+      clearReferralCode();
+
+      // Mostrar mensaje de bienvenida si vino con referido
+      if (referralCode) {
+        const welcomeReward = getSetting('welcome_reward');
+        if (welcomeReward?.enabled) {
+          showAlert(welcomeReward.message.replace('{CODE}', welcomeReward.discount_code));
+        }
+      }
     }
   };
 
@@ -168,10 +211,19 @@ export default function PhoneModal() {
   const isComplete = inputValue.length === 10;
 
   return (
-    <div className={styles.overlay} onMouseDown={(e) => e.target === e.currentTarget && setPhoneModalOpen(false)}>
+    <div
+      className={styles.overlay}
+      onMouseDown={(e) => e.target === e.currentTarget && setPhoneModalOpen(false)}
+    >
       <div className={styles.modalContent}>
-        <button className={styles.closeBtn} onClick={() => setPhoneModalOpen(false)} aria-label="Cerrar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        <button
+          className={styles.closeBtn}
+          onClick={() => setPhoneModalOpen(false)}
+          aria-label="Cerrar"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
         </button>
 
         <div className={styles.header}>
@@ -206,10 +258,17 @@ export default function PhoneModal() {
           </div>
         </div>
 
+        {/* MOSTRAR ADVERTENCIA DE REFERRAL SI EXISTE */}
+        {referralWarning && (
+          <div className={styles.referralWarning}>
+            <p>{referralWarning}</p>
+          </div>
+        )}
+
         <div className={`${styles.expandableArea} ${isNewUser ? styles.expanded : ''}`}>
           <div className={styles.expandableContent}>
             <p className={styles.promptText}>
-              {referralCode ? '¡Vienes con invitación!' : 'Parece que eres nuevo.'} ¿Cómo te llamas?
+              {referralCode && isNewUser ? '¡Vienes con invitación!' : 'Parece que eres nuevo.'} ¿Cómo te llamas?
             </p>
             <input
               type="text"
