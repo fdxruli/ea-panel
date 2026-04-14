@@ -82,7 +82,6 @@ function ReloadPrompt() {
   if (installPrompt) {
     return (
       <div className={styles.toast} role="dialog" aria-label="Instalar aplicación">
-        <div className={styles.toastIcon} aria-hidden="true">📲</div>
         <div className={styles.message}>
           <strong>¿Instalar la app?</strong>
           <span>Accede más rápido desde tu pantalla de inicio.</span>
