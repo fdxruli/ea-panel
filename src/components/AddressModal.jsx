@@ -25,8 +25,8 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
             });
             setShouldSave(true);
         } else {
-             setFormData({ label: 'Casa', address_reference: '', coords: null });
-             setShouldSave(true);
+            setFormData({ label: 'Casa', address_reference: '', coords: null });
+            setShouldSave(true);
         }
     }, [address, isOpen]);
 
@@ -47,14 +47,14 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!formData.coords) {
             showAlert("Por favor, selecciona una ubicación en el mapa.");
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         try {
             // 🔧 CAMBIO CRÍTICO: Simplificar y dejar que CheckoutModal maneje la DB
             const addressData = {
@@ -63,15 +63,15 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                 latitude: formData.coords.lat,
                 longitude: formData.coords.lng
             };
-            
+
             const savePermanently = showSaveOption ? shouldSave : true;
-            
+
             // 🔧 CAMBIO CRÍTICO: Esperar a que termine onSave
             await onSave(addressData, savePermanently, address?.id);
-            
+
             // Solo cerrar si todo salió bien
             onClose();
-            
+
         } catch (error) {
             console.error('[AddressModal] Error:', error);
             showAlert(`Error al procesar la dirección: ${error.message}`);
@@ -81,7 +81,7 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
     };
 
     if (!isOpen) return null;
-    
+
     const mapInitialPosition = address ? { lat: address.latitude, lng: address.longitude } : null;
 
     return (
@@ -90,55 +90,57 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
             if (!isSubmitting) onClose();
         }}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button 
-                    onClick={onClose} 
+                <button
+                    onClick={onClose}
                     className={styles.closeButton}
                     disabled={isSubmitting}
                 >
                     ×
                 </button>
-                
+
                 <h2>{address ? 'Editar Dirección' : 'Nueva Dirección'}</h2>
+
                 
+                    <button
+                        type="button"
+                        onClick={handleAutoLocation}
+                        className={styles.primaryGpsButton} // Usa un CSS llamativo (ej. verde, icono grande, padding ancho)
+                        disabled={isSubmitting}
+                    >
+                        Buscar mi ubicación actual por GPS
+                    </button>
+                
+
                 <div className={styles.contentWrapper}>
                     <div className={styles.mapContainer}>
-                       <ClientOnly>
-                           <DynamicMapPicker
+                        <ClientOnly>
+                            <DynamicMapPicker
                                 ref={mapPickerRef}
                                 onLocationSelect={handleLocationSelect}
                                 initialPosition={mapInitialPosition}
-                           />
-                       </ClientOnly>
+                            />
+                        </ClientOnly>
                     </div>
 
                     <form onSubmit={handleSubmit} className={styles.form}>
-                        <button 
-                            type="button" 
-                            onClick={handleAutoLocation} 
-                            className={styles.locationButton}
-                            disabled={isSubmitting}
-                        >
-                            Ubicarme automáticamente
-                        </button>
-
                         <label htmlFor="label">Etiqueta (ej: Casa, Oficina):</label>
-                        <input 
-                            id="label" 
-                            name="label" 
-                            type="text" 
-                            value={formData.label} 
-                            onChange={handleChange} 
-                            required 
+                        <input
+                            id="label"
+                            name="label"
+                            type="text"
+                            value={formData.label}
+                            onChange={handleChange}
+                            required
                             disabled={isSubmitting}
                             maxLength={50}
                         />
 
                         <label htmlFor="address_reference">Referencia (ej: portón rojo):</label>
-                        <input 
-                            id="address_reference" 
-                            name="address_reference" 
-                            type="text" 
-                            value={formData.address_reference} 
+                        <input
+                            id="address_reference"
+                            name="address_reference"
+                            type="text"
+                            value={formData.address_reference}
                             onChange={handleChange}
                             disabled={isSubmitting}
                             maxLength={200}
@@ -158,13 +160,18 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
                                 </label>
                             </div>
                         )}
-
-                        <button 
-                            type="submit" 
-                            disabled={isSubmitting || !formData.coords} 
-                            className={styles.saveButton}
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || !formData.coords}
+                            className={`${styles.saveButton} ${!formData.coords ? styles.disabledAction : ''}`}
                         >
-                            {isSubmitting ? 'Procesando...' : (address ? 'Guardar Cambios' : 'Usar esta Dirección')}
+                            {isSubmitting
+                                ? 'Procesando...'
+                                : address
+                                    ? 'Guardar Cambios'
+                                    : !formData.coords
+                                        ? 'Arrastra el pin o usa GPS' // Instrucción clara en el botón bloqueado
+                                        : 'Confirmar esta Dirección'}
                         </button>
                     </form>
                 </div>

@@ -55,10 +55,12 @@ const MapPicker = forwardRef(({ onLocationSelect, initialPosition, isDraggable =
   });
 
   useEffect(() => {
-    if (onLocationSelect && !initialPosition) {
-      onLocationSelect(defaultCenter);
+    // Si es una dirección nueva (!initialPosition), NO envíes nada todavía.
+    // Solo envía si ya existía una posición guardada previamente.
+    if (onLocationSelect && initialPosition) {
+      onLocationSelect(initialPosition);
     }
-  }, []);
+  }, [initialPosition, onLocationSelect]);
   
   const onPolygonLoad = useCallback(polygon => {
     polygonRef.current = polygon;

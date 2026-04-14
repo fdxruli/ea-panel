@@ -11,7 +11,7 @@
   justify-content: center;
   align-items: center;
   /* 👇 CAMBIO IMPORTANTE: */
-  z-index: 3000; /* Subimos de 1000 a 3000 para superar al Navbar (1000) y Toasts (2100) */
+  z-index: 3500; /* Above checkout (2000) but below alert (10000) */
   padding: 1rem;
   backdrop-filter: blur(2px);
 }
@@ -191,4 +191,52 @@
   .mapContainer {
     height: 250px;
   }
+}
+
+/* Botón principal de GPS flotando arriba del mapa */
+.primaryGpsButton {
+    width: 100%;
+    padding: 16px;
+    background-color: #2563eb; /* Azul dominante, cámbialo al color primario de tu marca si prefieres */
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Interacción táctil/mouse */
+.primaryGpsButton:hover:not(:disabled) {
+    background-color: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+.primaryGpsButton:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Estado bloqueado para evitar clics dobles mientras procesa */
+.primaryGpsButton:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+    opacity: 0.7;
+}
+
+/* Clase auxiliar para el botón final de Guardar cuando aún no hay coordenadas */
+.disabledAction {
+    background-color: #e5e7eb !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+    border: 1px dashed #9ca3af !important;
+    box-shadow: none !important;
 }
