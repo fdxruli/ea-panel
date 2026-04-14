@@ -277,10 +277,10 @@ export default function MyOrders() {
     const renderContent = () => {
         if (!phone) return <AuthPrompt />;
         if (loading) return <LoadingSpinner />;
-        if (error) return <div className={styles.prompt}><h2>Error Inesperado</h2><p>No pudimos cargar tus datos.</p></div>;
         if (visibilitySettings.my_orders_page === false) return <div className={styles.prompt}><h2>Sección no disponible</h2><p>Esta sección está temporalmente desactivada.</p></div>;
         if (!customer) return <div className={styles.prompt}><h2>¡Bienvenido!</h2><p>Completa tu perfil para que podamos registrar tus pedidos.</p><button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>Completar mi perfil</button></div>;
 
+        // Network error fallback: show stale data with a warning banner
         return (
             <>
                 {orders.length > 0 ? (
