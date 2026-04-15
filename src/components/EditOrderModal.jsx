@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react'; // Agregamos useRef
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import styles from './EditOrderModal.module.css';
 import LoadingSpinner from './LoadingSpinner';
@@ -7,11 +7,11 @@ import ImageWithFallback from './ImageWithFallback';
 import DeliveryInfoModal from './DeliveryInfoModal';
 
 const TrashIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
 );
-const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
+const MapPinIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
 
-// Función auxiliar para fecha local (Misma corrección anterior)
 const getLocalYYYYMMDD = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -37,13 +37,10 @@ const formatTimeForInput = (isoString) => {
     } catch (e) { return ''; }
 };
 
-// --- HELPER PARA DETECTAR CAMBIOS EN PRODUCTOS ---
-// Genera una "firma" única de los items para saber si cambiaron
 const getItemsSignature = (items) => {
     if (!items || items.length === 0) return '';
-    // Ordenamos y concatenamos ID-CANTIDAD-PRECIO para comparar
     return items
-        .map(i => `${i.product_id || i.id}-${i.quantity}-${i.price}`)
+        .map(i => `${i.product_id}-${i.quantity}-${i.price}`)
         .sort()
         .join('|');
 };
@@ -69,7 +66,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     const [scheduleDate, setScheduleDate] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
 
-    // Estado para guardar la "firma" original de los items
     const [originalItemsSignature, setOriginalItemsSignature] = useState('');
 
     useEffect(() => {
@@ -84,7 +80,10 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 if (productsRes.error) throw productsRes.error;
                 if (addressesRes.error) throw addressesRes.error;
 
-                setAllProducts(productsRes.data || []);
+                setAllProducts((productsRes.data || []).filter(p => {
+                    return p.id && p.name && p.price !== null && p.price !== undefined;
+                }));
+
                 setCustomerAddresses(addressesRes.data || []);
 
                 const defaultAddress = addressesRes.data.find(a => a.is_default) || addressesRes.data[0];
@@ -93,15 +92,16 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 setInitialAddressId(currentAddressId);
 
                 const initialItems = order.order_items.map(item => ({
-                    ...item.products,
-                    original_item_id: item.id,
-                    product_id: item.product_id, // Importante: asegurar este ID
+                    product_id: item.product_id,
+                    id: item.product_id,
+                    name: item.products?.name || 'Producto Desconocido',
+                    price: Number(item.price) || 0,
+                    image_url: item.products?.image_url || '',
                     quantity: item.quantity,
-                    price: item.price,
+                    original_item_id: item.id,
                 }));
 
                 setOrderItems(initialItems);
-                // Guardamos la firma inicial para comparar después
                 setOriginalItemsSignature(getItemsSignature(initialItems));
 
                 setScheduleDate(formatDateForInput(order.scheduled_for));
@@ -121,7 +121,10 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     }, [order, onClose, showAlert]);
 
     useEffect(() => {
-        const newTotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const newTotal = orderItems.reduce((sum, item) => {
+            const price = item.price || 0;
+            return sum + (price * item.quantity);
+        }, 0);
         setTotal(newTotal);
     }, [orderItems]);
 
@@ -134,39 +137,48 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             });
             setIsDeliveryModalOpen(true);
         } else {
-             showAlert("No se encontró la dirección o los datos del cliente.");
+            showAlert("No se encontró la dirección o los datos del cliente.");
         }
     };
 
     const updateQuantity = (productId, newQuantity) => {
-         const numQuantity = parseInt(newQuantity, 10);
+        const numQuantity = parseInt(newQuantity, 10);
         if (isNaN(numQuantity) || numQuantity <= 0) {
             removeItem(productId);
             return;
-        };
+        }
         setOrderItems(prevItems => prevItems.map(item =>
-            item.id === productId ? { ...item, quantity: numQuantity } : item
+            item.product_id === productId ? { ...item, quantity: numQuantity } : item
         ));
     };
 
     const removeItem = (productId) => {
-         setOrderItems(prevItems => prevItems.filter(item => item.id !== productId));
+        setOrderItems(prevItems => prevItems.filter(item => item.product_id !== productId));
     };
 
     const addProduct = (product) => {
-         const existingItem = orderItems.find(item => item.id === product.id);
+        const existingItem = orderItems.find(item => item.product_id === product.id);
         if (existingItem) {
             setOrderItems(prevItems =>
                 prevItems.map(item =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                    item.product_id === product.id
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
                 )
             );
         } else {
-            // Aseguramos que product_id se guarde correctamente
-            setOrderItems(prevItems => [...prevItems, { ...product, quantity: 1, product_id: product.id }]);
-            showAlert(`${product.name} añadido al pedido.`);
+            setOrderItems(prevItems => [...prevItems, {
+                product_id: product.id,
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image_url: product.image_url,
+                quantity: 1,
+            }]);
+            showAlert(`${product.name} añadido al pedido.`, 'success');
         }
-        setActiveTab('current');
+        // En móvil regresamos a la pestaña actual después de añadir
+        if (window.innerWidth < 768) setActiveTab('current');
     };
 
     const handleUpdateOrder = async () => {
@@ -175,7 +187,6 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             return;
         }
 
-        // --- VALIDACIÓN FECHA/HORA (Misma lógica corregida) ---
         let scheduledTimestamp = null;
         if (scheduleDate || scheduleTime) {
             if (!scheduleDate || !scheduleTime) {
@@ -203,58 +214,40 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
         setIsSubmitting(true);
         try {
-            // 1. Actualizar dirección si cambió
             if (selectedAddressId && selectedAddressId !== initialAddressId) {
                 await supabase.from('customer_addresses').update({ is_default: false }).eq('customer_id', order.customer_id);
                 await supabase.from('customer_addresses').update({ is_default: true }).eq('id', selectedAddressId);
                 setInitialAddressId(selectedAddressId);
             }
 
-            // 2. DETECCIÓN INTELIGENTE DE CAMBIOS EN PRODUCTOS
             const currentSignature = getItemsSignature(orderItems);
             const itemsChanged = currentSignature !== originalItemsSignature;
 
             if (itemsChanged) {
-                console.log('📦 Cambios detectados en productos. Actualizando items...');
-
-                // Borrar items anteriores
                 await supabase.from('order_items').delete().eq('order_id', order.id);
-
-                // Preparar nuevos items con protección de IDs
                 const newOrderItems = orderItems.map(item => {
-                    const finalProductId = item.product_id || item.id;
-                    if (!finalProductId) {
-                         throw new Error(`Error de integridad: Producto sin ID detectado (${item.name})`);
-                    }
+                    if (!item.product_id) throw new Error(`Error de integridad: Producto sin ID detectado (${item.name})`);
                     return {
                         order_id: order.id,
-                        product_id: finalProductId,
+                        product_id: item.product_id,
                         quantity: item.quantity,
                         price: item.price,
                     };
                 });
-
-                // Insertar nuevos items
                 const { error: insertError } = await supabase.from('order_items').insert(newOrderItems);
                 if (insertError) throw insertError;
-
-            } else {
-                console.log('⚡ Sin cambios en productos. Saltando actualización de items.');
             }
 
-            // 3. Actualizar datos de la cabecera (Total y Horario)
-            // Siempre actualizamos esto por si cambió el horario o el total
             await supabase.from('orders').update({
                 total_amount: total,
                 scheduled_for: scheduledTimestamp
             }).eq('id', order.id);
 
-            showAlert("¡Pedido actualizado con éxito!", 'success'); // Agregado tipo success
+            showAlert("¡Pedido actualizado con éxito!", 'success');
             onOrderUpdated();
             onClose();
 
         } catch (error) {
-            console.error("Error al actualizar el pedido:", error);
             showAlert(`Error al actualizar: ${error.message}`);
         } finally {
             setIsSubmitting(false);
@@ -262,11 +255,12 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
     };
 
     const availableProducts = useMemo(() => {
-        const currentIds = new Set(orderItems.map(i => i.id));
+        const currentIds = new Set(orderItems.map(i => i.product_id));
         return allProducts
-            .filter(p => !currentIds.has(p.id))
-            .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            .filter(p => !currentIds.has(p.id) && p.price != null)
+            .filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [allProducts, orderItems, searchTerm]);
+
 
     return (
         <>
@@ -279,99 +273,100 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
                     {loading ? <LoadingSpinner /> : (
                         <>
-                             <div className={styles.deliveryInfoSection}>
-                                <label htmlFor="address-select">Dirección de Entrega</label>
-                                <div className={styles.deliveryInfoControls}>
-                                    <select
-                                        id="address-select"
-                                        value={selectedAddressId}
-                                        onChange={(e) => setSelectedAddressId(e.target.value)}
-                                        disabled={customerAddresses.length === 0}
-                                    >
-                                        {customerAddresses.length > 0 ? (
-                                            customerAddresses.map(addr => (
-                                                <option key={addr.id} value={addr.id}>
-                                                    {addr.label} - {addr.address_reference || 'Sin referencia'}
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <option value="">El cliente no tiene direcciones.</option>
-                                        )}
-                                    </select>
-                                    <button type="button" onClick={handleShowDeliveryInfo} className={styles.viewAddressButton} disabled={!selectedAddressId}>
-                                        Ver Mapa
-                                    </button>
+                            <div className={styles.infoCardsContainer}>
+                                <div className={styles.infoCard}>
+                                    <label htmlFor="address-select"><MapPinIcon /> Dirección</label>
+                                    <div className={styles.deliveryInfoControls}>
+                                        <select
+                                            id="address-select"
+                                            value={selectedAddressId}
+                                            onChange={(e) => setSelectedAddressId(e.target.value)}
+                                            disabled={customerAddresses.length === 0}
+                                        >
+                                            {customerAddresses.length > 0 ? (
+                                                customerAddresses.map(addr => (
+                                                    <option key={addr.id} value={addr.id}>
+                                                        {addr.label} - {addr.address_reference || 'Sin ref'}
+                                                    </option>
+                                                ))
+                                            ) : (
+                                                <option value="">Sin direcciones</option>
+                                            )}
+                                        </select>
+                                        <button type="button" onClick={handleShowDeliveryInfo} className={styles.viewAddressButton} disabled={!selectedAddressId}>
+                                            Mapa
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className={styles.scheduleSection}>
-                                <label><ClockIcon/> Programar Entrega (Opcional)</label>
-                                <div className={styles.scheduleInputs}>
-                                    <input
-                                        type="date"
-                                        value={scheduleDate}
-                                        onChange={e => setScheduleDate(e.target.value)}
-                                        min={getLocalYYYYMMDD(new Date())}
-                                        aria-label="Fecha de programación"
-                                    />
-                                    <input
-                                        type="time"
-                                        value={scheduleTime}
-                                        onChange={e => setScheduleTime(e.target.value)}
-                                        aria-label="Hora de programación"
-                                    />
+                                <div className={styles.infoCard}>
+                                    <label><ClockIcon /> Programación</label>
+                                    <div className={styles.scheduleInputs}>
+                                        <input
+                                            type="date"
+                                            value={scheduleDate}
+                                            onChange={e => setScheduleDate(e.target.value)}
+                                            min={getLocalYYYYMMDD(new Date())}
+                                        />
+                                        <input
+                                            type="time"
+                                            value={scheduleTime}
+                                            onChange={e => setScheduleTime(e.target.value)}
+                                        />
+                                    </div>
+                                    {(scheduleDate || scheduleTime) && (
+                                        <button type="button" onClick={() => { setScheduleDate(''); setScheduleTime(''); }} className={styles.clearScheduleButton}>
+                                            Quitar programación
+                                        </button>
+                                    )}
                                 </div>
-                                {(scheduleDate || scheduleTime) && (
-                                     <button type="button" onClick={() => { setScheduleDate(''); setScheduleTime(''); }} className={styles.clearScheduleButton}>
-                                         Limpiar Programación
-                                     </button>
-                                )}
                             </div>
 
                             <div className={styles.tabs}>
                                 <button onClick={() => setActiveTab('current')} className={activeTab === 'current' ? styles.active : ''}>
-                                    Pedido Actual ({orderItems.length})
+                                    Detalle ({orderItems.length})
                                 </button>
                                 <button onClick={() => setActiveTab('add')} className={activeTab === 'add' ? styles.active : ''}>
-                                    Añadir Productos
+                                    + Añadir
                                 </button>
                             </div>
-                            <div className={`${styles.contentBody}`}>
+
+                            <div className={styles.contentBody}>
                                 <div className={styles.itemsList}>
                                     {orderItems.length > 0 ? orderItems.map(item => (
                                         <div key={item.id || item.original_item_id} className={styles.cartItem}>
                                             <ImageWithFallback src={item.image_url || 'https://placehold.co/80'} alt={item.name} />
                                             <div className={styles.itemInfo}>
                                                 <span className={styles.itemName}>{item.name}</span>
-                                                <span className={styles.itemPrice}>${item.price.toFixed(2)}</span>
+                                                <span className={styles.itemPrice}>${(item.price || 0).toFixed(2)}</span>
                                             </div>
                                             <div className={styles.itemActions}>
                                                 {item.quantity <= 1 ? (
-                                                    <button onClick={() => removeItem(item.id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
+                                                    <button onClick={() => removeItem(item.product_id)} className={`${styles.quantityButton} ${styles.deleteButton}`}>
                                                         <TrashIcon />
                                                     </button>
                                                 ) : (
-                                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className={styles.quantityButton}>-</button>
+                                                    <button onClick={() => updateQuantity(item.product_id, item.quantity - 1)} className={styles.quantityButton}>-</button>
                                                 )}
                                                 <span className={styles.quantityDisplay}>{item.quantity}</span>
-                                                <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className={styles.quantityButton}>+</button>
+                                                <button onClick={() => updateQuantity(item.product_id, item.quantity + 1)} className={styles.quantityButton}>+</button>
                                             </div>
                                         </div>
-                                    )) : <p className={styles.emptyMessage}>Añade productos al pedido.</p>}
+                                    )) : <p className={styles.emptyMessage}>El pedido está vacío.</p>}
                                 </div>
 
                                 <div className={styles.addProductSection}>
-                                    <input type="text" placeholder="Buscar producto..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
+                                    <input type="text" placeholder="Buscar producto para añadir..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className={styles.searchInput} />
                                     <div className={styles.productList}>
                                         {availableProducts.length > 0 ? availableProducts.map(product => (
                                             <div key={product.id} className={styles.productCard} onClick={() => addProduct(product)} role="button">
-                                                <ImageWithFallback src={product.image_url || 'https://placehold.co/150'} alt={product.name}/>
+                                                <ImageWithFallback src={product.image_url || 'https://placehold.co/150'} alt={product.name} />
                                                 <div className={styles.productInfo}>
                                                     <span>{product.name}</span>
-                                                    <strong>${product.price.toFixed(2)}</strong>
+                                                    <strong>${(product.price || 0).toFixed(2)}</strong>
                                                 </div>
                                             </div>
-                                        )) : <p className={styles.emptyMessage}>No hay más productos disponibles o que coincidan.</p>
+                                        )) : <p className={styles.emptyMessage}>No hay productos disponibles.</p>
                                         }
                                     </div>
                                 </div>
@@ -379,11 +374,11 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
                             <div className={styles.footer}>
                                 <div className={styles.totalContainer}>
-                                    <span>Total</span>
+                                    <span>Total Pedido</span>
                                     <strong>${total.toFixed(2)}</strong>
                                 </div>
                                 <button onClick={handleUpdateOrder} disabled={isSubmitting} className={styles.updateButton}>
-                                    {isSubmitting ? 'Actualizando...' : 'Guardar Cambios'}
+                                    {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
                                 </button>
                             </div>
                         </>
