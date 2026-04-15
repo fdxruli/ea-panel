@@ -96,7 +96,7 @@
 
 .infoSection h4 {
     margin: 0 0 0.75rem 0;
-    color: var(--text-primary); 
+    color: var(--text-primary);
     font-size: 1rem;
     font-weight: 600;
     border-bottom: 1px solid var(--border-color);
@@ -155,6 +155,19 @@
 }
 .scheduledTime strong {
     color: var(--text-primary);
+}
+
+.orderNotes {
+    background-color: rgba(251, 191, 36, 0.1);
+    color: var(--text-primary);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-left: 3px solid var(--color-warning, #f59e0b);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
 }
 
 

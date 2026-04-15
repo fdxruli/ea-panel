@@ -86,6 +86,15 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
           </div>
         )}
 
+        {order.notes && (
+          <div className={styles.infoSection}>
+            <h4>Notas</h4>
+            <p className={styles.orderNotes}>
+              {order.notes}
+            </p>
+          </div>
+        )}
+
         <div className={styles.infoSection}>
           <h4>Productos</h4>
           <ul className={styles.productsList}>
@@ -254,11 +263,12 @@ export default function Orders() {
           status,
           total_amount,
           scheduled_for,
+          notes,
           created_at,
           updated_at,
           cancellation_reason,
           customers!inner(id, name, phone),
-          order_items(id, quantity, price, products(name))
+          order_items(id, product_id, quantity, price, products(id, name, image_url))
       `, { count: 'exact' });
 
       // 1. Filtrado por Estado en el Servidor
@@ -381,24 +391,24 @@ export default function Orders() {
 
   // Handler de confirmación de cancelación
   const handleCancelConfirm = useCallback(async (reason) => {
-  if (!cancellingOrderId) return;
+    if (!cancellingOrderId) return;
 
-  try {
-    // Reemplazar la actualización directa por una llamada RPC atómica
-    const { error } = await supabase.rpc('cancel_order_and_restore_stock', {
-      p_order_id: cancellingOrderId,
-      p_reason: reason || 'Cancelado por administrador.'
-    });
+    try {
+      // Reemplazar la actualización directa por una llamada RPC atómica
+      const { error } = await supabase.rpc('cancel_order_and_restore_stock', {
+        p_order_id: cancellingOrderId,
+        p_reason: reason || 'Cancelado por administrador.'
+      });
 
-    if (error) throw error;
-    setCancellingOrderId(null);
+      if (error) throw error;
+      setCancellingOrderId(null);
 
-    // El realtime de Supabase (el evento UPDATE) se encargará de actualizar la UI
-  } catch (error) {
-    console.error('Error cancelling order:', error);
-    alert('Error al cancelar el pedido y restaurar stock. Revisa tu conexión.');
-  }
-}, [cancellingOrderId]);
+      // El realtime de Supabase (el evento UPDATE) se encargará de actualizar la UI
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert('Error al cancelar el pedido y restaurar stock. Revisa tu conexión.');
+    }
+  }, [cancellingOrderId]);
 
   // ✅ OPTIMIZACIÓN: Filtrado en el cliente con búsqueda debounced
   const filteredOrders = useMemo(() => {

@@ -177,6 +177,13 @@ export default function MyOrders() {
                 ))}
             </div>
 
+            {order.notes && (
+                <div className={styles.orderNotes}>
+                    <strong>Notas:</strong>
+                    <p>{order.notes}</p>
+                </div>
+            )}
+
             {order.status === 'cancelado' && order.cancellation_reason && (
                 <div className={styles.cancellationReason}>
                     <strong>Motivo de cancelación:</strong>
