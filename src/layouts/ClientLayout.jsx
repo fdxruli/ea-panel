@@ -65,8 +65,8 @@ export default function ClientLayout() {
   const { settings, loading: settingsLoading } = useSettings();
   const { isOpen: isBusinessOpen, loading: hoursLoading } = useBusinessHours();
 
-  const maintenanceSetting = settings['maintenance_mode'] || { enabled: false };
-  const visibilitySettings = settings['client_visibility'] || {};
+  const maintenanceSetting = settings.maintenance_mode || { enabled: false };
+  const visibilitySettings = settings.client_visibility || {};
   const isMaintenanceMode = maintenanceSetting?.enabled === true;
   const maintenanceMessage = maintenanceSetting?.message;
 
@@ -90,7 +90,6 @@ export default function ClientLayout() {
       setIsFirstAddressRequired(false);
     }
   }, [isFirstAddressRequired, customer, setIsFirstAddressRequired]);
-
 
 
   const handleSaveFirstAddress = async (addressData) => {

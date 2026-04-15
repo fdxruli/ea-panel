@@ -23,6 +23,7 @@ import { GUEST_CUSTOMER_ID } from '../../config/constantes';
  * @param {object|null} params.customer
  * @param {object|null} params.selectedAddress
  * @param {string|null} params.scheduledTime
+ * @param {string|null} params.orderNotes
  * @param {Function} params.showAlert
  * @param {Function} params.clearCart
  * @param {Function} params.closeCart
@@ -46,6 +47,7 @@ export const useOrderSubmission = ({
   customer,
   selectedAddress,
   scheduledTime,
+  orderNotes,
   showAlert,
   clearCart,
   closeCart,
@@ -110,6 +112,7 @@ export const useOrderSubmission = ({
           totalAmount: total,
           scheduledFor: !isGuest && scheduledTime ? scheduledTime : null,
           cartItems,
+          notes: orderNotes?.trim() || null,
         });
 
         if (!ok || !order) {
@@ -133,6 +136,7 @@ export const useOrderSubmission = ({
           total,
           discount: discount ? { code: discount.code, amount: discount.amount } : null,
           scheduledISO: scheduledTime,
+          notes: orderNotes,
           customer,
           address: selectedAddress,
         });
@@ -187,6 +191,7 @@ export const useOrderSubmission = ({
       isNetworkBlocked,
       isSubmitting,
       onClose,
+      orderNotes,
       refetchUserData,
       scheduledTime,
       selectedAddress,

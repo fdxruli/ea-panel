@@ -299,7 +299,7 @@ export default function Products() {
 
             // Opcional: Refrescar la lista de productos en el estado local si es necesario
             // (Aunque la invalidación de caché debería manejarlo en la próxima carga)
-            // refetchProducts(); 
+            // refetchProducts();
 
         } catch (error) {
             console.error('Error al guardar el producto y su receta:', error);

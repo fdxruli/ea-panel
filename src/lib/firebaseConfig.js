@@ -59,7 +59,7 @@ export const requestFCMToken = async () => {
 // Listener para mensajes en primer plano
 export const onForegroundMessage = (callback) => {
   if (!messaging) return;
-  
+
   onMessage(messaging, (payload) => {
     console.log('📨 Mensaje en primer plano:', payload);
     callback(payload);

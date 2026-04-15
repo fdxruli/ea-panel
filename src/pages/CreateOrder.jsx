@@ -1,6 +1,6 @@
 /* src/pages/CreateOrder.jsx (Migrado con Clientes/Productos Básicos) */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import styles from './CreateOrder.module.css';
@@ -86,6 +86,7 @@ export default function CreateOrder() {
     const { hasPermission } = useAdminAuth();
     const [step, setStep] = useState(1);
     const [newCustomerCountryCode, setNewCustomerCountryCode] = useState('+52');
+    const [orderNotes, setOrderNotes] = useState('');
 
     const {
         data: allProductsData,
@@ -271,7 +272,7 @@ export default function CreateOrder() {
 
     const updateQuantity = useCallback((productId, newQuantityStr) => {
         if (!canEdit) return;
-        const newQuantity = parseInt(newQuantityStr, 10);
+        const newQuantity = parseInt(newQuantityStr);
         if (isNaN(newQuantity) || newQuantity <= 0) {
             setCart(prev => prev.filter(item => item.id !== productId));
         } else {
@@ -320,12 +321,20 @@ export default function CreateOrder() {
                 cost: item.cost // El 'cost' se guarda al crear el producto
             }));
 
+            console.log('Debug notas:', {
+                orderNotes,
+                tipo: typeof orderNotes,
+                largo: orderNotes?.length || 0,
+                trimmed: orderNotes?.trim() || 'VACIO',
+                valor: JSON.stringify(orderNotes)
+            });
             // 2. Llamar a la RPC en lugar de .insert()
             const { data: orderData, error: rpcError } = await supabase.rpc('create_order_with_stock_check', {
                 p_customer_id: selectedCustomer.id,
                 p_total_amount: cartTotal,
                 p_scheduled_for: scheduledTimestamp,
-                p_cart_items: p_cart_items
+                p_cart_items: p_cart_items,
+                p_notes: DOMPurify.sanitize(orderNotes.trim()) || null,
             });
 
             if (rpcError) {
@@ -341,11 +350,11 @@ export default function CreateOrder() {
 
             // 3. El resto de la lógica (notificación por WhatsApp)
             let message = `Te confirmamos tu pedido en *ENTRE ALAS*:\n\n*Pedido N°: ${newOrder.order_code}*\n\n*Detalle del pedido:*\n`;
-            
-            cart.forEach(item => { 
+
+            cart.forEach(item => {
                 const subtotal = item.quantity * item.price;
                 message += `• ${item.name}\n`;
-                message += `  ${item.quantity} x $${item.price.toFixed(2)} = $${subtotal.toFixed(2)}\n`; 
+                message += `  ${item.quantity} x $${item.price.toFixed(2)} = $${subtotal.toFixed(2)}\n`;
             });
 
             // Cálculo de la comisión de Clip (3.6% + 16% IVA = 4.176%)
@@ -389,6 +398,7 @@ export default function CreateOrder() {
                     setProductsWithPrices([]);
                     setScheduleDate('');
                     setScheduleTime('');
+                    setOrderNotes('');
                 }
             );
 
@@ -402,7 +412,7 @@ export default function CreateOrder() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, showAlert, categories]); // Asegúrate de que 'categories' esté si 'allProducts' depende de él.
+    }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, orderNotes, showAlert]);
 
     // --- (PASO E) AJUSTAR LOADING ---
     if (loadingCustomers || loadingProducts || loadingCategories) return <LoadingSpinner />;
@@ -570,6 +580,17 @@ export default function CreateOrder() {
                         {/* PROGRAMACIÓN (Sin cambios) */}
                         {selectedCustomer && cart.length > 0 && canEdit && (
                             <div className={styles.scheduleSection}>
+                                <div className={styles.notesSection}>
+                                    <label htmlFor="order-notes">Notas del Pedido (Opcional)</label>
+                                    <textarea
+                                        id="order-notes"
+                                        placeholder="Ej: Sin cebolla, entregar en la puerta, horario después de las 18:00..."
+                                        value={orderNotes}
+                                        onChange={(e) => setOrderNotes(e.target.value)}
+                                        maxLength="500"
+                                        rows="3"
+                                    />
+                                </div>
                                 <h4><ClockIcon /> Programar Entrega (Opcional)</h4>
                                 <div className={styles.scheduleInputs}>
                                     <div className={styles.formGroup}>

@@ -95,11 +95,11 @@ export default function Dashboard() {
         const end = new Date();
         const start = new Date();
         start.setDate(start.getDate() - 30);
-        return { 
+        return {
             startDateStr: start.toISOString().split('T')[0],
             endDateStr: end.toISOString().split('T')[0],
-            startIso: start.toISOString(), 
-            endIso: end.toISOString() 
+            startIso: start.toISOString(),
+            endIso: end.toISOString()
         };
     };
 
@@ -127,7 +127,7 @@ export default function Dashboard() {
         isError,
         invalidate
     } = useAdminCache(cacheKey, fetchDashboardStats, {
-        ttl: 60 * 1000, 
+        ttl: 60 * 1000,
         staleWhileRevalidate: true
     });
 

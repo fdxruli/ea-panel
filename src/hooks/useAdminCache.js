@@ -45,7 +45,7 @@ export const useAdminCache = (key, fetcher, options = {}) => {
     const fetcherRef = useRef(fetcher);
     const onSuccessRef = useRef(onSuccess);
     const onErrorRef = useRef(onError);
-    
+
     useEffect(() => {
         fetcherRef.current = fetcher;
         onSuccessRef.current = onSuccess;
@@ -62,21 +62,21 @@ export const useAdminCache = (key, fetcher, options = {}) => {
         setIsLoading(true);
         setIsError(false);
         setError(null);
-        
+
         try {
             // 1. Consultar caché
             const cachedEntry = getCached(key, { skipExpiry: staleWhileRevalidate });
 
             if (cachedEntry && !refetchOnMount && !isRefetch) {
                 // 2. Usar caché
-                
+
                 if (cachedEntry.isExpired && staleWhileRevalidate) {
                     // 2a. Stale-While-Revalidate: Devolver dato "viejo" y hacer refetch
                     console.log(`[useCache] SWR: Devolviendo datos "stale" para "${key}".`);
                     setData(cachedEntry.data);
                     setIsCached(true);
                     setAge(cachedEntry.age);
-                    
+
                     // Iniciar refetch en background (sin await)
                     handleFetch(key, fetcherRef.current, ttl).then(freshData => {
                         setData(freshData); // Actualizar con datos frescos
@@ -88,7 +88,7 @@ export const useAdminCache = (key, fetcher, options = {}) => {
                         console.warn(`[useCache] SWR: Refetch falló para "${key}".`, err);
                         // No establecemos error, ya que tenemos datos
                     });
-                    
+
                 } else if (!cachedEntry.isExpired) {
                     // 2b. Caché válido
                     console.log(`[useCache] HIT: Usando caché para "${key}".`);
@@ -97,7 +97,7 @@ export const useAdminCache = (key, fetcher, options = {}) => {
                     setAge(cachedEntry.age);
                     onSuccessRef.current?.(cachedEntry.data);
                 }
-                
+
             } else {
                  // 3. No hay caché o se fuerza refetch
                 console.log(`[useCache] MISS: Haciendo fetch para "${key}".`);
@@ -132,7 +132,7 @@ export const useAdminCache = (key, fetcher, options = {}) => {
         }
         return Promise.resolve();
     }, [enabled, executeFetch]);
-    
+
     // Función de invalidación manual
     const manualInvalidate = useCallback(() => {
         invalidate(key);

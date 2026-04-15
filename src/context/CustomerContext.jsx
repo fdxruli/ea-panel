@@ -6,7 +6,7 @@ const CustomerContext = createContext();
 const CUSTOMER_PHONE_KEY = 'customer_phone';
 const CUSTOMER_DATA_KEY = 'customer_data';
 
-// eslint-disable-next-line react-refresh/only-export-components
+
 export const useCustomer = () => useContext(CustomerContext);
 
 const generateUniqueReferralCode = async (name, phone) => {

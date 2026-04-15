@@ -55,7 +55,7 @@ const ReferralSystem = ({ customer }) => {
             <div className={styles.referralStats}>
                 <p><strong>Amigos Invitados:</strong> {customer.referral_count || 0}</p>
             </div>
-            
+
             {/* --- 4. ENVOLVEMOS EL MODAL EN SUSPENSE --- */}
             {isQrModalOpen && (
                 <Suspense fallback={<LoadingSpinner />}>
@@ -234,7 +234,7 @@ export default function MyStuff() {
     const [reviewToDelete, setReviewToDelete] = useState(null);
     const [favoriteToRemove, setFavoriteToRemove] = useState(null);
     const { settings, loading: settingsLoading } = useSettings();
-    const visibilitySettings = settings['client_visibility'] || {};
+    const visibilitySettings = settings.client_visibility || {};
     const loading = userLoading || extrasLoading || settingsLoading;
 
     // --- (HANDLERS SIN CAMBIOS) ---

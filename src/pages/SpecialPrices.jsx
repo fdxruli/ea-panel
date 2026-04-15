@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import SpecialPriceForm from '../components/SpecialPriceForm'; 
+import SpecialPriceForm from '../components/SpecialPriceForm';
 import styles from './SpecialPrices.module.css';
 import ConfirmModal from '../components/ConfirmModal';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -64,10 +64,10 @@ const SpecialPrices = () => {
   const [products, setProducts] = useState([]);
   // 'categories' se sigue fetcheando aquí, pero solo para 'getTargetName'.
   // El formulario (SpecialPriceForm) ya no lo necesita como prop.
-  const [categories, setCategories] = useState([]); 
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingPrice, setEditingPrice] = useState(null);
-  const [isFormVisible, setIsFormVisible] = useState(false); 
+  const [isFormVisible, setIsFormVisible] = useState(false);
   const [priceToDelete, setPriceToDelete] = useState(null);
 
   const canEdit = hasPermission('special-prices.edit');
@@ -136,16 +136,16 @@ const SpecialPrices = () => {
           } else if (payload.eventType === 'UPDATE') {
             setSpecialPrices(prev => prev.map(price =>
               price.id === payload.new.id
-                ? { ...price, ...payload.new } 
+                ? { ...price, ...payload.new }
                 : price
             ));
              if (editingPrice?.id === payload.new.id) {
-               fetchData(); 
+               fetchData();
              }
           } else if (payload.eventType === 'DELETE') {
             setSpecialPrices(prev => prev.filter(price => price.id !== payload.old.id));
             if (editingPrice?.id === payload.old.id) {
-                 setIsFormVisible(false); 
+                 setIsFormVisible(false);
                  setEditingPrice(null);
              }
           }
@@ -273,19 +273,19 @@ const SpecialPrices = () => {
       </div>
 
       {isFormVisible && (
-        <section className={styles.section}> 
+        <section className={styles.section}>
           <h2>{editingPrice ? 'Editar Promoción' : 'Crear Nueva Promoción'}</h2>
-          
+
           {/* --- (PASO C) ELIMINAR PROP 'categories' --- */}
           <SpecialPriceForm
-            onClose={() => { 
+            onClose={() => {
               setIsFormVisible(false);
               setEditingPrice(null);
             }}
             onSubmit={handleFormSubmit}
             products={products}
             // categories={categories} // <-- ELIMINADO
-            initialData={editingPrice} 
+            initialData={editingPrice}
           />
           {/* --- FIN PASO C --- */}
         </section>
@@ -323,7 +323,7 @@ const SpecialPrices = () => {
                     price={price}
                     canEdit={canEdit}
                     canDelete={canDelete}
-                    onEdit={handleEdit} 
+                    onEdit={handleEdit}
                     onDelete={handleDelete}
                     getTargetName={getTargetName}
                     getAudience={getAudience}

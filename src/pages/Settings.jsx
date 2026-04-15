@@ -56,7 +56,7 @@ const ClientVisibilitySection = memo(({ visibility, onToggle, onSave, disabled, 
           />
         ))}
       </div>
-      
+
       {/* Botón de guardado dentro de la sección */}
       {!disabled && (
         <div className={styles.sectionFooter}>
@@ -76,9 +76,9 @@ const ClientVisibilitySection = memo(({ visibility, onToggle, onSave, disabled, 
 ClientVisibilitySection.displayName = 'ClientVisibilitySection';
 
 // OPTIMIZACIÓN: Componente de modo mantenimiento con su propio botón
-const MaintenanceModeSection = memo(({ 
-  maintenanceMode, 
-  onToggle, 
+const MaintenanceModeSection = memo(({
+  maintenanceMode,
+  onToggle,
   onMessageChange,
   onSave,
   disabled,
@@ -90,7 +90,7 @@ const MaintenanceModeSection = memo(({
       Activa el modo mantenimiento para mostrar un mensaje a los clientes cuando
       el sitio no esté disponible.
     </p>
-    
+
     <ToggleSwitch
       label="Activar Modo Mantenimiento"
       checked={maintenanceMode.enabled}
@@ -114,7 +114,7 @@ const MaintenanceModeSection = memo(({
         />
       </div>
     )}
-    
+
     {/* Botón de guardado dentro de la sección */}
     {!disabled && (
       <div className={styles.sectionFooter}>
@@ -136,16 +136,16 @@ export default function Settings() {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
   const { refetch: refreshSettings } = useSettings();
-  
+
   const [loading, setLoading] = useState(true);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
-  
+
   const [maintenanceMode, setMaintenanceMode] = useState({
     enabled: false,
     message: 'Estamos realizando mejoras en el sitio. Volveremos pronto.'
   });
-  
+
   const [clientVisibility, setClientVisibility] = useState({
     my_orders_page: true,
     my_profile_page: true,

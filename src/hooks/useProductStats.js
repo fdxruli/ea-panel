@@ -34,13 +34,13 @@ const fetchProductStats = async (productId) => {
         .select('quantity, price, orders!inner(status)')
         .eq('product_id', productId)
         .eq('orders.status', 'completado'),
-        
+
       // Reviews del producto
       supabase
         .from('product_reviews')
         .select('rating')
         .eq('product_id', productId),
-        
+
       // Favoritos del producto
       supabase
         .from('customer_favorites')
@@ -73,7 +73,7 @@ const fetchProductStats = async (productId) => {
       },
       error: null
     };
-    
+
   } catch (fallbackError) {
     console.error(`[useProductStats] Error en fallback:`, fallbackError);
     // Retornar stats vacíos en lugar de fallar completamente

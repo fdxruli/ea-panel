@@ -37,6 +37,7 @@ export const buildGuestOrderMessage = ({ orderCode, cartItems, total }) => {
  * @param {number} params.total
  * @param {object|null} params.discount - { code, amount } or null
  * @param {string|null} params.scheduledISO - ISO string or null for "as soon as possible"
+ * @param {string|null} params.notes - Order notes
  * @param {object} params.customer - { name }
  * @param {object|null} params.address - { address_reference } or null
  * @returns {string}
@@ -48,6 +49,7 @@ export const buildCustomerOrderMessage = ({
   total,
   discount,
   scheduledISO,
+  notes,
   customer,
   address,
 }) => {
@@ -71,6 +73,10 @@ export const buildCustomerOrderMessage = ({
     message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
   }
 
+  if (notes?.trim()) {
+    message += `\n\n*Notas del pedido:*\n${notes.trim()}\n`;
+  }
+
   message += `\n*Datos del cliente:*\n*Nombre:* ${customer?.name}\n`;
 
   if (address?.address_reference) {
@@ -91,6 +97,7 @@ export const buildCustomerOrderMessage = ({
  * @param {number} params.total
  * @param {object|null} params.discount
  * @param {string|null} params.scheduledISO
+ * @param {string|null} params.notes
  * @param {object|null} params.customer
  * @param {object|null} params.address
  * @returns {string}
@@ -111,6 +118,7 @@ export const buildOrderMessage = (params) => {
     total: params.total,
     discount: params.discount,
     scheduledISO: params.scheduledISO,
+    notes: params.notes,
     customer: params.customer,
     address: params.address,
   });

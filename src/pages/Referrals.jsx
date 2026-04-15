@@ -227,13 +227,13 @@ export default function Referrals() {
     const { hasPermission } = useAdminAuth();
 
     const [customersWithReferrals, setCustomersWithReferrals] = useState([]);
-    
+
     // --- (PASO B) REEMPLAZAR ESTADO ---
     // const [referralLevels, setReferralLevels] = useState([]); // <-- Eliminado
-    const { 
-        data: referralLevelsData, 
-        isLoading: loadingLevels, 
-        invalidate: invalidateLevels 
+    const {
+        data: referralLevelsData,
+        isLoading: loadingLevels,
+        invalidate: invalidateLevels
     } = useReferralLevelsCache();
     // Corrección para evitar error en null.filter/.sort
     const referralLevels = useMemo(() => referralLevelsData || [], [referralLevelsData]);
@@ -266,7 +266,7 @@ export default function Referrals() {
                 `)
                 .not('referral_code', 'is', null)
                 .order('referral_count', { ascending: false });
-            
+
             // levelsRes (eliminado)
 
             if (customersRes.error) throw customersRes.error;

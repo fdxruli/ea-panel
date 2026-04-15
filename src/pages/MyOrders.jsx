@@ -22,7 +22,7 @@ export default function MyOrders() {
 
     const { customer, orders, loading: userLoading, error, refetch } = useUserData();
     const { settings, loading: settingsLoading } = useSettings();
-    const visibilitySettings = settings['client_visibility'] || {};
+    const visibilitySettings = settings.client_visibility || {};
 
     const [editingOrder, setEditingOrder] = useState(null);
     const [orderToCancel, setOrderToCancel] = useState(null);

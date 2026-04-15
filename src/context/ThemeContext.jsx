@@ -44,7 +44,7 @@ export const ThemeProvider = ({ children }) => {
 
     const value = {
         theme,
-        changeTheme: setTheme 
+        changeTheme: setTheme
     };
 
     return (

@@ -350,7 +350,6 @@ export default function Menu() {
   }, [error, isMissingProductRoute, loading, productSlug, routeSelectedProduct]);
 
 
-
   if (isMissingProductRoute) {
     return (
       <>
@@ -487,9 +486,9 @@ export default function Menu() {
           ) : error ? (
             <div className={`${styles.emptyState} ${styles.errorState}`}>
               <p>Tardó demasiado en cargar. Verifica tu conexión.</p>
-              <button 
-                type="button" 
-                onClick={refetch} 
+              <button
+                type="button"
+                onClick={refetch}
                 className={styles.errorRetryButtonInline}
               >
                 Reintentar

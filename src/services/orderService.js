@@ -16,7 +16,7 @@
  * @returns {{ ok: boolean, order: object|null, error: Error|null }}
  */
 export const createOrder = async (supabase, params) => {
-  const { customerId, totalAmount, scheduledFor, cartItems } = params;
+  const { customerId, totalAmount, scheduledFor, cartItems, notes } = params;
 
   const p_cart_items = cartItems.map((item) => ({
     product_id: item.id,
@@ -30,6 +30,7 @@ export const createOrder = async (supabase, params) => {
     p_total_amount: totalAmount,
     p_scheduled_for: scheduledFor,
     p_cart_items,
+    p_notes: notes || null,
   });
 
   if (error) {

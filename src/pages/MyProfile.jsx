@@ -26,7 +26,7 @@ export default function MyProfile() {
     const { customer, addresses, loading: userLoading, error, refetch, logout } = useUserData();
     const { theme, changeTheme } = useTheme();
     const { settings, loading: settingsLoading } = useSettings();
-    const visibilitySettings = settings['client_visibility'] || {};
+    const visibilitySettings = settings.client_visibility || {};
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -264,8 +264,6 @@ export default function MyProfile() {
                     onClose={() => { setAddressModalOpen(false); setEditingAddress(null); }}
                     onSave={handleSaveAddress}
                     address={editingAddress}
-                    customerId={customer?.id}
-                    showSaveOption={true}
                 />
                 <ConfirmModal isOpen={!!addressToDelete} onClose={() => setAddressToDelete(null)} onConfirm={handleDeleteAddress} title="¿Eliminar Dirección?">
                     Estás a punto de eliminar esta dirección. Esta acción no se puede deshacer.

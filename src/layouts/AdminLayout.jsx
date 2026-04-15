@@ -28,7 +28,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     // Solo debes cerrar el menú automáticamente al navegar si estás en móvil.
-    // Si realmente quieres cerrarlo también en desktop al navegar (mala idea), 
+    // Si realmente quieres cerrarlo también en desktop al navegar (mala idea),
     // al menos ahora no causará un bucle infinito.
     if (!isDesktop) {
       setIsSidebarOpen(false);
@@ -57,7 +57,7 @@ export default function AdminLayout() {
         type="website"
         noindex
       />
-        
+
       <Navbar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       <div className={`container ${!isSidebarOpen && isDesktop ? 'sidebar-closed' : ''}`}>
         {isDesktop && <Sidebar isSidebarOpen={isSidebarOpen} closeSidebar={closeSidebar} />}

@@ -45,11 +45,11 @@ const evictOldestEntry = () => {
             sessionStorage.removeItem(oldestKey);
             return true; // Evicción exitosa
         }
-        
+
     } catch (error) {
          console.error(`[CacheAdmin] Error durante la evicción de caché:`, error);
     }
-    
+
     return false; // No se pudo eliminar nada
 };
 
@@ -82,15 +82,15 @@ export const deserializeFromStorage = (key) => {
     try {
         const item = sessionStorage.getItem(CACHE_PREFIX + key);
         if (!item) return null;
-        
+
         const entry = JSON.parse(item);
-        
+
         // --- MEJORA (PUNTO 3) ---
         // Validación robusta
         if (
-            typeof entry === 'object' && 
-            entry !== null && 
-            'data' in entry && 
+            typeof entry === 'object' &&
+            entry !== null &&
+            'data' in entry &&
             'timestamp' in entry &&
             typeof entry.timestamp === 'number' &&
             entry.timestamp > 0
@@ -98,7 +98,7 @@ export const deserializeFromStorage = (key) => {
             return entry;
         }
         // --- FIN MEJORA ---
-        
+
         console.warn(`[CacheAdmin] La entrada de caché "${key}" está corrupta o tiene un formato inválido. Descartando.`);
         removeStorageItem(key); // Llama a la versión síncrona
         return null;
@@ -123,7 +123,7 @@ export const setStorageItem = async (key, serializedData) => {
         // --- MEJORA (PUNTO 2) ---
         if (error.name === 'QuotaExceededError') {
             console.warn(`[CacheAdmin] sessionStorage está lleno. Intentando limpiar la entrada más antigua...`);
-            
+
             const evicted = evictOldestEntry(); // Síncrono
 
             if (evicted) {
@@ -195,7 +195,7 @@ export const cleanupExpiredEntries = (cache) => {
             nextCache[key] = entry;
         }
     }
-    
+
     if (entriesCleaned > 0) {
          console.log(`[CacheAdmin] Limpieza automática: ${entriesCleaned} entrada(s) expirada(s) eliminada(s).`);
     }
@@ -214,16 +214,16 @@ export const generateKey = (base, params) => {
 
     // Ordenar keys alfabéticamente para crear una clave estable
     const sortedKeys = Object.keys(params).sort();
-    
+
     const sortedParams = sortedKeys
         .map(key => {
             const value = params[key];
-            
+
             // Serializar según tipo para evitar colisiones
             if (value === null) return `${key}=null`;
             if (value === undefined) return `${key}=undefined`;
             if (Array.isArray(value)) return `${key}=[${value.join(',')}]`; // Simple serialización de array
-            
+
             if (typeof value === 'object' && value !== null) {
                 try {
                     return `${key}=${JSON.stringify(value)}`;
@@ -231,11 +231,11 @@ export const generateKey = (base, params) => {
                     return `${key}=[ObjectError]`;
                 }
             }
-                        
+
             return `${key}=${value}`; // Primitivos (string, number, boolean)
         })
         .join(':');
-            
+
     return `${base}:${sortedParams}`;
 };
 // --- FIN MEJORA ---

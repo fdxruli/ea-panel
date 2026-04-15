@@ -90,18 +90,18 @@ export default function TermsAndConditions() {
   // OPTIMIZACIÓN 4: Memoizar función de apertura de modal
   const openModal = useCallback((term = null) => {
     if (!canEdit) return;
-    
+
     if (term) {
       setEditingTerm({ ...term });
     } else {
       const latestVersion = terms.length > 0 ? terms[0].version : 0;
-      setEditingTerm({ 
-        id: null, 
-        version: latestVersion + 1, 
-        content: '' 
+      setEditingTerm({
+        id: null,
+        version: latestVersion + 1,
+        content: ''
       });
     }
-    
+
     setIsModalOpen(true);
   }, [canEdit, terms]);
 
@@ -116,7 +116,7 @@ export default function TermsAndConditions() {
         .eq('id', termToDelete.id);
 
       if (error) throw error;
-      
+
       showAlert('Versión eliminada exitosamente.');
       setTermToDelete(null);
       fetchTerms();
@@ -163,8 +163,8 @@ export default function TermsAndConditions() {
       <div className={styles.header}>
         <h1>Términos y Condiciones</h1>
         {canEdit && (
-          <button 
-            onClick={() => openModal()} 
+          <button
+            onClick={() => openModal()}
             className={styles.addButton}
           >
             + Nueva Versión
@@ -176,8 +176,8 @@ export default function TermsAndConditions() {
         <div className={styles.emptyState}>
           <p>No hay versiones de términos y condiciones publicadas.</p>
           {canEdit && (
-            <button 
-              onClick={() => openModal()} 
+            <button
+              onClick={() => openModal()}
               className={styles.addButton}
             >
               Crear Primera Versión
@@ -194,7 +194,7 @@ export default function TermsAndConditions() {
                   {formatDate(term.published_at)}
                 </span>
               </div>
-              
+
               <div className={styles.termContent}>
                 <p>{term.content}</p>
               </div>
@@ -227,16 +227,16 @@ export default function TermsAndConditions() {
       {/* Modal para editar/crear */}
       {isModalOpen && editingTerm && (
         <div className={styles.modalOverlay} onClick={closeModal}>
-          <div 
-            className={styles.modalContent} 
+          <div
+            className={styles.modalContent}
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.modalHeader}>
               <h2>
                 {editingTerm.id ? 'Editar Versión' : 'Nueva Versión'}
               </h2>
-              <button 
-                onClick={closeModal} 
+              <button
+                onClick={closeModal}
                 className={styles.closeButton}
                 aria-label="Cerrar"
               >
@@ -265,14 +265,14 @@ export default function TermsAndConditions() {
             </div>
 
             <div className={styles.modalFooter}>
-              <button 
-                onClick={closeModal} 
+              <button
+                onClick={closeModal}
                 className={styles.cancelButton}
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleSave} 
+              <button
+                onClick={handleSave}
                 className={styles.saveButton}
               >
                 {editingTerm.id ? 'Guardar Cambios' : 'Crear Versión'}

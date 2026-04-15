@@ -26,7 +26,7 @@ export const exportToCSV = (data, fileName) => {
 
     // Usar las claves del primer objeto como cabeceras
     const headers = Object.keys(data[0]);
-    
+
     // Crear la fila de cabeceras (escapando también las cabeceras)
     const headerRow = headers.map(escapeCSVValue).join(',');
 
@@ -44,7 +44,7 @@ export const exportToCSV = (data, fileName) => {
     // Añadir BOM (Byte Order Mark) para compatibilidad con Excel en Windows (UTF-8)
     const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
     const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
-    
+
     const link = document.createElement('a');
     if (link.download !== undefined) {
         const url = URL.createObjectURL(blob);

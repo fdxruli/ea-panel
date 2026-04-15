@@ -20,7 +20,7 @@ export const AlertProvider = ({ children }) => {
         const handleIDBDegradation = (event) => {
             const { message, tableName } = event.detail || {};
 
-            // Usamos showAlert para notificar al usuario. 
+            // Usamos showAlert para notificar al usuario.
             // Configuramos el tipo como 'error' para que destaque visualmente.
             showAlert(
                 `Problema de almacenamiento detectado en tu dispositivo. La aplicación podría funcionar más lento o perder datos offline. Detalle: ${message}`,

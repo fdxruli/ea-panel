@@ -9,7 +9,7 @@ import ImageWithFallback from '../components/ImageWithFallback';
 import { NETWORK_STATUS } from '../lib/networkState';
 
 // Nota: Ya NO importamos CheckoutModal aquí
-// import CheckoutModal from '../components/CheckoutModal'; 
+// import CheckoutModal from '../components/CheckoutModal';
 
 const TrashIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -39,7 +39,7 @@ export default function Cart({ networkState }) {
 
     // ❌ Ya no necesitamos estado local para el modal
     // const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
-    
+
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
@@ -97,10 +97,10 @@ export default function Cart({ networkState }) {
         if (cartItems.some(item => !item.quantity || item.quantity <= 0)) {
             showAlert("Revisa las cantidades de tus productos."); return;
         }
-        
+
         // ✅ 1. Cerramos el carrito para que no estorbe visualmente
         toggleCart();
-        
+
         // ✅ 2. Abrimos el Checkout Modal GLOBAL (que vive en ClientLayout)
         setCheckoutModalOpen(true);
     };
@@ -203,7 +203,7 @@ export default function Cart({ networkState }) {
                     </>
                 )}
             </div>
-            
+
             {/* ❌ ELIMINADO: Ya no renderizamos el modal localmente */}
         </>
     );

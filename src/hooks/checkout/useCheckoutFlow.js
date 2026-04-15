@@ -89,6 +89,7 @@ export const useCheckoutFlow = ({ networkState, onClose, showAlert }) => {
   const [mode, setMode] = useState('selection');
   const [rememberGuest, setRememberGuest] = useState(false);
   const [isAutoDispatching, setIsAutoDispatching] = useState(false);
+  const [orderNotes, setOrderNotes] = useState('');
   const hasAutoDispatchedRef = useRef(false);
 
   const isGuestPreferenceRemembered =
@@ -122,6 +123,7 @@ export const useCheckoutFlow = ({ networkState, onClose, showAlert }) => {
     customer,
     selectedAddress: addressManager.selectedAddress,
     scheduledTime: scheduling.scheduledTime,
+    orderNotes,
     showAlert,
     clearCart,
     closeCart,
@@ -165,7 +167,7 @@ export const useCheckoutFlow = ({ networkState, onClose, showAlert }) => {
     hasAutoDispatchedRef.current = true;
     setIsAutoDispatching(true);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     submission.handleSubmitOrder(true).finally(() => {
       setIsAutoDispatching(false);
     });
@@ -238,6 +240,10 @@ export const useCheckoutFlow = ({ networkState, onClose, showAlert }) => {
     handleToggleScheduling: scheduling.handleToggleScheduling,
     handleScheduleChange: scheduling.handleScheduleChange,
     validateScheduledTime: scheduling.validateScheduledTime,
+
+    // Order notes
+    orderNotes,
+    setOrderNotes,
 
     // Address manager
     selectedAddress: addressManager.selectedAddress,

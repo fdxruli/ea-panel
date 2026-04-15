@@ -392,7 +392,7 @@ export default function Orders() {
 
     if (error) throw error;
     setCancellingOrderId(null);
-    
+
     // El realtime de Supabase (el evento UPDATE) se encargará de actualizar la UI
   } catch (error) {
     console.error('Error cancelling order:', error);

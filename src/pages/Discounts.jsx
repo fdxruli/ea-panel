@@ -69,7 +69,7 @@ export default function Discounts() {
     const { hasPermission } = useAdminAuth();
 
     const [discounts, setDiscounts] = useState([]);
-    
+
     // Categorías del hook (de la Fase 1)
     const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
     const categories = useMemo(() => categoriesData || [], [categoriesData]);

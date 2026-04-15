@@ -25,7 +25,7 @@ export const AdminAuthProvider = ({ children }) => {
 
             if (error) {
                 if (error.code === 'PGRST116') {
-                    // Asumimos que si no está en la tabla admins, es un cliente. 
+                    // Asumimos que si no está en la tabla admins, es un cliente.
                     // Advertencia: Esto sigue siendo una suposición permisiva.
                     if (mounted) setAuthState({ status: 'CLIENT', adminData: null, error: null });
                     return;
@@ -41,15 +41,15 @@ export const AdminAuthProvider = ({ children }) => {
                 } catch (e) {
                     console.error("Error al interpretar los permisos del admin:", e);
                     // Dalla de seguridad: denegamos permisos si el string está corrupto
-                    parsedPermissions = null; 
+                    parsedPermissions = null;
                 }
             }
 
             if (mounted) {
-                setAuthState({ 
-                    status: 'ADMIN', 
-                    adminData: { ...data, permissions: parsedPermissions }, 
-                    error: null 
+                setAuthState({
+                    status: 'ADMIN',
+                    adminData: { ...data, permissions: parsedPermissions },
+                    error: null
                 });
             }
 
@@ -82,10 +82,10 @@ export const AdminAuthProvider = ({ children }) => {
     }, [resolveAdminStatus]);
 
     const loading = authState.status === 'RESOLVING';
-    
+
     const hasPermission = useCallback((permissionKey) => {
         if (authState.status !== 'ADMIN' || !authState.adminData) return false;
-        
+
         const { role, permissions } = authState.adminData;
 
         // God mode (Te lo dejo porque es tu diseño actual, pero sigue siendo poco escalable)

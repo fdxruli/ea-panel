@@ -26,19 +26,19 @@ export const useCacheAdmin = () => useContext(CacheAdminContext);
 export const CacheAdminProvider = ({ children }) => {
     // Caché en memoria (estado de React)
     const [cache, setCache] = useState({});
-    
+
     // Ref para peticiones en vuelo (evitar duplicados)
     const inFlightRequests = useRef(new Map());
-    
+
     // Hook para detectar el cierre de sesión
     const { admin } = useAdminAuth();
-    
+
     // 1. Hidratación inicial desde sessionStorage
     useEffect(() => {
         console.log('[CacheAdmin] Hidratando caché desde sessionStorage...');
         const hydratedCache = {};
         const keys = Object.keys(sessionStorage);
-        
+
         for (const fullKey of keys) {
             if (fullKey.startsWith('admin_cache:')) {
                 const key = fullKey.replace('admin_cache:', '');
@@ -83,13 +83,13 @@ export const CacheAdminProvider = ({ children }) => {
             ttl,
             key
         };
-        
+
         // Actualizar estado en memoria
         setCache(prevCache => ({
             ...prevCache,
             [key]: entry
         }));
-        
+
         // Actualizar sessionStorage (asíncrono, no bloquea)
         setStorageItem(key, serializeForStorage(entry));
     }, []);
@@ -100,7 +100,7 @@ export const CacheAdminProvider = ({ children }) => {
     const getCached = useCallback((key, options = {}) => {
         const { skipExpiry = false } = options;
         const entry = cache[key];
-        
+
         if (!entry) return null; // No encontrado
 
         if (!skipExpiry && isExpired(entry.timestamp, entry.ttl)) {
@@ -148,7 +148,7 @@ export const CacheAdminProvider = ({ children }) => {
                     }
                 }
             }
-            
+
             console.log(`[CacheAdmin] Invalidadas ${invalidatedCount} entrada(s) para "${keyOrPattern}".`);
             return nextCache;
         });
@@ -169,20 +169,20 @@ export const CacheAdminProvider = ({ children }) => {
             try {
                 console.log(`[CacheAdmin] FETCH: Ejecutando fetcher para "${key}".`);
                 const result = await fetcher();
-                
+
                 // Asumimos que el fetcher devuelve { data, error } de Supabase
                 if (result.error) {
                     throw new Error(result.error.message);
                 }
-                
+
                 const data = result.data;
                 setCached(key, data, ttl); // Guardar en caché al tener éxito
                 return data;
-                
+
             } catch (error) {
                 console.error(`[CacheAdmin] FETCH ERROR para "${key}":`, error);
                 throw error; // Relanzar el error para que useCache lo maneje
-                
+
             } finally {
                 // 4. Limpiar la petición en curso (éxito o fallo)
                 inFlightRequests.current.delete(key);
