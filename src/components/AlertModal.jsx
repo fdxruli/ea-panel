@@ -7,13 +7,13 @@ import styles from './AlertModal.module.css';
 const AlertIcon = () => {
     return (
         <div className={styles.iconWrapper}>
-            <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2.5" 
-                strokeLinecap="round" 
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
                 strokeLinejoin="round"
             >
                 <circle cx="12" cy="12" r="10"></circle>
@@ -66,7 +66,7 @@ export default function AlertModal() {
 
     return createPortal(
         <>
-            <div id="app-root" inert={!!alert ? "" : undefined} />
+            <div id="app-root" inert={alert ? "" : undefined} />
 
             <div
                 className={styles.overlay}
@@ -79,15 +79,15 @@ export default function AlertModal() {
             >
                 <div className={styles.modalContent}>
                     <AlertIcon />
-                    
+
                     <h2 id="alert-title" className={styles.title}>
                         Notificación
                     </h2>
-                    
+
                     <p id="alert-message" className={styles.message}>
                         {alert.message}
                     </p>
-                    
+
                     <button
                         onClick={handleConfirm}
                         className={styles.closeButton}

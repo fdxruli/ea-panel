@@ -12,7 +12,7 @@ export default function CancellationRequestModal({ order, onClose }) {
     }
     const message = `¡Hola! 👋 Quisiera solicitar la cancelación de mi pedido *${order.order_code}*.\n\n*Motivo:* ${reason}`;
     const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessPhoneNumber}&text=${encodeURIComponent(message)}`;
-    
+
     window.open(whatsappUrl, '_blank');
     onClose();
   };

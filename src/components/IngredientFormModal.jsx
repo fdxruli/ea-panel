@@ -41,7 +41,7 @@ export default function IngredientFormModal({ isOpen, onClose, onSave, ingredien
       return;
     }
     setIsSubmitting(true);
-    
+
     const dataToSave = {
       name: DOMPurify.sanitize(formData.name),
       base_unit: DOMPurify.sanitize(formData.base_unit.toLowerCase()),

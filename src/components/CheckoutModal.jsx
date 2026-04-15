@@ -173,6 +173,8 @@ export default function CheckoutModal({ onClose, networkState }) {
             getActionButtonClassName={flow.getActionButtonClassName}
             whatsappFallback={flow.whatsappFallback}
             onClearWhatsappFallback={flow.clearWhatsappFallback}
+            orderNotes={flow.orderNotes}
+            onOrderNotesChange={flow.setOrderNotes}
           />
         </div>
 

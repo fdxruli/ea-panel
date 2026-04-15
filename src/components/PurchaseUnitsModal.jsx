@@ -20,7 +20,7 @@ export default function PurchaseUnitsModal({ isOpen, onClose, ingredient }) {
       .select('*')
       .eq('ingredient_id', ingredient.id)
       .order('purchase_unit_name');
-    
+
     if (error) showAlert(error.message, 'error');
     else setUnits(data);
     setLoading(false);
@@ -37,7 +37,7 @@ export default function PurchaseUnitsModal({ isOpen, onClose, ingredient }) {
       return;
     }
     setIsSubmitting(true);
-    
+
     const { error } = await supabase.from('ingredient_purchase_units').insert({
       ingredient_id: ingredient.id,
       purchase_unit_name: DOMPurify.sanitize(formData.name),
@@ -56,12 +56,12 @@ export default function PurchaseUnitsModal({ isOpen, onClose, ingredient }) {
 
   const handleDeleteUnit = async (unitId) => {
     if (!window.confirm('¿Seguro que quieres eliminar este formato de compra?')) return;
-    
+
     const { error } = await supabase
       .from('ingredient_purchase_units')
       .delete()
       .eq('id', unitId);
-    
+
     if (error) showAlert(error.message, 'error');
     else fetchUnits();
   };

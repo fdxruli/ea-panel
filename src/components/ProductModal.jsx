@@ -187,10 +187,10 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             handleClose();
             return;
         }
-        
+
         // Bloquea explícitamente la propagación del evento hacia Menu.jsx
         onAddToCart(product, quantity, null);
-        
+
         // Usa el botón actual como origen estricto y la clase CSS correcta
         if (event?.currentTarget) {
             animateToCart({
@@ -200,7 +200,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                 flySize: 48 // Tamaño reducido temporalmente para mitigar el desbordamiento en el botón
             });
         }
-        
+
         setWasAdded(true);
         setTimeout(() => setWasAdded(false), 2000);
     };

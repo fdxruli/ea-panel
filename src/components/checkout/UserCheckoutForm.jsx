@@ -82,6 +82,8 @@ export default function UserCheckoutForm({
   getActionButtonClassName,
   whatsappFallback,
   onClearWhatsappFallback,
+  orderNotes,
+  onOrderNotesChange,
 }) {
   const mapInitialPosition =
     selectedAddress
@@ -246,6 +248,23 @@ export default function UserCheckoutForm({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Order Notes */}
+        <div className={styles.detailsGroup}>
+          <h4>Notas del Pedido (Opcional)</h4>
+          <textarea
+            className={styles.notesTextarea}
+            value={orderNotes}
+            onChange={(e) => onOrderNotesChange(e.target.value)}
+            placeholder="Ej: Sin cebolla, dejar en recepción..."
+            maxLength={500}
+            disabled={isSubmitLocked}
+            rows={3}
+          />
+          <span className={styles.notesCounter}>
+            {orderNotes.length}/500
+          </span>
         </div>
 
         {/* Order Summary */}

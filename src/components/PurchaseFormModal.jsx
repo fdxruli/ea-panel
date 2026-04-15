@@ -30,7 +30,7 @@ export default function PurchaseFormModal({ isOpen, onClose, onSave, allIngredie
         .from('ingredient_purchase_units')
         .select('*')
         .eq('ingredient_id', formData.ingredient_id);
-      
+
       if (error) showAlert(error.message, 'error');
       else setPurchaseUnits(data);
       setLoadingUnits(false);
@@ -45,7 +45,7 @@ export default function PurchaseFormModal({ isOpen, onClose, onSave, allIngredie
       return;
     }
     setIsSubmitting(true);
-    
+
     // El frontend solo inserta. El Trigger de Fase 2 hará la magia.
     const { error } = await supabase.from('ingredient_purchases').insert({
       ingredient_id: formData.ingredient_id,
@@ -93,7 +93,7 @@ export default function PurchaseFormModal({ isOpen, onClose, onSave, allIngredie
               ))}
             </select>
           </div>
-          
+
           <div className={styles.formGroup}>
             <label htmlFor="purchase_unit_id">Formato de Compra</label>
             <select
@@ -109,7 +109,7 @@ export default function PurchaseFormModal({ isOpen, onClose, onSave, allIngredie
               ))}
             </select>
           </div>
-          
+
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label htmlFor="quantity_purchased">Cantidad Comprada</label>
@@ -137,7 +137,7 @@ export default function PurchaseFormModal({ isOpen, onClose, onSave, allIngredie
               />
             </div>
           </div>
-          
+
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label htmlFor="purchase_date">Fecha de Compra</label>

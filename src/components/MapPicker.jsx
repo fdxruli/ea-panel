@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, Polygon } from '@react-google-maps/api';
 import styles from './MapPicker.module.css';
 import { useAlert } from '../context/AlertContext';
@@ -41,7 +41,7 @@ const mapOptions = {
 const MapPicker = forwardRef(({ onLocationSelect, initialPosition, isDraggable = true }, ref) => {
   const { showAlert } = useAlert();
   const defaultCenter = { lat: 15.852182, lng: -91.977533 };
-  
+
   const [markerPosition, setMarkerPosition] = useState(initialPosition || defaultCenter);
   const [mapCenter, setMapCenter] = useState(initialPosition || defaultCenter);
   const [lastValidPosition, setLastValidPosition] = useState(initialPosition || defaultCenter);
@@ -54,24 +54,16 @@ const MapPicker = forwardRef(({ onLocationSelect, initialPosition, isDraggable =
     libraries: libraries,
   });
 
-  useEffect(() => {
-    // Si es una dirección nueva (!initialPosition), NO envíes nada todavía.
-    // Solo envía si ya existía una posición guardada previamente.
-    if (onLocationSelect && initialPosition) {
-      onLocationSelect(initialPosition);
-    }
-  }, [initialPosition, onLocationSelect]);
-  
   const onPolygonLoad = useCallback(polygon => {
     polygonRef.current = polygon;
   }, []);
-  
+
   const onMarkerDragEnd = useCallback(event => {
     const newPosition = {
       lat: event.latLng.lat(),
       lng: event.latLng.lng()
     };
-    
+
     if ( isLoaded && polygonRef.current && window.google.maps.geometry.poly.containsLocation(event.latLng, polygonRef.current) ) {
       setMarkerPosition(newPosition);
       setLastValidPosition(newPosition);
@@ -158,7 +150,7 @@ const MapPicker = forwardRef(({ onLocationSelect, initialPosition, isDraggable =
           {instructionText}
         </p>
       )}
-      
+
       <div className={styles.mapContainer}>
         {isLoaded ? (
           <>

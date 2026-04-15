@@ -19,7 +19,7 @@ const getSupabaseTransformUrl = (src, width) => {
   if (!src || src.includes('placehold.co') || typeof src !== 'string') {
     return src;
   }
-  
+
   try {
     const url = new URL(src);
     // Usamos 'width' para el redimensionamiento

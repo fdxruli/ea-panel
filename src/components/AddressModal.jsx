@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styles from './AddressModal.module.css';
 import ClientOnly from './ClientOnly';
 import DynamicMapPicker from './DynamicMapPicker';
 import { useAlert } from '../context/AlertContext';
 import DOMPurify from 'dompurify';
 
-export default function AddressModal({ isOpen, onClose, onSave, address = null, customerId, showSaveOption = false }) {
+export default function AddressModal({ isOpen, onClose, onSave, address = null, showSaveOption = false }) {
     const { showAlert } = useAlert();
     const [formData, setFormData] = useState({
         label: '',
@@ -80,12 +80,14 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
         }
     };
 
+    const mapInitialPosition = useMemo(() => {
+        return address ? { lat: address.latitude, lng: address.longitude } : null;
+    }, [address]);
+
     if (!isOpen) return null;
 
-    const mapInitialPosition = address ? { lat: address.latitude, lng: address.longitude } : null;
-
     return (
-        <div className={styles.modalOverlay} onClick={(e) => {
+        <div className={styles.modalOverlay} onClick={() => {
             // Prevenir cierre al hacer clic en el overlay si están enviando
             if (!isSubmitting) onClose();
         }}>
@@ -100,16 +102,16 @@ export default function AddressModal({ isOpen, onClose, onSave, address = null, 
 
                 <h2>{address ? 'Editar Dirección' : 'Nueva Dirección'}</h2>
 
-                
-                    <button
-                        type="button"
-                        onClick={handleAutoLocation}
-                        className={styles.primaryGpsButton} // Usa un CSS llamativo (ej. verde, icono grande, padding ancho)
-                        disabled={isSubmitting}
-                    >
-                        Buscar mi ubicación actual por GPS
-                    </button>
-                
+
+                <button
+                    type="button"
+                    onClick={handleAutoLocation}
+                    className={styles.primaryGpsButton} // Usa un CSS llamativo (ej. verde, icono grande, padding ancho)
+                    disabled={isSubmitting}
+                >
+                    Buscar mi ubicación actual por GPS
+                </button>
+
 
                 <div className={styles.contentWrapper}>
                     <div className={styles.mapContainer}>

@@ -8,7 +8,7 @@ export default function ClientOnly({ children }) {
   }, []);
 
   if (!hasMounted) {
-    return null; 
+    return null;
   }
 
   return <>{children}</>;

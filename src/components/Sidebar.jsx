@@ -5,7 +5,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from '../lib/supabaseClient';
 import { useAdminAuth } from "../context/AdminAuthContext";
 // --- 1. AÑADIR IMPORT ---
-import { useCacheAdmin } from "../context/CacheAdminContext"; 
+import { useCacheAdmin } from "../context/CacheAdminContext";
 // --- FIN IMPORT ---
 import ConfirmModal from './ConfirmModal';
 import styles from './Sidebar.module.css';
@@ -32,12 +32,12 @@ const routeToGroupMap = {
 export default function Sidebar({ isSidebarOpen, closeSidebar }) {
   const { hasPermission } = useAdminAuth();
   const navigate = useNavigate();
-  const location = useLocation(); 
-  
+  const location = useLocation();
+
   // --- 2. OBTENER LA FUNCIÓN DE LIMPIEZA ---
-  const { clear: clearCache } = useCacheAdmin(); 
+  const { clear: clearCache } = useCacheAdmin();
   // --- FIN OBTENER ---
-  
+
   const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState(null);
 
@@ -48,9 +48,9 @@ export default function Sidebar({ isSidebarOpen, closeSidebar }) {
     if (activeGroup) {
       setOpenGroup(activeGroup);
     } else {
-      setOpenGroup('gestionPrincipal'); 
+      setOpenGroup('gestionPrincipal');
     }
-  }, [location.pathname]); 
+  }, [location.pathname]);
 
   const toggleGroup = (groupKey) => {
     setOpenGroup(prevOpenGroup => (prevOpenGroup === groupKey ? null : groupKey));
@@ -82,7 +82,7 @@ export default function Sidebar({ isSidebarOpen, closeSidebar }) {
       console.error("Error al cerrar sesión:", error);
     } else {
       // --- LLAMAR A LA LIMPIEZA MANUALMENTE AQUÍ ---
-      clearCache(); 
+      clearCache();
       console.log('[Sidebar] Caché limpiado manualmente al cerrar sesión.');
       // --- FIN LLAMADA MANUAL ---
       navigate('/login');

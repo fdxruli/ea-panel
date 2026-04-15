@@ -23,7 +23,7 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
 
   const isDuplicateFile = (newFile, existingFiles) => {
     return existingFiles.some(existingFile => {
-      return existingFile.name === newFile.name && 
+      return existingFile.name === newFile.name &&
              existingFile.size === newFile.size;
     });
   };
@@ -31,7 +31,7 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
   const getFileKey = (file) => {
     return `${file.name}-${file.size}-${file.lastModified}`;
   };
-  
+
   // --- 👇 LA CORRECCIÓN ESTÁ AQUÍ ---
   // Hacemos esta función "estable" usando la forma funcional de setState.
   // Ya no depende de `previewUrls`, por lo que `useCallback`
@@ -41,28 +41,28 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
       // Revocamos las URLs del estado anterior
       prevUrls.forEach(url => URL.revokeObjectURL(url));
       // Devolvemos el nuevo estado (vacío)
-      return []; 
+      return [];
     });
-    setSelectedFiles([]); 
+    setSelectedFiles([]);
   }, [setPreviewUrls, setSelectedFiles]); // Solo depende de setters, que son estables
   // --- 👆 FIN DE LA CORRECCIÓN ---
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (files.length === 0) return;
 
     let duplicatesFound = 0;
     let addedCount = 0;
     const newFiles = [...selectedFiles];
     const newPreviews = [...previewUrls];
-    
+
     files.forEach(file => {
       if (isDuplicateFile(file, newFiles)) {
         duplicatesFound++;
         return;
       }
-      
+
       newFiles.push(file);
       const url = URL.createObjectURL(file);
       newPreviews.push(url);
@@ -92,10 +92,10 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
     // Aún necesitamos la URL específica aquí, así que la leemos del estado
     const urlToRevoke = previewUrls[index];
     URL.revokeObjectURL(urlToRevoke);
-    
+
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     const newPreviews = previewUrls.filter((_, i) => i !== index);
-    
+
     setSelectedFiles(newFiles);
     setPreviewUrls(newPreviews);
   };
@@ -248,7 +248,7 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
               )}
               <span>{notification.message}</span>
             </div>
-            <button 
+            <button
               className={styles.notificationClose}
               onClick={() => setNotification(null)}
               aria-label="Cerrar notificación"
@@ -264,7 +264,7 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
         <div className={styles.modalBody}>
           <div className={styles.addImageSection}>
             <h3>Añadir Nuevas Imágenes</h3>
-            
+
             <div className={styles.fileInputWrapper}>
               <input
                 id="image-upload-input"
@@ -281,8 +281,8 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
                   <circle cx="8.5" cy="8.5" r="1.5"></circle>
                   <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
-                {selectedFiles.length > 0 
-                  ? `${selectedFiles.length} imagen(es) seleccionada(s) - Agregar más` 
+                {selectedFiles.length > 0
+                  ? `${selectedFiles.length} imagen(es) seleccionada(s) - Agregar más`
                   : 'Seleccionar imágenes (múltiples)'}
               </label>
             </div>
@@ -293,12 +293,12 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
                   {selectedFiles.map((file, index) => (
                     <div key={getFileKey(file)} className={styles.previewCard}>
                       <div className={styles.previewImageWrapper}>
-                        <img 
-                          src={previewUrls[index]} 
-                          alt={`Preview ${index + 1}`} 
+                        <img
+                          src={previewUrls[index]}
+                          alt={`Preview ${index + 1}`}
                           className={styles.previewImage}
                         />
-                        <button 
+                        <button
                           className={styles.removePreviewButton}
                           onClick={() => removePreviewAtIndex(index)}
                           type="button"
@@ -322,9 +322,9 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
                 </div>
 
                 <div className={styles.buttonGroup}>
-                  <button 
-                    className={styles.addButton} 
-                    onClick={uploadImages} 
+                  <button
+                    className={styles.addButton}
+                    onClick={uploadImages}
                     disabled={loading}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -334,9 +334,9 @@ export default function ManageImagesModal({ product, isOpen, onClose, onImagesUp
                     </svg>
                     {loading ? 'Subiendo...' : `Subir ${selectedFiles.length} imagen(es)`}
                   </button>
-                  
+
                   {!loading && (
-                    <button 
+                    <button
                       className={styles.cancelButton}
                       onClick={clearAllPreviews}
                       type="button"

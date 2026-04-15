@@ -10,12 +10,12 @@ import { useCategoriesCache } from '../hooks/useCategoriesCache';
 // --- FIN PASO A ---
 
 // (Añadido por si las categorías están cargando)
-import LoadingSpinner from './LoadingSpinner'; 
+import LoadingSpinner from './LoadingSpinner';
 
 // --- (PASO B) CAMBIAR PROPS ---
 const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
   const { showAlert } = useAlert();
-  
+
   // --- (PASO B) OBTENER CATEGORÍAS DEL HOOK ---
   const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
   // Corrección para evitar error en null.map
@@ -28,10 +28,10 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
-  const [appliesTo, setAppliesTo] = useState('everyone'); 
+  const [appliesTo, setAppliesTo] = useState('everyone');
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [allCustomers, setAllCustomers] = useState([]); 
+  const [allCustomers, setAllCustomers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
 
@@ -85,7 +85,7 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
     if (!customerSearch) return [];
     const lowerSearch = customerSearch.toLowerCase();
     return allCustomers.filter(c =>
-        !selectedCustomerIds.includes(c.id) && 
+        !selectedCustomerIds.includes(c.id) &&
         (c.name.toLowerCase().includes(lowerSearch) || (c.phone && c.phone.includes(customerSearch)))
     ).slice(0, 10);
   }, [customerSearch, allCustomers, selectedCustomerIds]);
@@ -94,7 +94,7 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
     if (!selectedCustomerIds.includes(customerId)) {
          setSelectedCustomerIds(prev => [...prev, customerId]);
     }
-    setCustomerSearch(''); 
+    setCustomerSearch('');
   };
 
   const handleRemoveCustomer = (customerId) => {
@@ -140,14 +140,14 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
       }
 
       if (response.error) {
-          if (response.error.code === '23505') { 
+          if (response.error.code === '23505') {
               showAlert('Error: Ya existe una promoción similar para este objetivo y fechas.');
           } else {
               throw response.error;
           }
       } else {
           showAlert(`Promoción ${initialData ? 'actualizada' : 'creada'} con éxito.`);
-          onSubmit(); 
+          onSubmit();
       }
 
     } catch (error) {
@@ -228,7 +228,7 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
             disabled={!allCustomers.length}
           />
           {customerSearch && filteredCustomers.length > 0 && (
-            <ul className={styles.customerSearchResults}> 
+            <ul className={styles.customerSearchResults}>
               {filteredCustomers.map(c => (
                 <li key={c.id} onClick={() => handleAddCustomer(c.id)} role="button">
                   {c.name} ({c.phone || 'Sin teléfono'})
@@ -238,13 +238,13 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
           )}
           {customerSearch && !filteredCustomers.length && <p className={styles.noResults}>No se encontraron clientes.</p>}
 
-          <div className={styles.selectedCustomersList}> 
+          <div className={styles.selectedCustomersList}>
              <label>Clientes Seleccionados ({selectedCustomerIds.length}):</label>
             {selectedCustomerIds.length > 0 ? (
                 selectedCustomerIds.map(id => {
                   const customer = allCustomers.find(c => c.id === id);
                   return (
-                    <div key={id} className={styles.selectedCustomerTag}> 
+                    <div key={id} className={styles.selectedCustomerTag}>
                       <span>{customer?.name || `ID: ${id.substring(0, 6)}...`}</span>
                       <button type="button" onClick={() => handleRemoveCustomer(id)} aria-label={`Quitar ${customer?.name || 'cliente'}`}>×</button>
                     </div>

@@ -15,7 +15,7 @@ import { useCacheAdmin } from '../context/CacheAdminContext';
 
 export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpdate }) {
     const { showAlert } = useAlert();
-    
+
     // --- (PASO B) AÑADIR HOOK ---
     const { invalidate } = useCacheAdmin();
     // --- FIN PASO B ---
@@ -23,10 +23,10 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const [formData, setFormData] = useState({ id: null, name: '', description: '' });
     const [categoryToDelete, setCategoryToDelete] = useState(null);
-    
+
     const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
     const [productsInCateogryCount, setProductsInCategoryCount] = useState(0);
 
@@ -89,10 +89,10 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
         fetchCategories();
         onCategoriesUpdate();
     };
-    
+
     const confirmReassignAndDelete = async (newCategoryId) => {
         if (!categoryToDelete) return;
-        
+
         const { error: updateError } = await supabase
             .from('products')
             .update({ category_id: newCategoryId })
@@ -115,7 +115,7 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             // --- (PASO D) INVALIDAR CACHÉ ---
             invalidate('categories');
         }
-        
+
         setIsReassignModalOpen(false);
         setCategoryToDelete(null);
         fetchCategories();
@@ -148,14 +148,14 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
         } else {
             showAlert(`Categoría ${formData.id ? 'actualizada' : 'creada'} con éxito.`);
             resetForm();
-            fetchCategories(); 
+            fetchCategories();
             onCategoriesUpdate();
             // --- (PASO C) INVALIDAR CACHÉ ---
             invalidate('categories');
         }
         setIsSubmitting(false);
     };
-    
+
     if (!isOpen) return null;
 
     const otherCategories = categories.filter(cat => cat.id !== categoryToDelete?.id);
@@ -203,7 +203,7 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
                     </div>
                 </div>
             </div>
-            
+
             <ConfirmModal
                 isOpen={!!categoryToDelete && !isReassignModalOpen}
                 onClose={() => setCategoryToDelete(null)}

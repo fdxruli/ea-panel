@@ -14,7 +14,7 @@ const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" heig
 
 const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: initialProduct }) => {
     const { showAlert } = useAlert();
-    
+
     // --- Pestaña activa ---
     const [activeTab, setActiveTab] = useState('info'); // 'info' o 'recipe'
 
@@ -30,7 +30,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     const [recipeItems, setRecipeItems] = useState([]); // Los ingredientes de la receta
     const [allIngredients, setAllIngredients] = useState([]); // Lista de ingredientes de la BD
     const [loadingRecipe, setLoadingRecipe] = useState(false);
-    
+
     // Cargar todos los ingredientes disponibles para el dropdown
     const fetchAllIngredients = async () => {
       const { data, error } = await supabase.from('ingredients').select('*').order('name');
@@ -54,7 +54,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           ingredients ( name, base_unit, average_cost )
         `)
         .eq('product_id', productId);
-      
+
       if (error) {
         showAlert('Error al cargar la receta del producto', 'error');
       } else {
@@ -99,7 +99,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 const { product_images, ...productData } = initialProduct;
                 setFormData(productData);
                 setPreviewImage(productData.image_url);
-                
+
                 // 2. Poblar formulario de Receta
                 setTrackStock(initialProduct.track_stock || false);
                 if (initialProduct.track_stock) {
@@ -224,7 +224,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     // --- handleSubmit ACTUALIZADO ---
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         // 1. Validaciones
         const price = parseFloat(formData.price);
         if (!price || price <= 0) {
@@ -240,10 +240,10 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           const confirm = window.confirm('Has marcado "Rastrear Stock" pero no has añadido ingredientes a la receta. El costo será $0. ¿Continuar?');
           if (!confirm) return;
         }
-        
+
         setIsSubmitting(true);
         setUploadProgress(0);
-        
+
         try {
             // 2. Manejar imagen
             let imageUrl = formData.image_url;
@@ -273,7 +273,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
 
             // 5. Llamar a onSave con ambos paquetes de datos
             await onSave({ productData, recipeData });
-            
+
         } catch (error) {
             console.error('Submit error:', error);
             showAlert(`Error: ${error.message}`, 'error');
@@ -292,14 +292,14 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
 
                 {/* --- PESTAÑAS --- */}
                 <div className={styles.modalTabs}>
-                  <button 
+                  <button
                     type="button"
                     className={`${styles.tabButton} ${activeTab === 'info' ? styles.active : ''}`}
                     onClick={() => setActiveTab('info')}
                   >
                     Información
                   </button>
-                  <button 
+                  <button
                     type="button"
                     className={`${styles.tabButton} ${activeTab === 'recipe' ? styles.active : ''}`}
                     onClick={() => setActiveTab('recipe')}
@@ -309,12 +309,12 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.productForm}>
-                    
+
                     {/* --- CONTENIDO PESTAÑA 1: INFORMACIÓN --- */}
                     <div className={`${styles.tabContent} ${activeTab === 'info' ? styles.active : ''}`}>
                         <div className={styles.formGroup}><label htmlFor="name">Nombre del Producto *</label><input id="name" name="name" className={styles.formInput} value={formData.name} onChange={handleChange} required maxLength={100} /></div>
                         <div className={styles.formGroup}><label htmlFor="description">Descripción *</label><textarea id="description" name="description" className={styles.formTextarea} value={formData.description} onChange={handleChange} required maxLength={500} rows={4} /></div>
-                        
+
                         <div className={styles.formGroup}>
                           <label htmlFor="category_id">Categoría *</label>
                           <select id="category_id" name="category_id" className={styles.formSelect} value={formData.category_id} onChange={handleChange} required>
@@ -334,7 +334,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                             {uploadProgress > 0 && uploadProgress < 100 && (<div className={styles.progressBar}><div className={styles.progressFill} style={{ width: `${uploadProgress}%` }} /><span>{uploadProgress}%</span></div>)}
                         </div>
                     </div>
-                    
+
                     {/* --- CONTENIDO PESTAÑA 2: RECETA --- */}
                     <div className={`${styles.tabContent} ${activeTab === 'recipe' ? styles.active : ''}`}>
                         <div className={styles.formGroup}>
@@ -351,14 +351,14 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                             Si marcas esto, el costo se calculará de la receta y se descontará el stock al vender.
                           </p>
                         </div>
-                        
+
                         {loadingRecipe ? <LoadingSpinner /> : (
                           trackStock && (
                             <div className={styles.recipeBuilder}>
                               <div className={styles.formGroup}>
                                 <label htmlFor="add-ingredient">Añadir Ingrediente a la Receta</label>
-                                <select 
-                                  id="add-ingredient" 
+                                <select
+                                  id="add-ingredient"
                                   className={styles.formSelect}
                                   onChange={(e) => handleAddIngredient(e.target.value)}
                                   value=""
@@ -371,7 +371,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                                   ))}
                                 </select>
                               </div>
-                              
+
                               {recipeItems.length > 0 && (
                                 <div className={styles.recipeList}>
                                   {recipeItems.map((item, index) => (
@@ -389,15 +389,15 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                                       />
                                       <span className={styles.recipeUnit}>{item.base_unit}</span>
                                       <label className={styles.recipeDeductToggle} title="Descontar del stock automáticamente">
-                                        <input 
+                                        <input
                                           type="checkbox"
                                           checked={item.deduct_stock_automatically}
                                           onChange={(e) => handleRecipeChange(index, 'deduct_stock_automatically', e.target.checked)}
                                         />
                                         <span className={styles.recipeDeductSlider}></span>
                                       </label>
-                                      <button 
-                                        type="button" 
+                                      <button
+                                        type="button"
                                         className={styles.recipeDeleteButton}
                                         onClick={() => handleRemoveIngredient(index)}
                                       >
@@ -411,7 +411,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                           )
                         )}
                     </div>
-                    
+
                     {/* --- PRECIO Y COSTO (MOVIDOS FUERA DE LAS PESTAÑAS) --- */}
                     <div className={styles.pricingSection}>
                       <div className={styles.formGrid}>
@@ -423,15 +423,15 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                             <label htmlFor="cost">
                               {trackStock ? "Costo (Calculado)" : "Costo (Manual) *"}
                             </label>
-                            <input 
-                              id="cost" 
-                              name="cost" 
-                              type="number" 
-                              step="0.01" 
-                              min="0" 
-                              value={trackStock ? calculatedCost.toFixed(4) : formData.cost} 
-                              onChange={handleChange} 
-                              required 
+                            <input
+                              id="cost"
+                              name="cost"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={trackStock ? calculatedCost.toFixed(4) : formData.cost}
+                              onChange={handleChange}
+                              required
                               readOnly={trackStock}
                             />
                           </div>

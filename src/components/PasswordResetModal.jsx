@@ -12,10 +12,10 @@ const WhatsAppIcon = (props) => (
 export default function PasswordResetModal({ onClose }) {
   // Obtener el número de teléfono desde las variables de entorno
   const businessPhoneNumber = import.meta.env.VITE_BUSINESS_PHONE;
-  
+
   // Mensaje predeterminado
   const defaultMessage = "¡Hola! He olvidado mi contraseña del panel de administrador, ¿me podrían ayudar a recuperarla?";
-  
+
   // Construir la URL de WhatsApp
   const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessPhoneNumber}&text=${encodeURIComponent(defaultMessage)}`;
 
@@ -23,7 +23,7 @@ export default function PasswordResetModal({ onClose }) {
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} className={styles.closeButton}>×</button>
-        
+
         <h2>Recuperar Contraseña</h2>
         <p>
           Para restablecer tu contraseña, por favor contacta a Entre Alas
@@ -32,11 +32,11 @@ export default function PasswordResetModal({ onClose }) {
         <p className={styles.note}>
           Un administrador verificará tu identidad y te ayudará a crear una nueva contraseña.
         </p>
-        
-        <a 
-          href={whatsappUrl} 
-          target="_blank" 
-          rel="noopener noreferrer" 
+
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
           className={styles.whatsappButton}
         >
           <WhatsAppIcon className={styles.icon} />

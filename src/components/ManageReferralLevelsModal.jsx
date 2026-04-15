@@ -40,13 +40,13 @@ const LevelRewards = ({ levelId }) => {
       return;
     }
     const sanitizedCode = rewardCode.trim() ? DOMPurify.sanitize(rewardCode.toUpperCase()) : null;
-    
+
     const { error } = await supabase
       .from('rewards')
       .insert({
         level_id: levelId,
         description: DOMPurify.sanitize(description),
-        reward_code: sanitizedCode, 
+        reward_code: sanitizedCode,
       });
     if (error) {
       showAlert('Hubo un error al añadir la recompensa: ' + error.message);
@@ -116,7 +116,7 @@ const LevelRewards = ({ levelId }) => {
 // Componente Principal
 export default function ManageReferralLevelsModal({ isOpen, onClose }) {
   const { showAlert } = useAlert();
-  
+
   // --- (PASO B) AÑADIR HOOK ---
   const { invalidate } = useCacheAdmin();
   // --- FIN PASO B ---
@@ -131,7 +131,7 @@ export default function ManageReferralLevelsModal({ isOpen, onClose }) {
     try {
       const { data, error } = await supabase
         .from('referral_levels')
-        .select('*, rewards(*)') 
+        .select('*, rewards(*)')
         .order('min_referrals', { ascending: true });
       if (error) throw error;
       setLevels(data || []);
@@ -243,7 +243,7 @@ export default function ManageReferralLevelsModal({ isOpen, onClose }) {
 
           showAlert('Nivel y sus recompensas (si las había) eliminados con éxito.', 'success');
           invalidate('referral_levels'); // <-- AÑADIDO
-          fetchLevels(); 
+          fetchLevels();
 
       } catch (error) {
           console.error("Error en handleDelete:", error);
@@ -297,7 +297,7 @@ export default function ManageReferralLevelsModal({ isOpen, onClose }) {
                 <button onClick={() => handleDelete(level.id, level.name, level.rewards?.length || 0)}>
                     Eliminar Nivel
                 </button>
-                <LevelRewards levelId={level.id} /> 
+                <LevelRewards levelId={level.id} />
               </div>
             ))
           )

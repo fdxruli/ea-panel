@@ -24,12 +24,12 @@ export default function ReassignProductsModal({ isOpen, onClose, onConfirm, cate
         <p>
           Para continuar, por favor, reasigna estos productos a una nueva categoría.
         </p>
-        
+
         <div className={styles.formGroup}>
             <label htmlFor="reassign-category">Reasignar a:</label>
-            <select 
-                id="reassign-category" 
-                value={reassignCategoryId} 
+            <select
+                id="reassign-category"
+                value={reassignCategoryId}
                 onChange={(e) => setReassignCategoryId(e.target.value)}
             >
                 {otherCategories.map(cat => (

@@ -537,6 +537,41 @@
     background-color: var(--bg-secondary);
 }
 
+/* --- NOTAS DEL PEDIDO --- */
+.notesTextarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.notesTextarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #3b82f6);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.notesTextarea:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.notesCounter {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: right;
+    display: block;
+    margin-top: 0.25rem;
+}
+
 /* --- PROGRAMACIÓN (Scheduling) --- */
 .deliveryOptions {
     display: flex;

@@ -9,22 +9,22 @@ const AdminRoute = () => {
   switch (status) {
     case 'RESOLVING':
       return <LoadingSpinner />;
-      
+
     case 'UNAUTHENTICATED':
       return <Navigate to="/login" replace />;
-      
+
     case 'CLIENT':
       // El usuario está logueado, pero no en la tabla admins. Expulsarlo del área de administración.
-      return <Navigate to="/" replace />; 
-      
+      return <Navigate to="/" replace />;
+
     case 'ERROR':
       // No ocultes los errores de red bajo la alfombra de un redirect.
       return <div className="error-screen">Error validando permisos. Revisa tu conexión.</div>;
-      
+
     case 'ADMIN':
       // Renderiza las rutas anidadas
       return <Outlet />;
-      
+
     default:
       return null;
   }

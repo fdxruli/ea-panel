@@ -82,17 +82,17 @@ export default function AdminMobileNav() {
   const { hasPermission } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
 
   // Filtrar enlaces del menú modal (excluir los que están en la barra inferior)
-  const filteredMenuLinks = adminLinks.filter(link => 
+  const filteredMenuLinks = adminLinks.filter(link =>
     !bottomNavLabels.includes(link.label)
   );
 
   // Verificar si la ruta actual pertenece al menú modal
-  const isMenuActive = menuOnlyRoutes.some(route => 
+  const isMenuActive = menuOnlyRoutes.some(route =>
     location.pathname.startsWith(route)
   );
 
@@ -153,7 +153,7 @@ export default function AdminMobileNav() {
             </NavLink>
           )
         ))}
-        
+
         <button
           onClick={openMenu}
           className={`${styles.navLink} ${isMenuActive ? styles.active : ''}`}
@@ -164,11 +164,11 @@ export default function AdminMobileNav() {
       </nav>
 
       {/* === MENÚ MODAL DESLIZANTE === */}
-      <div 
+      <div
         className={`${styles.overlay} ${isMenuOpen ? styles.open : ''}`}
         onClick={closeMenu}
       >
-        <div 
+        <div
           className={`${styles.menuContent} ${isMenuOpen ? styles.open : ''}`}
           onClick={(e) => e.stopPropagation()}
         >

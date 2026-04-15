@@ -99,7 +99,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                     quantity: item.quantity,
                     price: item.price,
                 }));
-                
+
                 setOrderItems(initialItems);
                 // Guardamos la firma inicial para comparar después
                 setOriginalItemsSignature(getItemsSignature(initialItems));
@@ -148,11 +148,11 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             item.id === productId ? { ...item, quantity: numQuantity } : item
         ));
     };
-    
+
     const removeItem = (productId) => {
          setOrderItems(prevItems => prevItems.filter(item => item.id !== productId));
     };
-    
+
     const addProduct = (product) => {
          const existingItem = orderItems.find(item => item.id === product.id);
         if (existingItem) {
@@ -216,10 +216,10 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
             if (itemsChanged) {
                 console.log('📦 Cambios detectados en productos. Actualizando items...');
-                
+
                 // Borrar items anteriores
                 await supabase.from('order_items').delete().eq('order_id', order.id);
-                
+
                 // Preparar nuevos items con protección de IDs
                 const newOrderItems = orderItems.map(item => {
                     const finalProductId = item.product_id || item.id;
@@ -228,16 +228,16 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                     }
                     return {
                         order_id: order.id,
-                        product_id: finalProductId, 
+                        product_id: finalProductId,
                         quantity: item.quantity,
                         price: item.price,
                     };
                 });
-                
+
                 // Insertar nuevos items
                 const { error: insertError } = await supabase.from('order_items').insert(newOrderItems);
                 if (insertError) throw insertError;
-                
+
             } else {
                 console.log('⚡ Sin cambios en productos. Saltando actualización de items.');
             }
@@ -311,7 +311,7 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                         type="date"
                                         value={scheduleDate}
                                         onChange={e => setScheduleDate(e.target.value)}
-                                        min={getLocalYYYYMMDD(new Date())} 
+                                        min={getLocalYYYYMMDD(new Date())}
                                         aria-label="Fecha de programación"
                                     />
                                     <input

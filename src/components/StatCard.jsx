@@ -85,13 +85,13 @@ const StatCard = memo(({ title, value, helpKey, icon, color, evolution, subtitle
                     </button>
                 )}
             </div>
-            
+
             {showHelp && helpKey && (
                 <div className={styles.modalOverlay} onClick={() => setShowHelp(false)}>
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
                             <h3>{title}</h3>
-                            <button 
+                            <button
                                 className={styles.modalClose}
                                 onClick={() => setShowHelp(false)}
                             >

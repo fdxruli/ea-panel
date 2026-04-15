@@ -58,7 +58,7 @@ export default function StockAdjustmentModal({ isOpen, onClose, onSave, ingredie
           <p>
             Stock actual: <strong>{ingredient.current_stock} {ingredient.base_unit}</strong>
           </p>
-          
+
           <div className={styles.formGroup}>
             <label>Tipo de Ajuste</label>
             <div className={styles.radioGroup}>
@@ -84,7 +84,7 @@ export default function StockAdjustmentModal({ isOpen, onClose, onSave, ingredie
               </label>
             </div>
           </div>
-          
+
           <div className={styles.formGroup}>
             <label htmlFor="quantity">Cantidad a {adjustmentType === 'add' ? 'Añadir' : 'Restar'} (en {ingredient.base_unit})</label>
             <input
@@ -97,7 +97,7 @@ export default function StockAdjustmentModal({ isOpen, onClose, onSave, ingredie
               required
             />
           </div>
-          
+
           <div className={styles.formGroup}>
             <label htmlFor="reason">Motivo del Ajuste (Obligatorio)</label>
             <input
