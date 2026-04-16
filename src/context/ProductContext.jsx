@@ -264,7 +264,7 @@ export const ProductProvider = ({ children }) => {
         baseRealtimeTimerRef.current = window.setTimeout(() => {
             baseRealtimeTimerRef.current = null;
             scheduleAlert(baseAlertTimerRef, 'El menu se ha actualizado!', 'info', 0);
-            fetchBaseProductsAndCategories({ background: true }).catch(() => {});
+            fetchBaseProductsAndCategories({ background: true }).catch(() => { });
         }, BASE_ALERT_DELAY_MS);
     }, [fetchBaseProductsAndCategories, scheduleAlert]);
 
@@ -306,14 +306,14 @@ export const ProductProvider = ({ children }) => {
 
                 if (isStale) {
                     // Con SWR mostramos cache stale primero y revalidamos en segundo plano.
-                    fetchBaseProductsAndCategories({ background: true }).catch(() => {});
+                    fetchBaseProductsAndCategories({ background: true }).catch(() => { });
                 }
 
                 return;
             }
 
             setLoadingProducts(true);
-            fetchBaseProductsAndCategories().catch(() => {});
+            fetchBaseProductsAndCategories().catch(() => { });
         };
 
         initBaseCatalog();
@@ -348,14 +348,14 @@ export const ProductProvider = ({ children }) => {
                 setLoadingPrices(false);
 
                 if (isStale) {
-                    fetchSpecialPrices(customerId, { background: true }).catch(() => {});
+                    fetchSpecialPrices(customerId, { background: true }).catch(() => { });
                 }
 
                 return;
             }
 
             setSpecialPrices([]);
-            fetchSpecialPrices(customerId).catch(() => {});
+            fetchSpecialPrices(customerId).catch(() => { });
         };
 
         initSpecialPrices();
@@ -376,7 +376,7 @@ export const ProductProvider = ({ children }) => {
             priceRealtimeTimerRef.current = window.setTimeout(() => {
                 priceRealtimeTimerRef.current = null;
                 scheduleAlert(priceAlertTimerRef, 'Promociones actualizadas!', 'info', 0);
-                fetchSpecialPrices(customerId, { background: true }).catch(() => {});
+                fetchSpecialPrices(customerId, { background: true }).catch(() => { });
             }, PRICES_ALERT_DELAY_MS);
         };
 
@@ -407,14 +407,21 @@ export const ProductProvider = ({ children }) => {
             categoryMap.set(categories[i].id, categories[i].name);
         }
 
+        // Solo aplicar precios especiales si el usuario está logueado (customerId existe)
+        const shouldApplySpecialPrices = Boolean(customerId);
+
         const productPricesMap = new Map();
         const categoryPricesMap = new Map();
-        for (let i = 0; i < specialPrices.length; i++) {
-            const sp = specialPrices[i];
-            if (sp.product_id) {
-                productPricesMap.set(sp.product_id, sp);
-            } else if (sp.category_id) {
-                categoryPricesMap.set(sp.category_id, sp);
+
+        // Solo poblar los mapas de precios si el usuario está logueado
+        if (shouldApplySpecialPrices) {
+            for (let i = 0; i < specialPrices.length; i++) {
+                const sp = specialPrices[i];
+                if (sp.product_id) {
+                    productPricesMap.set(sp.product_id, sp);
+                } else if (sp.category_id) {
+                    categoryPricesMap.set(sp.category_id, sp);
+                }
             }
         }
 
@@ -426,7 +433,8 @@ export const ProductProvider = ({ children }) => {
             const specialPriceInfo = productSpecificPrice || categorySpecificPrice;
             const slug = createSlug(product.name);
 
-            if (specialPriceInfo) {
+            // Solo aplicar precio especial si existe info y el usuario está logueado
+            if (specialPriceInfo && shouldApplySpecialPrices) {
                 return {
                     ...product,
                     slug,
@@ -466,8 +474,8 @@ export const ProductProvider = ({ children }) => {
 
     const refetch = useCallback(() => {
         setError(null);
-        fetchBaseProductsAndCategories({ background: false }).catch(() => {});
-        fetchSpecialPrices(customerId, { background: false }).catch(() => {});
+        fetchBaseProductsAndCategories({ background: false }).catch(() => { });
+        fetchSpecialPrices(customerId, { background: false }).catch(() => { });
     }, [fetchBaseProductsAndCategories, fetchSpecialPrices, customerId]);
 
     const value = {
