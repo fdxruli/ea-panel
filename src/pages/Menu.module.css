@@ -164,15 +164,42 @@
 }
 
 .categoryCircle {
+  position: relative;
   width: 76px;
   height: 76px;
   padding: 3px;
-  overflow: hidden;
+  overflow: visible;
   border: 2px solid transparent;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(229, 115, 115, 0.16), rgba(38, 50, 56, 0.08));
   box-shadow: 0 12px 26px rgba(38, 50, 56, 0.08);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.categoryOfferBadge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  z-index: 2;
+  padding: 0.25rem 0.45rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--color-error), #c62828);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(211, 47, 47, 0.3);
+  animation: categoryOfferPulse 2s ease-in-out infinite;
+}
+
+@keyframes categoryOfferPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
 }
 
 .categoryButtonActive .categoryCircle {
@@ -480,6 +507,11 @@
   .categoryCircle {
     width: 82px;
     height: 82px;
+  }
+
+  .categoryOfferBadge {
+    font-size: 0.62rem;
+    padding: 0.28rem 0.5rem;
   }
 
   .productList {

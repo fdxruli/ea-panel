@@ -158,21 +158,28 @@ export default function Menu() {
       name: 'Todos',
       imageUrl: defaultCatalogImage,
       fallback: 'EA',
+      hasOffer: false,
     };
 
     const visualCategories = categories.map((category) => {
+      const categoryProducts = products.filter((product) => product.category_id === category.id);
+      const hasOffer = categoryProducts.some(
+        (product) => product.original_price && product.original_price !== product.price
+      );
+
       return {
         id: category.id,
         key: category.id,
         name: category.name,
-        imageUrl: getFirstAvailableProductImage(
-          products.filter((product) => product.category_id === category.id)
-        ),
+        imageUrl: getFirstAvailableProductImage(categoryProducts),
         fallback: getCategoryFallback(category.name),
+        hasOffer,
       };
     });
 
-    return [allEntry, ...visualCategories];
+    const allHasOffer = visualCategories.some((cat) => cat.hasOffer);
+
+    return [{ ...allEntry, hasOffer: allHasOffer }, ...visualCategories];
   }, [categories, defaultCatalogImage, products]);
 
   useEffect(() => {
@@ -470,6 +477,7 @@ export default function Menu() {
                     ) : (
                       <span className={styles.categoryFallback}>{category.fallback}</span>
                     )}
+                    {category.hasOffer && <span className={styles.categoryOfferBadge}>Oferta</span>}
                   </span>
                   <span className={styles.categoryName}>{category.name}</span>
                 </button>
@@ -480,9 +488,9 @@ export default function Menu() {
 
         <div className={`${styles.productList} ${styles[layout]}`}>
           {loading ? (
-             Array.from({ length: 8 }).map((_, i) => (
-               <ProductSkeleton key={`skeleton-${i}`} layout={layout} />
-             ))
+            Array.from({ length: 8 }).map((_, i) => (
+              <ProductSkeleton key={`skeleton-${i}`} layout={layout} />
+            ))
           ) : error ? (
             <div className={`${styles.emptyState} ${styles.errorState}`}>
               <p>Tardó demasiado en cargar. Verifica tu conexión.</p>

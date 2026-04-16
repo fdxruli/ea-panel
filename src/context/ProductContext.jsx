@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
-import { getAsyncCache, setAsyncCache } from '../lib/db';
+import { getAsyncCache, setAsyncCache, clearAsyncCache } from '../lib/db';
 import { useUserData } from './UserDataContext';
 import { createSlug } from '../seo/config';
 import { useAlert } from './AlertContext';
@@ -375,6 +375,11 @@ export const ProductProvider = ({ children }) => {
 
             priceRealtimeTimerRef.current = window.setTimeout(() => {
                 priceRealtimeTimerRef.current = null;
+
+                // ✅ INVALIDAR el caché ANTES de refetch
+                const cacheKey = buildSpecialPricesCacheKey(customerId);
+                clearAsyncCache(cacheKey).catch(() => { });
+
                 scheduleAlert(priceAlertTimerRef, 'Promociones actualizadas!', 'info', 0);
                 fetchSpecialPrices(customerId, { background: true }).catch(() => { });
             }, PRICES_ALERT_DELAY_MS);
