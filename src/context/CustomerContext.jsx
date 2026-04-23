@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { deleteFCMRegistration } from '../lib/firebaseConfig';
 
 const CustomerContext = createContext();
 
@@ -353,13 +354,34 @@ export const CustomerProvider = ({ children }) => {
     return true;
   };
 
-  const clearPhone = () => {
+  function clearPhone() {
+    const currentCustomerId = customer?.id;
+
     sessionRestoreIdRef.current += 1;
     localStorage.removeItem(CUSTOMER_PHONE_KEY);
     localStorage.removeItem(CUSTOMER_DATA_KEY);
     setPhone('');
     setCustomer(null);
-  };
+
+    const cleanupNotificationSession = async () => {
+      if (currentCustomerId) {
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('customer_id', currentCustomerId);
+
+        if (error) {
+          console.error('[Notifications] No se pudo limpiar la suscripcion push del cliente:', error);
+        }
+      }
+
+      await deleteFCMRegistration();
+    };
+
+    cleanupNotificationSession().catch((error) => {
+      console.error('[Notifications] Error limpiando sesion push:', error);
+    });
+  }
 
   const togglePhoneModal = (value) => {
     if (typeof value === 'function') {

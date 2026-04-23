@@ -13,6 +13,11 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
+import {
+  firebaseWebConfig,
+  getNotificationDisplayFromPayload,
+  DEFAULT_NOTIFICATION_URL,
+} from './lib/firebaseMessagingConfig';
 
 // ─── Constantes de nombres de caché ───────────────────────────────────────────
 const CACHE_NAMES = {
@@ -32,13 +37,37 @@ const SUPABASE_HOST = SUPABASE_URL
   ? new URL(SUPABASE_URL).hostname
   : null;
 
+const getUrlToOpen = (notification) => {
+  const rawData = notification?.data;
+
+  if (rawData?.url) {
+    return rawData.url;
+  }
+
+  if (rawData?.FCM_MSG?.data?.url) {
+    return rawData.FCM_MSG.data.url;
+  }
+
+  if (rawData?.FCM_MSG?.fcmOptions?.link) {
+    return rawData.FCM_MSG.fcmOptions.link;
+  }
+
+  if (rawData?.FCM_MSG?.notification?.click_action) {
+    return rawData.FCM_MSG.notification.click_action;
+  }
+
+  return DEFAULT_NOTIFICATION_URL;
+};
+
+const firebaseApp = initializeApp(firebaseWebConfig);
+const messaging = getMessaging(firebaseApp);
+
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 // Limpiar cachés de versiones anteriores automáticamente
 cleanupOutdatedCaches();
 
 self.addEventListener('install', () => {
-  console.log('[SW] Instalando nueva versión...');
   // No llamamos self.skipWaiting() aquí intencionalmente.
   // Con registerType: 'prompt', el SW espera en 'waiting' hasta que
   // el usuario acepte vía ReloadPrompt → updateServiceWorker(true).
@@ -46,7 +75,6 @@ self.addEventListener('install', () => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activado. Tomando control de todos los clientes.');
   event.waitUntil(clientsClaim());
 });
 
@@ -60,58 +88,39 @@ self.addEventListener('message', (event) => {
 // ─── Notificaciones Push (click) ──────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/';
+  const targetUrl = new URL(getUrlToOpen(event.notification), self.location.origin).href;
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          if (client.url.includes(urlToOpen) && 'focus' in client) {
+          if (client.url === targetUrl && 'focus' in client) {
             return client.focus();
           }
         }
+
         if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+          return clients.openWindow(targetUrl);
         }
+
+        return undefined;
       })
   );
 });
 
-// ─── Firebase Cloud Messaging (solo en producción) ────────────────────────────
-if (!import.meta.env.DEV) {
-  console.log('[SW] Producción: Inicializando Firebase Messaging...');
+onBackgroundMessage(messaging, async (payload) => {
+  const notificationDisplay = getNotificationDisplayFromPayload(payload);
+  const existingNotifications = await self.registration.getNotifications({
+    tag: notificationDisplay.options.tag,
+  });
 
-  const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  };
+  existingNotifications.forEach((notification) => notification.close());
 
-  try {
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-
-    onBackgroundMessage(messaging, (payload) => {
-      console.log('[SW] Mensaje FCM recibido:', payload);
-      const notificationTitle = payload.notification?.title || 'Nueva Notificación';
-      const notificationOptions = {
-        body: payload.notification?.body || '',
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
-        data: { url: payload.data?.url || '/' },
-        tag: 'notification-' + Date.now(),
-        requireInteraction: false,
-      };
-      return self.registration.showNotification(notificationTitle, notificationOptions);
-    });
-  } catch (err) {
-    console.warn('[SW] Falló la inicialización de Firebase Messaging.', err);
-  }
-} else {
-  console.log('[SW] Desarrollo: Omitiendo Firebase Messaging.');
-}
+  await self.registration.showNotification(
+    notificationDisplay.title,
+    notificationDisplay.options
+  );
+});
 
 // ─── Precache del App Shell ───────────────────────────────────────────────────
 // Vite-plugin-pwa inyecta aquí el manifiesto de precache con todos los
