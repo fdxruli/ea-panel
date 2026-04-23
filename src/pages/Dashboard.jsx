@@ -1,44 +1,132 @@
 import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { supabase } from "../lib/supabaseClient";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { useAlert } from "../context/AlertContext";
 import styles from './Dashboard.module.css';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { StatCard } from "../components/StatCard";
 import { exportToCSV } from "../utils/exportUtils";
 import { useAdminCache } from "../hooks/useAdminCache";
+import DashboardSkeleton from "../components/DashboardSkeleton";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
+
+// ==================== CONSTANTS ====================
+const CST_OFFSET_HOURS = -6;
+const EMPTY_STATE_DATA = {
+    profitableProducts: [],
+    recentOrders: [],
+    totalProfit: 0,
+    totalRevenue: 0,
+    totalCosts: 0,
+    profitMargin: 0,
+    avgOrderValue: 0,
+    totalCustomers: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+    canceledOrders: 0
+};
+
+// ==================== FORMATTERS ====================
+const currencyFormatter = new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+const formatCurrency = (value) => currencyFormatter.format(value || 0);
+
+// ==================== HELPER FUNCTIONS ====================
+const getInitialDateRange = () => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    return {
+        startDateStr: start.toISOString().split('T')[0],
+        endDateStr: end.toISOString().split('T')[0],
+        startIso: start.toISOString(),
+        endIso: end.toISOString()
+    };
+};
+
+/**
+ * Calculates CST (Chiapas, Mexico) timezone boundaries for a given date string.
+ * Returns ISO strings representing 00:00:00 and 23:59:59.999 in CST.
+ * This ensures midnight orders (1-4 AM) are not lost during UTC conversion.
+ */
+const getCSTDateBoundaries = (dateStr, isEnd = false) => {
+    if (!dateStr) return null;
+
+    const [year, month, day] = dateStr.split('-').map(Number);
+
+    const cstDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    cstDate.setUTCHours(0 - CST_OFFSET_HOURS, 0, 0, 0);
+
+    if (isEnd) {
+        cstDate.setUTCHours(23, 59, 59, 999);
+    }
+
+    return cstDate.toISOString();
+};
 
 // ==================== GRÁFICOS ====================
 const ProfitabilityChart = memo(({ profitData }) => {
     const chartData = useMemo(() => ({
         labels: profitData.map(item => item.name.length > 15 ? item.name.substring(0, 12) + '...' : item.name),
         datasets: [
-            { label: 'Ingresos', data: profitData.map(item => item.revenue), backgroundColor: 'rgba(46, 204, 113, 0.6)', borderColor: 'rgba(46, 204, 113, 1)', borderWidth: 1 },
-            { label: 'Costos', data: profitData.map(item => item.totalCost), backgroundColor: 'rgba(231, 76, 60, 0.6)', borderColor: 'rgba(231, 76, 60, 1)', borderWidth: 1 },
-            { label: 'Ganancia', data: profitData.map(item => item.profit), backgroundColor: 'rgba(52, 152, 219, 0.6)', borderColor: 'rgba(52, 152, 219, 1)', borderWidth: 1 }
+            {
+                label: 'Ingresos',
+                data: profitData.map(item => item.revenue),
+                backgroundColor: 'rgba(46, 204, 113, 0.6)',
+                borderColor: 'rgba(46, 204, 113, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Costos',
+                data: profitData.map(item => item.totalCost),
+                backgroundColor: 'rgba(231, 76, 60, 0.6)',
+                borderColor: 'rgba(231, 76, 60, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Ganancia',
+                data: profitData.map(item => item.profit),
+                backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 1
+            }
         ],
     }), [profitData]);
 
     const options = useMemo(() => ({
-        responsive: true, maintainAspectRatio: false, animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
         plugins: {
             legend: { position: 'top' },
             tooltip: {
                 animation: false,
                 callbacks: {
-                    label: context => `${context.dataset.label || ''}: $${context.parsed.y.toFixed(2)}`,
+                    label: context => `${context.dataset.label || ''}: ${formatCurrency(context.parsed.y)}`,
                     afterBody: tooltipItems => {
                         const product = profitData[tooltipItems[0].dataIndex];
-                        return [`Margen: ${product.marginPercent}%`, `Cantidad vendida: ${product.quantity}`];
+                        return [
+                            `Margen: ${product.marginPercent}%`,
+                            `Cantidad vendida: ${product.quantity}`
+                        ];
                     }
                 }
             }
         },
         scales: {
             x: { ticks: { maxRotation: 45, minRotation: 45 } },
-            y: { beginAtZero: true, ticks: { callback: value => '$' + value.toFixed(0) } }
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: value => formatCurrency(value).replace('$', '')
+                }
+            }
         }
     }), [profitData]);
 
@@ -63,7 +151,9 @@ const ProfitMarginChart = memo(({ profitData }) => {
     }), [profitData]);
 
     const options = useMemo(() => ({
-        responsive: true, maintainAspectRatio: false, animation: false,
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
         plugins: {
             legend: { display: false },
             tooltip: {
@@ -71,7 +161,11 @@ const ProfitMarginChart = memo(({ profitData }) => {
                 callbacks: {
                     label: context => {
                         const product = profitData[context.dataIndex];
-                        return [`Margen: ${context.parsed}%`, `Ganancia: $${product.profit.toFixed(2)}`, `Vendidos: ${product.quantity}`];
+                        return [
+                            `Margen: ${context.parsed}%`,
+                            `Ganancia: ${formatCurrency(product.profit)}`,
+                            `Vendidos: ${product.quantity}`
+                        ];
                     }
                 }
             }
@@ -89,25 +183,24 @@ const DownloadIcon = memo(() => (
 ));
 DownloadIcon.displayName = 'DownloadIcon';
 
+const EmptyStateIcon = memo(() => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+));
+EmptyStateIcon.displayName = 'EmptyStateIcon';
+
 // ==================== COMPONENTE PRINCIPAL ====================
 export default function Dashboard() {
-    const getInitialDateRange = () => {
-        const end = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - 30);
-        return {
-            startDateStr: start.toISOString().split('T')[0],
-            endDateStr: end.toISOString().split('T')[0],
-            startIso: start.toISOString(),
-            endIso: end.toISOString()
-        };
-    };
-
-    const initDates = getInitialDateRange();
-
-    const [filterRange, setFilterRange] = useState({ start: initDates.startIso, end: initDates.endIso });
-    const [startDate, setStartDate] = useState(initDates.startDateStr);
-    const [endDate, setEndDate] = useState(initDates.endDateStr);
+    const { showAlert } = useAlert();
+    const [filterRange, setFilterRange] = useState(() => {
+        const initDates = getInitialDateRange();
+        return { start: initDates.startIso, end: initDates.endIso };
+    });
+    const [startDate, setStartDate] = useState(() => getInitialDateRange().startDateStr);
+    const [endDate, setEndDate] = useState(() => getInitialDateRange().endDateStr);
     const [showDateFilter, setShowDateFilter] = useState(false);
 
     const cacheKey = useMemo(() => `dashboard_stats_${filterRange.start}_${filterRange.end}`, [filterRange]);
@@ -142,26 +235,33 @@ export default function Dashboard() {
         return () => supabase.removeChannel(channel);
     }, [invalidate]);
 
-    const handleFilterApply = () => {
+    const handleFilterApply = useCallback(() => {
         if (startDate && endDate && endDate < startDate) {
-            alert('La fecha de fin no puede ser anterior a la fecha de inicio.');
+            showAlert('La fecha de fin no puede ser anterior a la fecha de inicio.', 'error');
             return;
         }
-        const utcStart = startDate ? new Date(`${startDate}T00:00:00`).toISOString() : null;
-        const utcEnd = endDate ? new Date(`${endDate}T23:59:59.999`).toISOString() : null;
-        setFilterRange({ start: utcStart, end: utcEnd });
-    };
 
-    const handleFilterClear = () => {
+        const utcStart = getCSTDateBoundaries(startDate, false);
+        const utcEnd = getCSTDateBoundaries(endDate, true);
+
+        setFilterRange({ start: utcStart, end: utcEnd });
+        setShowDateFilter(false);
+    }, [startDate, endDate, showAlert]);
+
+    const handleFilterClear = useCallback(() => {
         const resetDates = getInitialDateRange();
         setStartDate(resetDates.startDateStr);
         setEndDate(resetDates.endDateStr);
         setFilterRange({ start: resetDates.startIso, end: resetDates.endIso });
-    };
+    }, []);
 
-    const stats = statsRaw || {};
-    const profitableProducts = stats.profitableProducts || [];
-    const recentOrders = stats.recentOrders || [];
+    const stats = statsRaw || EMPTY_STATE_DATA;
+    const profitableProducts = useMemo(() => stats.profitableProducts || [], [stats]);
+    const recentOrders = useMemo(() => stats.recentOrders || [], [stats]);
+
+    const hasData = useMemo(() => {
+        return profitableProducts.length > 0 || recentOrders.length > 0 || (stats.totalRevenue || 0) > 0;
+    }, [profitableProducts, recentOrders, stats.totalRevenue]);
 
     const handleExportProfitability = useCallback(() => {
         const dataToExport = profitableProducts.map(p => ({
@@ -174,20 +274,44 @@ export default function Dashboard() {
             'Precio Promedio ($)': p.avgPrice.toFixed(2),
             'Costo Promedio ($)': p.avgCost.toFixed(2)
         }));
-        if (dataToExport.length === 0) return alert("No hay datos de rentabilidad para exportar.");
+        if (dataToExport.length === 0) {
+            showAlert('No hay datos de rentabilidad para exportar.', 'info');
+            return;
+        }
         exportToCSV(dataToExport, 'analisis_rentabilidad.csv');
-    }, [profitableProducts]);
+    }, [profitableProducts, showAlert]);
 
     const handleExportMargins = useCallback(() => {
         const dataToExport = profitableProducts.map(p => ({
-            'Producto': p.name, 'Margen (%)': p.marginPercent, 'Ganancia ($)': p.profit.toFixed(2), 'Cantidad Vendida': p.quantity
+            'Producto': p.name,
+            'Margen (%)': p.marginPercent,
+            'Ganancia ($)': p.profit.toFixed(2),
+            'Cantidad Vendida': p.quantity
         }));
-        if (dataToExport.length === 0) return alert("No hay datos de márgenes para exportar.");
+        if (dataToExport.length === 0) {
+            showAlert('No hay datos de márgenes para exportar.', 'info');
+            return;
+        }
         exportToCSV(dataToExport, 'margenes_ganancia.csv');
-    }, [profitableProducts]);
+    }, [profitableProducts, showAlert]);
 
-    if (isLoading && !statsRaw) return <LoadingSpinner />;
-    if (isError) return <div className={styles.error}>Error al cargar el dashboard.</div>;
+    const top6Products = useMemo(() => profitableProducts.slice(0, 6), [profitableProducts]);
+    const top5Products = useMemo(() => profitableProducts.slice(0, 5), [profitableProducts]);
+    const top8Products = useMemo(() => profitableProducts.slice(0, 8), [profitableProducts]);
+
+    if (isLoading && !statsRaw) {
+        return <DashboardSkeleton />;
+    }
+
+    if (isError) {
+        return (
+            <div className={styles.errorContainer}>
+                <EmptyStateIcon />
+                <h2>Error al cargar el dashboard</h2>
+                <p>Hubo un problema al obtener los datos. Por favor, intenta nuevamente.</p>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.container}>
@@ -202,13 +326,26 @@ export default function Dashboard() {
                     <div className={`${styles.dateFilterContainer} ${showDateFilter ? styles.filtersVisible : ''}`}>
                         <div className={styles.dateInputGroup}>
                             <label htmlFor="start-date">Desde</label>
-                            <input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} className={styles.dateInput} />
+                            <input
+                                type="date"
+                                id="start-date"
+                                value={startDate}
+                                onChange={e => setStartDate(e.target.value)}
+                                className={styles.dateInput}
+                            />
                         </div>
                         <div className={styles.dateInputGroup}>
                             <label htmlFor="end-date">Hasta</label>
-                            <input type="date" id="end-date" value={endDate} min={startDate} onChange={e => setEndDate(e.target.value)} className={styles.dateInput} />
+                            <input
+                                type="date"
+                                id="end-date"
+                                value={endDate}
+                                min={startDate}
+                                onChange={e => setEndDate(e.target.value)}
+                                className={styles.dateInput}
+                            />
                         </div>
-                        <div className={"buttonGroup"}>
+                        <div className={styles.buttonGroup}>
                             <button onClick={handleFilterApply} className={styles.filterButton}>Filtrar</button>
                             <button onClick={handleFilterClear} className={styles.clearButton}>Limpiar</button>
                         </div>
@@ -216,65 +353,142 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {!hasData && (
+                <div className={styles.emptyState}>
+                    <EmptyStateIcon />
+                    <h2>No hay datos en este periodo</h2>
+                    <p>Selecciona un rango de fechas diferente o verifica que haya pedidos registrados.</p>
+                </div>
+            )}
+
             <div className={styles.statsGrid}>
-                <StatCard title="Ganancia Total" value={`$${(stats.totalProfit || 0).toFixed(2)}`} subtitle={`Margen: ${(stats.profitMargin || 0).toFixed(1)}%`} color="#2ecc71" icon="💰" />
-                <StatCard title="Ingresos Totales" value={`$${(stats.totalRevenue || 0).toFixed(2)}`} color="#3498db" icon="💵" />
-                <StatCard title="Costos Totales" value={`$${(stats.totalCosts || 0).toFixed(2)}`} subtitle="Costos de producción" color="#e74c3c" icon="📊" />
-                <StatCard title="Valor Promedio/Pedido" value={`$${(stats.avgOrderValue || 0).toFixed(2)}`} color="#f1c40f" icon="📦" />
-                <StatCard title="Total Clientes" value={stats.totalCustomers || 0} subtitle="Clientes registrados" color="#9b59b6" icon="👥" />
-                <StatCard title="Pedidos Pendientes" value={stats.pendingOrders || 0} color="#e67e22" icon="⌛" />
-                <StatCard title="Pedidos Completados" value={stats.completedOrders || 0} color="#2ecc71" icon="✅" />
-                <StatCard title="Órdenes Canceladas" value={stats.canceledOrders || 0} color="#95a5a6" icon="❌" />
+                <StatCard
+                    title="Ganancia Total"
+                    value={formatCurrency(stats.totalProfit)}
+                    subtitle={`Margen: ${(stats.profitMargin || 0).toFixed(1)}%`}
+                    color="#2ecc71"
+                    icon="💰"
+                    helpKey="totalProfit"
+                />
+                <StatCard
+                    title="Ingresos Totales"
+                    value={formatCurrency(stats.totalRevenue)}
+                    color="#3498db"
+                    icon="💵"
+                    helpKey="totalRevenue"
+                />
+                <StatCard
+                    title="Costos Totales"
+                    value={formatCurrency(stats.totalCosts)}
+                    subtitle="Costos de producción"
+                    color="#e74c3c"
+                    icon="📊"
+                    helpKey="totalCosts"
+                />
+                <StatCard
+                    title="Valor Promedio/Pedido"
+                    value={formatCurrency(stats.avgOrderValue)}
+                    color="#f1c40f"
+                    icon="📦"
+                    helpKey="avgOrderValue"
+                />
+                <StatCard
+                    title="Total Clientes"
+                    value={stats.totalCustomers || 0}
+                    subtitle="Clientes registrados"
+                    color="#9b59b6"
+                    icon="👥"
+                    helpKey="totalCustomers"
+                />
+                <StatCard
+                    title="Pedidos Pendientes"
+                    value={stats.pendingOrders || 0}
+                    color="#e67e22"
+                    icon="⌛"
+                    helpKey="pendingOrders"
+                />
+                <StatCard
+                    title="Pedidos Completados"
+                    value={stats.completedOrders || 0}
+                    color="#2ecc71"
+                    icon="✅"
+                    helpKey="completedOrders"
+                />
+                <StatCard
+                    title="Órdenes Canceladas"
+                    value={stats.canceledOrders || 0}
+                    color="#95a5a6"
+                    icon="❌"
+                    helpKey="canceledOrders"
+                />
             </div>
 
-            <div className={styles.mainGrid}>
-                <div className={`${styles.chartCard} ${styles.profitability}`}>
-                    <div className={styles.chartHeader}>
-                        <h3>💹 Análisis de Rentabilidad</h3>
-                        <button onClick={handleExportProfitability} className={styles.exportButton}><DownloadIcon /> Exportar</button>
+            {hasData && (
+                <div className={styles.mainGrid}>
+                    <div className={`${styles.chartCard} ${styles.profitability}`}>
+                        <div className={styles.chartHeader}>
+                            <h3>💹 Análisis de Rentabilidad</h3>
+                            <button onClick={handleExportProfitability} className={styles.exportButton}>
+                                <DownloadIcon /> Exportar
+                            </button>
+                        </div>
+                        <div className={styles.chartContainer}>
+                            <ProfitabilityChart profitData={top6Products} />
+                        </div>
                     </div>
-                    <div className={styles.chartContainer}><ProfitabilityChart profitData={profitableProducts.slice(0, 6)} /></div>
-                </div>
 
-                <div className={`${styles.chartCard} ${styles.marginAnalysis}`}>
-                    <div className={styles.chartHeader}>
-                        <h3>🎯 Márgenes de Ganancia</h3>
-                        <button onClick={handleExportMargins} className={styles.exportButton}><DownloadIcon /> Exportar</button>
+                    <div className={`${styles.chartCard} ${styles.marginAnalysis}`}>
+                        <div className={styles.chartHeader}>
+                            <h3>🎯 Márgenes de Ganancia</h3>
+                            <button onClick={handleExportMargins} className={styles.exportButton}>
+                                <DownloadIcon /> Exportar
+                            </button>
+                        </div>
+                        <div className={styles.chartContainer}>
+                            <ProfitMarginChart profitData={top5Products} />
+                        </div>
                     </div>
-                    <div className={styles.chartContainer}><ProfitMarginChart profitData={profitableProducts.slice(0, 5)} /></div>
-                </div>
 
-                <div className={`${styles.chartCard} ${styles.topProducts}`}>
-                    <h3>🏆 Top Productos Más Rentables</h3>
-                    <div className={styles.profitableList}>
-                        {profitableProducts.slice(0, 8).map((product, index) => (
-                            <div key={index} className={styles.profitableItem}>
-                                <div className={styles.productInfo}>
-                                    <span className={styles.productName}>{product.name}</span>
-                                    <span className={styles.productStats}>Vendidos: {product.quantity} • Margen: {product.marginPercent}%</span>
-                                    <span className={styles.productPricing}>Precio: ${product.avgPrice.toFixed(2)} • Costo: ${product.avgCost.toFixed(2)}</span>
+                    <div className={`${styles.chartCard} ${styles.topProducts}`}>
+                        <h3>🏆 Top Productos Más Rentables</h3>
+                        <div className={styles.profitableList}>
+                            {top8Products.map((product, index) => (
+                                <div key={`${product.name}-${index}`} className={styles.profitableItem}>
+                                    <div className={styles.productInfo}>
+                                        <span className={styles.productName}>{product.name}</span>
+                                        <span className={styles.productStats}>
+                                            Vendidos: {product.quantity} • Margen: {product.marginPercent}%
+                                        </span>
+                                        <span className={styles.productPricing}>
+                                            Precio: {formatCurrency(product.avgPrice)} • Costo: {formatCurrency(product.avgCost)}
+                                        </span>
+                                    </div>
+                                    <div className={styles.productProfit}>
+                                        <span className={styles.profitValue}>{formatCurrency(product.profit)}</span>
+                                    </div>
                                 </div>
-                                <div className={styles.productProfit}><span className={styles.profitValue}>+${product.profit.toFixed(2)}</span></div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={`${styles.chartCard} ${styles.recentOrders}`}>
+                        <h3>⚡ Pedidos Recientes</h3>
+                        <ul className={styles.recentList}>
+                            {recentOrders.map((order, index) => (
+                                <li key={`${order.id}-${index}`} className={styles.recentOrderItem}>
+                                    <span>{order.customer_name || 'Cliente'}</span>
+                                    <div className={styles.orderInfo}>
+                                        <span>{formatCurrency(order.total_amount)}</span>
+                                        <span className={`${styles.statusBadge} ${styles[order.status]}`}>
+                                            {order.status.replace('_', ' ')}
+                                        </span>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
-
-                <div className={`${styles.chartCard} ${styles.recentOrders}`}>
-                    <h3>⚡ Pedidos Recientes</h3>
-                    <ul className={styles.recentList}>
-                        {recentOrders.map((order, index) => (
-                            <li key={`${order.id}-${index}`}>
-                                <span>{order.customer_name || 'Cliente'}</span>
-                                <div className={styles.orderInfo}>
-                                    <span>${order.total_amount}</span>
-                                    <span className={`${styles.statusBadge} ${styles[order.status]}`}>{order.status.replace('_', ' ')}</span>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
+            )}
         </div>
     );
 }

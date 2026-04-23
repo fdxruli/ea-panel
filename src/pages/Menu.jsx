@@ -13,11 +13,12 @@ import { useBusinessHours } from '../context/BusinessHoursContext';
 import styles from './Menu.module.css';
 import ProductModal from '../components/ProductModal';
 import ImageWithFallback from '../components/ImageWithFallback';
-import ProductSkeleton from '../components/ProductSkeleton';
+import MenuRouteSkeleton from '../components/MenuRouteSkeleton';
 import SEO from '../components/SEO';
 import { getThumbnailUrl } from '../utils/imageUtils';
 import BaseProductCard from '../components/BaseProductCard';
 import { animateToCart } from '../utils/cartAnimation';
+import { MENU_LAYOUT_STORAGE_KEY } from './menuConstants';
 import {
   defaultSeoImageAlt,
   homeDescription,
@@ -71,7 +72,6 @@ const GridIcon = () => (
   </svg>
 );
 
-const LAYOUT_STORAGE_KEY = 'product-layout-preference';
 const MOBILE_BREAKPOINT = 768;
 
 const getProductDisplayImage = (product) =>
@@ -133,7 +133,7 @@ export default function Menu() {
   const pathnameRef = useRef(location.pathname);
 
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [layout, setLayout] = useState(() => localStorage.getItem(LAYOUT_STORAGE_KEY) || 'grid');
+  const [layout, setLayout] = useState(() => localStorage.getItem(MENU_LAYOUT_STORAGE_KEY) || 'grid');
   const shouldShowLeadCapture = !customer;
   const routeSelectedProduct = useMemo(() => (
     productSlug ? products.find((product) => product.slug === productSlug) || null : null
@@ -146,7 +146,7 @@ export default function Menu() {
   }, [location.pathname]);
 
   useEffect(() => {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, layout);
+    localStorage.setItem(MENU_LAYOUT_STORAGE_KEY, layout);
   }, [layout]);
 
   const defaultCatalogImage = useMemo(() => getFirstAvailableProductImage(products), [products]);
@@ -398,6 +398,24 @@ export default function Menu() {
     );
   }
 
+  if (loading) {
+    return (
+      <>
+        <SEO
+          title={pageTitle}
+          description={pageDescription}
+          type="website"
+          schemaMarkup={currentSchema}
+          canonicalUrl={canonicalUrl}
+          image={seoImage}
+          imageAlt={seoImageAlt}
+          noindex={isMissingProductRoute}
+        />
+        <MenuRouteSkeleton layout={layout} showLeadCapture={shouldShowLeadCapture} />
+      </>
+    );
+  }
+
   return (
     <>
       <SEO
@@ -487,11 +505,7 @@ export default function Menu() {
         </div>
 
         <div className={`${styles.productList} ${styles[layout]}`}>
-          {loading ? (
-            Array.from({ length: 8 }).map((_, i) => (
-              <ProductSkeleton key={`skeleton-${i}`} layout={layout} />
-            ))
-          ) : error ? (
+          {error ? (
             <div className={`${styles.emptyState} ${styles.errorState}`}>
               <p>Tardó demasiado en cargar. Verifica tu conexión.</p>
               <button

@@ -5,7 +5,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "./context/CartContext.jsx";
 import { CustomerProvider } from "./context/CustomerContext.jsx";
 import { ProductProvider } from "./context/ProductContext.jsx";
-import { UserDataProvider } from "./context/UserDataContext.jsx";
+import { UserDataProvider, useUserData } from "./context/UserDataContext.jsx";
 import { ProductExtrasProvider } from "./context/ProductExtrasContext.jsx";
 import { AlertProvider } from "./context/AlertContext.jsx";
 import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext.jsx";
@@ -18,6 +18,7 @@ import { CacheAdminProvider } from "./context/CacheAdminContext.jsx";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import ClientLayout from "./layouts/ClientLayout.jsx";
 import AdminRoute from "./components/AdminRoute.jsx";
+import MenuRouteSkeleton from "./components/MenuRouteSkeleton.jsx";
 
 // --- Páginas de Cliente ---
 const Menu = lazy(() => import("./pages/Menu.jsx"));
@@ -47,7 +48,6 @@ const Login = lazy(() => import("./pages/Login.jsx"));
 const NotFoundPage = lazy(() => import("./components/NotFoundPage.jsx"));
 
 // --- Componentes (NO son páginas, se cargan de inmediato) ---
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import AlertModal from "./components/AlertModal.jsx";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
@@ -88,6 +88,11 @@ const FullscreenLoader = () => (
   </div>
 );
 
+const ClientMenuFallback = () => {
+  const { customer } = useUserData();
+  return <MenuRouteSkeleton showLeadCapture={!customer} />;
+};
+
 function App() {
   useEffect(() => {
     cleanupExpiredCache();
@@ -116,9 +121,7 @@ function App() {
                                   {/* El Suspense aquí ya no es necesario
                                     si tenemos uno global, pero lo dejamos
                                     por si ClientLayout hace algo especial */}
-                                  <Suspense fallback={<FullscreenLoader />}>
-                                    <ClientLayout />
-                                  </Suspense>
+                                  <ClientLayout />
                                 </CartProvider>
                               </ProductExtrasProvider>
                             </ProductProvider>
@@ -126,8 +129,22 @@ function App() {
                         </CustomerProvider>
                       }
                     >
-                      <Route index element={<Menu />} />
-                      <Route path="producto/:productSlug" element={<Menu />} />
+                      <Route
+                        index
+                        element={(
+                          <Suspense fallback={<ClientMenuFallback />}>
+                            <Menu />
+                          </Suspense>
+                        )}
+                      />
+                      <Route
+                        path="producto/:productSlug"
+                        element={(
+                          <Suspense fallback={<ClientMenuFallback />}>
+                            <Menu />
+                          </Suspense>
+                        )}
+                      />
                       <Route path="mis-pedidos" element={<MyOrders />} />
                       <Route path="mis-pedidos/:orderCode" element={<OrderDetailPage />} />
                       <Route path="mi-perfil" element={<MyProfile />} />
