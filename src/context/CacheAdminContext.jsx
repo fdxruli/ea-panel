@@ -10,6 +10,7 @@ import {
     clearStorage,
     cleanupExpiredEntries
 } from '../utils/cacheAdminUtils';
+import { createThrottle } from '../utils/throttle';
 
 // TTLs por defecto (en milisegundos)
 const DEFAULT_TTL = {
@@ -18,6 +19,9 @@ const DEFAULT_TTL = {
     SHORT: 1 * 60 * 1000,     // 1 minuto (stats, pedidos activos)
     NONE: null                // Nunca expira (datos de sesión)
 };
+
+// Tiempo de throttle para invalidaciones por Realtime (ms)
+const REALTIME_INVALIDATE_THROTTLE_MS = 2000;
 
 export const CacheAdminContext = createContext();
 
@@ -30,8 +34,14 @@ export const CacheAdminProvider = ({ children }) => {
     // Ref para peticiones en vuelo (evitar duplicados)
     const inFlightRequests = useRef(new Map());
 
+    // Ref para cleanup de peticiones en vuelo huérfanas
+    const cleanupIntervalRef = useRef(null);
+
     // Hook para detectar el cierre de sesión
     const { admin } = useAdminAuth();
+
+    // Ref para throttled invalidate (se crea una sola vez)
+    const throttledInvalidateRef = useRef(null);
 
     // 1. Hidratación inicial desde sessionStorage
     useEffect(() => {
@@ -62,6 +72,42 @@ export const CacheAdminProvider = ({ children }) => {
         return () => clearInterval(intervalId);
     }, []);
 
+    // Cleanup interval para peticiones en vuelo huérfanas
+    useEffect(() => {
+        cleanupIntervalRef.current = setInterval(() => {
+            const now = Date.now();
+            const ORPHAN_THRESHOLD_MS = 30000; // 30 segundos
+            let orphanedCount = 0;
+
+            inFlightRequests.current.forEach((request, key) => {
+                const elapsed = now - request.startTime;
+
+                // Si la petición lleva más de 30 segundos, probablemente está huérfana
+                if (elapsed > ORPHAN_THRESHOLD_MS && request.status === 'pending') {
+                    console.warn(`[CacheAdmin] Petición huérfana detectada para "${key}" (${elapsed}ms). Limpiando...`);
+                    inFlightRequests.current.delete(key);
+                    orphanedCount++;
+                }
+            });
+
+            if (orphanedCount > 0) {
+                console.log(`[CacheAdmin] Limpiadas ${orphanedCount} peticiones huérfanas.`);
+            }
+
+            // Log de estado
+            const activeCount = inFlightRequests.current.size;
+            if (activeCount > 0) {
+                console.debug(`[CacheAdmin] ${activeCount} peticiones en vuelo activas`);
+            }
+        }, 10000); // Chequear cada 10 segundos
+
+        return () => {
+            if (cleanupIntervalRef.current) {
+                clearInterval(cleanupIntervalRef.current);
+            }
+        };
+    }, []);
+
     // 3. Limpieza de caché al cerrar sesión
     useEffect(() => {
         // Si el admin se vuelve null (cierre de sesión)
@@ -70,6 +116,11 @@ export const CacheAdminProvider = ({ children }) => {
             setCache({});
             inFlightRequests.current.clear();
             clearStorage();
+
+            // Cancelar throttle si existe
+            if (throttledInvalidateRef.current?.cancel) {
+                throttledInvalidateRef.current.cancel();
+            }
         }
     }, [admin]);
 
@@ -118,8 +169,31 @@ export const CacheAdminProvider = ({ children }) => {
 
     /**
      * Invalida (borra) una o más entradas del caché.
+     * Versión throttled para usar con Realtime (evita refetch masivos).
      */
-    const invalidate = useCallback((keyOrPattern) => {
+    const invalidate = useCallback((keyOrPattern, options = {}) => {
+        const { throttled = false } = options;
+
+        // Si es throttled, usar la función con throttle
+        if (throttled) {
+            if (!throttledInvalidateRef.current) {
+                throttledInvalidateRef.current = createThrottle(
+                    (key) => invalidate(key, { throttled: false }),
+                    REALTIME_INVALIDATE_THROTTLE_MS,
+                    { leading: true, trailing: true }
+                );
+            }
+
+            if (typeof keyOrPattern === 'string') {
+                throttledInvalidateRef.current(keyOrPattern);
+            } else {
+                // Para patrones o '*', ejecutar inmediatamente
+                throttledInvalidateRef.current.flush();
+                // Ejecutar la invalidación original
+            }
+            return;
+        }
+
         setCache(prevCache => {
             const nextCache = { ...prevCache };
             let invalidatedCount = 0;
@@ -156,18 +230,21 @@ export const CacheAdminProvider = ({ children }) => {
 
     /**
      * Función auxiliar para manejar peticiones (con deduplicación).
+     * Incluye timestamp para detectar peticiones huérfanas.
      */
     const handleFetch = useCallback(async (key, fetcher, ttl) => {
         // 1. DEDUPLICACIÓN: Verificar si ya hay una petición en curso
-        if (inFlightRequests.current.has(key)) {
+        const existingRequest = inFlightRequests.current.get(key);
+        if (existingRequest) {
             console.log(`[CacheAdmin] Petición duplicada para "${key}". Esperando resultado...`);
-            return inFlightRequests.current.get(key);
+            return existingRequest.promise;
         }
 
-        // 2. Crear la promesa de la petición
+        // 2. Crear la promesa de la petición con timestamp
+        const startTime = Date.now();
         const fetchPromise = (async () => {
             try {
-                console.log(`[CacheAdmin] FETCH: Ejecutando fetcher para "${key}".`);
+                console.log(`[CacheAdmin] FETCH: Ejecutando fetcher para "${key}" (t=${startTime}).`);
                 const result = await fetcher();
 
                 // Asumimos que el fetcher devuelve { data, error } de Supabase
@@ -185,12 +262,18 @@ export const CacheAdminProvider = ({ children }) => {
 
             } finally {
                 // 4. Limpiar la petición en curso (éxito o fallo)
+                const duration = Date.now() - startTime;
+                console.log(`[CacheAdmin] FETCH completado para "${key}" en ${duration}ms. Limpiando inFlight.`);
                 inFlightRequests.current.delete(key);
             }
         })();
 
-        // 3. Almacenar la promesa en el ref
-        inFlightRequests.current.set(key, fetchPromise);
+        // 3. Almacenar la promesa en el ref con metadata
+        inFlightRequests.current.set(key, {
+            promise: fetchPromise,
+            startTime,
+            status: 'pending'
+        });
 
         return fetchPromise;
 
@@ -214,18 +297,26 @@ export const CacheAdminProvider = ({ children }) => {
             console.log(`[CacheAdmin] PRELOAD: Precargando "${key}".`);
             // No necesitamos el resultado, solo iniciamos el fetch
             handleFetch(key, fetcher, ttl).catch(() => {
-                 // Capturamos el error para que no cause un Unhandled Promise Rejection
-                 console.warn(`[CacheAdmin] PRELOAD falló para "${key}".`);
+                // Capturamos el error para que no cause un Unhandled Promise Rejection
+                console.warn(`[CacheAdmin] PRELOAD falló para "${key}".`);
             });
         }
     }, [getCached, handleFetch]);
 
+    /**
+     * Invalida con throttle para eventos de Realtime.
+     * Evita múltiples refetch en cascada cuando hay muchos cambios simultáneos.
+     */
+    const invalidateThrottled = useCallback((keyOrPattern) => {
+        invalidate(keyOrPattern, { throttled: true });
+    }, [invalidate]);
 
     const value = {
         DEFAULT_TTL,
         getCached,
         setCached,
         invalidate,
+        invalidateThrottled,
         refresh,
         preload,
         clear: () => invalidate('*'), // 'clear' es un alias para invalidar todo
