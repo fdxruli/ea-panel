@@ -1,0 +1,344 @@
+/* src/components/DashboardSkeleton.module.css */
+
+.container {
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.header {
+    margin-bottom: 2rem;
+}
+
+.title {
+    height: 2.5rem;
+    width: 300px;
+    margin-bottom: 0.75rem;
+}
+
+.subtitle {
+    height: 1.2rem;
+    width: 450px;
+}
+
+/* ==================== STATS GRID SKELETON ==================== */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.statCard {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px var(--shadow-color);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    position: relative;
+    min-height: 120px;
+}
+
+.statInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.iconPlaceholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: linear-gradient(
+        90deg,
+        rgba(150, 150, 150, 0.08) 0%,
+        rgba(150, 150, 150, 0.2) 50%,
+        rgba(150, 150, 150, 0.08) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    flex-shrink: 0;
+}
+
+/* ==================== CHART CARD SKELETON ==================== */
+.chartCard {
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px var(--shadow-color);
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+}
+
+.chartHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.headerTitle {
+    width: 200px;
+    height: 1.3rem;
+}
+
+.exportButton {
+    width: 100px;
+    height: 32px;
+}
+
+.chartTitle {
+    width: 250px;
+    height: 1.4rem;
+    margin-bottom: 1.5rem;
+}
+
+.chartPlaceholder {
+    flex-grow: 1;
+    min-height: 300px;
+    background: linear-gradient(
+        90deg,
+        rgba(150, 150, 150, 0.06) 0%,
+        rgba(150, 150, 150, 0.15) 50%,
+        rgba(150, 150, 150, 0.06) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 8px;
+}
+
+/* ==================== PROFITABLE LIST SKELETON ==================== */
+.profitableList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    height: 300px;
+    overflow: hidden;
+}
+
+.profitableItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.8rem;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border-left: 3px solid rgba(46, 204, 117, 0.3);
+}
+
+.productInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.productName {
+    width: 70%;
+    height: 1rem;
+}
+
+.productStats {
+    width: 55%;
+    height: 0.75rem;
+}
+
+.productPricing {
+    width: 60%;
+    height: 0.75rem;
+}
+
+.productProfit {
+    width: 80px;
+    height: 1rem;
+    flex-shrink: 0;
+    margin-left: 0.8rem;
+}
+
+/* ==================== RECENT ORDERS SKELETON ==================== */
+.recentList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    height: 300px;
+    overflow: hidden;
+}
+
+.recentItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem;
+    background: var(--bg-primary);
+    border-radius: 6px;
+}
+
+.customerName {
+    width: 140px;
+    height: 1rem;
+    flex: 1;
+    margin-right: 0.8rem;
+}
+
+.orderInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.orderAmount {
+    width: 60px;
+    height: 1rem;
+}
+
+.statusBadge {
+    width: 70px;
+    height: 1.2rem;
+}
+
+/* ==================== SKELETON LINE BASE ==================== */
+.skeletonLine {
+    background: linear-gradient(
+        90deg,
+        rgba(150, 150, 150, 0.08) 0%,
+        rgba(150, 150, 150, 0.2) 50%,
+        rgba(150, 150, 150, 0.08) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: 6px;
+}
+
+.valueLine {
+    width: 60%;
+    height: 2rem;
+}
+
+.titleLine {
+    width: 75%;
+    height: 0.9rem;
+}
+
+.subtitleLine {
+    width: 50%;
+    height: 0.8rem;
+}
+
+/* ==================== ANIMATION ==================== */
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* ==================== TABLET STYLES ==================== */
+@media (min-width: 768px) {
+    .container {
+        padding: 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.2rem;
+    }
+
+    .mainGrid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.2rem;
+    }
+
+    .profitableList,
+    .recentList {
+        height: 280px;
+    }
+}
+
+/* ==================== DESKTOP STYLES ==================== */
+@media (min-width: 1024px) {
+    .container {
+        padding: 2rem;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .mainGrid {
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+    }
+
+    .chartCard {
+        min-height: 450px;
+    }
+
+    .chartPlaceholder {
+        min-height: 350px;
+    }
+
+    .profitability {
+        grid-column: span 8;
+    }
+
+    .marginAnalysis {
+        grid-column: span 4;
+    }
+
+    .topProducts {
+        grid-column: span 6;
+    }
+
+    .recentOrders {
+        grid-column: span 6;
+    }
+
+    .profitableList,
+    .recentList {
+        height: 350px;
+    }
+}
+
+/* ==================== LARGE DESKTOP ==================== */
+@media (min-width: 1440px) {
+    .container {
+        max-width: 1400px;
+        padding: 2.5rem;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        max-width: none;
+    }
+
+    .chartCard {
+        padding: 2rem;
+        min-height: 500px;
+    }
+
+    .chartPlaceholder {
+        min-height: 400px;
+    }
+
+    .profitableList,
+    .recentList {
+        height: 400px;
+    }
+}
