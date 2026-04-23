@@ -227,20 +227,24 @@ registerRoute(
 );
 
 // ─── 5. RUTAS DEL PANEL DE ADMINISTRACIÓN ────────────────────────────────────
-// Estrategia: NetworkFirst estricto — el admin SIEMPRE debe tener datos frescos.
-// Solo cachea si la respuesta es 200 OK. Sin fallback offline intencionado.
-registerRoute(
-  ({ url, request }) =>
-    request.mode === 'navigate' && url.pathname.startsWith('/admin'),
-  new NetworkFirst({
-    cacheName: CACHE_NAMES.ADMIN,
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new CacheableResponsePlugin({ statuses: [200] }),
-      new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 }), // 1 hora
-    ],
-  })
-);
+// OPTIMIZACIÓN: Eliminado caché redundante.
+// El HTML del admin se sirve del precache (App Shell).
+// Los datos vienen de la ruta SUPABASE_DATA (NetworkFirst con 8s timeout).
+// Esto evita caché duplicado y reduce la complejidad.
+//
+// Si necesitas caché específico para HTML de admin, usa esta configuración:
+// registerRoute(
+//   ({ url, request }) =>
+//     request.mode === 'navigate' && url.pathname.startsWith('/admin'),
+//   new NetworkFirst({
+//     cacheName: CACHE_NAMES.ADMIN,
+//     networkTimeoutSeconds: 3,
+//     plugins: [
+//       new CacheableResponsePlugin({ statuses: [200] }),
+//       new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 5 * 60 }), // 5 min
+//     ],
+//   })
+// );
 
 // ─── 6. RUTAS DEL CLIENTE (App Shell Navigation) ─────────────────────────────
 // Cubre: /, /mis-pedidos, /mi-perfil, /mi-actividad, /terminos, etc.
