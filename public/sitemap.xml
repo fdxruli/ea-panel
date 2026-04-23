@@ -11,24 +11,6 @@
     <changefreq>monthly</changefreq>
   </url>
   <url>
-    <loc>https://ea-panel.vercel.app/producto/alitas-bbq</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-10-07</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/alitas-mango-habanero</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-10-07</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/alitas-buffalo</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-10-07</lastmod>
-  </url>
-  <url>
     <loc>https://ea-panel.vercel.app/producto/boneless-buffalo</loc>
     <priority>0.8</priority>
     <changefreq>daily</changefreq>
@@ -39,30 +21,6 @@
     <priority>0.8</priority>
     <changefreq>daily</changefreq>
     <lastmod>2025-10-12</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/papas-fritas-200g-corte-delgado</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-10-07</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/papas-fritas-200gr-corte-ondulado</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-12-05</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/papas-gajos-200gr</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-12-13</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/alitas-estilo-brayan</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-10-07</lastmod>
   </url>
   <url>
     <loc>https://ea-panel.vercel.app/producto/salsa-extra-5oz</loc>
@@ -81,29 +39,5 @@
     <priority>0.8</priority>
     <changefreq>daily</changefreq>
     <lastmod>2025-11-11</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/boneless-queso-parmesano</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-12-13</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/salchipapas-especial</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-12-14</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/salchipapas-clasica</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2025-12-14</lastmod>
-  </url>
-  <url>
-    <loc>https://ea-panel.vercel.app/producto/10-alitas-crunchy-coleslaw</loc>
-    <priority>0.8</priority>
-    <changefreq>daily</changefreq>
-    <lastmod>2026-03-15</lastmod>
   </url>
 </urlset>

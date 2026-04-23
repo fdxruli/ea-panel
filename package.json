@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "node scripts/generate-sitemap.js && vite build && node scripts/prerender-public-routes.js",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prerender:public": "node scripts/prerender-public-routes.js",
     "preview": "vite preview"
   },
@@ -39,6 +40,8 @@
     "globals": "^16.3.0",
     "puppeteer": "^24.40.0",
     "rollup-plugin-visualizer": "^6.0.5",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.2",
     "vite": "^7.1.2",
     "vite-plugin-pwa": "^1.1.0"
   }
