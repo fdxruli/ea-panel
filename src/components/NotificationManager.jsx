@@ -51,6 +51,7 @@ const NotificationManager = () => {
   const [supportMessage, setSupportMessage] = useState('');
   const [syncError, setSyncError] = useState('');
   const [foregroundNotification, setForegroundNotification] = useState(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   const pushToast = useCallback((toast) => {
     setForegroundNotification({
@@ -273,7 +274,13 @@ const NotificationManager = () => {
   }, [customer?.id, refreshNotificationState]);
 
   const handleRefreshStatus = useCallback(async () => {
+    setIsCheckingStatus(true);
     await refreshNotificationState();
+
+    // Pequeño retraso artificial para que el ojo humano alcance a percibir el cambio
+    setTimeout(() => {
+      setIsCheckingStatus(false);
+    }, 600);
   }, [refreshNotificationState]);
 
   const handleOpenNotification = useCallback(() => {
@@ -312,9 +319,9 @@ const NotificationManager = () => {
     if (notificationState === 'denied') {
       return {
         title: 'Notificaciones bloqueadas',
-        body: supportMessage || 'Activalas desde la configuracion del navegador para seguir recibiendo avisos.',
-        actionLabel: 'Revisar estado',
-        onAction: handleRefreshStatus,
+        body: supportMessage || 'Actívalas desde la configuración del navegador para seguir recibiendo avisos.',
+        actionLabel: isCheckingStatus ? 'Revisando...' : 'Revisar estado',
+        onAction: isCheckingStatus ? undefined : handleRefreshStatus, // Evita dobles clics
       };
     }
 
@@ -379,9 +386,8 @@ const NotificationManager = () => {
 
       {foregroundNotification && (
         <section
-          className={`${styles.card} ${
-            foregroundNotification.kind === 'success' ? styles.successCard : styles.messageCard
-          }`}
+          className={`${styles.card} ${foregroundNotification.kind === 'success' ? styles.successCard : styles.messageCard
+            }`}
           role="status"
         >
           <div className={styles.iconWrap}>
