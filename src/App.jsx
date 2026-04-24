@@ -118,9 +118,6 @@ function App() {
                             <ProductProvider>
                               <ProductExtrasProvider>
                                 <CartProvider>
-                                  {/* El Suspense aquí ya no es necesario
-                                    si tenemos uno global, pero lo dejamos
-                                    por si ClientLayout hace algo especial */}
                                   <ClientLayout />
                                 </CartProvider>
                               </ProductExtrasProvider>

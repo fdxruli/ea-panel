@@ -1,58 +1,28 @@
 /* src/utils/cacheAdminUtils.js */
-import { Mutex } from 'async-mutex';
 
-// Prefijo para claves en sessionStorage
-const CACHE_PREFIX = 'admin_cache:';
+// Configuración de IndexedDB para reemplazar sessionStorage
+const DB_NAME = 'EAPanelAdminCacheDB';
+const STORE_NAME = 'cache_store';
+const DB_VERSION = 1;
 
-// Mutex (SOLO para operaciones de escritura y limpieza masiva)
-const storageMutex = new Mutex();
+let dbPromise = null;
 
-/**
- * Encuentra y elimina la entrada de caché más antigua (menor timestamp)
- * del sessionStorage para liberar espacio.
- * @returns {boolean} - True si una entrada fue eliminada, false si no.
- */
-const evictOldestEntry = () => {
-    let oldestKey = null;
-    let oldestTimestamp = Infinity;
-
-    try {
-        const keys = Object.keys(sessionStorage).filter(k => k.startsWith(CACHE_PREFIX));
-
-        for (const key of keys) {
-            try {
-                const item = JSON.parse(sessionStorage.getItem(key));
-                // Validar que el timestamp sea un número antes de comparar
-                if (item && typeof item.timestamp === 'number' && item.timestamp < oldestTimestamp) {
-                    oldestTimestamp = item.timestamp;
-                    oldestKey = key;
+const initDB = () => {
+    if (!dbPromise) {
+        dbPromise = new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
                 }
-            } catch (e) {
-                // --- MEJORA (PUNTO 5) ---
-                // Si falla el parseo, la entrada está corrupta. Eliminarla de forma segura.
-                console.warn(`[CacheAdmin] Eliminando entrada corrupta: ${key}`);
-                try {
-                    sessionStorage.removeItem(key);
-                } catch (removeError) {
-                    console.error(`[CacheAdmin] No se pudo eliminar la entrada corrupta "${key}":`, removeError);
-                }
-                // --- FIN MEJORA ---
-            }
-        }
-
-        if (oldestKey) {
-            console.warn(`[CacheAdmin] Quota llena. Eliminando la entrada más antigua: ${oldestKey}`);
-            sessionStorage.removeItem(oldestKey);
-            return true; // Evicción exitosa
-        }
-
-    } catch (error) {
-         console.error(`[CacheAdmin] Error durante la evicción de caché:`, error);
+            };
+        });
     }
-
-    return false; // No se pudo eliminar nada
+    return dbPromise;
 };
-
 
 /**
  * Comprueba si una marca de tiempo ha expirado según un TTL (Time To Live).
@@ -64,115 +34,86 @@ export const isExpired = (timestamp, ttl) => {
 };
 
 /**
- * Prepara datos para sessionStorage (serialización).
+ * Recupera todas las entradas del almacenamiento para la hidratación inicial.
  */
-export const serializeForStorage = (entry) => {
+export const getAllStorageItems = async () => {
     try {
-        return JSON.stringify(entry);
-    } catch (error) {
-        console.error(`[CacheAdmin] Error al serializar la clave "${entry.key}":`, error);
-        return null;
-    }
-};
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const entries = {};
+            const request = store.openCursor();
 
-/**
- * Recupera datos de sessionStorage (deserialización).
- */
-export const deserializeFromStorage = (key) => {
-    try {
-        const item = sessionStorage.getItem(CACHE_PREFIX + key);
-        if (!item) return null;
-
-        const entry = JSON.parse(item);
-
-        // --- MEJORA (PUNTO 3) ---
-        // Validación robusta
-        if (
-            typeof entry === 'object' &&
-            entry !== null &&
-            'data' in entry &&
-            'timestamp' in entry &&
-            typeof entry.timestamp === 'number' &&
-            entry.timestamp > 0
-        ) {
-            return entry;
-        }
-        // --- FIN MEJORA ---
-
-        console.warn(`[CacheAdmin] La entrada de caché "${key}" está corrupta o tiene un formato inválido. Descartando.`);
-        removeStorageItem(key); // Llama a la versión síncrona
-        return null;
-    } catch (error) {
-        console.error(`[CacheAdmin] Error al deserializar la clave "${key}":`, error);
-        removeStorageItem(key); // Llama a la versión síncrona
-        return null;
-    }
-};
-
-/**
- * Guarda de forma segura en sessionStorage, con reintento y evicción.
- */
-export const setStorageItem = async (key, serializedData) => {
-    if (!serializedData) return;
-
-    const release = await storageMutex.acquire();
-    try {
-        // Intento 1
-        sessionStorage.setItem(CACHE_PREFIX + key, serializedData);
-    } catch (error) {
-        // --- MEJORA (PUNTO 2) ---
-        if (error.name === 'QuotaExceededError') {
-            console.warn(`[CacheAdmin] sessionStorage está lleno. Intentando limpiar la entrada más antigua...`);
-
-            const evicted = evictOldestEntry(); // Síncrono
-
-            if (evicted) {
-                try {
-                    // 2. Reintentar guardar
-                    console.log(`[CacheAdmin] Reintentando guardar: ${key}`);
-                    sessionStorage.setItem(CACHE_PREFIX + key, serializedData);
-                } catch (retryError) {
-                    console.error(`[CacheAdmin] Falló el reintento de guardar "${key}" después de la evicción:`, retryError);
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    entries[cursor.key] = cursor.value;
+                    cursor.continue();
+                } else {
+                    resolve(entries);
                 }
-            } else {
-                 console.error(`[CacheAdmin] Quota excedida, pero no se pudo eliminar ninguna entrada antigua para liberar espacio.`);
-            }
-
-        } else {
-            console.error(`[CacheAdmin] Error al guardar en sessionStorage "${key}":`, error);
-        }
-        // --- FIN MEJORA ---
-    } finally {
-        release();
-    }
-};
-
-/**
- * Elimina de forma síncrona de sessionStorage.
- */
-// --- MEJORA (PUNTO 3) ---
-export const removeStorageItem = (key) => {
-    try {
-        sessionStorage.removeItem(CACHE_PREFIX + key);
+            };
+            request.onerror = () => reject(request.error);
+        });
     } catch (error) {
-        console.error(`[CacheAdmin] Error al eliminar de sessionStorage "${key}":`, error);
+        console.error(`[CacheAdmin] Error al obtener items de IndexedDB:`, error);
+        return {};
     }
 };
-// --- FIN MEJORA ---
 
 /**
- * Limpia todas las entradas del caché del admin en sessionStorage (esta SÍ usa mutex).
+ * Guarda de forma asíncrona en IndexedDB.
+ */
+export const setStorageItem = async (key, data) => {
+    if (!data) return;
+    try {
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.put(data, key);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        console.error(`[CacheAdmin] Error al guardar en IndexedDB "${key}":`, error);
+    }
+};
+
+/**
+ * Elimina de forma asíncrona de IndexedDB.
+ */
+export const removeStorageItem = async (key) => {
+    try {
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.delete(key);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        console.error(`[CacheAdmin] Error al eliminar de IndexedDB "${key}":`, error);
+    }
+};
+
+/**
+ * Limpia todas las entradas del store en IndexedDB.
  */
 export const clearStorage = async () => {
-     const release = await storageMutex.acquire();
     try {
-        Object.keys(sessionStorage)
-            .filter(key => key.startsWith(CACHE_PREFIX))
-            .forEach(key => sessionStorage.removeItem(key)); // Síncrono, pero dentro del mutex
+        const db = await initDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
     } catch (error) {
-         console.error(`[CacheAdmin] Error al limpiar sessionStorage:`, error);
-    } finally {
-        release();
+        console.error(`[CacheAdmin] Error al limpiar IndexedDB:`, error);
     }
 };
 
@@ -188,8 +129,7 @@ export const cleanupExpiredEntries = (cache) => {
     for (const key in cache) {
         const entry = cache[key];
         if (entry.ttl && (now - entry.timestamp > entry.ttl)) {
-            // --- MEJORA (PUNTO 3) ---
-            removeStorageItem(key); // Llama a la versión síncrona
+            removeStorageItem(key); // Fire-and-forget asíncrono
             entriesCleaned++;
         } else {
             nextCache[key] = entry;

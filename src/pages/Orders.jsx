@@ -7,6 +7,7 @@ import DeliveryInfoModal from "../components/DeliveryInfoModal";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import EditOrderModal from "../components/EditOrderModal";
 import { GUEST_CUSTOMER_ID } from "../config/constantes";
+import { subscribeToTableChanges } from "../lib/sharedAdminRealtime";
 
 // ==================== CUSTOM HOOKS ====================
 
@@ -245,6 +246,13 @@ export default function Orders() {
   // ✅ Debounce de búsqueda
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
+  // Ref para mantener los filtros actuales y usarlos en Realtime sin tener que
+  // re-suscribir el websocket cada vez que el usuario escribe.
+  const filtersRef = useRef({ search: debouncedSearchTerm, status: statusFilter });
+  useEffect(() => {
+    filtersRef.current = { search: debouncedSearchTerm, status: statusFilter };
+  }, [debouncedSearchTerm, statusFilter]);
+
   // ✅ OPTIMIZACIÓN: Fetch con paginación
   const fetchOrders = useCallback(async (page = 1, append = false, search = "", status = "activos") => {
     try {
@@ -272,20 +280,21 @@ export default function Orders() {
       `, { count: 'exact' });
 
       // 1. Filtrado por Estado en el Servidor
-      if (status === 'activos') {
-        query = query.in('status', ['pendiente', 'en_proceso', 'en_envio']);
-      } else if (status !== 'todos') {
-        query = query.eq('status', status);
+      // IMPORTANTE: Si hay búsqueda activa, ignoramos el filtro de estado
+      // para que el usuario pueda encontrar pedidos completados, cancelados, etc.
+      if (!search) {
+        if (status === 'activos') {
+          query = query.in('status', ['pendiente', 'en_proceso', 'en_envio']);
+        } else if (status !== 'todos') {
+          query = query.eq('status', status);
+        }
       }
 
       // 2. Filtrado por Búsqueda en el Servidor
       if (search) {
-        // Nota: Para buscar en una tabla unida (customers.name), requieres un inner join y sintaxis específica
-        // O buscar por el código de orden.
-        const cleanSearch = search.trim().toLowerCase();
-        // Asumiendo que order_code es texto:
+        const cleanSearch = search.trim();
+        // Búsqueda por código de orden (case-insensitive)
         query = query.ilike('order_code', `%${cleanSearch}%`);
-        // Si necesitas buscar por nombre de cliente, la forma más limpia en Supabase es usar una View o RPC.
       }
 
       query = query.order("created_at", { ascending: false }).range(from, to);
@@ -315,57 +324,42 @@ export default function Orders() {
     }
   }, []);
 
-  // Carga inicial
+  // Carga inicial y Refetch automático cuando cambian los filtros
   useEffect(() => {
-    fetchOrders(1, false);
-  }, [fetchOrders]);
+    fetchOrders(1, false, debouncedSearchTerm, statusFilter);
+  }, [fetchOrders, debouncedSearchTerm, statusFilter]);
 
   // ✅ OPTIMIZACIÓN: Realtime con actualización selectiva
   useEffect(() => {
-    const channel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders',
-          // Solo escuchar cambios de columnas específicas
-          select: 'id, status, updated_at, cancellation_reason'
-        },
-        (payload) => {
-          console.log('Order change detected:', payload);
+    const unsubscribe = subscribeToTableChanges('orders', (payload) => {
+      console.log('Order change detected:', payload);
 
-          if (payload.eventType === 'INSERT') {
-            // Nuevo pedido: recargar primera página
-            fetchOrders(1, false);
-            currentPage.current = 1;
-          } else if (payload.eventType === 'UPDATE') {
-            // Actualizar pedido existente sin refetch
-            setOrders(prev => prev.map(order =>
-              order.id === payload.new.id
-                ? { ...order, ...payload.new }
-                : order
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            // Eliminar pedido de la lista
-            setOrders(prev => prev.filter(order => order.id !== payload.old.id));
-          }
-        }
-      )
-      .subscribe();
+      if (payload.eventType === 'INSERT') {
+        // Nuevo pedido: recargar primera página usando los filtros actuales
+        fetchOrders(1, false, filtersRef.current.search, filtersRef.current.status);
+        currentPage.current = 1;
+      } else if (payload.eventType === 'UPDATE') {
+        // Actualizar pedido existente sin refetch
+        setOrders(prev => prev.map(order =>
+          order.id === payload.new.id
+            ? { ...order, ...payload.new }
+            : order
+        ));
+      } else if (payload.eventType === 'DELETE') {
+        // Eliminar pedido de la lista
+        setOrders(prev => prev.filter(order => order.id !== payload.old.id));
+      }
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => unsubscribe();
   }, [fetchOrders]);
 
   // Handler para cargar más pedidos
   const loadMoreOrders = useCallback(() => {
     if (!loadingMore && hasMore) {
-      fetchOrders(currentPage.current + 1, true);
+      fetchOrders(currentPage.current + 1, true, debouncedSearchTerm, statusFilter);
     }
-  }, [loadingMore, hasMore, fetchOrders]);
+  }, [loadingMore, hasMore, fetchOrders, debouncedSearchTerm, statusFilter]);
 
   // ✅ Handler de actualización de estado con modal
   const updateStatus = async (orderId, newStatus) => {
@@ -409,27 +403,6 @@ export default function Orders() {
       alert('Error al cancelar el pedido y restaurar stock. Revisa tu conexión.');
     }
   }, [cancellingOrderId]);
-
-  // ✅ OPTIMIZACIÓN: Filtrado en el cliente con búsqueda debounced
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      // Filtro de búsqueda
-      const matchesSearch =
-        o.order_code.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        o.customers?.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-
-      // Filtro de estado
-      if (statusFilter === 'todos') return matchesSearch;
-      if (statusFilter === 'activos') {
-        return (
-          o.status === 'pendiente' ||
-          o.status === 'en_proceso' ||
-          o.status === 'en_envio'
-        ) && matchesSearch;
-      }
-      return o.status === statusFilter && matchesSearch;
-    });
-  }, [orders, debouncedSearchTerm, statusFilter]);
 
   // ✅ OPTIMIZACIÓN: Caché de direcciones (CON SOPORTE PARA GUEST)
   const handleShowDeliveryInfo = useCallback(async (order) => {
@@ -489,7 +462,7 @@ export default function Orders() {
   // Handler de pedido actualizado
   const handleOrderUpdated = useCallback(() => {
     // Refrescar solo si es necesario
-    fetchOrders(currentPage.current, false);
+    fetchOrders(currentPage.current, false, filtersRef.current.search, filtersRef.current.status);
     setEditingOrder(null);
   }, [fetchOrders]);
 
@@ -531,7 +504,7 @@ export default function Orders() {
 
       {/* Grid de pedidos */}
       <div className={styles.orderGrid}>
-        {filteredOrders.map(order => (
+        {orders.map(order => (
           <OrderCard
             key={order.id}
             order={order}
@@ -543,14 +516,14 @@ export default function Orders() {
       </div>
 
       {/* Mensajes de estado */}
-      {filteredOrders.length === 0 && (
+      {orders.length === 0 && (
         <p className={styles.emptyMessage}>
           No se encontraron pedidos con los filtros actuales.
         </p>
       )}
 
       {/* Botón Load More */}
-      {hasMore && filteredOrders.length === orders.length && (
+      {hasMore && (
         <div className={styles.loadMoreContainer}>
           <button
             onClick={loadMoreOrders}

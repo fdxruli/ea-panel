@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "../context/AlertContext";
 import styles from './Dashboard.module.css';
+import { subscribeToTables } from "../lib/sharedAdminRealtime";
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { StatCard } from "../components/StatCard";
@@ -225,14 +226,25 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        const channel = supabase
-            .channel('dashboard-advanced-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => invalidate())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => invalidate())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => invalidate())
-            .subscribe();
+        let timeoutId = null;
 
-        return () => supabase.removeChannel(channel);
+        const handleRealtimeChange = () => {
+            // Limitador (Throttle): Si ya hay una actualización programada, ignoramos los nuevos eventos.
+            // Esto agrupa los múltiples inserts (ej. 1 order + 5 order_items) en una sola llamada RPC.
+            if (!timeoutId) {
+                timeoutId = setTimeout(() => {
+                    invalidate();
+                    timeoutId = null;
+                }, 15000); // El dashboard se actualizará máximo 1 vez cada 15 segundos
+            }
+        };
+
+        const unsubscribe = subscribeToTables(['orders', 'order_items', 'products'], handleRealtimeChange);
+
+        return () => {
+            unsubscribe();
+            if (timeoutId) clearTimeout(timeoutId);
+        };
     }, [invalidate]);
 
     const handleFilterApply = useCallback(() => {

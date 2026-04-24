@@ -20,7 +20,6 @@ import UserMenu from "../components/UserMenu";
 import AddressModal from "../components/AddressModal";
 import NotificationManager from "../components/NotificationManager";
 import MaintenancePage from "../components/MaintenancePage";
-import LoadingSpinner from "../components/LoadingSpinner";
 import ClosedMessage from "../components/ClosedMessage";
 import './ClientLayout.css';
 
@@ -111,9 +110,6 @@ export default function ClientLayout() {
     }
   };
 
-  if (settingsLoading || hoursLoading) return <LoadingSpinner />;
-  if (isMaintenanceMode) return <MaintenancePage message={maintenanceMessage} />;
-
   const mobileNavItems = [
     { to: "/", label: "Inicio", icon: <HomeIcon />, end: true },
     (visibilitySettings.my_profile_page !== false) && {
@@ -162,7 +158,7 @@ export default function ClientLayout() {
           : '0px',
       }}
     >
-      {!isBusinessOpen && <ClosedMessage />}
+      {!hoursLoading && !isBusinessOpen && <ClosedMessage />}
 
       <div className="sticky-top-container">
 
@@ -277,7 +273,7 @@ export default function ClientLayout() {
 
       <main className="client-main">
         <div className="client-content-container">
-          <Outlet />
+          {!settingsLoading && isMaintenanceMode ? <MaintenancePage message={maintenanceMessage} /> : <Outlet />}
         </div>
       </main>
 

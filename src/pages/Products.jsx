@@ -139,23 +139,47 @@ export default function Products() {
     }, [showAlert]);
     // --- FIN PASO D ---
 
+    // --- (PASO G) Filtrar productos básicos ANTES de pedir stats ---
+    const filteredBasicProducts = useMemo(() => {
+        if (!basicProducts) return [];
+        return basicProducts.filter(p => {
+            const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
+            const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+            const matchesStatus = statusFilter === 'all' ||
+                (statusFilter === 'active' ? p.is_active : !p.is_active);
+            return matchesCategory && matchesSearch && matchesStatus;
+        });
+    }, [basicProducts, debouncedSearchTerm, selectedCategory, statusFilter]);
+    // --- FIN PASO G ---
+
     // --- (PASO E) NUEVO useEffect para Cargar Stats ---
-    /**
-     * Cuando basicProducts cambia (primera carga o refetch),
-     * cargar stats solo de los productos VISIBLES.
-     */
+    const prevIdsRef = useRef('');
+
     useEffect(() => {
-        if (!basicProducts || basicProducts.length === 0) {
+        if (!filteredBasicProducts || filteredBasicProducts.length === 0) {
             setProductsWithStats([]);
+            prevIdsRef.current = '';
             return;
         }
 
-        // TODO: Implementar virtualización para cargar solo los visibles en viewport
-        // Por ahora, cargar stats de los primeros 20 (primeros visibles)
-        const visibleProducts = basicProducts.slice(0, 20);
-        enrichProductsWithStats(visibleProducts);
+        // Tomamos los primeros 50 que coincidan con el filtro
+        const visibleProducts = filteredBasicProducts.slice(0, 50);
+        const currentIds = visibleProducts.map(p => p.id).join(',');
 
-    }, [basicProducts, enrichProductsWithStats]);
+        if (prevIdsRef.current !== currentIds) {
+            // Los resultados del filtro cambiaron, pedir stats
+            prevIdsRef.current = currentIds;
+            enrichProductsWithStats(visibleProducts);
+        } else {
+            // Los resultados son los mismos (solo cambiaron datos básicos), actualizamos conservando stats
+            setProductsWithStats(prev => {
+                return visibleProducts.map(vp => {
+                    const existing = prev.find(p => p.id === vp.id);
+                    return existing ? { ...existing, ...vp } : vp;
+                });
+            });
+        }
+    }, [filteredBasicProducts, enrichProductsWithStats]);
     // --- FIN PASO E ---
 
 
@@ -357,18 +381,6 @@ export default function Products() {
         setImagesModalOpen(true);
     }, []);
 
-    // --- (PASO G) Actualizar filteredProducts ---
-    const filteredProducts = useMemo(() => {
-        // Filtrar sobre productsWithStats (los que tienen stats cargados)
-        return productsWithStats.filter(p => {
-            const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
-            const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'all' ||
-                (statusFilter === 'active' ? p.is_active : !p.is_active);
-            return matchesCategory && matchesSearch && matchesStatus;
-        });
-    }, [productsWithStats, debouncedSearchTerm, selectedCategory, statusFilter]); // <-- Dependencia actualizada
-    // --- FIN PASO G ---
 
     const categoryMap = useMemo(() =>
         categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {})
@@ -438,7 +450,7 @@ export default function Products() {
 
             {/* Grid de productos */}
             <div className={styles.productGrid}>
-                {filteredProducts.map(p => (
+                {productsWithStats.map(p => (
                     <ProductCard
                         key={p.id}
                         product={p}
@@ -451,7 +463,7 @@ export default function Products() {
             </div>
 
             {/* Mensaje vacío (Actualizado) */}
-            {!loadingBasic && !loadingCategories && !loading && filteredProducts.length === 0 && (
+            {!loadingBasic && !loadingCategories && !loading && productsWithStats.length === 0 && (
                 <p className={styles.emptyMessage}>
                     No se encontraron productos con los filtros actuales.
                 </p>
