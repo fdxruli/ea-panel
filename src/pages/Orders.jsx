@@ -28,12 +28,15 @@ function useDebounce(value, delay = 300) {
 
 // ==================== COMPONENTE ORDERCARD MEMOIZADO ====================
 
-const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder }) => {
+const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder, updatingStatusId }) => {
   const { hasPermission } = useAdminAuth();
   const canEdit = hasPermission('pedidos.edit');
 
   // Detectar si es pedido de invitado
   const isGuest = order.customer_id === GUEST_CUSTOMER_ID;
+
+  // ✅ MEJORA: Verificar si este pedido está siendo actualizado
+  const isUpdating = updatingStatusId === order.id;
 
   // Memoizar formato de fecha
   const scheduledTimeFormatted = useMemo(() => {
@@ -52,7 +55,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
   const items = order.order_items || [];
 
   return (
-    <div className={styles.orderCard}>
+    <div className={`${styles.orderCard} ${isUpdating ? styles.updating : ''}`}>
       <div className={styles.cardHeader}>
         <h3>Pedido #{order.order_code}</h3>
         <span className={`${styles.statusBadge} ${styles[order.status]}`}>
@@ -120,38 +123,43 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
           {canEdit && order.status === 'pendiente' && (
             <button
               onClick={() => onUpdateStatus(order.id, "en_proceso")}
+              disabled={isUpdating}
               className={styles.processButton}
             >
-              Procesar
+              {isUpdating ? '⏳' : 'Procesar'}
             </button>
           )}
           {canEdit && order.status === 'en_proceso' && (
             <button
               onClick={() => onUpdateStatus(order.id, "en_envio")}
+              disabled={isUpdating}
               className={styles.processButton}
             >
-              Enviar
+              {isUpdating ? '⏳' : 'Enviar'}
             </button>
           )}
           {canEdit && order.status === 'en_envio' && (
             <button
               onClick={() => onUpdateStatus(order.id, "completado")}
+              disabled={isUpdating}
               className={styles.completeButton}
             >
-              Completar
+              {isUpdating ? '⏳' : 'Completar'}
             </button>
           )}
           {canEdit && order.status !== 'completado' && order.status !== 'cancelado' && (
             <button
               onClick={() => onUpdateStatus(order.id, "cancelado")}
+              disabled={isUpdating}
               className={styles.cancelButton}
             >
-              Cancelar
+              {isUpdating ? '⏳' : 'Cancelar'}
             </button>
           )}
           {canEdit && (order.status === 'pendiente' || order.status === 'en_proceso') && (
             <button
               onClick={() => onEditOrder(order)}
+              disabled={isUpdating}
               className={styles.editButton}
             >
               Editar
@@ -160,6 +168,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
 
           <button
             onClick={() => onShowDeliveryInfo(order)}
+            disabled={isUpdating}
             className={styles.deliveryButton}
           >
             Ver Envío
@@ -173,8 +182,9 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
   return (
     prevProps.order.id === nextProps.order.id &&
     prevProps.order.status === nextProps.order.status &&
-    prevProps.order.order_items?.length === nextProps.order.order_items?.length &&
-    prevProps.order.updated_at === nextProps.order.updated_at
+    prevProps.order.order_items?.length === nextProps.order_items?.length &&
+    prevProps.order.updated_at === nextProps.order.updated_at &&
+    prevProps.updatingStatusId === nextProps.updatingStatusId
   );
 });
 OrderCard.displayName = 'OrderCard';
@@ -226,7 +236,8 @@ CancellationModal.displayName = 'CancellationModal';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // ✅ MEJORA: Separar loading inicial del de operaciones
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -235,6 +246,9 @@ export default function Orders() {
   const [deliveryInfo, setDeliveryInfo] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
+  // ✅ Estados para feedback visual en operaciones
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   // Caché de direcciones
   const addressCache = useRef(new Map());
@@ -244,7 +258,7 @@ export default function Orders() {
   const currentPage = useRef(1);
 
   // ✅ Debounce de búsqueda
-  const debouncedSearchTerm = useDebounce(searchTerm, 400);
+  const debouncedSearchTerm = useDebounce(searchTerm, 700);
 
   // Ref para mantener los filtros actuales y usarlos en Realtime sin tener que
   // re-suscribir el websocket cada vez que el usuario escribe.
@@ -256,8 +270,12 @@ export default function Orders() {
   // ✅ OPTIMIZACIÓN: Fetch con paginación
   const fetchOrders = useCallback(async (page = 1, append = false, search = "", status = "activos") => {
     try {
-      if (!append) setLoading(true);
-      else setLoadingMore(true);
+      // ✅ MEJORA: Solo setLoading en la primera carga
+      if (page === 1 && !append) {
+        setInitialLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
       const from = (page - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
@@ -318,8 +336,10 @@ export default function Orders() {
 
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setActionError(`Error al cargar pedidos: ${error.message}`);
     } finally {
-      setLoading(false);
+      // ✅ MEJORA: Solo clear initialLoading en primera carga
+      setInitialLoading(false);
       setLoadingMore(false);
     }
   }, []);
@@ -361,7 +381,7 @@ export default function Orders() {
     }
   }, [loadingMore, hasMore, fetchOrders, debouncedSearchTerm, statusFilter]);
 
-  // ✅ Handler de actualización de estado con modal
+  // ✅ Handler de actualización de estado con feedback visual mejorado
   const updateStatus = async (orderId, newStatus) => {
     let updateData = { status: newStatus };
     if (newStatus === 'cancelado') {
@@ -370,22 +390,37 @@ export default function Orders() {
       updateData.cancellation_reason = reason || 'Cancelado por administrador.';
     }
 
-    // Agregar .select() para esperar confirmación
-    const { error } = await supabase
-      .from("orders")
-      .update(updateData)
-      .eq("id", orderId)
-      .select();
+    // ✅ MEJORA: Marcar pedido como "actualizando" para feedback visual
+    setUpdatingStatusId(orderId);
+    setActionError(null);
 
-    if (error) {
-      console.error("Error al actualizar:", error);
-      alert("Error al actualizar el pedido: " + error.message);
+    try {
+      // Agregar .select() para esperar confirmación
+      const { error } = await supabase
+        .from("orders")
+        .update(updateData)
+        .eq("id", orderId)
+        .select();
+
+      if (error) {
+        console.error("Error al actualizar:", error);
+        setActionError(`Error al actualizar el pedido: ${error.message}`);
+      }
+    } catch (err) {
+      setActionError('Error de conexión al actualizar el pedido');
+    } finally {
+      // ✅ MEJORA: Quitar indicador después de un breve delay para UX
+      setTimeout(() => setUpdatingStatusId(null), 500);
     }
   };
 
-  // Handler de confirmación de cancelación
+  // Handler de confirmación de cancelación con feedback visual
   const handleCancelConfirm = useCallback(async (reason) => {
     if (!cancellingOrderId) return;
+
+    // ✅ MEJORA: Marcar como actualizando
+    setUpdatingStatusId(cancellingOrderId);
+    setActionError(null);
 
     try {
       // Reemplazar la actualización directa por una llamada RPC atómica
@@ -395,12 +430,14 @@ export default function Orders() {
       });
 
       if (error) throw error;
-      setCancellingOrderId(null);
 
-      // El realtime de Supabase (el evento UPDATE) se encargará de actualizar la UI
+      // ✅ MEJORA: Feedback visual de éxito implícito (el pedido se actualiza via realtime)
+      setCancellingOrderId(null);
     } catch (error) {
       console.error('Error cancelling order:', error);
-      alert('Error al cancelar el pedido y restaurar stock. Revisa tu conexión.');
+      setActionError('Error al cancelar el pedido. Revisa tu conexión.');
+    } finally {
+      setTimeout(() => setUpdatingStatusId(null), 500);
     }
   }, [cancellingOrderId]);
 
@@ -461,15 +498,24 @@ export default function Orders() {
 
   // Handler de pedido actualizado
   const handleOrderUpdated = useCallback(() => {
-    // Refrescar solo si es necesario
+    // Refrescar solo si es necesario (sin loading spinner)
     fetchOrders(currentPage.current, false, filtersRef.current.search, filtersRef.current.status);
     setEditingOrder(null);
   }, [fetchOrders]);
 
-  if (loading) return <LoadingSpinner />;
+  // ✅ MEJORA: Spinner solo en carga inicial
+  if (initialLoading) return <LoadingSpinner />;
 
   return (
     <div className={styles.container}>
+      {/* ✅ Banner de errores de acciones */}
+      {actionError && (
+        <div className={styles.errorBanner}>
+          <span>⚠️ {actionError}</span>
+          <button onClick={() => setActionError(null)} className={styles.dismissButton}>✕</button>
+        </div>
+      )}
+
       <div className={styles.header}>
         <h1>Gestión de Pedidos</h1>
         <p className={styles.subtitle}>
@@ -511,6 +557,7 @@ export default function Orders() {
             onUpdateStatus={updateStatus}
             onShowDeliveryInfo={handleShowDeliveryInfo}
             onEditOrder={setEditingOrder}
+            updatingStatusId={updatingStatusId}
           />
         ))}
       </div>
