@@ -3,8 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useAdminAuth } from './AdminAuthContext';
 import {
     isExpired,
-    serializeForStorage,
-    deserializeFromStorage,
+    getAllStorageItems,
     setStorageItem,
     removeStorageItem,
     clearStorage,
@@ -45,31 +44,45 @@ export const CacheAdminProvider = ({ children }) => {
 
     // 1. Hidratación inicial desde sessionStorage
     useEffect(() => {
-        console.log('[CacheAdmin] Hidratando caché desde sessionStorage...');
-        const hydratedCache = {};
-        const keys = Object.keys(sessionStorage);
+        let isMounted = true;
 
-        for (const fullKey of keys) {
-            if (fullKey.startsWith('admin_cache:')) {
-                const key = fullKey.replace('admin_cache:', '');
-                const entry = deserializeFromStorage(key);
-                if (entry && !isExpired(entry.timestamp, entry.ttl)) {
-                    hydratedCache[key] = entry;
-                } else if (entry) {
-                    // Limpiar si está expirado
-                    removeStorageItem(key);
+        const hydrate = async () => {
+            console.log('[CacheAdmin] Hidratando caché desde IndexedDB...');
+            try {
+                const entries = await getAllStorageItems();
+                if (!isMounted) return;
+
+                const hydratedCache = {};
+                for (const [key, entry] of Object.entries(entries)) {
+                    // Validación robusta de la estructura del entry
+                    if (entry && typeof entry === 'object' && 'timestamp' in entry && 'data' in entry) {
+                        if (!isExpired(entry.timestamp, entry.ttl)) {
+                            hydratedCache[key] = entry;
+                        } else {
+                            removeStorageItem(key); // Limpiar expirados (fire and forget)
+                        }
+                    } else {
+                        removeStorageItem(key); // Limpiar corruptos
+                    }
                 }
+                setCache(hydratedCache);
+                console.log(`[CacheAdmin] Hidratación completa. ${Object.keys(hydratedCache).length} entradas cargadas.`);
+            } catch (error) {
+                console.error('[CacheAdmin] Error durante la hidratación:', error);
             }
-        }
-        setCache(hydratedCache);
-        console.log(`[CacheAdmin] Hidratación completa. ${Object.keys(hydratedCache).length} entradas cargadas.`);
+        };
+
+        hydrate();
 
         // 2. Iniciar limpieza periódica
         const intervalId = setInterval(() => {
             setCache(prevCache => cleanupExpiredEntries(prevCache));
         }, 60 * 1000); // Limpiar cada 60 segundos
 
-        return () => clearInterval(intervalId);
+        return () => {
+            isMounted = false;
+            clearInterval(intervalId);
+        };
     }, []);
 
     // Cleanup interval para peticiones en vuelo huérfanas
@@ -141,8 +154,8 @@ export const CacheAdminProvider = ({ children }) => {
             [key]: entry
         }));
 
-        // Actualizar sessionStorage (asíncrono, no bloquea)
-        setStorageItem(key, serializeForStorage(entry));
+        // Actualizar IndexedDB (asíncrono, ya no serializamos y no bloquea UI)
+        setStorageItem(key, entry);
     }, []);
 
     /**

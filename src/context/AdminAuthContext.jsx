@@ -21,16 +21,17 @@ export const AdminAuthProvider = ({ children }) => {
                 .from('admins')
                 .select('name, role, permissions') // CORREGIDO: No uses select('*')
                 .eq('id', session.user.id)         // CORREGIDO: Revertido a 'id' en lugar de 'user_id'
-                .single();
+                .maybeSingle(); // <-- CAMBIO CLAVE
 
             if (error) {
-                if (error.code === 'PGRST116') {
-                    // Asumimos que si no está en la tabla admins, es un cliente.
-                    // Advertencia: Esto sigue siendo una suposición permisiva.
-                    if (mounted) setAuthState({ status: 'CLIENT', adminData: null, error: null });
-                    return;
-                }
+                // Cualquier error aquí es un error real de base de datos (Ej: Violación RLS, Timeout)
                 throw error;
+            }
+
+            if (!data) {
+                // Control de flujo explícito: el registro simplemente no existe.
+                if (mounted) setAuthState({ status: 'CLIENT', adminData: null, error: null });
+                return;
             }
 
             // Manejo de permisos: Soporta tanto JSONB nativo como strings parseables
