@@ -236,6 +236,11 @@
 
 }
 
+.resendTicketButton {
+    background-color: var(--color-success);
+    color: white;
+}
+
 .scheduledTime {
     background-color: var(--color-primary-light);
     color: var(--color-primary-dark);

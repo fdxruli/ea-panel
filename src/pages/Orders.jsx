@@ -54,6 +54,50 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
   // Los items ya vienen con el pedido
   const items = order.order_items || [];
 
+  const handleResendTicket = useCallback(() => {
+    if (order.customer_id === GUEST_CUSTOMER_ID || !order.customers || !order.customers.phone) {
+      alert("No se puede reenviar el ticket a clientes invitados o sin teléfono registrado.");
+      return;
+    }
+
+    let message = `Te enviamos la *ACTUALIZACIÓN DE TU PEDIDO* en *ENTRE ALAS*:\n\n*Pedido N°: ${order.order_code}*\n\n*Detalle del pedido modificado:*\n`;
+
+    const total = order.total_amount;
+
+    items.forEach(item => {
+      const subtotal = item.quantity * item.price;
+      message += `• ${item.products?.name || 'Producto'}\n`;
+      message += `  ${item.quantity} x $${(item.price || 0).toFixed(2)} = $${subtotal.toFixed(2)}\n`;
+    });
+
+    const clipCommission = total * 0.04176;
+    const totalWithCard = total + clipCommission;
+
+    message += `\n*Total en Efectivo / Transferencia: $${total.toFixed(2)}*`;
+
+    if (order.scheduled_for) {
+      const scheduledDateObj = new Date(order.scheduled_for);
+      if (!isNaN(scheduledDateObj.getTime())) {
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const formattedDate = `${scheduledDateObj.toLocaleDateString('es-MX', dateOptions)} a las ${scheduledDateObj.toLocaleTimeString('es-MX', timeOptions)}`;
+        message += `\n\n*Programado para entregar:*\n${formattedDate}\n`;
+      }
+    }
+
+    message += `\n\n*Métodos de pago aceptados:*\n`;
+    message += `💵 Efectivo\n`;
+    message += `📱 Transferencia\n`;
+    message += `💳 Tarjeta (Incluye 4.18% de cargo por servicio).`;
+    message += `\n*Total pagando con Tarjeta: $${totalWithCard.toFixed(2)}*`;
+
+    const clientSpecificOrderUrl = `https://ea-panel.vercel.app/mis-pedidos/${order.order_code}`;
+    message += `\n\nPuedes ver el estado de tu pedido aquí:\n${clientSpecificOrderUrl}`;
+
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${order.customers.phone}&text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  }, [order, items]);
+
   return (
     <div className={`${styles.orderCard} ${isUpdating ? styles.updating : ''}`}>
       <div className={styles.cardHeader}>
@@ -165,6 +209,14 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
               Editar
             </button>
           )}
+
+          <button
+            onClick={handleResendTicket}
+            disabled={isUpdating}
+            className={styles.resendTicketButton}
+          >
+            Reenviar Ticket
+          </button>
 
           <button
             onClick={() => onShowDeliveryInfo(order)}
