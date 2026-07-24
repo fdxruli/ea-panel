@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-sitemap.js && vite build && node scripts/prerender-public-routes.js",
+    "build": "node scripts/validate-product-routes.js && node scripts/generate-sitemap.js && vite build && node scripts/prerender-public-routes.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test:routing": "node scripts/validate-product-routes.js",
     "prerender:public": "node scripts/prerender-public-routes.js",
     "preview": "vite preview"
   },
