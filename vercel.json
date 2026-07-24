@@ -66,10 +66,6 @@
   ],
   "rewrites": [
     {
-      "source": "/producto/:slug",
-      "destination": "/api/product-not-found"
-    },
-    {
       "source": "/((?!api/|assets/|.*\\..*).*)",
       "destination": "/index.html"
     }
