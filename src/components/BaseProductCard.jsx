@@ -42,19 +42,27 @@ const BaseProductCard = memo(({
     : '(max-width: 430px) 100vw, (max-width: 767px) 50vw, 33vw';
 
   const imageUrl = product?.image_url || product?.product_images?.[0]?.image_url || '';
+  const parsedThumbnailSizes = typeof thumbnailSize === 'string'
+    ? thumbnailSize.split(',').map((value) => Number.parseInt(value.trim(), 10)).filter(Number.isFinite)
+    : [];
+  const imageWidths = parsedThumbnailSizes.length > 0 ? parsedThumbnailSizes : [360, 540, 720];
 
   const InnerContent = () => (
     <div className={styles.innerContent}>
-      <div className={`${styles.imageContainer} ${layout === 'list' ? styles.listImageContainer : ''}`}>
+      <div
+        className={`${styles.imageContainer} ${layout === 'list' ? styles.listImageContainer : ''}`}
+        style={{ aspectRatio: layout === 'list' ? '4 / 3' : '4 / 3' }}
+      >
         {renderImageOverlay && (
           <div className={styles.overlaySlot}>
             {renderImageOverlay(product)}
           </div>
         )}
         <ImageWithFallback
-          src={imageUrl} // Si tienes el util getThumbnailUrl, aplícalo aquí o en el renderOverlay
+          src={imageUrl}
           alt={`Imagen de ${product.name}`}
           className={styles.productImage}
+          imageSizes={imageWidths}
           sizes={imageSizes}
           priority={imagePriority}
         />
