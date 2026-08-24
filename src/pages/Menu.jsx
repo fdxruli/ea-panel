@@ -33,17 +33,7 @@ import { notifySeoReady } from '../seo/prerender';
 import fallbackImage from '../assets/images/fallback-product.svg';
 
 const ListIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="8" y1="6" x2="21" y2="6"></line>
     <line x1="8" y1="12" x2="21" y2="12"></line>
     <line x1="8" y1="18" x2="21" y2="18"></line>
@@ -54,21 +44,25 @@ const ListIcon = () => (
 );
 
 const GridIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7"></rect>
     <rect x="14" y="3" width="7" height="7"></rect>
     <rect x="14" y="14" width="7" height="7"></rect>
     <rect x="3" y="14" width="7" height="7"></rect>
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="7"></circle>
+    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
   </svg>
 );
 
@@ -133,8 +127,10 @@ export default function Menu() {
   const pathnameRef = useRef(location.pathname);
 
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [layout, setLayout] = useState(() => localStorage.getItem(MENU_LAYOUT_STORAGE_KEY) || 'grid');
   const shouldShowLeadCapture = !customer;
+  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase('es-MX');
   const routeSelectedProduct = useMemo(() => (
     productSlug ? products.find((product) => product.slug === productSlug) || null : null
   ), [productSlug, products]);
@@ -194,9 +190,27 @@ export default function Menu() {
     }
   }, [selectedCategory, categoryVisuals.length]);
 
-  const filteredProducts = useMemo(() => (
-    products.filter((product) => (selectedCategory ? product.category_id === selectedCategory : true))
-  ), [products, selectedCategory]);
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory = selectedCategory
+        ? product.category_id === selectedCategory
+        : true;
+
+      if (!matchesCategory) {
+        return false;
+      }
+
+      if (!normalizedSearchQuery) {
+        return true;
+      }
+
+      const searchableName = String(product.name || '').toLocaleLowerCase('es-MX');
+      const searchableDescription = String(product.description || '').toLocaleLowerCase('es-MX');
+
+      return searchableName.includes(normalizedSearchQuery)
+        || searchableDescription.includes(normalizedSearchQuery);
+    });
+  }, [products, selectedCategory, normalizedSearchQuery]);
 
   const selectedCategoryLabel = useMemo(() => {
     if (!selectedCategory) {
@@ -232,6 +246,10 @@ export default function Menu() {
     setSelectedCategory(categoryId);
   }, []);
 
+  const clearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
+
   const toggleLayout = useCallback(() => {
     setLayout((currentLayout) => (currentLayout === 'list' ? 'grid' : 'list'));
   }, []);
@@ -247,8 +265,7 @@ export default function Menu() {
       ? parsedQuantity
       : 1;
 
-    // TODO: Revalidate business hours and product availability on the server,
-    // or at the final checkout step. Client-side guards are UX only.
+    // Client-side guard only. Final availability must be revalidated server-side.
     if (!isBusinessOpen) {
       showToast('🕒 Estamos cerrados ahora mismo, no se pueden añadir productos al carrito.');
       return;
@@ -356,7 +373,6 @@ export default function Menu() {
     }
   }, [error, isMissingProductRoute, loading, productSlug, routeSelectedProduct]);
 
-
   if (isMissingProductRoute) {
     return (
       <>
@@ -370,29 +386,14 @@ export default function Menu() {
           noindex
         />
         <div className={styles.errorContainer}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="64"
-            height="64"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={styles.errorIcon}
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={styles.errorIcon}>
             <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"></path>
             <path d="M9 9l6 6"></path>
             <path d="M15 9l-6 6"></path>
           </svg>
           <h2 className={styles.errorTitle}>Producto no disponible</h2>
-          <p className={styles.errorMessage}>
-            El producto que buscas ya no esta disponible o fue retirado del menu publico.
-          </p>
-          <Link to="/" className={styles.errorRetryButton}>
-            Volver al menu
-          </Link>
+          <p className={styles.errorMessage}>El producto que buscas ya no esta disponible o fue retirado del menu publico.</p>
+          <Link to="/" className={styles.errorRetryButton}>Volver al menu</Link>
         </div>
       </>
     );
@@ -416,6 +417,10 @@ export default function Menu() {
     );
   }
 
+  const hasAnyProducts = products.length > 0;
+  const hasCategoryFilter = Boolean(selectedCategory);
+  const hasSearchFilter = Boolean(normalizedSearchQuery);
+
   return (
     <>
       <SEO
@@ -430,7 +435,6 @@ export default function Menu() {
       />
 
       <div className={`${styles.menuContainer} ${shouldShowLeadCapture ? styles.menuContainerWithLeadCapture : ''}`}>
-
         <section className={styles.menuHero}>
           <div className={styles.heroCopy}>
             <h1>{selectedCategory ? selectedCategoryLabel : '¿Qué se te antoja hoy?'}</h1>
@@ -442,7 +446,6 @@ export default function Menu() {
               <span className={styles.statusDot}></span>
               {isBusinessOpen ? 'Abierto • Recibe en minutos' : 'Cerrado por ahora'}
             </span>
-
             {businessStatusMessage && <span className={styles.heroMessage}>{businessStatusMessage}</span>}
           </div>
         </section>
@@ -467,10 +470,63 @@ export default function Menu() {
           </div>
 
           <div
-            ref={categoryRailRef}
-            className={styles.categoryRail}
-            aria-label="Categorias del menu"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              width: '100%',
+              marginBottom: '0.85rem',
+              padding: '0.7rem 0.85rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '999px',
+              background: 'var(--bg-secondary)',
+              boxSizing: 'border-box',
+            }}
           >
+            <SearchIcon />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Buscar por nombre o descripción"
+              aria-label="Buscar productos del menú"
+              enterKeyHint="search"
+              autoComplete="off"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                border: 0,
+                outline: 'none',
+                background: 'transparent',
+                color: 'var(--text-primary)',
+                fontSize: '0.95rem',
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label="Limpiar búsqueda"
+                title="Limpiar búsqueda"
+                style={{
+                  width: 34,
+                  height: 34,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                  border: 0,
+                  borderRadius: '50%',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                <CloseIcon />
+              </button>
+            )}
+          </div>
+
+          <div ref={categoryRailRef} className={styles.categoryRail} aria-label="Categorias del menu">
             {categoryVisuals.map((category) => {
               const isActive = selectedCategory === category.id;
 
@@ -508,13 +564,7 @@ export default function Menu() {
           {error ? (
             <div className={`${styles.emptyState} ${styles.errorState}`}>
               <p>Tardó demasiado en cargar. Verifica tu conexión.</p>
-              <button
-                type="button"
-                onClick={refetch}
-                className={styles.errorRetryButtonInline}
-              >
-                Reintentar
-              </button>
+              <button type="button" onClick={refetch} className={styles.errorRetryButtonInline}>Reintentar</button>
             </div>
           ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product, index) => (
@@ -530,9 +580,26 @@ export default function Menu() {
                 renderActions={renderClientActions}
               />
             ))
+          ) : !hasAnyProducts ? (
+            <div className={styles.emptyState}>
+              <p>No hay productos disponibles en este momento.</p>
+            </div>
+          ) : hasSearchFilter ? (
+            <div className={styles.emptyState}>
+              <p>No encontramos productos para “{searchQuery.trim()}”.</p>
+              {hasCategoryFilter && (
+                <p style={{ marginTop: '0.5rem', fontSize: '0.88rem', fontWeight: 500 }}>
+                  Prueba con otra búsqueda o cambia de categoría.
+                </p>
+              )}
+            </div>
+          ) : hasCategoryFilter ? (
+            <div className={styles.emptyState}>
+              <p>No hay productos disponibles en esta categoría.</p>
+            </div>
           ) : (
             <div className={styles.emptyState}>
-              <p>No se encontraron productos para esta categoria.</p>
+              <p>No hay productos disponibles en este momento.</p>
             </div>
           )}
         </div>
@@ -551,16 +618,8 @@ export default function Menu() {
             <div className={styles.footerContent}>
               <div className={styles.socialProof}>
                 <span className={styles.socialProofText}>¿Aún no te decides?</span>
-                <a
-                  href="https://www.facebook.com/EntreAlasDarkitchen"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.socialProofLink}
-                >
-                  Conocenos más en Facebook
-                </a>
+                <a href="https://www.facebook.com/EntreAlasDarkitchen" target="_blank" rel="noopener noreferrer" className={styles.socialProofLink}>Conocenos más en Facebook</a>
               </div>
-
               <div className={styles.footerBottom}>
                 <p>&copy; {new Date().getFullYear()} Entre Alas. Todos los derechos reservados.</p>
               </div>
