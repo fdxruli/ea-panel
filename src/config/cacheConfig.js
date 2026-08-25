@@ -12,13 +12,16 @@ export const CACHE_TTL = {
 
 /**
  * Claves unicas para almacenar cada tipo de dato en cache.
+ *
+ * User info/orders use a new namespace so caches written by older
+ * frontends are never accepted by the identity-reconciled frontend.
  */
 export const CACHE_KEYS = {
   PRODUCTS: 'client:catalog:base:v1',
   PRODUCTS_BASIC: 'client:products:basic:v1',
   BUSINESS_STATUS: 'ea-business-status-cache',
-  USER_INFO: 'ea-user-info-cache',
-  USER_ORDERS: 'ea-user-orders-cache',
+  USER_INFO: 'ea-user-info-cache:v2',
+  USER_ORDERS: 'ea-user-orders-cache:v2',
   FAVORITES: 'ea-favorites-cache',
   REVIEWS: 'ea-reviews-cache',
   SPECIAL_PRICE: 'ea-special-price-cache',
