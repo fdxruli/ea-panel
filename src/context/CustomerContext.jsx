@@ -6,10 +6,9 @@ const CustomerContext = createContext();
 
 const CUSTOMER_PHONE_KEY = 'customer_phone';
 const CUSTOMER_DATA_KEY = 'customer_data';
+const CANONICAL_CUSTOMER_ID_KEY = 'customer_canonical_id';
 
 export const useCustomer = () => useContext(CustomerContext);
-
-const CANONICAL_CUSTOMER_ID_KEY = 'customer_canonical_id';
 
 const normalizeCustomer = (customer) => {
   if (!customer?.id || !customer?.phone) return customer;
@@ -80,7 +79,6 @@ export const CustomerProvider = ({ children }) => {
     if (!termsResolution.ok) return { status: 'error', code: termsResolution.code };
 
     try {
-      // Identity is resolved by phone. There must now be exactly one customer per phone.
       const { data, error } = await supabase.from('customers').select(`*, customer_terms_acceptances ( terms_version_id )`).eq('phone', phoneToVerify).maybeSingle();
       if (error) {
         console.error('Error de red o DB en verifyCustomer:', error);
@@ -163,6 +161,35 @@ export const CustomerProvider = ({ children }) => {
     if (isMountedRef.current && sessionRestoreIdRef.current === restoreId) setIsCustomerLoading(false);
   }, []);
 
+  const reconcileCanonicalCustomer = useCallback(async () => {
+    const currentPhone = phone;
+    const currentCustomer = customer;
+    if (!currentPhone || !currentCustomer?.id || !isMountedRef.current) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', currentPhone)
+        .maybeSingle();
+
+      if (error || !data || !isMountedRef.current) return;
+      if (data.id === currentCustomer.id) return;
+
+      const canonical = normalizeCustomer({
+        ...data,
+        terms_accepted: currentCustomer.terms_accepted,
+      });
+
+      setCustomer(canonical);
+      setPhone(canonical.phone);
+      persistCanonicalCustomer(canonical);
+      console.info('[CustomerContext] Identidad canonica reconciliada:', canonical.id);
+    } catch (error) {
+      console.warn('[CustomerContext] No se pudo reconciliar la identidad al volver a foco:', error);
+    }
+  }, [customer, phone]);
+
   useEffect(() => {
     isMountedRef.current = true;
     initializeSession();
@@ -171,6 +198,19 @@ export const CustomerProvider = ({ children }) => {
       sessionRestoreIdRef.current += 1;
     };
   }, [initializeSession]);
+
+  useEffect(() => {
+    const reconcileOnFocus = () => {
+      if (document.visibilityState === 'visible') reconcileCanonicalCustomer();
+    };
+
+    document.addEventListener('visibilitychange', reconcileOnFocus);
+    window.addEventListener('online', reconcileOnFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', reconcileOnFocus);
+      window.removeEventListener('online', reconcileOnFocus);
+    };
+  }, [reconcileCanonicalCustomer]);
 
   const registerNewCustomer = async (customerPhone, name, inviterCode = null) => {
     const newClientReferralCode = await generateUniqueReferralCode(name, customerPhone);
