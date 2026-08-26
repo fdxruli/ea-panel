@@ -11,7 +11,6 @@ import {
 } from '../utils/cacheAdminUtils';
 import { createThrottle } from '../utils/throttle';
 
-// TTLs por defecto (en milisegundos)
 const DEFAULT_TTL = {
     STATIC: 30 * 60 * 1000,
     MEDIUM: 5 * 60 * 1000,
@@ -22,7 +21,6 @@ const DEFAULT_TTL = {
 const REALTIME_INVALIDATE_THROTTLE_MS = 2000;
 
 export const CacheAdminContext = createContext();
-
 export const useCacheAdmin = () => useContext(CacheAdminContext);
 
 export const CacheAdminProvider = ({ children }) => {
@@ -30,11 +28,9 @@ export const CacheAdminProvider = ({ children }) => {
     const [isHydrated, setIsHydrated] = useState(false);
     const inFlightRequests = useRef(new Map());
     const cleanupIntervalRef = useRef(null);
-    const { admin } = useAdminAuth();
+    const { status } = useAdminAuth();
     const throttledInvalidateRef = useRef(null);
 
-    // Hydrate first. Consumers must wait for this flag before fetching so a
-    // late hydration cannot overwrite a freshly fetched cache entry.
     useEffect(() => {
         let isMounted = true;
 
@@ -62,10 +58,7 @@ export const CacheAdminProvider = ({ children }) => {
                 console.log(`[CacheAdmin] Hidratación completa. ${Object.keys(hydratedCache).length} entradas cargadas.`);
             } catch (error) {
                 console.error('[CacheAdmin] Error durante la hidratación:', error);
-                if (isMounted) {
-                    // Do not leave consumers blocked forever after a storage error.
-                    setIsHydrated(true);
-                }
+                if (isMounted) setIsHydrated(true);
             }
         };
 
@@ -85,32 +78,24 @@ export const CacheAdminProvider = ({ children }) => {
         cleanupIntervalRef.current = setInterval(() => {
             const now = Date.now();
             const ORPHAN_THRESHOLD_MS = 30000;
-            let orphanedCount = 0;
-
             inFlightRequests.current.forEach((request, key) => {
                 const elapsed = now - request.startTime;
                 if (elapsed > ORPHAN_THRESHOLD_MS && request.status === 'pending') {
                     console.warn(`[CacheAdmin] Petición huérfana detectada para "${key}" (${elapsed}ms). Limpiando...`);
                     inFlightRequests.current.delete(key);
-                    orphanedCount++;
                 }
             });
-
-            if (orphanedCount > 0) {
-                console.log(`[CacheAdmin] Limpiadas ${orphanedCount} peticiones huérfanas.`);
-            }
         }, 10000);
 
         return () => {
-            if (cleanupIntervalRef.current) {
-                clearInterval(cleanupIntervalRef.current);
-            }
+            if (cleanupIntervalRef.current) clearInterval(cleanupIntervalRef.current);
         };
     }, []);
 
+    // RESOLVING no significa logout: esperar a que Auth determine el estado.
     useEffect(() => {
-        if (!admin) {
-            console.log('[CacheAdmin] Cierre de sesión detectado. Limpiando caché...');
+        if (status === 'UNAUTHENTICATED' || status === 'CLIENT' || status === 'ERROR') {
+            console.log(`[CacheAdmin] Estado de auth ${status}. Limpiando caché...`);
             setCache({});
             inFlightRequests.current.clear();
             clearStorage();
@@ -119,28 +104,17 @@ export const CacheAdminProvider = ({ children }) => {
                 throttledInvalidateRef.current.cancel();
             }
         }
-    }, [admin]);
+    }, [status]);
 
     const setCached = useCallback((key, data, ttl = DEFAULT_TTL.MEDIUM) => {
-        const entry = {
-            data,
-            timestamp: Date.now(),
-            ttl,
-            key
-        };
-
-        setCache(prevCache => ({
-            ...prevCache,
-            [key]: entry
-        }));
-
+        const entry = { data, timestamp: Date.now(), ttl, key };
+        setCache(prevCache => ({ ...prevCache, [key]: entry }));
         setStorageItem(key, entry);
     }, []);
 
     const getCached = useCallback((key, options = {}) => {
         const { skipExpiry = false } = options;
         const entry = cache[key];
-
         if (!entry) return null;
         if (!skipExpiry && isExpired(entry.timestamp, entry.ttl)) return null;
 
@@ -157,17 +131,13 @@ export const CacheAdminProvider = ({ children }) => {
         if (throttled) {
             if (!throttledInvalidateRef.current) {
                 throttledInvalidateRef.current = createThrottle(
-                    (key) => invalidate(key, { throttled: false }),
+                    key => invalidate(key, { throttled: false }),
                     REALTIME_INVALIDATE_THROTTLE_MS,
                     { leading: true, trailing: true }
                 );
             }
-
-            if (typeof keyOrPattern === 'string') {
-                throttledInvalidateRef.current(keyOrPattern);
-            } else {
-                throttledInvalidateRef.current.flush();
-            }
+            if (typeof keyOrPattern === 'string') throttledInvalidateRef.current(keyOrPattern);
+            else throttledInvalidateRef.current.flush();
             return;
         }
 
@@ -204,75 +174,52 @@ export const CacheAdminProvider = ({ children }) => {
 
     const handleFetch = useCallback(async (key, fetcher, ttl) => {
         const existingRequest = inFlightRequests.current.get(key);
-        if (existingRequest) {
-            console.log(`[CacheAdmin] Petición duplicada para "${key}". Esperando resultado...`);
-            return existingRequest.promise;
-        }
+        if (existingRequest) return existingRequest.promise;
 
         const startTime = Date.now();
         const fetchPromise = (async () => {
             try {
-                console.log(`[CacheAdmin] FETCH: Ejecutando fetcher para "${key}" (t=${startTime}).`);
                 const result = await fetcher();
                 if (result.error) throw new Error(result.error.message);
-
                 const data = result.data;
                 setCached(key, data, ttl);
                 return data;
-            } catch (error) {
-                console.error(`[CacheAdmin] FETCH ERROR para "${key}":`, error);
-                throw error;
             } finally {
-                const duration = Date.now() - startTime;
-                console.log(`[CacheAdmin] FETCH completado para "${key}" en ${duration}ms. Limpiando inFlight.`);
                 inFlightRequests.current.delete(key);
             }
         })();
 
-        inFlightRequests.current.set(key, {
-            promise: fetchPromise,
-            startTime,
-            status: 'pending'
-        });
-
+        inFlightRequests.current.set(key, { promise: fetchPromise, startTime, status: 'pending' });
         return fetchPromise;
     }, [setCached]);
 
     const refresh = useCallback(async (key, fetcher, ttl) => {
-        console.log(`[CacheAdmin] REFRESH: Forzando actualización para "${key}".`);
         invalidate(key);
         return handleFetch(key, fetcher, ttl);
     }, [invalidate, handleFetch]);
 
     const preload = useCallback(async (key, fetcher, ttl) => {
         const cached = getCached(key);
-        if (!cached) {
-            console.log(`[CacheAdmin] PRELOAD: Precargando "${key}".`);
-            handleFetch(key, fetcher, ttl).catch(() => {
-                console.warn(`[CacheAdmin] PRELOAD falló para "${key}".`);
-            });
-        }
+        if (!cached) handleFetch(key, fetcher, ttl).catch(() => {});
     }, [getCached, handleFetch]);
 
     const invalidateThrottled = useCallback((keyOrPattern) => {
         invalidate(keyOrPattern, { throttled: true });
     }, [invalidate]);
 
-    const value = {
-        DEFAULT_TTL,
-        isHydrated,
-        getCached,
-        setCached,
-        invalidate,
-        invalidateThrottled,
-        refresh,
-        preload,
-        clear: () => invalidate('*'),
-        handleFetch,
-    };
-
     return (
-        <CacheAdminContext.Provider value={value}>
+        <CacheAdminContext.Provider value={{
+            DEFAULT_TTL,
+            isHydrated,
+            getCached,
+            setCached,
+            invalidate,
+            invalidateThrottled,
+            refresh,
+            preload,
+            clear: () => invalidate('*'),
+            handleFetch,
+        }}>
             {children}
         </CacheAdminContext.Provider>
     );
