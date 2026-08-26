@@ -9,6 +9,7 @@ import { UserDataProvider, useUserData } from "./context/UserDataContext.jsx";
 import { ProductExtrasProvider } from "./context/ProductExtrasContext.jsx";
 import { AlertProvider } from "./context/AlertContext.jsx";
 import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext.jsx";
+import { AdminDraftProvider } from "./context/AdminDraftContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { BusinessHoursProvider } from "./context/BusinessHoursContext.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
@@ -161,13 +162,16 @@ function App() {
                         <Suspense fallback={<FullscreenLoader />}>
                           {/* 1. El Provider realiza la petición y guarda el estado absoluto */}
                           <AdminAuthProvider>
-                            {/* 2. La ruta evalúa el estado y bloquea/deja pasar */}
-                            <AdminRoute />
+                            {/* 2. Drafts consumen la identidad canónica del AuthContext */}
+                            <AdminDraftProvider>
+                              {/* 3. La ruta evalúa el estado y bloquea/deja pasar */}
+                              <AdminRoute />
+                            </AdminDraftProvider>
                           </AdminAuthProvider>
                         </Suspense>
                       }
                     >
-                      {/* 3. Si AdminRoute permite el paso (Renderiza Outlet), se cargan el Layout y su caché */}
+                      {/* 4. Si AdminRoute permite el paso (Renderiza Outlet), se cargan el Layout y su caché */}
                       <Route element={
                         <CacheAdminProvider>
                           <AdminLayout />

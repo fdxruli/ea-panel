@@ -6,13 +6,14 @@ const AdminAuthContext = createContext(null);
 export const AdminAuthProvider = ({ children }) => {
     const [authState, setAuthState] = useState({
         status: 'RESOLVING', // 'RESOLVING' | 'ADMIN' | 'CLIENT' | 'UNAUTHENTICATED' | 'ERROR'
+        userId: null,
         adminData: null,
         error: null
     });
 
     const resolveAdminStatus = useCallback(async (session, mounted) => {
         if (!session) {
-            if (mounted) setAuthState({ status: 'UNAUTHENTICATED', adminData: null, error: null });
+            if (mounted) setAuthState({ status: 'UNAUTHENTICATED', userId: null, adminData: null, error: null });
             return;
         }
 
@@ -30,7 +31,7 @@ export const AdminAuthProvider = ({ children }) => {
 
             if (!data) {
                 // Control de flujo explícito: el registro simplemente no existe.
-                if (mounted) setAuthState({ status: 'CLIENT', adminData: null, error: null });
+                if (mounted) setAuthState({ status: 'CLIENT', userId: session.user.id, adminData: null, error: null });
                 return;
             }
 
@@ -49,6 +50,7 @@ export const AdminAuthProvider = ({ children }) => {
             if (mounted) {
                 setAuthState({
                     status: 'ADMIN',
+                    userId: session.user.id,
                     adminData: { ...data, permissions: parsedPermissions },
                     error: null
                 });
@@ -56,7 +58,7 @@ export const AdminAuthProvider = ({ children }) => {
 
         } catch (err) {
             console.error("Error crítico en autorización de admin:", err);
-            if (mounted) setAuthState({ status: 'ERROR', adminData: null, error: err.message });
+            if (mounted) setAuthState({ status: 'ERROR', userId: session.user.id, adminData: null, error: err.message });
         }
     }, []);
 
@@ -71,7 +73,7 @@ export const AdminAuthProvider = ({ children }) => {
         // 2. Suscripción a cambios (CORREGIDO: Evita condición de carrera ignorando la carga inicial duplicada)
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (mounted && event !== 'INITIAL_SESSION' && event !== 'SIGNED_UP') {
-                setAuthState(prev => ({ ...prev, status: 'RESOLVING' }));
+                setAuthState(prev => ({ ...prev, status: 'RESOLVING', userId: session?.user?.id ?? null }));
                 resolveAdminStatus(session, mounted);
             }
         });
