@@ -10,8 +10,7 @@
     "lint:fix": "eslint . --fix",
     "test": "node --test tests/adminDraftStorage.test.js tests/adminDraftIdentity.test.js",
     "test:routing": "node scripts/validate-product-routes.js",
-    "prerender:public": "node scripts/prerender-public-routes.js",
-    "preview": "vite preview"
+    "prerender:public": "vite preview"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
@@ -19,7 +18,6 @@
     "async-mutex": "^0.5.0",
     "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.0",
-    "@supabase/supabase-js": "^2.57.4",
     "dompurify": "^3.2.7",
     "firebase": "^12.4.0",
     "qrcode.react": "^4.2.0",
@@ -39,7 +37,6 @@
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
-    "fake-indexeddb": "^6.2.5",
     "globals": "^16.3.0",
     "puppeteer": "^24.40.0",
     "rollup-plugin-visualizer": "^6.0.5",
