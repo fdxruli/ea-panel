@@ -13,9 +13,13 @@ import {
 
 const AdminDraftContext = createContext(null);
 
+export const getAdminDraftOwnerKey = ({ status, userId } = {}) => (
+  status === 'ADMIN' && typeof userId === 'string' && userId ? userId : null
+);
+
 export const AdminDraftProvider = ({ children }) => {
   const { status, userId } = useAdminAuth();
-  const ownerKey = status === 'ADMIN' ? userId : null;
+  const ownerKey = getAdminDraftOwnerKey({ status, userId });
   const ownerKeyRef = useRef(ownerKey);
   const saversRef = useRef(new Map());
 
