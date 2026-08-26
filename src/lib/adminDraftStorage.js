@@ -107,7 +107,7 @@ export const findDraft = async ({ ownerKey, workflow, entityType = null, entityI
   if (!ownerKey || typeof ownerKey !== 'string') return null;
   if (!workflow || typeof workflow !== 'string') throw new TypeError('workflow is required');
   const entity = normalizeEntityContext({ entityType, entityId });
-  const drafts = await listDrafts({ workflow, now, cleanupExpired });
+  const drafts = await listDrafts({ ownerKey, workflow, now, cleanupExpired });
   return drafts.find((draft) => matchesContext(draft, { ownerKey, workflow, ...entity })) ?? null;
 };
 
