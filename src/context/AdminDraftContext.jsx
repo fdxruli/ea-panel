@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import {
   clearExpiredDrafts,
   createDebouncedDraftSaver,
@@ -45,6 +45,11 @@ export const AdminDraftProvider = ({ children }) => {
     cancelScheduledSave(id);
     await deleteDraft(id);
   }, [cancelScheduledSave]);
+
+  useEffect(() => () => {
+    for (const saver of saversRef.current.values()) saver.cancel();
+    saversRef.current.clear();
+  }, []);
 
   const value = useMemo(() => ({
     createDraft,
