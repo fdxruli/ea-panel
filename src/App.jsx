@@ -12,7 +12,7 @@ import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext.jsx"
 import { AdminDraftProvider } from "./context/AdminDraftContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { BusinessHoursProvider } from "./context/BusinessHoursContext.jsx";
-import { SettingsProvider } from "./context/SettingsProvider.jsx";
+import { SettingsProvider } from "./context/SettingsContext.jsx";
 import { CacheAdminProvider } from "./context/CacheAdminContext.jsx";
 
 // Layouts (Se cargan de inmediato, correcto)
@@ -57,7 +57,6 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 // Utils
 import { cleanupExpiredCache } from "./utils/cache.js";
 
-// Wrapper for Admin Permissions (Sin cambios)
 const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
 
