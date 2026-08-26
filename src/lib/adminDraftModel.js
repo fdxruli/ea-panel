@@ -1,6 +1,6 @@
 export const ADMIN_DRAFT_SCHEMA_VERSION = 1;
 export const DEFAULT_ADMIN_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const ADMIN_DRAFT_STATUS = Object.freeze({ ACTIVE: 'active' });
+export const ADMIN_DRAFT_STATUS = Object.freeze({ ACTIVE: 'active', COMPLETED: 'completed' });
 
 const FORBIDDEN_KEY = /(?:access[_-]?token|refresh[_-]?token|password|secret|credential|private[_-]?key)/i;
 
@@ -16,27 +16,18 @@ export const assertSerializable = (value, path = 'payload') => {
         if (!Number.isFinite(value)) throw new TypeError(`${path} contains a non-finite number.`);
         return value;
     }
-
     if (typeof value === 'function' || typeof value === 'symbol' || typeof value === 'bigint') {
         throw new TypeError(`${path} contains a non-serializable value.`);
     }
-
     if (Array.isArray(value)) {
         value.forEach((item, index) => assertSerializable(item, `${path}[${index}]`));
         return value;
     }
-
-    if (!isPlainObject(value)) {
-        throw new TypeError(`${path} contains an unsupported object type.`);
-    }
-
+    if (!isPlainObject(value)) throw new TypeError(`${path} contains an unsupported object type.`);
     for (const [key, child] of Object.entries(value)) {
-        if (FORBIDDEN_KEY.test(key)) {
-            throw new TypeError(`${path}.${key} is not allowed in a draft.`);
-        }
+        if (FORBIDDEN_KEY.test(key)) throw new TypeError(`${path}.${key} is not allowed in a draft.`);
         assertSerializable(child, `${path}.${key}`);
     }
-
     return value;
 };
 
@@ -55,7 +46,6 @@ export const createDraftRecord = ({
     if (!ownerKey || typeof ownerKey !== 'string') throw new TypeError('Draft ownerKey is required.');
     if (!workflow || typeof workflow !== 'string') throw new TypeError('Draft workflow is required.');
     if (!Number.isFinite(ttlMs) || ttlMs <= 0) throw new TypeError('Draft ttlMs must be a positive finite number.');
-
     assertSerializable(payload, 'payload');
     assertSerializable(metadata, 'metadata');
 
@@ -87,20 +77,30 @@ export const validateDraftRecord = draft => {
     if (draft.schemaVersion !== ADMIN_DRAFT_SCHEMA_VERSION) return false;
     if (!draft.id || !draft.ownerKey || !draft.workflow) return false;
     if (!draft.createdAt || !draft.updatedAt || !draft.expiresAt) return false;
-    if (draft.status !== ADMIN_DRAFT_STATUS.ACTIVE) return false;
-
+    if (![ADMIN_DRAFT_STATUS.ACTIVE, ADMIN_DRAFT_STATUS.COMPLETED].includes(draft.status)) return false;
     try {
         assertSerializable(draft.payload, 'payload');
         assertSerializable(draft.metadata ?? {}, 'metadata');
     } catch {
         return false;
     }
-
     return true;
+};
+
+const migrations = new Map();
+
+export const registerDraftMigration = (fromVersion, migrate) => {
+    migrations.set(fromVersion, migrate);
 };
 
 export const migrateDraftRecord = draft => {
     if (!draft || typeof draft !== 'object') return null;
-    if (draft.schemaVersion === ADMIN_DRAFT_SCHEMA_VERSION && validateDraftRecord(draft)) return draft;
-    return null;
+    let current = draft;
+    while (current.schemaVersion !== ADMIN_DRAFT_SCHEMA_VERSION) {
+        const migrate = migrations.get(current.schemaVersion);
+        if (!migrate) return null;
+        current = migrate(current);
+        if (!current) return null;
+    }
+    return validateDraftRecord(current) ? current : null;
 };

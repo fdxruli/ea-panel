@@ -5,7 +5,8 @@ import {
     DEFAULT_ADMIN_DRAFT_TTL_MS,
     isDraftExpired,
     migrateDraftRecord,
-    validateDraftRecord
+    validateDraftRecord,
+    ADMIN_DRAFT_STATUS
 } from './adminDraftModel';
 
 const createId = () => {
@@ -22,9 +23,7 @@ export class AdminDraftStore {
     }
 
     async createDraft({ id = createId(), ownerKey, workflow, entityType, entityId, payload, metadata, ttlMs } = {}) {
-        const draft = createDraftRecord({
-            id, ownerKey, workflow, entityType, entityId, payload, metadata, ttlMs: ttlMs ?? this.defaultTtlMs
-        });
+        const draft = createDraftRecord({ id, ownerKey, workflow, entityType, entityId, payload, metadata, ttlMs: ttlMs ?? this.defaultTtlMs });
         const stored = await this.storage.create(draft);
         if (!stored) this.fallback.set(id, draft);
         return draft;
@@ -49,10 +48,8 @@ export class AdminDraftStore {
     async updateDraft(id, patch = {}) {
         const current = await this.getDraft(id);
         if (!current) return null;
-
         if (patch.payload !== undefined) assertSerializable(patch.payload, 'payload');
         if (patch.metadata !== undefined) assertSerializable(patch.metadata, 'metadata');
-
         const next = {
             ...current,
             ...patch,
@@ -63,11 +60,14 @@ export class AdminDraftStore {
             createdAt: current.createdAt,
             updatedAt: new Date().toISOString()
         };
-
         if (!validateDraftRecord(next)) throw new TypeError('Invalid draft update.');
         const stored = await this.storage.update(id, next);
         if (!stored) this.fallback.set(id, next);
         return next;
+    }
+
+    async completeDraft(id) {
+        return this.updateDraft(id, { status: ADMIN_DRAFT_STATUS.COMPLETED });
     }
 
     async deleteDraft(id) {
@@ -107,6 +107,12 @@ export class AdminDraftStore {
             if (isDraftExpired(draft)) this.fallback.delete(id);
         }
         return removed;
+    }
+
+    async clearCompletedDrafts(filters = {}) {
+        const completed = await this.listDrafts({ ...filters, status: ADMIN_DRAFT_STATUS.COMPLETED });
+        await Promise.all(completed.map(draft => this.deleteDraft(draft.id)));
+        return completed.length;
     }
 
     scheduleSave(id, patch, delayMs = 500) {
