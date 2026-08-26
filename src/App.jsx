@@ -9,9 +9,10 @@ import { UserDataProvider, useUserData } from "./context/UserDataContext.jsx";
 import { ProductExtrasProvider } from "./context/ProductExtrasContext.jsx";
 import { AlertProvider } from "./context/AlertContext.jsx";
 import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext.jsx";
+import { AdminDraftProvider } from "./context/AdminDraftContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { BusinessHoursProvider } from "./context/BusinessHoursContext.jsx";
-import { SettingsProvider } from "./context/SettingsContext.jsx";
+import { SettingsProvider } from "./context/SettingsProvider.jsx";
 import { CacheAdminProvider } from "./context/CacheAdminContext.jsx";
 
 // Layouts (Se cargan de inmediato, correcto)
@@ -61,7 +62,6 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
 
   if (loading) {
-    // Usamos el spinner global centrado
     return (
       <div className="fullscreen-loader">
         <LoadingSpinner />
@@ -81,7 +81,6 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   return <Navigate to={canViewDashboard ? "/admin" : "/login"} replace />;
 };
 
-// Componente de Fallback de Suspense (para centrar el spinner)
 const FullscreenLoader = () => (
   <div className="fullscreen-loader">
     <LoadingSpinner />
@@ -109,7 +108,6 @@ function App() {
               <ErrorBoundary>
                 <Suspense fallback={<FullscreenLoader />}>
                   <Routes>
-                    {/* --- Client Routes --- */}
                     <Route
                       path="/"
                       element={
@@ -126,48 +124,38 @@ function App() {
                         </CustomerProvider>
                       }
                     >
-                      <Route
-                        index
-                        element={(
-                          <Suspense fallback={<ClientMenuFallback />}>
-                            <Menu />
-                          </Suspense>
-                        )}
-                      />
-                      <Route
-                        path="producto/:productSlug"
-                        element={(
-                          <Suspense fallback={<ClientMenuFallback />}>
-                            <Menu />
-                          </Suspense>
-                        )}
-                      />
+                      <Route index element={(
+                        <Suspense fallback={<ClientMenuFallback />}>
+                          <Menu />
+                        </Suspense>
+                      )} />
+                      <Route path="producto/:productSlug" element={(
+                        <Suspense fallback={<ClientMenuFallback />}>
+                          <Menu />
+                        </Suspense>
+                      )} />
                       <Route path="mis-pedidos" element={<MyOrders />} />
                       <Route path="mis-pedidos/:orderCode" element={<OrderDetailPage />} />
                       <Route path="mi-perfil" element={<MyProfile />} />
                       <Route path="mi-actividad" element={<MyStuff />} />
                       <Route path="terminos" element={<TermsPage />} />
-                      {/* Este NotFoundPage es solo para rutas DENTRO del ClientLayout */}
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
 
-                    {/* --- Admin Login --- */}
                     <Route path="/login" element={<Login />} />
 
-                    {/* --- Admin Routes --- */}
                     <Route
                       path="/admin"
                       element={
                         <Suspense fallback={<FullscreenLoader />}>
-                          {/* 1. El Provider realiza la petición y guarda el estado absoluto */}
                           <AdminAuthProvider>
-                            {/* 2. La ruta evalúa el estado y bloquea/deja pasar */}
-                            <AdminRoute />
+                            <AdminDraftProvider>
+                              <AdminRoute />
+                            </AdminDraftProvider>
                           </AdminAuthProvider>
                         </Suspense>
                       }
                     >
-                      {/* 3. Si AdminRoute permite el paso (Renderiza Outlet), se cargan el Layout y su caché */}
                       <Route element={
                         <CacheAdminProvider>
                           <AdminLayout />
@@ -189,9 +177,7 @@ function App() {
                       </Route>
                     </Route>
 
-                    {/* --- Global Catch-all --- */}
                     <Route path="*" element={<NotFoundPage />} />
-
                   </Routes>
                 </Suspense>
               </ErrorBoundary>
