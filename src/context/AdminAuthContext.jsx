@@ -17,30 +17,32 @@ export const AdminAuthProvider = ({ children }) => {
             return;
         }
 
-        const userId = session.user.id;
-
         try {
             const { data, error } = await supabase
                 .from('admins')
-                .select('name, role, permissions')
-                .eq('id', userId)
-                .maybeSingle();
+                .select('name, role, permissions') // CORREGIDO: No uses select('*')
+                .eq('id', session.user.id)         // CORREGIDO: Revertido a 'id' en lugar de 'user_id'
+                .maybeSingle(); // <-- CAMBIO CLAVE
 
             if (error) {
+                // Cualquier error aquí es un error real de base de datos (Ej: Violación RLS, Timeout)
                 throw error;
             }
 
             if (!data) {
-                if (mounted) setAuthState({ status: 'CLIENT', userId, adminData: null, error: null });
+                // Control de flujo explícito: el registro simplemente no existe.
+                if (mounted) setAuthState({ status: 'CLIENT', userId: session.user.id, adminData: null, error: null });
                 return;
             }
 
+            // Manejo de permisos: Soporta tanto JSONB nativo como strings parseables
             let parsedPermissions = data.permissions;
             if (typeof parsedPermissions === 'string') {
                 try {
                     parsedPermissions = JSON.parse(parsedPermissions);
                 } catch (e) {
                     console.error("Error al interpretar los permisos del admin:", e);
+                    // Dalla de seguridad: denegamos permisos si el string está corrupto
                     parsedPermissions = null;
                 }
             }
@@ -48,7 +50,7 @@ export const AdminAuthProvider = ({ children }) => {
             if (mounted) {
                 setAuthState({
                     status: 'ADMIN',
-                    userId,
+                    userId: session.user.id,
                     adminData: { ...data, permissions: parsedPermissions },
                     error: null
                 });
@@ -56,17 +58,19 @@ export const AdminAuthProvider = ({ children }) => {
 
         } catch (err) {
             console.error("Error crítico en autorización de admin:", err);
-            if (mounted) setAuthState({ status: 'ERROR', userId, adminData: null, error: err.message });
+            if (mounted) setAuthState({ status: 'ERROR', userId: session.user.id, adminData: null, error: err.message });
         }
     }, []);
 
     useEffect(() => {
         let mounted = true;
 
+        // 1. Carga inicial
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (mounted) resolveAdminStatus(session, mounted);
         });
 
+        // 2. Suscripción a cambios (CORREGIDO: Evita condición de carrera ignorando la carga inicial duplicada)
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (mounted && event !== 'INITIAL_SESSION' && event !== 'SIGNED_UP') {
                 setAuthState(prev => ({ ...prev, status: 'RESOLVING', userId: session?.user?.id ?? null }));
@@ -87,10 +91,12 @@ export const AdminAuthProvider = ({ children }) => {
 
         const { role, permissions } = authState.adminData;
 
+        // God mode (Te lo dejo porque es tu diseño actual, pero sigue siendo poco escalable)
         if (role === 'admin') return true;
 
         if (!permissions) return false;
 
+        // CORREGIDO: Restaurada la lógica para leer objetos anidados (ej. 'dashboard.view')
         const keys = permissionKey.split('.');
         let currentPermission = permissions;
 
@@ -101,6 +107,7 @@ export const AdminAuthProvider = ({ children }) => {
             }
         }
 
+        // CORREGIDO: Validación estricta. Si el objeto contiene algo que no sea 'true' booleano, deniega.
         return currentPermission === true;
     }, [authState]);
 
