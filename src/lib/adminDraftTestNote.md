@@ -1,0 +1,1 @@
+Draft persistence tests require a browser-compatible IndexedDB implementation. The test runner uses `fake-indexeddb` only in tests; production uses the existing Dexie dependency and the browser's native IndexedDB.
