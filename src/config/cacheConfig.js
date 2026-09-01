@@ -3,11 +3,11 @@
  * Define cuanto tiempo se considera que los datos en cache son "frescos".
  */
 export const CACHE_TTL = {
-  PRODUCTS: 10 * 60 * 1000,
+  PRODUCTS: 2 * 60 * 1000,
   BUSINESS_STATUS: 1 * 60 * 1000,
   USER_DATA: 15 * 60 * 1000,
   USER_ORDERS: 10 * 60 * 1000,
-  PRODUCT_EXTRAS: 10 * 60 * 1000,
+  PRODUCT_EXTRAS: 3 * 60 * 1000,
 };
 
 /**
