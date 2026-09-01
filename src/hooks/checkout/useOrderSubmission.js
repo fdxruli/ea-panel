@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { createOrder, deactivateSingleUseDiscount, isNetworkRequestError, NETWORK_BLOCKED_MESSAGE, NETWORK_SUBMIT_ERROR_MESSAGE } from '../../services/orderService';
 import { buildOrderMessage, getWhatsAppUrl } from '../../services/whatsappService';
 import { GUEST_CUSTOMER_ID } from '../../config/constantes';
+import { broadcastStoreChange } from '../../lib/broadcastRealtime';
 
 /**
  * @param {object} params
@@ -143,6 +144,9 @@ export const useOrderSubmission = ({
 
         const whatsappUrl = getWhatsAppUrl(message);
 
+        // Notificar a todos los dispositivos conectados que hubo un pedido y el stock cambió
+        broadcastStoreChange('order_changed', { orderCode: order.order_code });
+
         // STEP 4: Attempt WhatsApp redirect with fallback
         // Instead of immediately closing the modal, we store the URL
         // so the UI can show a fallback button if window.open is blocked.
@@ -175,9 +179,16 @@ export const useOrderSubmission = ({
         }
 
         if (error?.message && error.message.includes('Stock insuficiente')) {
-          showAlert('¡Oops! Algo se agotó mientras pedías.', 'error');
+          // Extraer la parte descriptiva del error de stock de PostgreSQL
+          const detail = error.message.replace(/^.*?Stock insuficiente/i, 'Stock insuficiente');
+          showAlert(
+            `⚠️ Lo sentimos, un producto o ingrediente se agotó justo antes de completar tu pedido:\n\n${detail}\n\nHemos actualizado el menú y tu carrito.`,
+            'error'
+          );
+          // Forzar sincronización de catálogo en todos los clientes conectados
+          broadcastStoreChange('order_changed');
         } else {
-          showAlert(`Error: ${error?.message || 'Error desconocido'}`, 'error');
+          showAlert(`Error al procesar tu pedido: ${error?.message || 'Error desconocido'}`, 'error');
         }
       }
     },

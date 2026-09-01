@@ -68,7 +68,7 @@ export const CartProvider = ({ children }) => {
             const item = currentCart[i];
             const liveProduct = liveProductsMap.get(item.id);
 
-            if (!liveProduct) {
+            if (!liveProduct || liveProduct.is_out_of_stock) {
                 itemsRemoved = true;
                 hasChanges = true;
                 removedNames.push(item.name);
@@ -94,7 +94,7 @@ export const CartProvider = ({ children }) => {
                 const names = removedNames.join(', ');
                 const plural = removedNames.length > 1;
                 setCartNotification(
-                    `Se ${plural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por no estar disponible(s).`
+                    `Se ${plural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por encontrarse agotado(s).`
                 );
             }
 
