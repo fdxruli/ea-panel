@@ -1,6 +1,7 @@
 /* src/pages/CreateOrder.jsx (Migrado con Clientes/Productos Básicos) */
 
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
+import { useAdminDraft } from '../hooks/useAdminDraft';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import styles from './CreateOrder.module.css';
@@ -79,11 +80,25 @@ const ProductItem = memo(({ product, onAdd, canEdit }) => {
 });
 ProductItem.displayName = 'ProductItem';
 
+// ==================== DRAFT CONSTANTS ====================
+const DRAFT_ID = 'admin-create-order-draft';
+const WORKFLOW = 'create-order';
+
 // ==================== COMPONENTE PRINCIPAL ====================
 
 export default function CreateOrder() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
+
+    // --- DRAFT: hook, estado de UI y refs de ciclo de vida ---
+    const draftStore = useAdminDraft(DRAFT_ID);
+    const [isDraftRestored, setIsDraftRestored] = useState(false);
+    /** true una vez que la carga inicial de IndexedDB finalizó. Evita sobreescritura. */
+    const hasLoadedDraftRef = useRef(false);
+    /** Handle del setTimeout del autoguardado (debounce manual). */
+    const autoSaveTimerRef = useRef(null);
+    // --- FIN DRAFT ---
+
     const [step, setStep] = useState(1);
     const [newCustomerCountryCode, setNewCustomerCountryCode] = useState('+52');
     const [orderNotes, setOrderNotes] = useState('');
@@ -190,7 +205,137 @@ export default function CreateOrder() {
         }
     }, [selectedCustomer, fetchProductsWithSpecialPrices]);
 
+    // ==================== DRAFT: CARGA INICIAL ====================
+    /**
+     * Se ejecuta una sola vez cuando ownerKey está disponible.
+     * Carga el borrador de IndexedDB y restaura el estado del formulario.
+     * Marca hasLoadedDraftRef = true al terminar para habilitar el autoguardado.
+     * NOTA: selectedCustomer restaurado dispara automáticamente fetchProductsWithSpecialPrices
+     * a través del useEffect de arriba — no es necesario llamarlo manualmente aquí.
+     */
+    useEffect(() => {
+        if (!draftStore.ownerKey || hasLoadedDraftRef.current) return;
+        draftStore.load().then((draft) => {
+            if (draft?.payload) {
+                const p = draft.payload;
+                const hasContent =
+                    (p.cart?.length > 0) ||
+                    p.selectedCustomer != null ||
+                    p.newCustomer?.name?.trim() ||
+                    p.orderNotes?.trim();
+                if (hasContent) {
+                    if (p.step != null) setStep(p.step);
+                    if (p.selectedCustomer != null) setSelectedCustomer(p.selectedCustomer);
+                    if (p.isCreatingCustomer != null) setIsCreatingCustomer(p.isCreatingCustomer);
+                    if (p.newCustomer) setNewCustomer(p.newCustomer);
+                    if (p.newCustomerCountryCode) setNewCustomerCountryCode(p.newCustomerCountryCode);
+                    if (Array.isArray(p.cart)) setCart(p.cart);
+                    if (p.orderNotes != null) setOrderNotes(p.orderNotes);
+                    if (p.scheduleDate != null) setScheduleDate(p.scheduleDate);
+                    if (p.scheduleTime != null) setScheduleTime(p.scheduleTime);
+                    if (p.customerSearch != null) setCustomerSearch(p.customerSearch);
+                    if (p.productSearch != null) setProductSearch(p.productSearch);
+                    if (p.categoryFilter != null) setCategoryFilter(p.categoryFilter);
+                    setIsDraftRestored(true);
+                }
+            }
+            hasLoadedDraftRef.current = true;
+        }).catch((err) => {
+            console.warn('[CreateOrder] Error al cargar borrador:', err);
+            hasLoadedDraftRef.current = true;
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [draftStore.ownerKey]); // Solo depende de ownerKey: se ejecuta una vez al autenticarse
+
+    // ==================== DRAFT: AUTOGUARDADO CON DEBOUNCE ====================
+    /**
+     * Observa todos los estados del formulario.
+     * Guarda en IndexedDB con un debounce de 400ms.
+     * Sale temprano si hasLoadedDraftRef aún es false (carga inicial no terminó).
+     */
+    useEffect(() => {
+        if (!hasLoadedDraftRef.current) return;
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+        autoSaveTimerRef.current = setTimeout(async () => {
+            const hasContent =
+                cart.length > 0 ||
+                selectedCustomer !== null ||
+                newCustomer.name.trim() !== '' ||
+                orderNotes.trim() !== '';
+
+            if (!hasContent) {
+                // El usuario limpió todo: eliminar el borrador si existe
+                await draftStore.remove().catch(() => {});
+                return;
+            }
+
+            // Construir payload estrictamente serializable
+            const payload = {
+                step,
+                selectedCustomer,
+                isCreatingCustomer,
+                newCustomer,
+                newCustomerCountryCode,
+                cart: cart.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    ...(item.original_price != null && { original_price: item.original_price }),
+                    quantity: item.quantity,
+                    ...(item.image_url != null && { image_url: item.image_url }),
+                    ...(item.category_id != null && { category_id: item.category_id }),
+                    ...(item.cost != null && { cost: item.cost }),
+                })),
+                orderNotes,
+                scheduleDate,
+                scheduleTime,
+                customerSearch,
+                productSearch,
+                categoryFilter,
+            };
+
+            try {
+                const existing = await draftStore.load();
+                if (existing) {
+                    await draftStore.update({ payload });
+                } else {
+                    await draftStore.createDraft({ id: DRAFT_ID, workflow: WORKFLOW, payload });
+                }
+            } catch (err) {
+                console.warn('[CreateOrder] Error al autoguardar borrador:', err);
+            }
+        }, 400);
+
+        return () => {
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        };
+    }, [step, selectedCustomer, isCreatingCustomer, newCustomer, newCustomerCountryCode,
+        cart, orderNotes, scheduleDate, scheduleTime, customerSearch, productSearch, categoryFilter]);
+    // draftStore es estable (memoizado en el contexto), no necesita estar en las deps
+
+    // ==================== DRAFT: DESCARTAR ====================
+    const handleDiscardDraft = useCallback(async () => {
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        await draftStore.remove().catch(() => {});
+        setStep(1);
+        setSelectedCustomer(null);
+        setIsCreatingCustomer(false);
+        setNewCustomer({ name: '', phone: '' });
+        setNewCustomerCountryCode('+52');
+        setCart([]);
+        setOrderNotes('');
+        setScheduleDate('');
+        setScheduleTime('');
+        setCustomerSearch('');
+        setProductSearch('');
+        setCategoryFilter('all');
+        setProductsWithPrices([]);
+        setIsDraftRestored(false);
+    }, [draftStore]);
+
     // --- (PASO F) Filtro de clientes (MANTENIDO) ---
+
     const filteredCustomers = useMemo(() => {
         if (!debouncedCustomerSearch) return [];
         const lowerSearch = debouncedCustomerSearch.toLowerCase();
@@ -348,7 +493,12 @@ export default function CreateOrder() {
                 throw new Error('La RPC no devolvió la información del pedido creado.');
             }
 
+            // DRAFT: Pedido creado con éxito — cancelar autoguardado pendiente y eliminar borrador
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+            await draftStore.remove().catch(() => {});
+
             // 3. El resto de la lógica (notificación por WhatsApp)
+
             let message = `Te confirmamos tu pedido en *ENTRE ALAS*:\n\n*Pedido N°: ${newOrder.order_code}*\n\n*Detalle del pedido:*\n`;
 
             cart.forEach(item => {
@@ -421,6 +571,22 @@ export default function CreateOrder() {
     return (
         <div className={styles.container}>
             <h1>Crear Nuevo Pedido</h1>
+
+            {/* DRAFT: Banner de borrador recuperado */}
+            {isDraftRestored && (
+                <div className={styles.draftBanner} role="alert">
+                    <span className={styles.draftBannerText}>
+                        📝 Borrador recuperado automáticamente
+                    </span>
+                    <button
+                        type="button"
+                        className={styles.discardDraftButton}
+                        onClick={handleDiscardDraft}
+                    >
+                        Descartar / Empezar pedido nuevo
+                    </button>
+                </div>
+            )}
 
             <div className={styles.mainGrid}>
                 {/* PASO 1: SELECCIONAR CLIENTE */}

@@ -8,6 +8,9 @@ const AdminRoute = () => {
 
   switch (status) {
     case 'RESOLVING':
+      // Solo se activa en el arranque en frío o cuando cambia la identidad del usuario.
+      // Los refrescos de token (TOKEN_REFRESHED) usan revalidación silenciosa
+      // y nunca llegan a este case; la UI del admin permanece montada sin parpadeo.
       return <LoadingSpinner />;
 
     case 'UNAUTHENTICATED':

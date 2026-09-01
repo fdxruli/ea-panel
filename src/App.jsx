@@ -62,7 +62,8 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
 
   if (loading) {
-    // Usamos el spinner global centrado
+    // `loading` es true solo durante el arranque en frío (status === 'RESOLVING').
+    // Los TOKEN_REFRESHED usan revalidación silenciosa y nunca activan este spinner.
     return (
       <div className="fullscreen-loader">
         <LoadingSpinner />

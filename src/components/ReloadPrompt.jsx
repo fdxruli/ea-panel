@@ -1,11 +1,9 @@
 // src/components/ReloadPrompt.jsx
-// Anti-App Zombie: el prompt de actualización NO tiene botón cerrar.
-// El usuario DEBE actualizarse al detectar una nueva versión.
-// Además, si el SW tiene una actualización pendiente y el usuario
-// recupera la conexión, se le muestra el prompt de forma prominente.
-//
 // PWA install prompt: se "pospone" con localStorage para no molestar
 // en cada recarga. Se vuelve a mostrar después de 7 días.
+//
+// La actualización del SW es SIEMPRE una decisión explícita del usuario.
+// Nunca se dispara una recarga automática al recuperar la conexión.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
@@ -59,17 +57,25 @@ function ReloadPrompt() {
     },
   });
 
-  // ── Auto-actualizar cuando el usuario vuelve a tener conexión ──────────────
-  // Si el SW ya detectó una nueva versión (needRefresh=true) y el usuario
-  // recupera la conexión, aplicamos la actualización automáticamente.
-  // Esto previene que el usuario se quede atascado en caché vieja indefinidamente
-  // después de una sesión offline.
+  // Estado de sesión: el usuario eligió posponer la actualización
+  const [isUpdateDismissed, setIsUpdateDismissed] = useState(false);
+
+  // ── Visibilidad del toast de actualización al recuperar conexión ───────────
+  // Si el SW detectó una nueva versión (needRefresh=true) y el usuario
+  // recupera la conexión, únicamente nos aseguramos de que el toast sea
+  // visible (resetando el dismiss de sesión). NUNCA se dispara una recarga
+  // automática — la decisión es siempre del usuario.
   const handleNetworkRestored = useCallback(() => {
     if (needRefresh) {
-      console.log('[ReloadPrompt] Conexión restaurada + update pendiente → aplicando SW.');
-      updateServiceWorker(true);
+      const isAdmin = window.location.pathname.startsWith('/admin');
+      console.log(
+        `[ReloadPrompt] Conexión restaurada + update pendiente${isAdmin ? ' (ruta admin)' : ''}. ` +
+        'Mostrando toast — sin auto-recarga.'
+      );
+      // Re-mostrar el toast si el usuario lo había pospuesto en esta sesión
+      setIsUpdateDismissed(false);
     }
-  }, [needRefresh, updateServiceWorker]);
+  }, [needRefresh]);
 
   useEffect(() => {
     window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, handleNetworkRestored);
@@ -135,15 +141,15 @@ function ReloadPrompt() {
   }
 
   // ── Nueva versión disponible ─────────────────────────────────────────────
-  // ⚠️  SIN botón "Cerrar" — el usuario DEBE actualizar para evitar
-  // quedarse atascado en una versión zombie del caché.
-  if (needRefresh) {
+  // El usuario puede posponer con "Ahora no" (oculta el toast en la sesión).
+  // La actualización SOLO se aplica cuando el usuario pulsa "Actualizar app".
+  if (needRefresh && !isUpdateDismissed) {
     return (
       <div
         className={`${styles.toast} ${styles.updateToast}`}
         role="alertdialog"
         aria-label="Actualización de la aplicación"
-        aria-live="assertive"
+        aria-live="polite"
       >
         <div className={styles.message}>
           <strong>Actualización disponible</strong>
@@ -155,6 +161,15 @@ function ReloadPrompt() {
             onClick={() => updateServiceWorker(true)}
           >
             Actualizar app
+          </button>
+          <button
+            className={styles.closeButton}
+            onClick={() => {
+              console.log('[ReloadPrompt] Usuario pospuso la actualización.');
+              setIsUpdateDismissed(true);
+            }}
+          >
+            Ahora no
           </button>
         </div>
       </div>
