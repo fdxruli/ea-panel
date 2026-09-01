@@ -519,13 +519,20 @@ export default function Customers() {
   // --- (PASO F/J/N) Importar hooks de caché ---
   const { getCached, setCached, invalidate } = useCacheAdmin();
 
-  const [customersWithStats, setCustomersWithStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
+
+  const initialCacheKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: 0 });
+  const initialCached = getCached(initialCacheKey);
+
+  const [customersWithStats, setCustomersWithStats] = useState(() =>
+    (initialCached && !initialCached.isExpired) ? (initialCached.data?.customers || []) : []
+  );
+  const [loading, setLoading] = useState(() => !initialCached || initialCached.isExpired);
   const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(() => initialCached?.data?.hasMore ?? true);
   const PAGE_SIZE = 50;
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -537,12 +544,28 @@ export default function Customers() {
   const canView = hasPermission('clientes.view');
   const canEdit = hasPermission('clientes.edit');
 
-  const debouncedSearchTerm = useDebounce(searchTerm, 400);
-
-  // --- NUEVO: Fetch paginado y búsqueda del lado del servidor ---
-  const fetchCustomers = useCallback(async (isLoadMore = false) => {
+  // --- NUEVO: Fetch paginado con caché y búsqueda del lado del servidor ---
+  const fetchCustomers = useCallback(async (isLoadMore = false, forceRefresh = false) => {
     if (!canView) return;
-    setLoading(true);
+
+    const currentPage = isLoadMore ? page : 0;
+    const cacheKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: currentPage });
+
+    if (!isLoadMore && !forceRefresh) {
+      const cached = getCached(cacheKey);
+      if (cached && !cached.isExpired) {
+        setCustomersWithStats(cached.data?.customers || []);
+        setHasMore(cached.data?.hasMore ?? false);
+        setLoading(false);
+        setPage(1);
+        return;
+      }
+    }
+
+    if (!isLoadMore && customersWithStats.length === 0) {
+      setLoading(true);
+    }
+
     try {
         let query = supabase
             .from('customers')
@@ -553,7 +576,6 @@ export default function Customers() {
             query = query.or(`name.ilike.%${debouncedSearchTerm}%,phone.ilike.%${debouncedSearchTerm}%`);
         }
 
-        const currentPage = isLoadMore ? page : 0;
         const from = currentPage * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
@@ -582,14 +604,17 @@ export default function Customers() {
                 };
             });
 
+            const moreAvailable = data.length === PAGE_SIZE;
+
             if (isLoadMore) {
                 setCustomersWithStats(prev => [...prev, ...enriched]);
                 setPage(currentPage + 1);
             } else {
                 setCustomersWithStats(enriched);
                 setPage(1);
+                setCached(cacheKey, { customers: enriched, hasMore: moreAvailable }, 5 * 60 * 1000);
             }
-            setHasMore(data.length === PAGE_SIZE);
+            setHasMore(moreAvailable);
         }
     } catch (error) {
         console.error('Error fetching customers:', error);
@@ -597,7 +622,7 @@ export default function Customers() {
     } finally {
         setLoading(false);
     }
-  }, [debouncedSearchTerm, page, canView, showAlert]);
+  }, [debouncedSearchTerm, page, canView, showAlert, getCached, setCached, customersWithStats.length]);
 
   useEffect(() => {
     fetchCustomers(false);
@@ -611,23 +636,34 @@ export default function Customers() {
       console.log('[Customers] Cambio detectado (Shared Realtime):', payload.eventType);
 
       if (payload.eventType === 'INSERT') {
-        // Al insertar, mejor recargamos la página 1 para mantener el orden
-        fetchCustomers(false);
+        // Al insertar, invalidar caché y recargar
+        invalidate(new RegExp('^customers_with_stats'));
+        fetchCustomers(false, true);
       } else if (payload.eventType === 'UPDATE') {
-        setCustomersWithStats(prev => prev.map(c =>
-          c.id === payload.new.id
-            ? { ...c, ...payload.new }
-            : c
-        ));
+        setCustomersWithStats(prev => {
+          const updated = prev.map(c =>
+            c.id === payload.new.id
+              ? { ...c, ...payload.new }
+              : c
+          );
+          const currentKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: 0 });
+          setCached(currentKey, { customers: updated, hasMore }, 5 * 60 * 1000);
+          return updated;
+        });
       } else if (payload.eventType === 'DELETE') {
-        setCustomersWithStats(prev => prev.filter(c => c.id !== payload.old.id));
+        setCustomersWithStats(prev => {
+          const filtered = prev.filter(c => c.id !== payload.old.id);
+          const currentKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: 0 });
+          setCached(currentKey, { customers: filtered, hasMore }, 5 * 60 * 1000);
+          return filtered;
+        });
       }
     });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [canView, fetchCustomers]);
+  }, [canView, fetchCustomers, invalidate, setCached, debouncedSearchTerm, hasMore]);
   // --- FIN PASO J ---
 
   const filteredCustomers = customersWithStats; // Ya están filtrados por el servidor

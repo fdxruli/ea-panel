@@ -6,6 +6,16 @@ import DOMPurify from 'dompurify';
 import styles from './RegisterAdmin.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+
+const fetchAdminsList = async () => {
+    return await supabase
+        .from('admins')
+        .select('*')
+        .order('created_at', { ascending: false });
+};
 
 
 const sections = [
@@ -139,8 +149,24 @@ AdminCard.displayName = 'AdminCard';
 export default function RegisterAdmin() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
-    const [admins, setAdmins] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { DEFAULT_TTL, invalidate } = useCacheAdmin();
+
+    const {
+        data: cachedAdmins,
+        isLoading: loadingAdmins,
+        refetch: refetchAdmins
+    } = useAdminCache('admins:all', fetchAdminsList, {
+        ttl: DEFAULT_TTL.MEDIUM,
+        staleWhileRevalidate: true
+    });
+
+    const [localAdmins, setLocalAdmins] = useState(null);
+    const admins = useMemo(() => localAdmins || cachedAdmins || [], [localAdmins, cachedAdmins]);
+
+    useEffect(() => {
+        if (cachedAdmins) setLocalAdmins(cachedAdmins);
+    }, [cachedAdmins]);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingAdmin, setEditingAdmin] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,11 +180,21 @@ export default function RegisterAdmin() {
     });
     const [permissions, setPermissions] = useState({});
 
-
     // OPTIMIZACIÓN 4: Memoizar permisos
     const canEdit = useMemo(() => hasPermission('registrar-admin.edit'), [hasPermission]);
     const canDelete = useMemo(() => hasPermission('registrar-admin.delete'), [hasPermission]);
 
+    // Realtime mediante Canal Compartido
+    useEffect(() => {
+        const unsubscribe = subscribeToTableChanges('admins', (payload) => {
+            console.log('[RegisterAdmin] Cambio detectado (Shared Realtime):', payload);
+            invalidate('admins:all');
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [invalidate]);
 
     // OPTIMIZACIÓN 5: Funciones auxiliares para permisos por defecto
     const getDefaultAdminPermissions = useCallback(() => {
@@ -167,7 +203,6 @@ export default function RegisterAdmin() {
             return acc;
         }, {});
     }, []);
-
 
     const getDefaultStaffPermissions = useCallback(() => {
         return {
@@ -185,32 +220,6 @@ export default function RegisterAdmin() {
             'configuracion': { view: false }
         };
     }, []);
-
-
-    // OPTIMIZACIÓN 6: Fetch optimizado
-    const fetchAdmins = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('admins')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-
-            if (error) throw error;
-            setAdmins(data);
-        } catch (error) {
-            console.error('Error fetching admins:', error);
-            showAlert(`Error al cargar administradores: ${error.message}`, 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, [showAlert]);
-
-
-    useEffect(() => {
-        fetchAdmins();
-    }, [fetchAdmins]);
 
 
     // OPTIMIZACIÓN 7: Memoizar cambios de rol
@@ -330,7 +339,7 @@ export default function RegisterAdmin() {
             }
 
             closeModal();
-            await fetchAdmins();
+            invalidate('admins:all');
 
         } catch (error) {
             console.error('❌ Error completo:', error);
@@ -338,7 +347,7 @@ export default function RegisterAdmin() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [formData, permissions, editingAdmin, isFormValid, fetchAdmins, showAlert]);
+    }, [formData, permissions, editingAdmin, isFormValid, showAlert, invalidate]);
 
     // OPTIMIZACIÓN 11: Modal handlers memoizados
     const openModal = useCallback((admin = null) => {
@@ -381,14 +390,14 @@ export default function RegisterAdmin() {
             if (error) throw error;
 
             showAlert('Administrador eliminado exitosamente.', 'success');
-            fetchAdmins();
+            invalidate('admins:all');
         } catch (error) {
             showAlert(`Error al eliminar: ${error.message}`, 'error');
         }
-    }, [canDelete, fetchAdmins, showAlert]);
+    }, [canDelete, showAlert, invalidate]);
 
 
-    if (loading) return <LoadingSpinner />;
+    if (loadingAdmins && admins.length === 0) return <LoadingSpinner />;
 
 
     return (

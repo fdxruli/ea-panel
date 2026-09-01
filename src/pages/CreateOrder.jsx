@@ -565,7 +565,9 @@ export default function CreateOrder() {
     }, [canEdit, selectedCustomer, cart, cartTotal, scheduleDate, scheduleTime, orderNotes, showAlert]);
 
     // --- (PASO E) AJUSTAR LOADING ---
-    if (loadingCustomers || loadingProducts || loadingCategories) return <LoadingSpinner />;
+    if ((loadingCustomers && customers.length === 0) || (loadingProducts && allProducts.length === 0) || (loadingCategories && categories.length === 0)) {
+        return <LoadingSpinner />;
+    }
 
     // ==================== RENDERIZADO ====================
     return (

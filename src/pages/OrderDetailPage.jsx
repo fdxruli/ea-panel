@@ -4,6 +4,7 @@ import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
 import { useCart } from '../context/CartContext';
 import { supabase } from '../lib/supabaseClient';
+import { subscribeToOrderBroadcast } from '../lib/broadcastRealtime';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO from '../components/SEO';
@@ -36,6 +37,13 @@ export default function OrderDetailPage() {
     useEffect(() => {
         if (isCustomerLoading) return;
 
+        let unsubBroadcast = null;
+        if (orderCode) {
+            unsubBroadcast = subscribeToOrderBroadcast(orderCode, (orderPayload) => {
+                setLocalOrder(prev => prev ? { ...prev, ...orderPayload } : orderPayload);
+            });
+        }
+
         if (phone) {
             setLocalLoading(false);
             if (!userLoading && !contextOrder) {
@@ -56,15 +64,16 @@ export default function OrderDetailPage() {
 
                     setLocalOrder(data);
 
-                    // Suscripción al socket para invitados
+                    // Suscripción al socket para invitados (Postgres CDC)
                     const channel = supabase.channel(`guest-order-${data.id}`)
                         .on('postgres_changes',
                             { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${data.id}` },
                             (payload) => setLocalOrder(prev => ({ ...prev, ...payload.new }))
                         ).subscribe();
 
-                    // Store channel reference for cleanup
-                    return { channel };
+                    return () => {
+                        supabase.removeChannel(channel);
+                    };
                 } catch (_err) {
                     setError(_err.message);
                     return null;
@@ -75,6 +84,10 @@ export default function OrderDetailPage() {
 
             fetchOrderStandalone();
         }
+
+        return () => {
+            if (unsubBroadcast) unsubBroadcast();
+        };
     }, [orderCode, phone, isCustomerLoading, userLoading, contextOrder]);
 
     // Variables derivadas

@@ -12,6 +12,7 @@ import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 import { useCustomer } from './CustomerContext';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL, CACHE_LIMITS } from '../config/cacheConfig';
+import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 
 const UserDataContext = createContext();
 
@@ -325,6 +326,35 @@ export const UserDataProvider = ({ children }) => {
         phone,
         syncUserDataRefs,
     ]);
+
+    // Escuchar broadcast de órdenes para actualización inmediata de clientes
+    useEffect(() => {
+        const handleBroadcastOrder = (data) => {
+            if (!data?.orderCode) return;
+            const currentOrders = ordersRef.current || [];
+            const existing = currentOrders.find(o => o.order_code === data.orderCode);
+            if (existing) {
+                const updatedOrders = currentOrders.map(order =>
+                    order.order_code === data.orderCode ? { ...order, ...data } : order
+                );
+                ordersRef.current = updatedOrders;
+                setUserData(prev => ({ ...prev, orders: updatedOrders }));
+                setCache(ORDERS_CACHE_KEY, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
+
+                window.dispatchEvent(new CustomEvent('order-status-updated', {
+                    detail: {
+                        orderCode: data.orderCode,
+                        status: data.status,
+                    },
+                }));
+            }
+        };
+
+        const unsubscribe = subscribeToStoreBroadcast('order_changed', handleBroadcastOrder);
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [ORDERS_CACHE_KEY]);
 
     useEffect(() => {
         const reconcileOnFocus = () => {

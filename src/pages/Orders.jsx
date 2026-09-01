@@ -8,6 +8,8 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import EditOrderModal from "../components/EditOrderModal";
 import { GUEST_CUSTOMER_ID } from "../config/constantes";
 import { subscribeToTableChanges } from "../lib/sharedAdminRealtime";
+import { useCacheAdmin } from "../context/CacheAdminContext";
+import { broadcastOrderUpdate, broadcastStoreChange } from "../lib/broadcastRealtime";
 
 // ==================== CUSTOM HOOKS ====================
 
@@ -287,13 +289,23 @@ CancellationModal.displayName = 'CancellationModal';
 // ==================== COMPONENTE PRINCIPAL ====================
 
 export default function Orders() {
-  const [orders, setOrders] = useState([]);
-  // ✅ MEJORA: Separar loading inicial del de operaciones
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const { getCached, setCached, invalidate } = useCacheAdmin();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("activos");
+
+  // ✅ Debounce de búsqueda
+  const debouncedSearchTerm = useDebounce(searchTerm, 700);
+
+  // Clave de caché para estado inicial
+  const initialCacheKey = `orders:${statusFilter}:${debouncedSearchTerm}:p1`;
+  const initialCached = getCached(initialCacheKey);
+
+  const [orders, setOrders] = useState(() => (initialCached && !initialCached.isExpired) ? (initialCached.data?.orders || []) : []);
+  // ✅ MEJORA: Separar loading inicial del de operaciones
+  const [initialLoading, setInitialLoading] = useState(() => !initialCached || initialCached.isExpired);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(() => initialCached?.data?.hasMore ?? true);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
@@ -309,9 +321,6 @@ export default function Orders() {
   const ITEMS_PER_PAGE = 20;
   const currentPage = useRef(1);
 
-  // ✅ Debounce de búsqueda
-  const debouncedSearchTerm = useDebounce(searchTerm, 700);
-
   // Ref para mantener los filtros actuales y usarlos en Realtime sin tener que
   // re-suscribir el websocket cada vez que el usuario escribe.
   const filtersRef = useRef({ search: debouncedSearchTerm, status: statusFilter });
@@ -319,12 +328,26 @@ export default function Orders() {
     filtersRef.current = { search: debouncedSearchTerm, status: statusFilter };
   }, [debouncedSearchTerm, statusFilter]);
 
-  // ✅ OPTIMIZACIÓN: Fetch con paginación
-  const fetchOrders = useCallback(async (page = 1, append = false, search = "", status = "activos") => {
+  // ✅ OPTIMIZACIÓN: Fetch con caché y paginación
+  const fetchOrders = useCallback(async (page = 1, append = false, search = "", status = "activos", forceRefresh = false) => {
+    const cacheKey = `orders:${status}:${search}:p${page}`;
+
+    // Si es la página 1 y no es append ni forceRefresh, verificar caché primero
+    if (page === 1 && !append && !forceRefresh) {
+      const cached = getCached(cacheKey);
+      if (cached && !cached.isExpired) {
+        setOrders(cached.data.orders || []);
+        setHasMore(cached.data.hasMore ?? false);
+        setInitialLoading(false);
+        currentPage.current = 1;
+        return;
+      }
+    }
+
     try {
-      // ✅ MEJORA: Solo setLoading en la primera carga
+      // ✅ MEJORA: Solo setLoading en la primera carga si no hay datos
       if (page === 1 && !append) {
-        setInitialLoading(true);
+        setInitialLoading(prev => orders.length === 0 ? true : prev);
       } else {
         setLoadingMore(true);
       }
@@ -373,28 +396,33 @@ export default function Orders() {
 
       if (error) throw error;
 
+      const moreAvailable = count ? (page * ITEMS_PER_PAGE) < count : false;
+
       if (append) {
         setOrders(prev => {
           // Evitar duplicados si realtime ya insertó el pedido
-          const newItems = data.filter(d => !prev.some(p => p.id === d.id));
+          const newItems = (data || []).filter(d => !prev.some(p => p.id === d.id));
           return [...prev, ...newItems];
         });
       } else {
-        setOrders(data || []);
+        const orderList = data || [];
+        setOrders(orderList);
+        if (page === 1) {
+          setCached(cacheKey, { orders: orderList, hasMore: moreAvailable }, 5 * 60 * 1000);
+        }
       }
 
-      setHasMore(count ? (page * ITEMS_PER_PAGE) < count : false);
+      setHasMore(moreAvailable);
       currentPage.current = page;
 
     } catch (error) {
       console.error('Error fetching orders:', error);
       setActionError(`Error al cargar pedidos: ${error.message}`);
     } finally {
-      // ✅ MEJORA: Solo clear initialLoading en primera carga
       setInitialLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [getCached, setCached, orders.length]);
 
   // Carga inicial y Refetch automático cuando cambian los filtros
   useEffect(() => {
@@ -404,32 +432,43 @@ export default function Orders() {
   // ✅ OPTIMIZACIÓN: Realtime con actualización selectiva
   useEffect(() => {
     const unsubscribe = subscribeToTableChanges('orders', (payload) => {
-      console.log('Order change detected:', payload);
+      console.log('[Orders] Cambio en pedidos detectado (Shared Realtime):', payload);
 
       if (payload.eventType === 'INSERT') {
-        // Nuevo pedido: recargar primera página usando los filtros actuales
-        fetchOrders(1, false, filtersRef.current.search, filtersRef.current.status);
+        // Nuevo pedido: invalidar caché de pedidos y recargar primera página
+        invalidate(new RegExp('^orders:'));
+        fetchOrders(1, false, filtersRef.current.search, filtersRef.current.status, true);
         currentPage.current = 1;
       } else if (payload.eventType === 'UPDATE') {
-        // Actualizar pedido existente sin refetch
-        setOrders(prev => prev.map(order =>
-          order.id === payload.new.id
-            ? { ...order, ...payload.new }
-            : order
-        ));
+        // Actualizar pedido existente en estado y caché
+        setOrders(prev => {
+          const updated = prev.map(order =>
+            order.id === payload.new.id
+              ? { ...order, ...payload.new }
+              : order
+          );
+          const currentKey = `orders:${filtersRef.current.status}:${filtersRef.current.search}:p1`;
+          setCached(currentKey, { orders: updated, hasMore }, 5 * 60 * 1000);
+          return updated;
+        });
       } else if (payload.eventType === 'DELETE') {
-        // Eliminar pedido de la lista
-        setOrders(prev => prev.filter(order => order.id !== payload.old.id));
+        // Eliminar pedido de la lista y caché
+        setOrders(prev => {
+          const filtered = prev.filter(order => order.id !== payload.old.id);
+          const currentKey = `orders:${filtersRef.current.status}:${filtersRef.current.search}:p1`;
+          setCached(currentKey, { orders: filtered, hasMore }, 5 * 60 * 1000);
+          return filtered;
+        });
       }
     });
 
     return () => unsubscribe();
-  }, [fetchOrders]);
+  }, [fetchOrders, invalidate, setCached, hasMore]);
 
   // Handler para cargar más pedidos
   const loadMoreOrders = useCallback(() => {
     if (!loadingMore && hasMore) {
-      fetchOrders(currentPage.current + 1, true, debouncedSearchTerm, statusFilter);
+      fetchOrders(currentPage.current + 1, true, debouncedSearchTerm, statusFilter, true);
     }
   }, [loadingMore, hasMore, fetchOrders, debouncedSearchTerm, statusFilter]);
 
@@ -441,6 +480,8 @@ export default function Orders() {
       if (reason === null) return;
       updateData.cancellation_reason = reason || 'Cancelado por administrador.';
     }
+
+    const targetOrder = orders.find(o => o.id === orderId);
 
     // ✅ MEJORA: Marcar pedido como "actualizando" para feedback visual
     setUpdatingStatusId(orderId);
@@ -457,6 +498,19 @@ export default function Orders() {
       if (error) {
         console.error("Error al actualizar:", error);
         setActionError(`Error al actualizar el pedido: ${error.message}`);
+      } else if (targetOrder?.order_code) {
+        // Emitir broadcast directo al cliente e historial
+        broadcastOrderUpdate(targetOrder.order_code, {
+          status: newStatus,
+          id: orderId,
+          cancellation_reason: updateData.cancellation_reason,
+          updated_at: new Date().toISOString()
+        });
+        broadcastStoreChange('order_changed', {
+          orderCode: targetOrder.order_code,
+          status: newStatus,
+          id: orderId
+        });
       }
     } catch (err) {
       setActionError('Error de conexión al actualizar el pedido');
@@ -469,6 +523,8 @@ export default function Orders() {
   // Handler de confirmación de cancelación con feedback visual
   const handleCancelConfirm = useCallback(async (reason) => {
     if (!cancellingOrderId) return;
+
+    const targetOrder = orders.find(o => o.id === cancellingOrderId);
 
     // ✅ MEJORA: Marcar como actualizando
     setUpdatingStatusId(cancellingOrderId);
@@ -483,6 +539,20 @@ export default function Orders() {
 
       if (error) throw error;
 
+      if (targetOrder?.order_code) {
+        broadcastOrderUpdate(targetOrder.order_code, {
+          status: 'cancelado',
+          id: cancellingOrderId,
+          cancellation_reason: reason || 'Cancelado por administrador.',
+          updated_at: new Date().toISOString()
+        });
+        broadcastStoreChange('order_changed', {
+          orderCode: targetOrder.order_code,
+          status: 'cancelado',
+          id: cancellingOrderId
+        });
+      }
+
       // ✅ MEJORA: Feedback visual de éxito implícito (el pedido se actualiza via realtime)
       setCancellingOrderId(null);
     } catch (error) {
@@ -491,7 +561,7 @@ export default function Orders() {
     } finally {
       setTimeout(() => setUpdatingStatusId(null), 500);
     }
-  }, [cancellingOrderId]);
+  }, [cancellingOrderId, orders]);
 
   // ✅ OPTIMIZACIÓN: Caché de direcciones (CON SOPORTE PARA GUEST)
   const handleShowDeliveryInfo = useCallback(async (order) => {

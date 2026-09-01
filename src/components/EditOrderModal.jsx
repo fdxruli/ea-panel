@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import styles from './EditOrderModal.module.css';
 import LoadingSpinner from './LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
+import { broadcastOrderUpdate, broadcastStoreChange } from '../lib/broadcastRealtime';
 import ImageWithFallback from './ImageWithFallback';
 import DeliveryInfoModal from './DeliveryInfoModal';
 
@@ -237,6 +238,18 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 total_amount: total,
                 scheduled_for: scheduledTimestamp
             }).eq('id', order.id);
+
+            if (order?.order_code) {
+                broadcastOrderUpdate(order.order_code, {
+                    total_amount: total,
+                    scheduled_for: scheduledTimestamp,
+                    updated_at: new Date().toISOString()
+                });
+                broadcastStoreChange('order_changed', {
+                    orderCode: order.order_code,
+                    total_amount: total
+                });
+            }
 
             showAlert("¡Pedido actualizado con éxito!", 'success');
             onOrderUpdated();

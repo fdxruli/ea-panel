@@ -13,6 +13,26 @@ let sharedChannel = null;
 let listenerCount = 0;
 const changeListeners = new Map(); // tableName -> Set de callbacks
 
+// Tablas administrativas soportadas
+const ADMIN_TABLES = [
+  'orders',
+  'order_items',
+  'products',
+  'customers',
+  'categories',
+  'product_images',
+  'discounts',
+  'special_prices',
+  'ingredients',
+  'business_hours',
+  'business_exceptions',
+  'admins',
+  'terms_and_conditions',
+  'referral_levels',
+  'settings',
+  'customer_addresses'
+];
+
 /**
  * Inicializa el canal compartido si no existe.
  * @private
@@ -21,10 +41,8 @@ const ensureChannel = () => {
   if (!sharedChannel) {
     sharedChannel = supabase.channel('shared-admin-changes');
     
-    // Suscribirse a cambios en tablas principales
-    const tables = ['orders', 'order_items', 'products', 'customers', 'categories', 'product_images'];
-    
-    tables.forEach(tableName => {
+    // Suscribirse a cambios en todas las tablas del panel
+    ADMIN_TABLES.forEach(tableName => {
       sharedChannel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: tableName },
@@ -46,7 +64,7 @@ const ensureChannel = () => {
 
     sharedChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log('[Realtime] Canal compartido inicializado correctamente');
+        console.log('[Realtime] Canal compartido inicializado correctamente con tablas:', ADMIN_TABLES.join(', '));
       } else if (status === 'CHANNEL_ERROR') {
         console.error('[Realtime] Error en el canal compartido');
       }

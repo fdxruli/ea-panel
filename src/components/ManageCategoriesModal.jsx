@@ -11,6 +11,7 @@ import DOMPurify from 'dompurify';
 
 // --- (PASO A) AÑADIR IMPORT ---
 import { useCacheAdmin } from '../context/CacheAdminContext';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 // --- FIN PASO A ---
 
 export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpdate }) {
@@ -82,8 +83,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             showAlert(`Error al eliminar: ${error.message}`);
         } else {
             showAlert('Categoría eliminada con éxito.');
-            // --- (PASO D) INVALIDAR CACHÉ ---
             invalidate('categories');
+            broadcastStoreChange('catalog_updated', { entity: 'categories', action: 'delete' });
         }
         setCategoryToDelete(null);
         fetchCategories();
@@ -112,8 +113,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             showAlert(`Productos reasignados, pero hubo un error al eliminar la categoría: ${deleteError.message}`);
         } else {
             showAlert('Productos reasignados y categoría eliminada con éxito.');
-            // --- (PASO D) INVALIDAR CACHÉ ---
             invalidate('categories');
+            broadcastStoreChange('catalog_updated', { entity: 'categories', action: 'delete_and_reassign' });
         }
 
         setIsReassignModalOpen(false);
@@ -150,8 +151,8 @@ export default function ManageCategoriesModal({ isOpen, onClose, onCategoriesUpd
             resetForm();
             fetchCategories();
             onCategoriesUpdate();
-            // --- (PASO C) INVALIDAR CACHÉ ---
             invalidate('categories');
+            broadcastStoreChange('catalog_updated', { entity: 'categories', action: formData.id ? 'update' : 'create' });
         }
         setIsSubmitting(false);
     };

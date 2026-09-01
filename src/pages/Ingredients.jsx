@@ -1,19 +1,25 @@
-// CREAR NUEVO ARCHIVO: src/pages/Ingredients.jsx
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAlert } from '../context/AlertContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-// Crearemos estos componentes en el siguiente paso
 import IngredientFormModal from '../components/IngredientFormModal';
 import PurchaseFormModal from '../components/PurchaseFormModal';
 import StockAdjustmentModal from '../components/StockAdjustmentModal';
 import PurchaseUnitsModal from '../components/PurchaseUnitsModal';
-// Importaremos un CSS module que crearemos
 import styles from './Ingredients.module.css';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 
-// --- Iconos (puedes reemplazarlos si lo deseas) ---
+const fetchIngredients = async () => {
+  return await supabase
+    .from('ingredients')
+    .select('*')
+    .order('name', { ascending: true });
+};
+
+// --- Iconos ---
 const AddIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 const ShoppingCartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
@@ -22,8 +28,24 @@ const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height
 export default function Ingredients() {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
-  const [ingredients, setIngredients] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { DEFAULT_TTL, invalidate } = useCacheAdmin();
+
+  const {
+    data: cachedIngredients,
+    isLoading: loadingIngredients,
+    refetch: refetchIngredients
+  } = useAdminCache('ingredients:all', fetchIngredients, {
+    ttl: DEFAULT_TTL.MEDIUM,
+    staleWhileRevalidate: true
+  });
+
+  const [localIngredients, setLocalIngredients] = useState(null);
+  const ingredients = useMemo(() => localIngredients || cachedIngredients || [], [localIngredients, cachedIngredients]);
+
+  useEffect(() => {
+    if (cachedIngredients) setLocalIngredients(cachedIngredients);
+  }, [cachedIngredients]);
+
   const [searchTerm, setSearchTerm] = useState('');
 
   // Estados de los Modales
@@ -35,27 +57,19 @@ export default function Ingredients() {
   // El ingrediente seleccionado para editar o registrar compras
   const [selectedIngredient, setSelectedIngredient] = useState(null);
 
-  const canEdit = hasPermission('productos.edit'); // O un nuevo permiso 'inventario.edit'
+  const canEdit = hasPermission('productos.edit');
 
-  // Cargar todos los ingredientes
-  const fetchIngredients = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('ingredients')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (error) {
-      showAlert(`Error al cargar ingredientes: ${error.message}`, 'error');
-    } else {
-      setIngredients(data || []);
-    }
-    setLoading(false);
-  }, [showAlert]);
-
+  // Realtime
   useEffect(() => {
-    fetchIngredients();
-  }, [fetchIngredients]);
+    const unsubscribe = subscribeToTableChanges('ingredients', (payload) => {
+      console.log('[Ingredients] Cambio detectado (Shared Realtime):', payload);
+      invalidate('ingredients:all');
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [invalidate]);
 
   // Filtrar ingredientes según la búsqueda
   const filteredIngredients = useMemo(() => {
@@ -90,7 +104,7 @@ export default function Ingredients() {
     setIsAdjustmentModalOpen(true);
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (loadingIngredients && ingredients.length === 0) return <LoadingSpinner />;
 
   return (
     <>
@@ -202,7 +216,7 @@ export default function Ingredients() {
         <IngredientFormModal
           isOpen={isIngredientModalOpen}
           onClose={() => setIsIngredientModalOpen(false)}
-          onSave={fetchIngredients}
+          onSave={() => invalidate('ingredients:all')}
           ingredient={selectedIngredient}
         />
       )}
@@ -219,7 +233,7 @@ export default function Ingredients() {
         <PurchaseFormModal
           isOpen={isPurchaseModalOpen}
           onClose={() => setIsPurchaseModalOpen(false)}
-          onSave={fetchIngredients}
+          onSave={() => invalidate('ingredients:all')}
           allIngredients={ingredients}
         />
       )}
@@ -228,7 +242,7 @@ export default function Ingredients() {
         <StockAdjustmentModal
           isOpen={isAdjustmentModalOpen}
           onClose={() => setIsAdjustmentModalOpen(false)}
-          onSave={fetchIngredients}
+          onSave={() => invalidate('ingredients:all')}
           ingredient={selectedIngredient}
         />
       )}

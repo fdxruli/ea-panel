@@ -21,6 +21,7 @@ import {
 } from '../hooks/useAdminProductsBasic';
 import { fetchProductStatsBatch } from '../lib/productQueries';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 
 // --- (PASO B) IMPORTAR COMPONENTES EXTRAÍDOS ---
 import ProductCard from '../components/ProductCard';
@@ -84,30 +85,59 @@ export default function Products() {
 
     const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
-    // --- (PASO D) Función Optimizada para Cargar Stats en Batch ---
-    /**
-     * Función que enriquece productos básicos con sus stats en una sola llamada RPC batch.
-     * Solo carga stats para productos VISIBLES en pantalla.
-     */
+    // --- (PASO D) Función Optimizada para Cargar Stats en Batch con Caché ---
     const enrichProductsWithStats = useCallback(async (productsList) => {
         if (!productsList || productsList.length === 0) return [];
 
-        setLoading(true);
-        try {
-            const productIds = productsList.map(p => p.id);
-            const statsData = await fetchProductStatsBatch(productIds);
+        const cachedStatsEntry = getCached('product_stats_map');
+        const existingStatsMap = (cachedStatsEntry && !cachedStatsEntry.isExpired)
+            ? (cachedStatsEntry.data || {})
+            : {};
 
-            const statsMap = new Map();
+        // Verificar si todos los productos visibles ya tienen stats en caché
+        const missingProductIds = productsList
+            .filter(p => !existingStatsMap[p.id])
+            .map(p => p.id);
+
+        if (missingProductIds.length === 0 && Object.keys(existingStatsMap).length > 0) {
+            // Todos los productos visibles ya están en caché: enriquecer inmediatamente sin llamar a la BD
+            const enriched = productsList.map(product => {
+                const stat = existingStatsMap[product.id];
+                return {
+                    ...product,
+                    total_sold: Number(stat?.total_sold || 0),
+                    total_revenue: Number(stat?.total_revenue || 0),
+                    avg_rating: stat?.avg_rating !== null && stat?.avg_rating !== undefined ? Number(stat.avg_rating) : null,
+                    reviews_count: Number(stat?.reviews_count || 0),
+                    favorites_count: Number(stat?.favorites_count || 0)
+                };
+            });
+            setProductsWithStats(enriched);
+            return;
+        }
+
+        // Si faltan stats, solo activar loading si no tenemos nada en pantalla
+        if (productsWithStats.length === 0) {
+            setLoading(true);
+        }
+
+        try {
+            const productIdsToFetch = missingProductIds.length > 0 ? missingProductIds : productsList.map(p => p.id);
+            const statsData = await fetchProductStatsBatch(productIdsToFetch);
+
+            const updatedStatsMap = { ...existingStatsMap };
             if (Array.isArray(statsData)) {
                 statsData.forEach(stat => {
                     if (stat && stat.product_id) {
-                        statsMap.set(stat.product_id, stat);
+                        updatedStatsMap[stat.product_id] = stat;
                     }
                 });
             }
 
+            setCached('product_stats_map', updatedStatsMap, 10 * 60 * 1000); // 10 min TTL
+
             const enrichedProducts = productsList.map(product => {
-                const stat = statsMap.get(product.id);
+                const stat = updatedStatsMap[product.id];
                 return {
                     ...product,
                     total_sold: Number(stat?.total_sold || 0),
@@ -126,7 +156,7 @@ export default function Products() {
         } finally {
             setLoading(false);
         }
-    }, [showAlert]);
+    }, [showAlert, getCached, setCached, productsWithStats.length]);
     // --- FIN PASO D ---
 
     // --- (PASO G) Filtrar productos básicos ANTES de pedir stats ---
@@ -286,24 +316,17 @@ export default function Products() {
             invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
             invalidate(new RegExp('^product_stats')); // Invalidar todos los stats de productos
 
+            // Emitir broadcast a la app del cliente
+            broadcastStoreChange('catalog_updated', { entity: 'products', action: dataToUpsert.id ? 'update' : 'create' });
+
             setFormModalOpen(false);
             setSelectedProduct(null);
-
-            // Opcional: Refrescar la lista de productos en el estado local si es necesario
-            // (Aunque la invalidación de caché debería manejarlo en la próxima carga)
-            // refetchProducts();
 
         } catch (error) {
             console.error('Error al guardar el producto y su receta:', error);
             showAlert(`Error: ${error.message}`, 'error');
-
-            // RE-LANZAMOS EL ERROR para que el 'finally' del modal sepa que algo falló
-            // y no cierre el modal (permitiendo al usuario reintentar).
-            // Opcionalmente, puedes comentar la siguiente línea si prefieres que el modal
-            // se quede abierto pero el botón "Guardar" se reactive.
             throw error;
         }
-        // ¡EL BLOQUE 'finally { setIsSubmitting(false); }' SE ELIMINA DE AQUÍ!
 
     }, [showAlert, invalidate, setFormModalOpen, setSelectedProduct]);
     // --- FIN PASO J ---
@@ -332,6 +355,9 @@ export default function Products() {
                 p.id === id ? { ...p, is_active: !isActive } : p
             ));
 
+            // Emitir broadcast
+            broadcastStoreChange('catalog_updated', { entity: 'products', action: 'toggle_active', id });
+
         } catch (error) {
             console.error('Toggle error:', error);
             showAlert(`Error: ${error.message}`);
@@ -355,7 +381,9 @@ export default function Products() {
         , [categories]);
 
     // --- (PASO H) Actualizar Condición de Loading ---
-    if (loadingBasic || loadingCategories || loading) return <LoadingSpinner />;
+    if ((loadingBasic && basicProducts.length === 0) || (loadingCategories && categories.length === 0) || (loading && productsWithStats.length === 0)) {
+        return <LoadingSpinner />;
+    }
     // --- FIN PASO H ---
 
     return (

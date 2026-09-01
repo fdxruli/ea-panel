@@ -1,10 +1,36 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useSettings } from '../context/SettingsContext';
-import { useAlert } from '../context/AlertContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAlert } from '../context/AlertContext';
 import styles from './Settings.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
+
+const fetchAdminSettings = async () => {
+  const [maintenanceResult, visibilityResult] = await Promise.all([
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'maintenance_mode')
+      .single(),
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'client_visibility')
+      .single()
+  ]);
+
+  if (maintenanceResult.error) throw maintenanceResult.error;
+  if (visibilityResult.error) throw visibilityResult.error;
+
+  return {
+    maintenanceMode: maintenanceResult.data.value,
+    clientVisibility: visibilityResult.data.value
+  };
+};
 
 // Componente ToggleSwitch (sin cambios)
 const ToggleSwitch = memo(({ label, checked, onChange, disabled }) => (
@@ -135,18 +161,26 @@ MaintenanceModeSection.displayName = 'MaintenanceModeSection';
 export default function Settings() {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
-  const { refetch: refreshSettings } = useSettings();
+  const { DEFAULT_TTL, invalidate } = useCacheAdmin();
 
-  const [loading, setLoading] = useState(true);
+  const {
+    data: cachedSettings,
+    isLoading: loadingSettings,
+    refetch: refetchSettings
+  } = useAdminCache('admin_settings:all', fetchAdminSettings, {
+    ttl: DEFAULT_TTL.LONG,
+    staleWhileRevalidate: true
+  });
+
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [savingVisibility, setSavingVisibility] = useState(false);
 
-  const [maintenanceMode, setMaintenanceMode] = useState({
+  const [maintenanceMode, setMaintenanceMode] = useState(() => cachedSettings?.maintenanceMode || {
     enabled: false,
     message: 'Estamos realizando mejoras en el sitio. Volveremos pronto.'
   });
 
-  const [clientVisibility, setClientVisibility] = useState({
+  const [clientVisibility, setClientVisibility] = useState(() => cachedSettings?.clientVisibility || {
     my_orders_page: true,
     my_profile_page: true,
     my_stuff_page: true,
@@ -158,43 +192,29 @@ export default function Settings() {
     stuff_reviews: true
   });
 
+  useEffect(() => {
+    if (cachedSettings) {
+      if (cachedSettings.maintenanceMode) setMaintenanceMode(cachedSettings.maintenanceMode);
+      if (cachedSettings.clientVisibility) setClientVisibility(cachedSettings.clientVisibility);
+    }
+  }, [cachedSettings]);
+
   const canEdit = useMemo(
     () => hasPermission('configuracion.edit'),
     [hasPermission]
   );
 
-  const fetchSettings = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [maintenanceResult, visibilityResult] = await Promise.all([
-        supabase
-          .from('settings')
-          .select('value')
-          .eq('key', 'maintenance_mode')
-          .single(),
-        supabase
-          .from('settings')
-          .select('value')
-          .eq('key', 'client_visibility')
-          .single()
-      ]);
-
-      if (maintenanceResult.error) throw maintenanceResult.error;
-      if (visibilityResult.error) throw visibilityResult.error;
-
-      setMaintenanceMode(maintenanceResult.data.value);
-      setClientVisibility(visibilityResult.data.value);
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-      showAlert(`Error al cargar configuración: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [showAlert]);
-
+  // Realtime
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    const unsubscribe = subscribeToTableChanges('settings', (payload) => {
+      console.log('[Settings] Cambio detectado (Shared Realtime):', payload);
+      invalidate('admin_settings:all');
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [invalidate]);
 
   const handleMaintenanceToggle = useCallback(() => {
     setMaintenanceMode(prev => ({
@@ -231,13 +251,14 @@ export default function Settings() {
       if (error) throw error;
 
       showAlert('Modo mantenimiento guardado exitosamente.');
-      refreshSettings();
+      invalidate('admin_settings:all');
+      broadcastStoreChange('settings_updated', { key: 'maintenance_mode', value: maintenanceMode });
     } catch (error) {
       showAlert(`Error al guardar modo mantenimiento: ${error.message}`);
     } finally {
       setSavingMaintenance(false);
     }
-  }, [maintenanceMode, canEdit, refreshSettings, showAlert]);
+  }, [maintenanceMode, canEdit, showAlert, invalidate]);
 
   // OPTIMIZACIÓN: Guardar solo visibilidad del cliente
   const handleSaveVisibility = useCallback(async () => {
@@ -253,15 +274,16 @@ export default function Settings() {
       if (error) throw error;
 
       showAlert('Visibilidad del cliente guardada exitosamente.');
-      refreshSettings();
+      invalidate('admin_settings:all');
+      broadcastStoreChange('settings_updated', { key: 'client_visibility', value: clientVisibility });
     } catch (error) {
-      showAlert(`Error al guardar visibilidad: ${error.message}`);
+      showAlert(`Error al guardar visibilidad del cliente: ${error.message}`);
     } finally {
       setSavingVisibility(false);
     }
-  }, [clientVisibility, canEdit, refreshSettings, showAlert]);
+  }, [clientVisibility, canEdit, showAlert, invalidate]);
 
-  if (loading) return <LoadingSpinner />;
+  if (loadingSettings && !cachedSettings) return <LoadingSpinner />;
 
   return (
     <div className={styles.container}>

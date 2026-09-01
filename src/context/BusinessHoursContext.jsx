@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
 import { subscribeToTables } from '../lib/sharedAdminRealtime';
+import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 
 const BusinessHoursContext = createContext();
 
@@ -62,15 +63,17 @@ export const BusinessHoursProvider = ({ children }) => {
     useEffect(() => {
         // Escucha cambios en tiempo real en las tablas de horarios y excepciones vía canal compartido
         const handleChanges = () => {
-            console.log('Cambio detectado en los horarios (Shared Realtime), actualizando...');
+            console.log('Cambio detectado en los horarios (Shared Realtime / Broadcast), actualizando...');
             localStorage.removeItem(CACHE_KEYS.BUSINESS_STATUS);
             checkBusinessHours();
         };
 
-        const unsubscribe = subscribeToTables(['business_hours', 'business_exceptions'], handleChanges);
+        const unsubscribeTables = subscribeToTables(['business_hours', 'business_exceptions'], handleChanges);
+        const unsubscribeBroadcast = subscribeToStoreBroadcast('hours_updated', handleChanges);
 
         return () => {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeTables) unsubscribeTables();
+            if (unsubscribeBroadcast) unsubscribeBroadcast();
         };
     }, [checkBusinessHours]);
 

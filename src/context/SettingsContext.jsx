@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 
 const SettingsContext = createContext();
 
@@ -28,14 +29,21 @@ export const SettingsProvider = ({ children }) => {
     useEffect(() => {
         fetchSettings();
 
-        // Suscripción compartida a cambios
-        const unsubscribe = subscribeToTableChanges('settings', (payload) => {
+        // Suscripción compartida a cambios (Postgres CDC)
+        const unsubscribeCDC = subscribeToTableChanges('settings', (payload) => {
             console.log('Settings changed (Shared Realtime)!', payload);
             fetchSettings();
         });
 
+        // Suscripción Broadcast directo
+        const unsubscribeBroadcast = subscribeToStoreBroadcast('settings_updated', (payload) => {
+            console.log('Settings changed (Broadcast)!', payload);
+            fetchSettings();
+        });
+
         return () => {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeCDC) unsubscribeCDC();
+            if (unsubscribeBroadcast) unsubscribeBroadcast();
         };
     }, [fetchSettings]);
 

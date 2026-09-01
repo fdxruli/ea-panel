@@ -180,8 +180,16 @@ export const CacheAdminProvider = ({ children }) => {
         const fetchPromise = (async () => {
             try {
                 const result = await fetcher();
-                if (result.error) throw new Error(result.error.message);
-                const data = result.data;
+                if (result && result.error) throw new Error(result.error.message || result.error);
+                
+                // Extraer data tanto si viene encapsulado por Supabase { data, error } como si es el objeto/array directo
+                let data = result;
+                if (result && typeof result === 'object' && 'data' in result) {
+                    if (result.error !== undefined || result.status !== undefined || Object.keys(result).length === 1) {
+                        data = result.data;
+                    }
+                }
+
                 setCached(key, data, ttl);
                 return data;
             } finally {
