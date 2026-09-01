@@ -438,6 +438,27 @@
   box-shadow: none;
 }
 
+.cardActionButtonOutOfStock {
+  color: var(--text-secondary, #757575);
+  background: var(--border-color, #e0e0e0);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.outOfStockBadge {
+  display: inline-block;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(33, 33, 33, 0.88);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+
 .emptyState {
   padding: 2.2rem 1.2rem;
   border: 1px dashed var(--border-color);

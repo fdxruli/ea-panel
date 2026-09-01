@@ -44,6 +44,7 @@ const toBasicProduct = (product) => ({
     image_url: product?.image_url ?? null,
     category_id: product?.category_id ?? null,
     is_active: Boolean(product?.is_active),
+    is_out_of_stock: Boolean(product?.is_out_of_stock),
 });
 
 const toBasicProducts = (products) => (
@@ -146,15 +147,24 @@ export const ProductProvider = ({ children }) => {
         }
 
         try {
-            const [productsRes, categoriesRes] = await Promise.all([
-                supabase
-                    .from('products')
-                    .select(PRODUCTS_WITH_IMAGES_SELECT)
-                    .eq('is_active', true),
+            let productsData = [];
+            const [productsRpcRes, categoriesRes] = await Promise.all([
+                supabase.rpc('get_active_menu_products'),
                 supabase.from('categories').select('*'),
             ]);
 
-            if (productsRes.error) throw productsRes.error;
+            if (productsRpcRes.error) {
+                console.warn('[ProductContext] RPC get_active_menu_products falló, usando fallback:', productsRpcRes.error);
+                const fallbackRes = await supabase
+                    .from('products')
+                    .select(PRODUCTS_WITH_IMAGES_SELECT)
+                    .eq('is_active', true);
+                if (fallbackRes.error) throw fallbackRes.error;
+                productsData = fallbackRes.data || [];
+            } else {
+                productsData = productsRpcRes.data || [];
+            }
+
             if (categoriesRes.error) throw categoriesRes.error;
 
             if (requestSequence !== baseFetchSequenceRef.current) {
@@ -162,7 +172,7 @@ export const ProductProvider = ({ children }) => {
             }
 
             const nextCatalog = normalizeBaseCatalog({
-                products: productsRes.data || [],
+                products: productsData,
                 categories: categoriesRes.data || [],
             });
 
@@ -281,6 +291,8 @@ export const ProductProvider = ({ children }) => {
 
         // Broadcast directo
         const unsubBroadcast = subscribeToStoreBroadcast('catalog_updated', handleBaseChanges);
+        const unsubOrderBroadcast = subscribeToStoreBroadcast('order_changed', handleBaseChanges);
+        const unsubInventoryBroadcast = subscribeToStoreBroadcast('inventory_updated', handleBaseChanges);
 
         return () => {
             if (baseAlertTimerRef.current) {
@@ -294,6 +306,8 @@ export const ProductProvider = ({ children }) => {
             }
 
             if (unsubBroadcast) unsubBroadcast();
+            if (unsubOrderBroadcast) unsubOrderBroadcast();
+            if (unsubInventoryBroadcast) unsubInventoryBroadcast();
             supabase.removeChannel(baseChannel);
         };
     }, [handleBaseChanges]);
