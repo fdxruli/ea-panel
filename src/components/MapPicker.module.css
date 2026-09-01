@@ -3,59 +3,289 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
+  min-height: 0;
   position: relative;
 }
 
 .instruction {
-  text-align: center;
-  padding-bottom: 0.8rem;
+  flex: 0 0 auto;
+  margin: 0 0 0.65rem;
+  padding: 0;
   color: var(--text-secondary);
-  font-weight: 500;
-  font-size: 0.9rem;
-  flex-shrink: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  text-align: left;
 }
 
 .mapContainer {
   width: 100%;
-  flex-grow: 1;
+  min-height: 0;
+  flex: 1 1 auto;
   position: relative;
-  border-radius: var(--border-radius);
   overflow: hidden;
-  /* Leaflet needs an explicit height when the parent uses flex-grow */
-  min-height: 300px;
+  isolation: isolate;
+  border: 1px solid rgba(38, 50, 56, 0.16);
+  border-radius: 14px;
+  background: #dfe8e7;
+  box-shadow: 0 8px 22px rgba(38, 50, 56, 0.12);
 }
 
-/* Ensure the Leaflet root fills its container */
+.isDragging {
+  box-shadow: 0 0 0 3px rgba(229, 115, 115, 0.28), 0 10px 28px rgba(38, 50, 56, 0.18);
+}
+
+.leafletMap {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #dfe8e7;
+  color: #263238;
+  font-family: var(--font-family);
+}
+
+/* Leaflet's stylesheet is imported by the active application entry point.
+   These scoped rules keep its controls legible inside the address modal. */
 .mapContainer :global(.leaflet-container) {
   width: 100%;
   height: 100%;
-  border-radius: var(--border-radius);
+  border-radius: 14px;
+  background: #dfe8e7;
+  font: inherit;
 }
 
-/* Suppress default popups (we don't use them) */
-.mapContainer :global(.leaflet-popup-content-wrapper),
-.mapContainer :global(.leaflet-popup-tip) {
-  display: none;
+.mapContainer :global(.leaflet-tile-pane) {
+  z-index: 200;
 }
 
-/* ---- Layer-toggle button ---- */
-.layerToggle {
+.mapContainer :global(.leaflet-overlay-pane) {
+  z-index: 400;
+}
+
+.mapContainer :global(.leaflet-marker-pane) {
+  z-index: 650;
+}
+
+.mapContainer :global(.leaflet-shadow-pane) {
+  z-index: 600;
+}
+
+.mapContainer :global(.leaflet-control-container) {
+  z-index: 900;
+}
+
+.mapContainer :global(.leaflet-control-zoom) {
+  margin: 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.24);
+}
+
+.mapContainer :global(.leaflet-control-zoom a) {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  color: #263238;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 1.25rem;
+  line-height: 38px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mapContainer :global(.leaflet-control-zoom a:hover),
+.mapContainer :global(.leaflet-control-zoom a:focus-visible) {
+  color: var(--color-primary-dark);
+  background: #ffffff;
+}
+
+.mapContainer :global(.leaflet-control-attribution) {
+  padding: 2px 5px;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 0.58rem;
+  line-height: 1.25;
+}
+
+.mapContainer :global(.leaflet-control-attribution a) {
+  color: #155e75;
+}
+
+/* The marker is a maintained Leaflet image asset, recoloured consistently
+   with the product palette. */
+.mapContainer :global(.ea-address-marker) {
+  z-index: 1000 !important;
+  filter: hue-rotate(150deg) saturate(1.5) drop-shadow(0 3px 3px rgba(15, 23, 42, 0.42));
+  transform-origin: 50% 100%;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.mapContainer :global(.ea-address-marker:hover) {
+  filter: hue-rotate(150deg) saturate(1.65) drop-shadow(0 4px 4px rgba(15, 23, 42, 0.48));
+  transform: scale(1.08);
+}
+
+/* ---- Map overlays ---- */
+.mapToolbar {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 1000;            /* above Leaflet tiles */
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  pointer-events: none;
+}
+
+.mapToolbar > * {
+  pointer-events: auto;
+}
+
+.mapLegend,
+.layerToggle,
+.mapStatus {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.mapLegend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  color: #263238;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px #10b981;
+}
+
+.layerToggle {
+  min-width: 82px;
+  min-height: 44px;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
+  color: #263238;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transition: background 0.15s ease;
-  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .layerToggle:hover {
-  background: rgba(240, 240, 240, 0.98);
+  color: var(--color-primary-dark);
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+.layerToggle:focus-visible {
+  outline: 3px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+
+.mapStatus {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  color: #263238;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.statusDotSelected {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+.loadingState {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 1rem;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .instruction {
+    font-size: 0.82rem;
+  }
+
+  .mapToolbar {
+    top: 9px;
+    right: 9px;
+    left: 9px;
+  }
+
+  .mapLegend {
+    min-height: 36px;
+    padding-inline: 0.6rem;
+    font-size: 0.66rem;
+  }
+
+  .layerToggle {
+    min-height: 42px;
+    min-width: 76px;
+    padding-inline: 0.65rem;
+  }
+
+  .mapStatus {
+    right: 9px;
+    bottom: 9px;
+    min-height: 34px;
+    padding-inline: 0.6rem;
+    font-size: 0.66rem;
+  }
+
+  .mapContainer :global(.leaflet-control-zoom) {
+    margin: 9px;
+  }
+
+  .mapContainer :global(.leaflet-control-zoom a) {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mapContainer :global(.ea-address-marker),
+  .layerToggle,
+  .mapContainer :global(.leaflet-control-zoom a) {
+    transition: none;
+  }
 }
