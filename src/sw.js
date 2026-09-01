@@ -147,7 +147,7 @@ if (SUPABASE_HOST) {
       url.pathname.startsWith('/rest/v1/'),
     new NetworkFirst({
       cacheName: CACHE_NAMES.SUPABASE_DATA,
-      networkTimeoutSeconds: 8,
+      networkTimeoutSeconds: 3,
       plugins: [
         // Solo cachear respuestas HTTP 200 OK
         new CacheableResponsePlugin({ statuses: [200] }),

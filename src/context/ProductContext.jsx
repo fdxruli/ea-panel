@@ -14,6 +14,7 @@ import { useUserData } from './UserDataContext';
 import { createSlug } from '../seo/config';
 import { useAlert } from './AlertContext';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
+import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 
 const ProductContext = createContext();
 
@@ -301,7 +302,7 @@ export const ProductProvider = ({ children }) => {
         let cancelled = false;
 
         const initBaseCatalog = async () => {
-            const { data: cachedCatalog, isStale } = await getAsyncCache(CACHE_KEYS.PRODUCTS);
+            const { data: cachedCatalog } = await getAsyncCache(CACHE_KEYS.PRODUCTS);
 
             if (cancelled || !isMountedRef.current) return;
 
@@ -309,11 +310,8 @@ export const ProductProvider = ({ children }) => {
                 applyBaseCatalog(cachedCatalog);
                 setLoadingProducts(false);
 
-                if (isStale) {
-                    // Con SWR mostramos cache stale primero y revalidamos en segundo plano.
-                    fetchBaseProductsAndCategories({ background: true }).catch(() => { });
-                }
-
+                // Con SWR mostramos cache de inmediato y SIEMPRE revalidamos en segundo plano
+                fetchBaseProductsAndCategories({ background: true }).catch(() => { });
                 return;
             }
 
@@ -338,7 +336,7 @@ export const ProductProvider = ({ children }) => {
         const initSpecialPrices = async () => {
             setLoadingPrices(true);
 
-            const { data: cachedPrices, isStale } = await getAsyncCache(cacheKey);
+            const { data: cachedPrices } = await getAsyncCache(cacheKey);
 
             if (
                 cancelled
@@ -352,10 +350,8 @@ export const ProductProvider = ({ children }) => {
                 setSpecialPrices(normalizeSpecialPrices(cachedPrices));
                 setLoadingPrices(false);
 
-                if (isStale) {
-                    fetchSpecialPrices(customerId, { background: true }).catch(() => { });
-                }
-
+                // Con SWR mostramos cache de inmediato y SIEMPRE revalidamos en segundo plano
+                fetchSpecialPrices(customerId, { background: true }).catch(() => { });
                 return;
             }
 
@@ -369,6 +365,24 @@ export const ProductProvider = ({ children }) => {
             cancelled = true;
         };
     }, [customerId, fetchSpecialPrices, loadingProducts]);
+
+    useEffect(() => {
+        const reconcileOnFocus = () => {
+            if (document.visibilityState !== 'visible' || !isMountedRef.current) return;
+            fetchBaseProductsAndCategories({ background: true }).catch(() => { });
+            fetchSpecialPrices(customerId, { background: true }).catch(() => { });
+        };
+
+        document.addEventListener('visibilitychange', reconcileOnFocus);
+        window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
+        window.addEventListener('online', reconcileOnFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', reconcileOnFocus);
+            window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
+            window.removeEventListener('online', reconcileOnFocus);
+        };
+    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices]);
 
     useEffect(() => {
         const pricesChannel = supabase.channel(`public:special_prices:${customerId || 'global'}`);
