@@ -21,8 +21,41 @@
   position: relative;
   border-radius: var(--border-radius);
   overflow: hidden;
+  /* Leaflet needs an explicit height when the parent uses flex-grow */
+  min-height: 300px;
 }
 
-.leaflet-popup-content-wrapper, .leaflet-popup-tip {
-    display: none;
+/* Ensure the Leaflet root fills its container */
+.mapContainer :global(.leaflet-container) {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--border-radius);
+}
+
+/* Suppress default popups (we don't use them) */
+.mapContainer :global(.leaflet-popup-content-wrapper),
+.mapContainer :global(.leaflet-popup-tip) {
+  display: none;
+}
+
+/* ---- Layer-toggle button ---- */
+.layerToggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;            /* above Leaflet tiles */
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+.layerToggle:hover {
+  background: rgba(240, 240, 240, 0.98);
 }

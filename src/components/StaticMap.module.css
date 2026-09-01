@@ -2,18 +2,29 @@
 .mapContainer {
   width: 100%;
   height: 100%;
-  background-color: #e0e0e0; /* Un fondo mientras carga la imagen */
+  background-color: #d0d0d0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #777;
-  font-size: 0.9rem;
-  border-radius: 8px; /* Para que coincida con tus otros estilos */
+  border-radius: 8px;
   overflow: hidden;
+  /* Leaflet needs a measurable height; callers should size the container */
+  min-height: 160px;
 }
 
-.mapContainer img {
+/* Ensure Leaflet root fills the container */
+.mapContainer :global(.leaflet-container) {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Cubre el contenedor */
+  border-radius: 8px;
+}
+
+/* Hide attribution in the tiny static preview */
+.mapContainer :global(.leaflet-control-attribution) {
+  display: none;
+}
+
+.unavailable {
+  color: #777;
+  font-size: 0.9rem;
 }
