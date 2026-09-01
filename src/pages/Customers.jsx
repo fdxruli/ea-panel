@@ -11,7 +11,6 @@ import DynamicMapPicker from '../components/DynamicMapPicker';
 import ClientOnly from "../components/ClientOnly";
 
 // --- (PASO A) AÑADIR IMPORTS ---
-import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { generateKey } from '../utils/cacheAdminUtils';
 import { fetchCustomerStatsBatch } from '../lib/customerQueries';
@@ -798,7 +797,7 @@ export default function Customers() {
   }, [customersWithStats]);
 
   // --- (PASO M) Actualizar Loading ---
-  if (loadingBasic || loading) return <LoadingSpinner />;
+  if (loading && customersWithStats.length === 0) return <LoadingSpinner />;
   // --- FIN PASO M ---
 
   if (!canView) {
