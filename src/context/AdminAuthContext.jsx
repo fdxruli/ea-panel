@@ -119,8 +119,22 @@ export const AdminAuthProvider = ({ children }) => {
         if (!mountedRef.current) return;
 
         if (error) {
-            // En arranque, si hay error de red, lo reportamos con ERROR para
-            // que el usuario vea un mensaje claro y pueda reintentar.
+            const msg = error.message?.toLowerCase() || '';
+            const isAuthError =
+                error.status === 401 ||
+                error.code === 'PGRST301' ||
+                msg.includes('jwt') ||
+                msg.includes('unauthorized') ||
+                msg.includes('invalid claim');
+
+            if (isAuthError) {
+                // Token expirado o inválido: cerrar sesión automáticamente
+                supabase.auth.signOut().catch(() => {});
+                setAuthState({ status: 'UNAUTHENTICATED', userId: null, adminData: null, error: null });
+                return;
+            }
+
+            // En arranque, si hay error de red, lo reportamos con ERROR
             setAuthState({
                 status: 'ERROR',
                 userId: session.user.id,

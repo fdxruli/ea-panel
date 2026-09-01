@@ -1,5 +1,6 @@
 import fs from 'fs';
 import http from 'http';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -132,9 +133,22 @@ async function prerenderPublicRoutes() {
   ]);
   const { allRoutes } = await fetchPublicSeoRoutes();
   const { server, baseUrl } = await startStaticServer();
+  
+  const tempUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ea-prerender-'));
   const browser = await puppeteer.launch({
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    userDataDir: tempUserDataDir,
+    timeout: 30000,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-background-networking',
+      '--disable-extensions',
+      '--disable-sync',
+    ],
   });
 
   try {
@@ -152,14 +166,18 @@ async function prerenderPublicRoutes() {
       await prerenderRoute(page, baseUrl, route.path);
     }
   } finally {
-    await browser.close();
+    await browser.close().catch(() => {});
     server.close();
+    try {
+      fs.rmSync(tempUserDataDir, { recursive: true, force: true });
+    } catch (_) {}
   }
 
   console.log('Prerender completado.');
 }
 
 prerenderPublicRoutes().catch((error) => {
-  console.error('Error durante el prerender:', error);
-  globalThis.process.exit(1);
+  console.warn('Advertencia durante el prerender local (el build de la app continua):', error.message);
 });
+
+

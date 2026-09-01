@@ -1,4 +1,4 @@
-/* src/pages/Discounts.jsx (Migrado con ProductsBasicCache) */
+/* src/pages/Discounts.jsx (Migrado con ProductsBasicCache y Realtime Compartido) */
 
 import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { supabase } from "../lib/supabaseClient";
@@ -10,9 +10,10 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 // --- (PASO A) AÑADIR IMPORTS ---
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
 import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 // --- FIN PASO A ---
 
-// ==================== COMPONENTES MEMOIZADOS (Sin cambios) ====================
+// ==================== COMPONENTES MEMOIZADOS ====================
 
 const DiscountTableRow = memo(({
     discount,
@@ -20,7 +21,6 @@ const DiscountTableRow = memo(({
     onToggle,
     getTargetName
 }) => {
-    // ... (código existente de DiscountTableRow)
     return (
         <tr>
             <td className={styles.codeCell}>
@@ -70,18 +70,15 @@ export default function Discounts() {
 
     const [discounts, setDiscounts] = useState([]);
 
-    // Categorías del hook (de la Fase 1)
+    // Categorías del hook
     const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
     const categories = useMemo(() => categoriesData || [], [categoriesData]);
 
-    // --- (PASO B) REEMPLAZAR ESTADO DE PRODUCTOS ---
-    // const [products, setProducts] = useState([]); // <-- Eliminado
+    // Productos del hook
     const { data: productsData, isLoading: loadingProducts } = useAdminProductsBasic();
-    // Corrección para evitar error en null.find
     const products = useMemo(() => productsData || [], [productsData]);
-    // --- FIN PASO B ---
 
-    const [loading, setLoading] = useState(true); // <-- Loading para los descuentos
+    const [loading, setLoading] = useState(true);
     const [newDiscount, setNewDiscount] = useState({
         code: "",
         type: "global",
@@ -95,11 +92,9 @@ export default function Discounts() {
 
     const canEdit = hasPermission('descuentos.edit');
 
-    // --- (PASO C) ELIMINAR FETCH DE PRODUCTOS Y CATEGORÍAS ---
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            // Solo fetchear descuentos
             const { data: discountsData, error: discountsError } = await supabase
                 .from("discounts")
                 .select("id, code, type, value, target_id, start_date, end_date, is_active, is_single_use, created_at")
@@ -108,58 +103,40 @@ export default function Discounts() {
             if (discountsError) throw discountsError;
 
             setDiscounts(discountsData || []);
-            // setCategories y setProducts eliminados
-
         } catch (error) {
             console.error('Fetch error:', error);
             showAlert(`Error al cargar datos: ${error.message}`);
             setDiscounts([]);
-            // setCategories y setProducts eliminados
         } finally {
             setLoading(false);
         }
     }, [showAlert]);
-    // --- FIN PASO C ---
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
 
-    // Realtime (sin cambios)
+    // Realtime mediante canal compartido
     useEffect(() => {
-        const channel = supabase
-            .channel('discounts-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'discounts',
-                    select: 'id, code, type, value, target_id, start_date, end_date, is_active, is_single_use'
-                },
-                (payload) => {
-                    console.log('Discount change detected:', payload);
+        const unsubscribe = subscribeToTableChanges('discounts', (payload) => {
+            console.log('Discount change detected (Shared Realtime):', payload);
 
-                    if (payload.eventType === 'INSERT') {
-                        setDiscounts(prev => [payload.new, ...prev]);
-                    } else if (payload.eventType === 'UPDATE') {
-                        setDiscounts(prev => prev.map(d =>
-                            d.id === payload.new.id ? { ...d, ...payload.new } : d
-                        ));
-                    } else if (payload.eventType === 'DELETE') {
-                        setDiscounts(prev => prev.filter(d => d.id !== payload.old.id));
-                    }
-                }
-            )
-            .subscribe();
+            if (payload.eventType === 'INSERT') {
+                setDiscounts(prev => [payload.new, ...prev]);
+            } else if (payload.eventType === 'UPDATE') {
+                setDiscounts(prev => prev.map(d =>
+                    d.id === payload.new.id ? { ...d, ...payload.new } : d
+                ));
+            } else if (payload.eventType === 'DELETE') {
+                setDiscounts(prev => prev.filter(d => d.id !== payload.old.id));
+            }
+        });
 
         return () => {
-            supabase.removeChannel(channel);
+            if (unsubscribe) unsubscribe();
         };
     }, []);
 
-    // ... (El resto de handlers: validateDiscount, addDiscount, toggleActive, getTargetName, targetOptions, stats, handleFormChange no cambian) ...
-    // ... (Omitidos por brevedad, son idénticos al archivo original) ...
     const validateDiscount = useCallback(() => {
         if (!newDiscount.code || !/^[A-Z0-9-]+$/.test(newDiscount.code)) {
             showAlert("El código es obligatorio y solo puede contener letras mayúsculas, números y guiones.");
@@ -230,7 +207,6 @@ export default function Discounts() {
         }
     }, [canEdit, showAlert]);
 
-    // 'categories' y 'products' ahora vienen de los hooks
     const getTargetName = useCallback((discount) => {
         if (discount.type === "global") return "Toda la tienda";
         if (discount.type === "category") {
@@ -242,9 +218,8 @@ export default function Discounts() {
             return product ? product.name : "Producto no encontrado";
         }
         return "N/A";
-    }, [categories, products]); // <-- Dependencias correctas
+    }, [categories, products]);
 
-    // 'categories' y 'products' ahora vienen de los hooks
     const targetOptions = useMemo(() => {
         if (newDiscount.type === "category") {
             return categories;
@@ -252,7 +227,7 @@ export default function Discounts() {
             return products;
         }
         return [];
-    }, [newDiscount.type, categories, products]); // <-- Dependencias correctas
+    }, [newDiscount.type, categories, products]);
 
     const stats = useMemo(() => {
         const active = discounts.filter(d => d.is_active).length;
@@ -273,8 +248,6 @@ export default function Discounts() {
         });
     }, []);
 
-
-    // --- (PASO D) AJUSTAR CONDICIÓN DE LOADING ---
     if (loading || loadingCategories || loadingProducts) {
         return <LoadingSpinner />;
     }
@@ -349,10 +322,9 @@ export default function Discounts() {
                                     required
                                 >
                                     <option value="">Seleccionar...</option>
-                                    {/* targetOptions ahora usa 'categories' y 'products' de los hooks */}
                                     {targetOptions.map(option => (
                                         <option key={option.id} value={option.id}>
-                                            {option.name}
+                                             {option.name}
                                         </option>
                                     ))}
                                 </select>

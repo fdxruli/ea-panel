@@ -21,8 +21,33 @@ const AdminRoute = () => {
       return <Navigate to="/" replace />;
 
     case 'ERROR':
-      // No ocultes los errores de red bajo la alfombra de un redirect.
-      return <div className="error-screen">Error validando permisos. Revisa tu conexión.</div>;
+      return (
+        <div className="error-screen" style={{ padding: '3rem 1.5rem', textAlign: 'center', maxWidth: '480px', margin: 'auto' }}>
+          <h2>⚠️ Problema de acceso</h2>
+          <p style={{ color: '#666', marginTop: '0.5rem' }}>Error validando permisos o la sesión ha expirado.</p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ padding: '0.6rem 1.2rem', cursor: 'pointer', borderRadius: '6px', border: '1px solid #ccc', background: '#fff' }}
+            >
+              Reintentar
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const { supabase } = await import('../lib/supabaseClient');
+                  await supabase.auth.signOut();
+                } catch (_) {}
+                localStorage.clear();
+                window.location.href = '/login';
+              }}
+              style={{ padding: '0.6rem 1.2rem', cursor: 'pointer', borderRadius: '6px', border: 'none', background: '#e11d48', color: '#fff' }}
+            >
+              Cerrar sesión e Iniciar de nuevo
+            </button>
+          </div>
+        </div>
+      );
 
     case 'ADMIN':
       // Renderiza las rutas anidadas

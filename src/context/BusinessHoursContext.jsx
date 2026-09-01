@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { supabase } from '../lib/supabaseClient';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
+import { subscribeToTables } from '../lib/sharedAdminRealtime';
 
 const BusinessHoursContext = createContext();
 
@@ -59,22 +60,19 @@ export const BusinessHoursProvider = ({ children }) => {
     }, [checkBusinessHours]);
 
     useEffect(() => {
-        // Escucha cambios en tiempo real en las tablas de horarios y excepciones
+        // Escucha cambios en tiempo real en las tablas de horarios y excepciones vía canal compartido
         const handleChanges = () => {
-            console.log('Cambio detectado en los horarios, actualizando instantáneamente...');
-            localStorage.removeItem(CACHE_KEYS.BUSINESS_STATUS); // Elimina caché de estado de negocio
-            checkBusinessHours(); // Vuelve a verificar inmediatamente si hay cambios
+            console.log('Cambio detectado en los horarios (Shared Realtime), actualizando...');
+            localStorage.removeItem(CACHE_KEYS.BUSINESS_STATUS);
+            checkBusinessHours();
         };
 
-        const channel = supabase.channel('public:business_hours_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'business_hours' }, handleChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'business_exceptions' }, handleChanges)
-            .subscribe();
+        const unsubscribe = subscribeToTables(['business_hours', 'business_exceptions'], handleChanges);
 
         return () => {
-            supabase.removeChannel(channel);
+            if (unsubscribe) unsubscribe();
         };
-    }, [checkBusinessHours]); // <-- Dependencia estable
+    }, [checkBusinessHours]);
 
 
     return (

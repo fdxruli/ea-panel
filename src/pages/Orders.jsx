@@ -345,7 +345,7 @@ export default function Orders() {
           created_at,
           updated_at,
           cancellation_reason,
-          customers!inner(id, name, phone),
+          customers(id, name, phone),
           order_items(id, product_id, quantity, price, products(id, name, image_url))
       `, { count: 'exact' });
 
