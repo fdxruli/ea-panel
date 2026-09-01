@@ -13,6 +13,7 @@ import { getAsyncCache, setAsyncCache, clearAsyncCache } from '../lib/db';
 import { useUserData } from './UserDataContext';
 import { createSlug } from '../seo/config';
 import { useAlert } from './AlertContext';
+import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 
 const ProductContext = createContext();
 
@@ -277,6 +278,9 @@ export const ProductProvider = ({ children }) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, handleBaseChanges)
             .subscribe();
 
+        // Broadcast directo
+        const unsubBroadcast = subscribeToStoreBroadcast('catalog_updated', handleBaseChanges);
+
         return () => {
             if (baseAlertTimerRef.current) {
                 clearTimeout(baseAlertTimerRef.current);
@@ -288,6 +292,7 @@ export const ProductProvider = ({ children }) => {
                 baseRealtimeTimerRef.current = null;
             }
 
+            if (unsubBroadcast) unsubBroadcast();
             supabase.removeChannel(baseChannel);
         };
     }, [handleBaseChanges]);
@@ -389,6 +394,9 @@ export const ProductProvider = ({ children }) => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'special_prices' }, handlePriceChanges)
             .subscribe();
 
+        const unsubPricesBroadcast = subscribeToStoreBroadcast('special_prices_updated', handlePriceChanges);
+        const unsubDiscountsBroadcast = subscribeToStoreBroadcast('discounts_updated', handlePriceChanges);
+
         return () => {
             if (priceAlertTimerRef.current) {
                 clearTimeout(priceAlertTimerRef.current);
@@ -400,6 +408,8 @@ export const ProductProvider = ({ children }) => {
                 priceRealtimeTimerRef.current = null;
             }
 
+            if (unsubPricesBroadcast) unsubPricesBroadcast();
+            if (unsubDiscountsBroadcast) unsubDiscountsBroadcast();
             supabase.removeChannel(pricesChannel);
         };
     }, [customerId, fetchSpecialPrices, scheduleAlert]);

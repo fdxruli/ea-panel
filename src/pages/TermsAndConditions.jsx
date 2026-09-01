@@ -5,12 +5,38 @@ import ConfirmModal from '../components/ConfirmModal';
 import styles from './TermsAndConditions.module.css';
 import { useAlert } from '../context/AlertContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+
+const fetchTermsData = async () => {
+  return await supabase
+    .from('terms_and_conditions')
+    .select('*')
+    .order('version', { ascending: false });
+};
 
 export default function TermsAndConditions() {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
-  const [terms, setTerms] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { DEFAULT_TTL, invalidate } = useCacheAdmin();
+
+  const {
+    data: cachedTerms,
+    isLoading: loadingTerms,
+    refetch: refetchTerms
+  } = useAdminCache('terms:all', fetchTermsData, {
+    ttl: DEFAULT_TTL.LONG,
+    staleWhileRevalidate: true
+  });
+
+  const [localTerms, setLocalTerms] = useState(null);
+  const terms = useMemo(() => localTerms || cachedTerms || [], [localTerms, cachedTerms]);
+
+  useEffect(() => {
+    if (cachedTerms) setLocalTerms(cachedTerms);
+  }, [cachedTerms]);
+
   const [editingTerm, setEditingTerm] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [termToDelete, setTermToDelete] = useState(null);
@@ -19,28 +45,17 @@ export default function TermsAndConditions() {
   const canEdit = useMemo(() => hasPermission('terminos.edit'), [hasPermission]);
   const canDelete = useMemo(() => hasPermission('terminos.delete'), [hasPermission]);
 
-  // OPTIMIZACIÓN 2: Memoizar función de fetch
-  const fetchTerms = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('terms_and_conditions')
-        .select('*')
-        .order('version', { ascending: false });
-
-      if (error) throw error;
-      setTerms(data);
-    } catch (error) {
-      console.error('Error fetching terms:', error);
-      showAlert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []); // Removido showAlert de dependencias
-
+  // Realtime
   useEffect(() => {
-    fetchTerms();
-  }, [fetchTerms]);
+    const unsubscribe = subscribeToTableChanges('terms_and_conditions', (payload) => {
+      console.log('[Terms] Cambio detectado (Shared Realtime):', payload);
+      invalidate('terms:all');
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [invalidate]);
 
   // OPTIMIZACIÓN 3: Memoizar función de guardado
   const handleSave = useCallback(async () => {
@@ -81,11 +96,11 @@ export default function TermsAndConditions() {
 
       setIsModalOpen(false);
       setEditingTerm(null);
-      fetchTerms();
+      invalidate('terms:all');
     } catch (error) {
       showAlert(`Error: ${error.message}`);
     }
-  }, [canEdit, editingTerm, terms, fetchTerms, showAlert]);
+  }, [canEdit, editingTerm, terms, showAlert, invalidate]);
 
   // OPTIMIZACIÓN 4: Memoizar función de apertura de modal
   const openModal = useCallback((term = null) => {
@@ -119,11 +134,11 @@ export default function TermsAndConditions() {
 
       showAlert('Versión eliminada exitosamente.');
       setTermToDelete(null);
-      fetchTerms();
+      invalidate('terms:all');
     } catch (error) {
       showAlert(`Error al eliminar: ${error.message}`);
     }
-  }, [canDelete, termToDelete, fetchTerms, showAlert]);
+  }, [canDelete, termToDelete, showAlert, invalidate]);
 
   // OPTIMIZACIÓN 6: Función para confirmar eliminación
   const confirmDelete = useCallback((term) => {
@@ -156,7 +171,7 @@ export default function TermsAndConditions() {
     });
   }, []);
 
-  if (loading) return <LoadingSpinner />;
+  if (loadingTerms && terms.length === 0) return <LoadingSpinner />;
 
   return (
     <div className={styles.container}>

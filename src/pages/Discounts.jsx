@@ -11,7 +11,18 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
 import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 // --- FIN PASO A ---
+
+// Fetcher optimizado para descuentos
+const fetchDiscounts = async () => {
+    return await supabase
+        .from("discounts_with_targets")
+        .select("id, code, type, value, target_id, start_date, end_date, is_active, is_single_use, created_at, product_name, category_name")
+        .order("created_at", { ascending: false });
+};
 
 // ==================== COMPONENTES MEMOIZADOS ====================
 
@@ -67,8 +78,7 @@ DiscountTableRow.displayName = 'DiscountTableRow';
 export default function Discounts() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
-
-    const [discounts, setDiscounts] = useState([]);
+    const { DEFAULT_TTL, invalidate } = useCacheAdmin();
 
     // Categorías del hook
     const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
@@ -78,7 +88,25 @@ export default function Discounts() {
     const { data: productsData, isLoading: loadingProducts } = useAdminProductsBasic();
     const products = useMemo(() => productsData || [], [productsData]);
 
-    const [loading, setLoading] = useState(true);
+    // Descuentos cacheados
+    const {
+        data: discountsData,
+        isLoading: loadingDiscounts,
+        refetch: refetchDiscounts
+    } = useAdminCache('discounts:all', fetchDiscounts, {
+        ttl: DEFAULT_TTL.MEDIUM,
+        staleWhileRevalidate: true
+    });
+
+    const [localDiscounts, setLocalDiscounts] = useState(null);
+    const discounts = useMemo(() => localDiscounts || discountsData || [], [localDiscounts, discountsData]);
+
+    useEffect(() => {
+        if (discountsData) {
+            setLocalDiscounts(discountsData);
+        }
+    }, [discountsData]);
+
     const [newDiscount, setNewDiscount] = useState({
         code: "",
         type: "global",
@@ -92,50 +120,27 @@ export default function Discounts() {
 
     const canEdit = hasPermission('descuentos.edit');
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data: discountsData, error: discountsError } = await supabase
-                .from("discounts_with_targets")
-                .select("id, code, type, value, target_id, start_date, end_date, is_active, is_single_use, created_at, product_name, category_name")
-                .order("created_at", { ascending: false });
-
-            if (discountsError) throw discountsError;
-
-            setDiscounts(discountsData || []);
-        } catch (error) {
-            console.error('Fetch error:', error);
-            showAlert(`Error al cargar datos: ${error.message}`);
-            setDiscounts([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [showAlert]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     // Realtime mediante canal compartido
     useEffect(() => {
         const unsubscribe = subscribeToTableChanges('discounts', (payload) => {
-            console.log('Discount change detected (Shared Realtime):', payload);
+            console.log('[Discounts] Cambio en descuentos detectado (Shared Realtime):', payload);
+            invalidate('discounts:all');
 
             if (payload.eventType === 'INSERT') {
-                setDiscounts(prev => [payload.new, ...prev]);
+                setLocalDiscounts(prev => prev ? [payload.new, ...prev] : [payload.new]);
             } else if (payload.eventType === 'UPDATE') {
-                setDiscounts(prev => prev.map(d =>
+                setLocalDiscounts(prev => prev ? prev.map(d =>
                     d.id === payload.new.id ? { ...d, ...payload.new } : d
-                ));
+                ) : null);
             } else if (payload.eventType === 'DELETE') {
-                setDiscounts(prev => prev.filter(d => d.id !== payload.old.id));
+                setLocalDiscounts(prev => prev ? prev.filter(d => d.id !== payload.old.id) : null);
             }
         });
 
         return () => {
             if (unsubscribe) unsubscribe();
         };
-    }, []);
+    }, [invalidate]);
 
     const validateDiscount = useCallback(() => {
         if (!newDiscount.code || !/^[A-Z0-9-]+$/.test(newDiscount.code)) {
@@ -184,6 +189,8 @@ export default function Discounts() {
             const { error } = await supabase.from("discounts").insert([dataToInsert]);
             if (error) throw error;
             showAlert("¡Descuento creado con éxito!", 'success');
+            invalidate('discounts:all');
+            broadcastStoreChange('discounts_updated', { action: 'add' });
             setNewDiscount({
                 code: "", type: "global", value: "", target_id: null,
                 start_date: "", end_date: "", is_active: true, is_single_use: false
@@ -192,7 +199,7 @@ export default function Discounts() {
             console.error('Add error:', error);
             showAlert(`Error al crear el descuento: ${error.message}`);
         }
-    }, [canEdit, validateDiscount, newDiscount, showAlert]);
+    }, [canEdit, validateDiscount, newDiscount, showAlert, invalidate]);
 
     const toggleActive = useCallback(async (id, isActive) => {
         if (!canEdit) return;
@@ -200,23 +207,23 @@ export default function Discounts() {
             const { error } = await supabase.from("discounts").update({ is_active: !isActive }).eq("id", id);
             if (error) throw error;
             showAlert("Estado del descuento actualizado.", 'success');
-            setDiscounts(prev => prev.map(d => d.id === id ? { ...d, is_active: !isActive } : d));
+            setLocalDiscounts(prev => (prev || discounts).map(d => d.id === id ? { ...d, is_active: !isActive } : d));
+            invalidate('discounts:all');
+            broadcastStoreChange('discounts_updated', { action: 'toggle', id });
         } catch (error) {
             console.error('Toggle error:', error);
             showAlert(`Error al actualizar: ${error.message}`);
         }
-    }, [canEdit, showAlert]);
+    }, [canEdit, showAlert, discounts, invalidate]);
 
     const getTargetName = useCallback((discount) => {
         if (discount.type === "global") return "Toda la tienda";
         if (discount.type === "category") {
-            // Utilizamos la columna de la vista si existe, sino caemos al caché (para los inserts realtime)
             if (discount.category_name) return discount.category_name;
             const category = categories.find(c => c.id === discount.target_id);
             return category ? category.name : "Categoría no encontrada";
         }
         if (discount.type === "product") {
-            // Utilizamos la columna de la vista si existe, sino caemos al caché (para los inserts realtime)
             if (discount.product_name) return discount.product_name;
             const product = products.find(p => p.id === discount.target_id);
             return product ? product.name : "Producto no encontrado";
@@ -252,7 +259,7 @@ export default function Discounts() {
         });
     }, []);
 
-    if (loading || loadingCategories || loadingProducts) {
+    if ((loadingDiscounts && discounts.length === 0) || (loadingCategories && categories.length === 0) || (loadingProducts && products.length === 0)) {
         return <LoadingSpinner />;
     }
 

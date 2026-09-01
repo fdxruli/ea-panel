@@ -12,6 +12,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 // --- (PASO A) AÑADIR IMPORTS ---
 import { useReferralLevelsCache } from '../hooks/useReferralLevelsCache';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { useCacheAdmin } from '../context/CacheAdminContext';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -226,11 +227,15 @@ ReferralRow.displayName = 'ReferralRow';
 export default function Referrals() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
+    const { getCached, setCached, invalidate } = useCacheAdmin();
 
-    const [customersWithReferrals, setCustomersWithReferrals] = useState([]);
+    const initialCached = getCached('referrals:customers_details');
+
+    const [customersWithReferrals, setCustomersWithReferrals] = useState(() =>
+        (initialCached && !initialCached.isExpired) ? (initialCached.data || []) : []
+    );
 
     // --- (PASO B) REEMPLAZAR ESTADO ---
-    // const [referralLevels, setReferralLevels] = useState([]); // <-- Eliminado
     const {
         data: referralLevelsData,
         isLoading: loadingLevels,
@@ -240,7 +245,7 @@ export default function Referrals() {
     const referralLevels = useMemo(() => referralLevelsData || [], [referralLevelsData]);
     // --- FIN PASO B ---
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => !initialCached || initialCached.isExpired);
     const [isLevelsModalOpen, setIsLevelsModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -248,13 +253,25 @@ export default function Referrals() {
     const canView = hasPermission('referidos.view');
     const canEdit = hasPermission('referidos.edit');
 
-    // --- (PASO C) ELIMINAR FETCH DE NIVELES ---
-    const fetchData = useCallback(async () => {
+    // --- (PASO C) FETCH DE REFERIDOS CON CACHÉ ---
+    const fetchData = useCallback(async (forceRefresh = false) => {
         if (!canView) return;
 
-        setLoading(true);
+        if (!forceRefresh) {
+            const cached = getCached('referrals:customers_details');
+            if (cached && !cached.isExpired) {
+                setCustomersWithReferrals(cached.data || []);
+                setLoading(false);
+                return;
+            }
+        }
+
+        if (customersWithReferrals.length === 0) {
+            setLoading(true);
+        }
+
         try {
-            // Solo fetchear clientes
+            // Fetchear clientes con código de referido
             const customersRes = await supabase
                 .from('customers')
                 .select(`
@@ -268,19 +285,14 @@ export default function Referrals() {
                 .not('referral_code', 'is', null)
                 .order('referral_count', { ascending: false });
 
-            // levelsRes (eliminado)
-
             if (customersRes.error) throw customersRes.error;
-            // levelsRes.error (eliminado)
 
             const customers = customersRes.data || [];
-            const levels = referralLevels; // <-- Obtener niveles del hook
-            // setReferralLevels(levels); // <-- Eliminado
+            const levels = referralLevels;
 
             // Fetch referidos para CADA cliente EN UNA SOLA CONSULTA (Solución N+1)
             const referrerIds = customers.map(c => c.id);
             
-            // Traemos todos los referidos de los clientes actuales de un solo golpe
             let allReferred = [];
             if (referrerIds.length > 0) {
                 const { data, error } = await supabase
@@ -319,7 +331,7 @@ export default function Referrals() {
             });
 
             setCustomersWithReferrals(customersWithDetails);
-            // setReferralLevels(levels); // <-- Ya estaba eliminado antes, pero lo confirmo
+            setCached('referrals:customers_details', customersWithDetails, 5 * 60 * 1000);
 
         } catch (error) {
             console.error('Fetch error:', error);
@@ -327,34 +339,39 @@ export default function Referrals() {
         } finally {
             setLoading(false);
         }
-    }, [canView, showAlert, referralLevels]); // <-- Añadir referralLevels como dependencia
+    }, [canView, showAlert, referralLevels, getCached, setCached, customersWithReferrals.length]);
     // --- FIN PASO C ---
 
     useEffect(() => {
-        // Solo fetchear si los niveles ya cargaron (o si referralLevels es [])
         if (!loadingLevels) {
             fetchData();
         }
-    }, [fetchData, loadingLevels]); // Añadir loadingLevels
+    }, [fetchData, loadingLevels]);
 
     // --- (PASO D) ACTUALIZAR LISTENER DE REALTIME (Canal Compartido) ---
     useEffect(() => {
         if (!canView) return;
 
-        const unsubCustomers = subscribeToTableChanges('customers', () => fetchData());
+        const unsubCustomers = subscribeToTableChanges('customers', () => {
+            console.log('[Referrals] Cambio en customers detectado (Shared Realtime).');
+            invalidate('referrals:customers_details');
+            fetchData(true);
+        });
+
         const unsubLevels = subscribeToTableChanges('referral_levels', () => {
-            console.log('[Referrals] Cambio en niveles detectado, invalidando caché.');
+            console.log('[Referrals] Cambio en niveles detectado (Shared Realtime).');
             invalidateLevels();
+            invalidate('referrals:customers_details');
+            fetchData(true);
         });
 
         return () => {
             if (unsubCustomers) unsubCustomers();
             if (unsubLevels) unsubLevels();
         };
-    }, [canView, fetchData, invalidateLevels]);
+    }, [canView, fetchData, invalidateLevels, invalidate]);
     // --- FIN PASO D ---
 
-    // ... (filteredCustomers, stats, handleEditCustomer, handleCloseEditModal sin cambios) ...
     const filteredCustomers = useMemo(() => {
         if (!searchTerm) return customersWithReferrals;
         const lowerSearch = searchTerm.toLowerCase();
@@ -380,12 +397,14 @@ export default function Referrals() {
 
     const handleCloseEditModal = useCallback(() => {
         setEditingCustomer(null);
-        fetchData();
-    }, [fetchData]);
-
+        invalidate('referrals:customers_details');
+        fetchData(true);
+    }, [fetchData, invalidate]);
 
     // --- (PASO E) AJUSTAR LOADING ---
-    if (loading || loadingLevels) return <LoadingSpinner />;
+    if ((loading && customersWithReferrals.length === 0) || (loadingLevels && referralLevels.length === 0)) {
+        return <LoadingSpinner />;
+    }
     // --- FIN PASO E ---
 
     if (!canView) {

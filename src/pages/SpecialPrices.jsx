@@ -11,6 +11,19 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
 import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
+
+const fetchSpecialPrices = async () => {
+  const pricesRes = await supabase.rpc('get_special_prices_with_details');
+  if (pricesRes.error) throw pricesRes.error;
+  return (pricesRes.data || []).map(price => ({
+    ...price,
+    products: price.product_name ? { name: price.product_name } : null,
+    categories: price.category_name ? { name: price.category_name } : null
+  }));
+};
 
 // ... (Componente PriceTableRow sin cambios) ...
 const PriceTableRow = memo(({
@@ -62,9 +75,8 @@ PriceTableRow.displayName = 'PriceTableRow';
 const SpecialPrices = () => {
   const { showAlert } = useAlert();
   const { hasPermission } = useAdminAuth();
+  const { DEFAULT_TTL, invalidate } = useCacheAdmin();
 
-  const [specialPrices, setSpecialPrices] = useState([]);
-  
   // Categorías y Productos desde Caché
   const { data: categoriesData } = useCategoriesCache();
   const categories = useMemo(() => categoriesData || [], [categoriesData]);
@@ -72,7 +84,23 @@ const SpecialPrices = () => {
   const { data: productsData } = useAdminProductsBasic();
   const products = useMemo(() => productsData || [], [productsData]);
 
-  const [loading, setLoading] = useState(true);
+  // Precios especiales desde caché
+  const {
+    data: cachedPrices,
+    isLoading: loadingPrices,
+    refetch: refetchSpecialPrices
+  } = useAdminCache('special_prices:all', fetchSpecialPrices, {
+    ttl: DEFAULT_TTL.MEDIUM,
+    staleWhileRevalidate: true
+  });
+
+  const [localPrices, setLocalPrices] = useState(null);
+  const specialPrices = useMemo(() => localPrices || cachedPrices || [], [localPrices, cachedPrices]);
+
+  useEffect(() => {
+    if (cachedPrices) setLocalPrices(cachedPrices);
+  }, [cachedPrices]);
+
   const [editingPrice, setEditingPrice] = useState(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [priceToDelete, setPriceToDelete] = useState(null);
@@ -80,69 +108,28 @@ const SpecialPrices = () => {
   const canEdit = hasPermission('special-prices.edit');
   const canDelete = hasPermission('special-prices.delete');
 
-  // Solo fetchear promociones de precios especiales
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const pricesRes = await supabase.rpc('get_special_prices_with_details');
-
-      if (pricesRes.error) throw pricesRes.error;
-
-      const adaptedPrices = (pricesRes.data || []).map(price => ({
-        ...price,
-        products: price.product_name ? { name: price.product_name } : null,
-        categories: price.category_name ? { name: price.category_name } : null
-      }));
-
-      setSpecialPrices(adaptedPrices);
-    } catch (error) {
-      console.error('Fetch error:', error);
-      showAlert(`Error al cargar datos: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  }, [showAlert]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   // Realtime mediante Canal Compartido
   useEffect(() => {
     const unsubscribe = subscribeToTableChanges('special_prices', (payload) => {
-      console.log('Special price change detected (Shared Realtime):', payload);
-
-      if (payload.eventType === 'INSERT') {
-        fetchData();
-      } else if (payload.eventType === 'UPDATE') {
-        setSpecialPrices(prev => prev.map(price =>
-          price.id === payload.new.id
-            ? { ...price, ...payload.new }
-            : price
-        ));
-        if (editingPrice?.id === payload.new.id) {
-          fetchData();
-        }
-      } else if (payload.eventType === 'DELETE') {
-        setSpecialPrices(prev => prev.filter(price => price.id !== payload.old.id));
-        if (editingPrice?.id === payload.old.id) {
-          setIsFormVisible(false);
-          setEditingPrice(null);
-        }
+      console.log('[SpecialPrices] Cambio detectado (Shared Realtime):', payload);
+      invalidate('special_prices:all');
+      if (editingPrice?.id === payload.old?.id && payload.eventType === 'DELETE') {
+        setIsFormVisible(false);
+        setEditingPrice(null);
       }
     });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [fetchData, editingPrice]);
+  }, [invalidate, editingPrice]);
 
-  // ... (Handlers: handleFormSubmit, handleEdit, handleDelete, confirmDelete sin cambios) ...
   const handleFormSubmit = useCallback(() => {
-    fetchData();
+    invalidate('special_prices:all');
+    broadcastStoreChange('special_prices_updated', { action: 'save' });
     setIsFormVisible(false);
     setEditingPrice(null);
-  }, [fetchData]);
+  }, [invalidate]);
 
   const handleEdit = useCallback((price) => {
     if (!canEdit) return;
@@ -165,13 +152,15 @@ const SpecialPrices = () => {
       if (error) throw error;
       showAlert('Promoción eliminada con éxito.', 'success');
       setSpecialPrices(prev => prev.filter(p => p.id !== priceToDelete.id));
+      invalidate('special_prices:all');
+      broadcastStoreChange('special_prices_updated', { action: 'delete' });
     } catch (error) {
       console.error('Delete error:', error);
       showAlert(`Error al eliminar: ${error.message}`);
     } finally {
       setPriceToDelete(null);
     }
-  }, [priceToDelete, canDelete, showAlert]);
+  }, [priceToDelete, canDelete, showAlert, invalidate]);
 
 
   // getTargetName sigue usando las 'categories' locales de este componente
@@ -222,7 +211,7 @@ const SpecialPrices = () => {
   }, [specialPrices, activeAndUpcomingPrices, pastPrices]);
 
 
-  if (loading) {
+  if (loadingPrices && specialPrices.length === 0) {
     return <LoadingSpinner />;
   }
 

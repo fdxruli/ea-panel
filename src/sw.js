@@ -31,7 +31,7 @@ const CACHE_NAMES = {
 };
 
 // ─── Dominio de Supabase (inyectado en build, disponible en SW via injectManifest) ─
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://xvstqhvooabljhhfmuas.supabase.co';
 // Extraer solo el hostname para las comparaciones (ej: "xyzabc.supabase.co")
 const SUPABASE_HOST = SUPABASE_URL
   ? new URL(SUPABASE_URL).hostname

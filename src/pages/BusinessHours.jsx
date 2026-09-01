@@ -4,6 +4,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
 import styles from './BusinessHours.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminCache } from '../hooks/useAdminCache';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 
 const weekDays = [
     { id: 0, name: 'Domingo' },
@@ -15,12 +19,61 @@ const weekDays = [
     { id: 6, name: 'Sábado' },
 ];
 
+const fetchBusinessHoursData = async () => {
+    const [hoursResult, exceptionsResult] = await Promise.all([
+        supabase
+            .from('business_hours')
+            .select('*')
+            .order('day_of_week', { ascending: true }),
+        supabase
+            .from('business_exceptions')
+            .select('*')
+            .order('start_date', { ascending: false })
+    ]);
+
+    if (hoursResult.error) throw hoursResult.error;
+    if (exceptionsResult.error) throw exceptionsResult.error;
+
+    const fullHours = weekDays.map(day => {
+        const dbHour = hoursResult.data.find(h => h.day_of_week === day.id);
+        return dbHour || {
+            day_of_week: day.id,
+            open_time: '09:00',
+            close_time: '17:00',
+            is_closed: true
+        };
+    });
+
+    return {
+        hours: fullHours,
+        exceptions: exceptionsResult.data || []
+    };
+};
+
 export default function BusinessHours() {
     const { showAlert } = useAlert();
     const { hasPermission } = useAdminAuth();
-    const [hours, setHours] = useState([]);
-    const [exceptions, setExceptions] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { DEFAULT_TTL, invalidate } = useCacheAdmin();
+
+    const {
+        data: cachedData,
+        isLoading: loadingHours,
+        refetch: refetchHours
+    } = useAdminCache('business_hours:all', fetchBusinessHoursData, {
+        ttl: DEFAULT_TTL.LONG,
+        staleWhileRevalidate: true
+    });
+
+    const [hours, setHours] = useState(() => cachedData?.hours || []);
+    const [exceptions, setExceptions] = useState(() => cachedData?.exceptions || []);
+
+    useEffect(() => {
+        if (cachedData) {
+            setHours(cachedData.hours || []);
+            setExceptions(cachedData.exceptions || []);
+        }
+    }, [cachedData]);
+
     const [isEditingHours, setIsEditingHours] = useState(false);
     const [newException, setNewException] = useState({
         start_date: '',
@@ -35,47 +88,23 @@ export default function BusinessHours() {
     const canEdit = useMemo(() => hasPermission('horarios.edit'), [hasPermission]);
     const canDelete = useMemo(() => hasPermission('horarios.delete'), [hasPermission]);
 
-    // OPTIMIZACIÓN 1: Consultas paralelas en lugar de secuenciales
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        try {
-            // Ejecutar ambas consultas en paralelo con Promise.all
-            const [hoursResult, exceptionsResult] = await Promise.all([
-                supabase
-                    .from('business_hours')
-                    .select('*')
-                    .order('day_of_week', { ascending: true }),
-                supabase
-                    .from('business_exceptions')
-                    .select('*')
-                    .order('start_date', { ascending: false })
-            ]);
-
-            if (hoursResult.error) throw hoursResult.error;
-            if (exceptionsResult.error) throw exceptionsResult.error;
-
-            const fullHours = weekDays.map(day => {
-                const dbHour = hoursResult.data.find(h => h.day_of_week === day.id);
-                return dbHour || {
-                    day_of_week: day.id,
-                    open_time: '09:00',
-                    close_time: '17:00',
-                    is_closed: true
-                };
-            });
-
-            setHours(fullHours);
-            setExceptions(exceptionsResult.data);
-        } catch (error) {
-            showAlert(`Error al cargar los datos: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }, []); // Removido showAlert de dependencias - no causa cambios en los datos
-
+    // Realtime mediante Canal Compartido
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        const unsubHours = subscribeToTableChanges('business_hours', (payload) => {
+            console.log('[BusinessHours] Cambio en horarios detectado (Shared Realtime):', payload);
+            invalidate('business_hours:all');
+        });
+
+        const unsubExceptions = subscribeToTableChanges('business_exceptions', (payload) => {
+            console.log('[BusinessHours] Cambio en excepciones detectado (Shared Realtime):', payload);
+            invalidate('business_hours:all');
+        });
+
+        return () => {
+            if (unsubHours) unsubHours();
+            if (unsubExceptions) unsubExceptions();
+        };
+    }, [invalidate]);
 
     // OPTIMIZACIÓN 2: Memoizar función de cambio de hora
     const handleHourChange = useCallback((day, field, value) => {
@@ -107,10 +136,12 @@ export default function BusinessHours() {
 
             if (error) throw error;
             showAlert('Horarios guardados con éxito.');
+            invalidate('business_hours:all');
+            broadcastStoreChange('hours_updated', { entity: 'business_hours' });
         } catch (error) {
             showAlert(`Error al guardar los horarios: ${error.message}`);
         }
-    }, [canEdit, hours, showAlert]);
+    }, [canEdit, hours, showAlert, invalidate]);
 
     const handleAddException = useCallback(async () => {
         if (!canEdit) return;
@@ -155,11 +186,12 @@ export default function BusinessHours() {
                 reason: ''
             });
 
-            fetchData();
+            invalidate('business_hours:all');
+            broadcastStoreChange('hours_updated', { entity: 'business_exceptions', action: 'add' });
         } catch (error) {
             showAlert(`Error al añadir la excepción: ${error.message}`);
         }
-    }, [canEdit, newException, exceptions, checkOverlap, fetchData, showAlert]);
+    }, [canEdit, newException, exceptions, checkOverlap, showAlert, invalidate]);
 
     const handleDeleteException = useCallback(async (exceptionId) => {
         if (!canDelete) return;
@@ -174,12 +206,13 @@ export default function BusinessHours() {
                 if (error) throw error;
 
                 showAlert('Excepción eliminada.');
-                fetchData();
+                invalidate('business_hours:all');
+                broadcastStoreChange('hours_updated', { entity: 'business_exceptions', action: 'delete' });
             } catch (error) {
                 showAlert(`Error al eliminar: ${error.message}`);
             }
         }
-    }, [canDelete, fetchData, showAlert]);
+    }, [canDelete, showAlert, invalidate]);
 
     // OPTIMIZACIÓN 4: Memoizar función de formato de fecha
     const formatExceptionDate = useCallback((ex) => {
@@ -194,7 +227,7 @@ export default function BusinessHours() {
         return startDate.toLocaleDateString('es-MX', options);
     }, []);
 
-    if (loading) return <LoadingSpinner />;
+    if (loadingHours && hours.length === 0) return <LoadingSpinner />;
 
     return (
         <div className={styles.container}>

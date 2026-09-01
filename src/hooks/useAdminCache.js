@@ -21,12 +21,19 @@ export const useAdminCache = (key, fetcher, options = {}) => {
     } = options;
 
     const effectiveEnabled = enabled && isHydrated;
-    const [data, setData] = useState(null);
+
+    // Obtener entrada de caché síncronamente si ya está disponible en memoria
+    const initialCachedEntry = (isHydrated && key)
+        ? getCached(key, { skipExpiry: staleWhileRevalidate })
+        : null;
+    const hasInitialValidCache = initialCachedEntry && (staleWhileRevalidate || !initialCachedEntry.isExpired);
+
+    const [data, setData] = useState(() => hasInitialValidCache ? initialCachedEntry.data : null);
     const [error, setError] = useState(null);
-    const [isLoading, setIsLoading] = useState(enabled);
+    const [isLoading, setIsLoading] = useState(() => hasInitialValidCache ? false : (enabled && !isHydrated ? true : enabled));
     const [isError, setIsError] = useState(false);
-    const [isCached, setIsCached] = useState(false);
-    const [age, setAge] = useState(null);
+    const [isCached, setIsCached] = useState(() => !!hasInitialValidCache);
+    const [age, setAge] = useState(() => initialCachedEntry ? initialCachedEntry.age : null);
 
     const fetcherRef = useRef(fetcher);
     const onSuccessRef = useRef(onSuccess);
@@ -44,40 +51,49 @@ export const useAdminCache = (key, fetcher, options = {}) => {
             return;
         }
 
+        const cachedEntry = getCached(key, { skipExpiry: staleWhileRevalidate });
+
+        if (cachedEntry && !refetchOnMount && !isRefetch) {
+            if (cachedEntry.isExpired && staleWhileRevalidate) {
+                // SWR: Mantener datos cacheados visibles y revalidar silenciosamente en segundo plano
+                setData(cachedEntry.data);
+                setIsCached(true);
+                setAge(cachedEntry.age);
+                setIsLoading(false);
+
+                handleFetch(key, fetcherRef.current, ttl).then(freshData => {
+                    setData(freshData);
+                    setIsCached(false);
+                    setAge(0);
+                    onSuccessRef.current?.(freshData);
+                }).catch(err => {
+                    console.warn(`[useCache] SWR: Refetch falló para "${key}".`, err);
+                });
+                return;
+            } else if (!cachedEntry.isExpired) {
+                // Datos en caché totalmente válidos: sincronizar estado sin hacer fetch
+                setData(cachedEntry.data);
+                setIsCached(true);
+                setAge(cachedEntry.age);
+                setIsLoading(false);
+                setIsError(false);
+                setError(null);
+                onSuccessRef.current?.(cachedEntry.data);
+                return;
+            }
+        }
+
+        // Si no hay caché válido o es refetch explícito, ejecutar fetch
         setIsLoading(true);
         setIsError(false);
         setError(null);
 
         try {
-            const cachedEntry = getCached(key, { skipExpiry: staleWhileRevalidate });
-
-            if (cachedEntry && !refetchOnMount && !isRefetch) {
-                if (cachedEntry.isExpired && staleWhileRevalidate) {
-                    setData(cachedEntry.data);
-                    setIsCached(true);
-                    setAge(cachedEntry.age);
-
-                    handleFetch(key, fetcherRef.current, ttl).then(freshData => {
-                        setData(freshData);
-                        setIsCached(false);
-                        setAge(0);
-                        onSuccessRef.current?.(freshData);
-                    }).catch(err => {
-                        console.warn(`[useCache] SWR: Refetch falló para "${key}".`, err);
-                    });
-                } else if (!cachedEntry.isExpired) {
-                    setData(cachedEntry.data);
-                    setIsCached(true);
-                    setAge(cachedEntry.age);
-                    onSuccessRef.current?.(cachedEntry.data);
-                }
-            } else {
-                const freshData = await handleFetch(key, fetcherRef.current, ttl);
-                setData(freshData);
-                setIsCached(false);
-                setAge(0);
-                onSuccessRef.current?.(freshData);
-            }
+            const freshData = await handleFetch(key, fetcherRef.current, ttl);
+            setData(freshData);
+            setIsCached(false);
+            setAge(0);
+            onSuccessRef.current?.(freshData);
         } catch (err) {
             console.error(`[useCache] ERROR: Falló el fetch para "${key}":`, err);
             setError(err);
