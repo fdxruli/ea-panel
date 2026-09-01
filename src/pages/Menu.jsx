@@ -90,6 +90,9 @@ const getCategoryFallback = (name) => {
 const formatPrice = (value) => `$${Number(value || 0).toFixed(2)}`;
 
 const renderClientOverlay = (p) => {
+  if (p?.is_out_of_stock) {
+    return <span className={styles.outOfStockBadge}>Agotado</span>;
+  }
   const hasSpecialPrice = p.original_price && p.original_price !== p.price;
   return hasSpecialPrice ? <span className={styles.offerBadge}>Oferta</span> : null;
 };
@@ -260,6 +263,11 @@ export default function Menu() {
       return;
     }
 
+    if (product.is_out_of_stock) {
+      showToast('Lo sentimos, este producto se encuentra agotado.');
+      return;
+    }
+
     const parsedQuantity = Number.parseInt(quantity, 10);
     const safeQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
       ? parsedQuantity
@@ -293,19 +301,33 @@ export default function Menu() {
     showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito.`);
   }, [isBusinessOpen, addToCart, showToast]);
 
-  const renderClientActions = useCallback((p) => (
-    <button
-      type="button"
-      className={`${styles.cardActionButton} ${!isBusinessOpen ? styles.cardActionButtonClosed : ''}`}
-      onClick={(event) => {
-        event.preventDefault();
-        handleAddToCart(p, 1, event);
-      }}
-      disabled={!isBusinessOpen}
-    >
-      {isBusinessOpen ? 'Añadir' : 'Cerrado'}
-    </button>
-  ), [isBusinessOpen, handleAddToCart]);
+  const renderClientActions = useCallback((p) => {
+    if (p.is_out_of_stock) {
+      return (
+        <button
+          type="button"
+          className={`${styles.cardActionButton} ${styles.cardActionButtonOutOfStock}`}
+          disabled={true}
+        >
+          Agotado
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={`${styles.cardActionButton} ${!isBusinessOpen ? styles.cardActionButtonClosed : ''}`}
+        onClick={(event) => {
+          event.preventDefault();
+          handleAddToCart(p, 1, event);
+        }}
+        disabled={!isBusinessOpen}
+      >
+        {isBusinessOpen ? 'Añadir' : 'Cerrado'}
+      </button>
+    );
+  }, [isBusinessOpen, handleAddToCart]);
 
   const isProductRoute = Boolean(productSlug);
   const isMissingProductRoute = isProductRoute && !loading && !error && !routeSelectedProduct;
@@ -572,6 +594,7 @@ export default function Menu() {
                 key={product.id}
                 product={product}
                 layout={layout}
+                inactive={Boolean(product.is_out_of_stock)}
                 linkUrl={`/producto/${product.slug}`}
                 imagePriority={index < 4}
                 renderImageOverlay={renderClientOverlay}

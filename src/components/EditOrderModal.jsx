@@ -216,28 +216,27 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                 setInitialAddressId(selectedAddressId);
             }
 
-            const currentSignature = getItemsSignature(orderItems);
-            const itemsChanged = currentSignature !== originalItemsSignature;
+            const cleanItems = orderItems.map(item => {
+                const prodId = item.product_id || item.id;
+                if (!prodId) throw new Error(`Error de integridad: Producto sin ID detectado (${item.name})`);
+                return {
+                    product_id: prodId,
+                    quantity: Number(item.quantity) || 1,
+                    price: Number(item.price) || 0,
+                    cost: Number(item.cost) || 0
+                };
+            });
 
-            if (itemsChanged) {
-                await supabase.from('order_items').delete().eq('order_id', order.id);
-                const newOrderItems = orderItems.map(item => {
-                    if (!item.product_id) throw new Error(`Error de integridad: Producto sin ID detectado (${item.name})`);
-                    return {
-                        order_id: order.id,
-                        product_id: item.product_id,
-                        quantity: item.quantity,
-                        price: item.price,
-                    };
-                });
-                const { error: insertError } = await supabase.from('order_items').insert(newOrderItems);
-                if (insertError) throw insertError;
-            }
+            // Actualización atómica de orden e items con sincronización de stock de ingredientes
+            const { error: updateRpcError } = await supabase.rpc('update_order_with_stock_sync', {
+                p_order_id: order.id,
+                p_total_amount: total,
+                p_scheduled_for: scheduledTimestamp,
+                p_items: cleanItems,
+                p_notes: order.notes || null
+            });
 
-            await supabase.from('orders').update({
-                total_amount: total,
-                scheduled_for: scheduledTimestamp
-            }).eq('id', order.id);
+            if (updateRpcError) throw updateRpcError;
 
             if (order?.order_code) {
                 broadcastOrderUpdate(order.order_code, {

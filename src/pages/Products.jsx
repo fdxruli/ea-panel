@@ -273,41 +273,13 @@ export default function Products() {
                 favorites_count, product_images, ...dataToUpsert
             } = productData;
 
-            // 2. Guardar el producto principal (Crear o Actualizar)
-            // .select() es crucial para obtener el ID del producto guardado
-            const { data: savedProduct, error: productError } = await supabase
-                .from('products')
-                .upsert(dataToUpsert)
-                .select('id')
-                .single();
+            // 2. Guardar el producto y su receta de forma atómica en el servidor vía RPC
+            const { error: saveError } = await supabase.rpc('save_product_with_recipe', {
+                p_product: dataToUpsert,
+                p_recipe_items: recipeData || []
+            });
 
-            if (productError) throw productError;
-
-            const productId = savedProduct.id;
-
-            // 3. Borrar la receta antigua (transacción parte 1)
-            const { error: deleteError } = await supabase
-                .from('product_recipes')
-                .delete()
-                .eq('product_id', productId);
-
-            if (deleteError) throw deleteError;
-
-            // 4. Si hay una nueva receta, insertarla (transacción parte 2)
-            if (recipeData && recipeData.length > 0) {
-                const newRecipeItems = recipeData.map(item => ({
-                    product_id: productId,
-                    ingredient_id: item.ingredient_id,
-                    quantity_used: item.quantity_used,
-                    deduct_stock_automatically: item.deduct_stock_automatically
-                }));
-
-                const { error: insertRecipeError } = await supabase
-                    .from('product_recipes')
-                    .insert(newRecipeItems);
-
-                if (insertRecipeError) throw insertRecipeError;
-            }
+            if (saveError) throw saveError;
 
             // 5. Éxito
             showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`, 'success');

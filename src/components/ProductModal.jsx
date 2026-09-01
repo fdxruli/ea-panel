@@ -181,6 +181,11 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     if (!product) return null;
 
     const handleAddToCartClick = (event) => {
+        if (product?.is_out_of_stock) {
+            showAlert("Lo sentimos, este producto se encuentra agotado.");
+            return;
+        }
+
         const isStillAvailable = liveProducts.some(p => p.id === product.id);
         if (!isStillAvailable) {
             showAlert("Lo sentimos, este producto ya no se encuentra disponible.");
@@ -359,13 +364,18 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     {activeTab === 'details' && (
                         <div className={styles.footer}>
                             <div className={styles.quantitySelector}>
-                                <button type="button" onClick={decrementQuantity}>-</button>
+                                <button type="button" onClick={decrementQuantity} disabled={product.is_out_of_stock}>-</button>
                                 <span>{quantity}</span>
-                                <button type="button" onClick={incrementQuantity}>+</button>
+                                <button type="button" onClick={incrementQuantity} disabled={product.is_out_of_stock}>+</button>
                             </div>
                             <div className={styles.actionButtons}>
-                                <button type="button" onClick={handleAddToCartClick} className={`${styles.addButton} ${wasAdded ? styles.added : ''}`} disabled={wasAdded}>
-                                    {wasAdded ? '¡Añadido!' : `Añadir por $${(product.price * quantity).toFixed(2)}`}
+                                <button
+                                    type="button"
+                                    onClick={handleAddToCartClick}
+                                    className={`${styles.addButton} ${wasAdded ? styles.added : ''} ${product.is_out_of_stock ? styles.outOfStockButton : ''}`}
+                                    disabled={wasAdded || product.is_out_of_stock}
+                                >
+                                    {product.is_out_of_stock ? 'Producto Agotado' : wasAdded ? '¡Añadido!' : `Añadir por $${(product.price * quantity).toFixed(2)}`}
                                 </button>
                                 <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.desktopOnly}`}>
                                     <HeartIcon isFavorite={isFavorite} />

@@ -11,6 +11,7 @@ import styles from './Ingredients.module.css';
 import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 
 const fetchIngredients = async () => {
   return await supabase
@@ -216,7 +217,10 @@ export default function Ingredients() {
         <IngredientFormModal
           isOpen={isIngredientModalOpen}
           onClose={() => setIsIngredientModalOpen(false)}
-          onSave={() => invalidate('ingredients:all')}
+          onSave={() => {
+            invalidate('ingredients:all');
+            broadcastStoreChange('inventory_updated');
+          }}
           ingredient={selectedIngredient}
         />
       )}
@@ -233,7 +237,10 @@ export default function Ingredients() {
         <PurchaseFormModal
           isOpen={isPurchaseModalOpen}
           onClose={() => setIsPurchaseModalOpen(false)}
-          onSave={() => invalidate('ingredients:all')}
+          onSave={() => {
+            invalidate('ingredients:all');
+            broadcastStoreChange('inventory_updated');
+          }}
           allIngredients={ingredients}
         />
       )}
@@ -242,7 +249,10 @@ export default function Ingredients() {
         <StockAdjustmentModal
           isOpen={isAdjustmentModalOpen}
           onClose={() => setIsAdjustmentModalOpen(false)}
-          onSave={() => invalidate('ingredients:all')}
+          onSave={() => {
+            invalidate('ingredients:all');
+            broadcastStoreChange('inventory_updated');
+          }}
           ingredient={selectedIngredient}
         />
       )}
