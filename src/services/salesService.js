@@ -1,8 +1,10 @@
 import {
     loadData,
+    loadDataBatch,
     saveData,
     STORES,
     queryBatchesByProductIdAndActive,
+    queryBatchesByMultipleProductIdsAndActive,
     queryByIndex,
     executeSaleTransactionSafe
 } from './database';
@@ -88,15 +90,17 @@ export const processSale = async ({
                 }
             });
 
-            // 2. Cargar el STOCK FRESCO desde la Base de Datos
+            // 2. Cargar el STOCK FRESCO desde la Base de Datos EN UNA SOLA TRANSACCIÓN
             const freshStockMap = new Map();
             if (uniqueIngredientIds.size > 0) {
-                await Promise.all(Array.from(uniqueIngredientIds).map(async (id) => {
-                    const freshProd = await loadData(STORES.MENU, id);
+                const idsArray = Array.from(uniqueIngredientIds);
+                const freshProducts = await loadDataBatch(STORES.MENU, idsArray);
+                
+                freshProducts.forEach(freshProd => {
                     if (freshProd) {
-                        freshStockMap.set(id, freshProd);
+                        freshStockMap.set(freshProd.id, freshProd);
                     }
-                }));
+                });
             }
 
             // 3. Validar usando un ACUMULADOR (Simulación de consumo)
@@ -228,22 +232,26 @@ export const processSale = async ({
             itemsToDeduct.forEach(component => uniqueProductIds.add(component.ingredientId));
         }
 
-        // Cargar lotes de la BD (solo para los que trackean stock)
+        // Cargar lotes de la BD (solo para los que trackean stock) EN UNA SOLA TRANSACCIÓN
         const batchesMap = new Map();
         if (uniqueProductIds.size > 0) {
-            await Promise.all(
-                Array.from(uniqueProductIds).map(async (productId) => {
-                    let batches = await queryBatchesByProductIdAndActive(productId, true);
-                    if (!batches || batches.length === 0) {
-                        const allBatches = await queryByIndex(STORES.PRODUCT_BATCHES, 'productId', productId);
-                        batches = allBatches.filter(b => b.isActive && b.stock > 0);
-                    }
-                    if (batches && batches.length > 0) {
-                        batches.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-                        batchesMap.set(productId, batches);
-                    }
-                })
-            );
+            const idsArray = Array.from(uniqueProductIds);
+            const results = await queryBatchesByMultipleProductIdsAndActive(idsArray, true);
+            
+            for (const productId of idsArray) {
+                let batches = results[productId] || [];
+                
+                // Fallback (por si acaso el índice falló)
+                if (batches.length === 0) {
+                    const allBatches = await queryByIndex(STORES.PRODUCT_BATCHES, 'productId', productId);
+                    batches = allBatches.filter(b => b.isActive && b.stock > 0);
+                }
+                
+                if (batches.length > 0) {
+                    batches.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    batchesMap.set(productId, batches);
+                }
+            }
         }
 
         // ============================================================

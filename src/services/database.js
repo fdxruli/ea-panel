@@ -567,6 +567,49 @@ export function queryBatchesByProductIdAndActive(productId, isActive = true) {
   });
 }
 
+export function queryBatchesByMultipleProductIdsAndActive(productIds, isActive = true) {
+  return executeWithRetry(async () => {
+    const dbInstance = await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = dbInstance.transaction([STORES.PRODUCT_BATCHES], 'readonly');
+      const objectStore = transaction.objectStore(STORES.PRODUCT_BATCHES);
+
+      if (!objectStore.indexNames.contains('productId')) {
+        console.warn("⚠️ Índice 'productId' no encontrado. Búsqueda múltiple fallida.");
+        resolve({});
+        return;
+      }
+
+      const index = objectStore.index('productId');
+      const results = {};
+      let pending = productIds.length;
+      let errorOccurred = false;
+
+      if (pending === 0) {
+        resolve({});
+        return;
+      }
+
+      productIds.forEach(productId => {
+        if (errorOccurred) return;
+        const range = IDBKeyRange.only(productId);
+        const request = index.getAll(range);
+        
+        request.onsuccess = () => {
+          const batches = request.result || [];
+          results[productId] = batches.filter(b => Boolean(b.isActive) === Boolean(isActive));
+          pending--;
+          if (pending === 0 && !errorOccurred) resolve(results);
+        };
+        request.onerror = (e) => {
+          errorOccurred = true;
+          reject(e.target.error);
+        };
+      });
+    });
+  });
+}
+
 export function saveData(storeName, data) {
   return executeWithRetry(async () => {
     const dbInstance = await initDB();
@@ -661,6 +704,38 @@ export function loadData(storeName, key = null) {
       const request = key ? store.get(key) : store.getAll();
       request.onsuccess = () => resolve(request.result || (key ? null : []));
       request.onerror = (e) => reject(e.target.error);
+    });
+  });
+}
+
+export function loadDataBatch(storeName, keys) {
+  return executeWithRetry(async () => {
+    const dbInstance = await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = dbInstance.transaction([storeName], 'readonly');
+      const store = transaction.objectStore(storeName);
+      const results = [];
+      let pending = keys.length;
+      
+      if (pending === 0) {
+        resolve([]);
+        return;
+      }
+      
+      let errorOccurred = false;
+      keys.forEach((key) => {
+        if (errorOccurred) return;
+        const request = store.get(key);
+        request.onsuccess = () => {
+          if (request.result) results.push(request.result);
+          pending--;
+          if (pending === 0 && !errorOccurred) resolve(results);
+        };
+        request.onerror = (e) => {
+          errorOccurred = true;
+          reject(e.target.error);
+        };
+      });
     });
   });
 }

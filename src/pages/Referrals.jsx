@@ -277,26 +277,46 @@ export default function Referrals() {
             const levels = referralLevels; // <-- Obtener niveles del hook
             // setReferralLevels(levels); // <-- Eliminado
 
-            // Fetch referidos para cada cliente
-            const customersWithDetails = await Promise.all(
-                customers.map(async (customer) => {
-                    const { data: referred } = await supabase
-                        .from('customers')
-                        .select('name, phone')
-                        .eq('referrer_id', customer.id);
+            // Fetch referidos para CADA cliente EN UNA SOLA CONSULTA (Solución N+1)
+            const referrerIds = customers.map(c => c.id);
+            
+            // Traemos todos los referidos de los clientes actuales de un solo golpe
+            let allReferred = [];
+            if (referrerIds.length > 0) {
+                const { data, error } = await supabase
+                    .from('customers')
+                    .select('name, phone, referrer_id')
+                    .in('referrer_id', referrerIds);
+                
+                if (!error && data) {
+                    allReferred = data;
+                }
+            }
 
-                    const level = levels
-                        .filter(l => customer.referral_count >= l.min_referrals)
-                        .sort((a, b) => b.min_referrals - a.min_referrals)[0] || { name: 'Novato' };
+            // Agrupamos en un diccionario para acceso instantáneo
+            const referredMap = {};
+            allReferred.forEach(referred => {
+                if (!referredMap[referred.referrer_id]) {
+                    referredMap[referred.referrer_id] = [];
+                }
+                referredMap[referred.referrer_id].push(referred);
+            });
 
-                    return {
-                        ...customer,
-                        customer_name: customer.name,
-                        level_name: level.name,
-                        referred_customers: referred || []
-                    };
-                })
-            );
+            // Asignamos a cada cliente su lista de referidos
+            const customersWithDetails = customers.map((customer) => {
+                const referred = referredMap[customer.id] || [];
+
+                const level = levels
+                    .filter(l => customer.referral_count >= l.min_referrals)
+                    .sort((a, b) => b.min_referrals - a.min_referrals)[0] || { name: 'Novato' };
+
+                return {
+                    ...customer,
+                    customer_name: customer.name,
+                    level_name: level.name,
+                    referred_customers: referred
+                };
+            });
 
             setCustomersWithReferrals(customersWithDetails);
             // setReferralLevels(levels); // <-- Ya estaba eliminado antes, pero lo confirmo

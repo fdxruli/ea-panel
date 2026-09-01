@@ -96,8 +96,8 @@ export default function Discounts() {
         setLoading(true);
         try {
             const { data: discountsData, error: discountsError } = await supabase
-                .from("discounts")
-                .select("id, code, type, value, target_id, start_date, end_date, is_active, is_single_use, created_at")
+                .from("discounts_with_targets")
+                .select("id, code, type, value, target_id, start_date, end_date, is_active, is_single_use, created_at, product_name, category_name")
                 .order("created_at", { ascending: false });
 
             if (discountsError) throw discountsError;
@@ -210,10 +210,14 @@ export default function Discounts() {
     const getTargetName = useCallback((discount) => {
         if (discount.type === "global") return "Toda la tienda";
         if (discount.type === "category") {
+            // Utilizamos la columna de la vista si existe, sino caemos al caché (para los inserts realtime)
+            if (discount.category_name) return discount.category_name;
             const category = categories.find(c => c.id === discount.target_id);
             return category ? category.name : "Categoría no encontrada";
         }
         if (discount.type === "product") {
+            // Utilizamos la columna de la vista si existe, sino caemos al caché (para los inserts realtime)
+            if (discount.product_name) return discount.product_name;
             const product = products.find(p => p.id === discount.target_id);
             return product ? product.name : "Producto no encontrado";
         }
