@@ -9,8 +9,9 @@ import ManageReferralLevelsModal from '../components/ManageReferralLevelsModal';
 import EditReferralCountModal from '../components/EditReferralCountModal';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
-// --- (PASO A) AÑADIR IMPORT ---
+// --- (PASO A) AÑADIR IMPORTS ---
 import { useReferralLevelsCache } from '../hooks/useReferralLevelsCache';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -316,29 +317,21 @@ export default function Referrals() {
         }
     }, [fetchData, loadingLevels]); // Añadir loadingLevels
 
-    // --- (PASO D) ACTUALIZAR LISTENER DE REALTIME ---
+    // --- (PASO D) ACTUALIZAR LISTENER DE REALTIME (Canal Compartido) ---
     useEffect(() => {
         if (!canView) return;
 
-        const channel = supabase
-            .channel('referrals-changes')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'customers'
-            }, () => fetchData()) // <-- Esto se mantiene
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'referral_levels'
-            }, () => {
-                console.log('[Referrals] Cambio en niveles detectado, invalidando caché.');
-                invalidateLevels(); // <-- Solo invalida el caché
-            })
-            .subscribe();
+        const unsubCustomers = subscribeToTableChanges('customers', () => fetchData());
+        const unsubLevels = subscribeToTableChanges('referral_levels', () => {
+            console.log('[Referrals] Cambio en niveles detectado, invalidando caché.');
+            invalidateLevels();
+        });
 
-        return () => supabase.removeChannel(channel);
-    }, [canView, fetchData, invalidateLevels]); // <-- Añadir invalidateLevels
+        return () => {
+            if (unsubCustomers) unsubCustomers();
+            if (unsubLevels) unsubLevels();
+        };
+    }, [canView, fetchData, invalidateLevels]);
     // --- FIN PASO D ---
 
     // ... (filteredCustomers, stats, handleEditCustomer, handleCloseEditModal sin cambios) ...

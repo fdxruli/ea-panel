@@ -1,21 +1,22 @@
 /**
- * Hook para obtener stats de múltiples productos en batch.
- * Evita hacer N llamadas RPC individuales.
+ * Hook para obtener stats de múltiples productos en batch con soporte de CacheAdminContext.
+ * Evita hacer N llamadas RPC individuales y reutiliza el caché de la aplicación.
  * 
  * @param {string[]} productIds - IDs de productos para obtener stats
- * @returns {{ stats: Map, loading: boolean, error: Error | null }}
+ * @returns {{ stats: Map, loading: boolean, error: Error | null, refreshStats: function, getStat: function }}
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchProductStatsBatch } from '../lib/productQueries';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { generateKey } from '../utils/cacheAdminUtils';
 
 export const useProductStatsBatch = (productIds) => {
+  const { getCached, setCached, DEFAULT_TTL } = useCacheAdmin();
   const [stats, setStats] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Ref para evitar fetch duplicados
-  const fetchedProductIdsRef = useRef(new Set());
   const pendingFetchRef = useRef(null);
 
   const loadStats = useCallback(async (idsToFetch) => {
@@ -29,25 +30,29 @@ export const useProductStatsBatch = (productIds) => {
       
       setStats(prevStats => {
         const newStats = new Map(prevStats);
-        statsData.forEach(stat => {
-          if (stat) {
-            newStats.set(stat.product_id, stat);
-          }
-        });
+        if (Array.isArray(statsData)) {
+          statsData.forEach(stat => {
+            if (stat && stat.product_id) {
+              newStats.set(stat.product_id, stat);
+              setCached(
+                generateKey('product_stats', stat.product_id),
+                stat,
+                DEFAULT_TTL.SHORT
+              );
+            }
+          });
+        }
         return newStats;
       });
 
-      // Marcar como fetcheados
-      idsToFetch.forEach(id => fetchedProductIdsRef.current.add(id));
-
     } catch (err) {
-      console.error('[useProductStatsBatch] Error al cargar stats:', err);
+      console.error('[useProductStatsBatch] Error al cargar stats en batch:', err);
       setError(err);
     } finally {
       setLoading(false);
       pendingFetchRef.current = null;
     }
-  }, []);
+  }, [setCached, DEFAULT_TTL.SHORT]);
 
   useEffect(() => {
     if (!productIds || productIds.length === 0) {
@@ -55,30 +60,30 @@ export const useProductStatsBatch = (productIds) => {
       return;
     }
 
-    // Filtrar IDs que ya fueron fetcheados
-    const newIds = productIds.filter(id => !fetchedProductIdsRef.current.has(id));
+    const cachedMap = new Map();
+    const missingIds = [];
 
-    if (newIds.length === 0) {
-      // Todos los stats ya están cargados
-      return;
+    productIds.forEach(id => {
+      const cacheEntry = getCached(generateKey('product_stats', id));
+      if (cacheEntry && !cacheEntry.isExpired && cacheEntry.data) {
+        cachedMap.set(id, cacheEntry.data);
+      } else {
+        missingIds.push(id);
+      }
+    });
+
+    if (cachedMap.size > 0) {
+      setStats(prev => new Map([...prev, ...cachedMap]));
     }
 
-    // Cancelar fetch pendiente si existe
-    if (pendingFetchRef.current) {
-      // El fetch anterior se completará pero no actualizaremos estado
+    if (missingIds.length > 0) {
+      pendingFetchRef.current = loadStats(missingIds);
     }
-
-    pendingFetchRef.current = loadStats(newIds);
-
-  }, [productIds, loadStats]);
+  }, [productIds, getCached, loadStats]);
 
   // Función para forzar recarga de stats específicos
   const refreshStats = useCallback(async (idsToRefresh) => {
     if (!idsToRefresh || idsToRefresh.length === 0) return;
-
-    // Marcar como no fetcheados para que se recarguen
-    idsToRefresh.forEach(id => fetchedProductIdsRef.current.delete(id));
-    
     await loadStats(idsToRefresh);
   }, [loadStats]);
 
@@ -95,3 +100,4 @@ export const useProductStatsBatch = (productIds) => {
     getStat
   };
 };
+

@@ -1,21 +1,22 @@
 /**
- * Hook para obtener stats de múltiples clientes en batch.
- * Evita hacer N llamadas RPC individuales.
+ * Hook para obtener stats de múltiples clientes en batch con soporte de CacheAdminContext.
+ * Evita hacer N llamadas RPC individuales y reutiliza el caché de la aplicación.
  * 
  * @param {string[]} customerIds - IDs de clientes para obtener stats
- * @returns {{ stats: Map, loading: boolean, error: Error | null, refreshStats: function }}
+ * @returns {{ stats: Map, loading: boolean, error: Error | null, refreshStats: function, getStat: function }}
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchCustomerStatsBatch } from '../lib/customerQueries';
+import { useCacheAdmin } from '../context/CacheAdminContext';
+import { generateKey } from '../utils/cacheAdminUtils';
 
 export const useCustomerStatsBatch = (customerIds) => {
+  const { getCached, setCached, DEFAULT_TTL } = useCacheAdmin();
   const [stats, setStats] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Ref para evitar fetch duplicados
-  const fetchedCustomerIdsRef = useRef(new Set());
   const pendingFetchRef = useRef(null);
 
   const loadStats = useCallback(async (idsToFetch) => {
@@ -29,25 +30,29 @@ export const useCustomerStatsBatch = (customerIds) => {
       
       setStats(prevStats => {
         const newStats = new Map(prevStats);
-        statsData.forEach(stat => {
-          if (stat) {
-            newStats.set(stat.customer_id, stat);
-          }
-        });
+        if (Array.isArray(statsData)) {
+          statsData.forEach(stat => {
+            if (stat && stat.customer_id) {
+              newStats.set(stat.customer_id, stat);
+              setCached(
+                generateKey('customer_stats', stat.customer_id),
+                stat,
+                DEFAULT_TTL.SHORT
+              );
+            }
+          });
+        }
         return newStats;
       });
 
-      // Marcar como fetcheados
-      idsToFetch.forEach(id => fetchedCustomerIdsRef.current.add(id));
-
     } catch (err) {
-      console.error('[useCustomerStatsBatch] Error al cargar stats:', err);
+      console.error('[useCustomerStatsBatch] Error al cargar stats en batch:', err);
       setError(err);
     } finally {
       setLoading(false);
       pendingFetchRef.current = null;
     }
-  }, []);
+  }, [setCached, DEFAULT_TTL.SHORT]);
 
   useEffect(() => {
     if (!customerIds || customerIds.length === 0) {
@@ -55,25 +60,30 @@ export const useCustomerStatsBatch = (customerIds) => {
       return;
     }
 
-    // Filtrar IDs que ya fueron fetcheados
-    const newIds = customerIds.filter(id => !fetchedCustomerIdsRef.current.has(id));
+    const cachedMap = new Map();
+    const missingIds = [];
 
-    if (newIds.length === 0) {
-      // Todos los stats ya están cargados
-      return;
+    customerIds.forEach(id => {
+      const cacheEntry = getCached(generateKey('customer_stats', id));
+      if (cacheEntry && !cacheEntry.isExpired && cacheEntry.data) {
+        cachedMap.set(id, cacheEntry.data);
+      } else {
+        missingIds.push(id);
+      }
+    });
+
+    if (cachedMap.size > 0) {
+      setStats(prev => new Map([...prev, ...cachedMap]));
     }
 
-    pendingFetchRef.current = loadStats(newIds);
-
-  }, [customerIds, loadStats]);
+    if (missingIds.length > 0) {
+      pendingFetchRef.current = loadStats(missingIds);
+    }
+  }, [customerIds, getCached, loadStats]);
 
   // Función para forzar recarga de stats específicos
   const refreshStats = useCallback(async (idsToRefresh) => {
     if (!idsToRefresh || idsToRefresh.length === 0) return;
-
-    // Marcar como no fetcheados para que se recarguen
-    idsToRefresh.forEach(id => fetchedCustomerIdsRef.current.delete(id));
-    
     await loadStats(idsToRefresh);
   }, [loadStats]);
 
@@ -90,3 +100,4 @@ export const useCustomerStatsBatch = (customerIds) => {
     getStat
   };
 };
+

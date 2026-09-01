@@ -19,6 +19,8 @@ import {
     ADMIN_PRODUCTS_BASIC_CACHE_KEY,
     useAdminProductsBasic
 } from '../hooks/useAdminProductsBasic';
+import { fetchProductStatsBatch } from '../lib/productQueries';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 
 // --- (PASO B) IMPORTAR COMPONENTES EXTRAÍDOS ---
 import ProductCard from '../components/ProductCard';
@@ -82,9 +84,9 @@ export default function Products() {
 
     const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
-    // --- (PASO D) NUEVA FUNCIÓN para Cargar Stats ---
+    // --- (PASO D) Función Optimizada para Cargar Stats en Batch ---
     /**
-     * Función que enriquece productos básicos con sus stats.
+     * Función que enriquece productos básicos con sus stats en una sola llamada RPC batch.
      * Solo carga stats para productos VISIBLES en pantalla.
      */
     const enrichProductsWithStats = useCallback(async (productsList) => {
@@ -92,46 +94,34 @@ export default function Products() {
 
         setLoading(true);
         try {
-            // Cargar stats de cada producto en paralelo
-            const statsPromises = productsList.map(async (product) => {
-                try {
-                    // Aquí podrías usar useProductStats, pero en un loop es mejor fetch directo
-                    const { data: stats, error } = await supabase.rpc('get_product_stats_single', {
-                        p_product_id: product.id
-                    });
+            const productIds = productsList.map(p => p.id);
+            const statsData = await fetchProductStatsBatch(productIds);
 
-                    if (error) throw error;
+            const statsMap = new Map();
+            if (Array.isArray(statsData)) {
+                statsData.forEach(stat => {
+                    if (stat && stat.product_id) {
+                        statsMap.set(stat.product_id, stat);
+                    }
+                });
+            }
 
-                    // stats es un array, tomamos el primer (y único) objeto
-                    const statsObject = stats?.[0];
-
-                    return {
-                        ...product,
-                        total_sold: statsObject?.total_sold || 0,
-                        total_revenue: statsObject?.total_revenue || 0,
-                        avg_rating: statsObject?.avg_rating || null,
-                        reviews_count: statsObject?.reviews_count || 0,
-                        favorites_count: statsObject?.favorites_count || 0
-                    };
-                } catch (error) {
-                    console.error(`Error loading stats for ${product.id}:`, error);
-                    // Si falla, retornar producto sin stats
-                    return {
-                        ...product,
-                        total_sold: 0,
-                        total_revenue: 0,
-                        avg_rating: null,
-                        reviews_count: 0,
-                        favorites_count: 0
-                    };
-                }
+            const enrichedProducts = productsList.map(product => {
+                const stat = statsMap.get(product.id);
+                return {
+                    ...product,
+                    total_sold: Number(stat?.total_sold || 0),
+                    total_revenue: Number(stat?.total_revenue || 0),
+                    avg_rating: stat?.avg_rating !== null && stat?.avg_rating !== undefined ? Number(stat.avg_rating) : null,
+                    reviews_count: Number(stat?.reviews_count || 0),
+                    favorites_count: Number(stat?.favorites_count || 0)
+                };
             });
 
-            const enrichedProducts = await Promise.all(statsPromises);
             setProductsWithStats(enrichedProducts);
 
         } catch (error) {
-            console.error('Error enriching products:', error);
+            console.error('Error enriqueciendo productos con stats en batch:', error);
             showAlert(`Error al cargar estadísticas: ${error.message}`);
         } finally {
             setLoading(false);
@@ -183,82 +173,60 @@ export default function Products() {
     // --- FIN PASO E ---
 
 
-    // --- (PASO F) Modificar Realtime para Actualizar Caché ---
+    // --- (PASO F) Realtime Compartido para Actualizar Productos y Categorías ---
     useEffect(() => {
-        const channel = supabase
-            .channel('products-updates')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'products',
-                    select: 'id, name, price, cost, is_active, category_id, image_url'
-                },
-                (payload) => {
-                    console.log('[Products] Cambio detectado:', payload.eventType);
+        const unsubscribeProducts = subscribeToTableChanges('products', (payload) => {
+            console.log('[Products] Cambio detectado (Shared Realtime):', payload.eventType);
 
-                    if (payload.eventType === 'INSERT') {
-                        // Invalidar caché para que refetch incluya el nuevo
-                        invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
+            if (payload.eventType === 'INSERT') {
+                // Invalidar caché para que refetch incluya el nuevo
+                invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
 
-                    } else if (payload.eventType === 'UPDATE') {
-                        // Actualización quirúrgica del caché
-                        const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
+            } else if (payload.eventType === 'UPDATE') {
+                // Actualización quirúrgica del caché
+                const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
 
-                        if (cached) {
-                            const updatedProducts = cached.data.map(p =>
-                                p.id === payload.new.id
-                                    ? { ...p, ...payload.new }
-                                    : p
-                            );
-                            setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, updatedProducts);
-                        }
-
-                        // Si es un producto visible con stats, actualizar también
-                        setProductsWithStats(prev => prev.map(p =>
-                            p.id === payload.new.id
-                                ? { ...p, ...payload.new }
-                                : p
-                        ));
-
-                    } else if (payload.eventType === 'DELETE') {
-                        // Remover del caché
-                        const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-
-                        if (cached) {
-                            const filteredProducts = cached.data.filter(p => p.id !== payload.old.id);
-                            setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, filteredProducts);
-                        }
-
-                        // Remover de products con stats
-                        setProductsWithStats(prev => prev.filter(p => p.id !== payload.old.id));
-                    }
+                if (cached && Array.isArray(cached.data)) {
+                    const updatedProducts = cached.data.map(p =>
+                        p.id === payload.new.id
+                            ? { ...p, ...payload.new }
+                            : p
+                    );
+                    setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, updatedProducts);
                 }
-            )
-            .subscribe();
+
+                // Si es un producto visible con stats, actualizar también
+                setProductsWithStats(prev => prev.map(p =>
+                    p.id === payload.new.id
+                        ? { ...p, ...payload.new }
+                        : p
+                ));
+
+            } else if (payload.eventType === 'DELETE') {
+                // Remover del caché
+                const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
+
+                if (cached && Array.isArray(cached.data)) {
+                    const filteredProducts = cached.data.filter(p => p.id !== payload.old.id);
+                    setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, filteredProducts);
+                }
+
+                // Remover de products con stats
+                setProductsWithStats(prev => prev.filter(p => p.id !== payload.old.id));
+            }
+        });
+
+        const unsubscribeCategories = subscribeToTableChanges('categories', () => {
+            console.log('[Products] Cambio en categorías detectado, invalidando caché.');
+            invalidate('categories');
+        });
 
         return () => {
-            supabase.removeChannel(channel);
+            if (unsubscribeProducts) unsubscribeProducts();
+            if (unsubscribeCategories) unsubscribeCategories();
         };
     }, [invalidate, getCached, setCached]);
     // --- FIN PASO F ---
-
-    // Listener de categorías (del paso anterior)
-    useEffect(() => {
-        const channel = supabase
-            .channel('categories-updates-products-page')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'categories' },
-                () => {
-                    console.log('[Products] Cambio en categorías detectado, invalidando caché.');
-                    invalidate('categories');
-                }
-            )
-            .subscribe();
-        return () => supabase.removeChannel(channel);
-    }, [invalidate]);
 
 
     // --- (PASO J) Actualizar handleSaveProduct ---

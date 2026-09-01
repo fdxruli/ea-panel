@@ -5,22 +5,30 @@ import { supabase } from '../lib/supabaseClient';
 import styles from './SpecialPriceForm.module.css';
 import { useAlert } from '../context/AlertContext';
 
-// --- (PASO A) AÑADIR IMPORT ---
+// --- (PASO A) AÑADIR IMPORTS ---
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
+import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
+import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 // --- FIN PASO A ---
 
 // (Añadido por si las categorías están cargando)
 import LoadingSpinner from './LoadingSpinner';
 
 // --- (PASO B) CAMBIAR PROPS ---
-const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
+const SpecialPriceForm = ({ products: propsProducts, onSubmit, initialData }) => {
   const { showAlert } = useAlert();
 
-  // --- (PASO B) OBTENER CATEGORÍAS DEL HOOK ---
+  // Categorías del hook
   const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
-  // Corrección para evitar error en null.map
   const categories = useMemo(() => categoriesData || [], [categoriesData]);
-  // --- FIN PASO B ---
+
+  // Productos del hook (o props)
+  const { data: productsData } = useAdminProductsBasic();
+  const products = useMemo(() => propsProducts || productsData || [], [propsProducts, productsData]);
+
+  // Clientes del hook
+  const { data: customersData } = useCustomersBasicCache();
+  const allCustomers = useMemo(() => customersData || [], [customersData]);
 
   const [targetType, setTargetType] = useState('product');
   const [targetId, setTargetId] = useState('');
@@ -31,24 +39,7 @@ const SpecialPriceForm = ({ products, onSubmit, initialData }) => {
   const [appliesTo, setAppliesTo] = useState('everyone');
   const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [allCustomers, setAllCustomers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-
-  // ... (useEffect para fetchCustomers sin cambios) ...
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      const { data, error } = await supabase.from('customers').select('id, name, phone');
-      if (error) {
-        showAlert('Error al obtener clientes para la selección.');
-      } else {
-        setAllCustomers(data);
-      }
-    };
-    if (appliesTo === 'specific') {
-      fetchCustomers();
-    }
-  }, [appliesTo, showAlert]);
 
   // ... (useEffect para initialData sin cambios) ...
   useEffect(() => {

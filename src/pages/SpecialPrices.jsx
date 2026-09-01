@@ -8,6 +8,9 @@ import ConfirmModal from '../components/ConfirmModal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAlert } from '../context/AlertContext';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useCategoriesCache } from '../hooks/useCategoriesCache';
+import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 
 // ... (Componente PriceTableRow sin cambios) ...
 const PriceTableRow = memo(({
@@ -61,10 +64,14 @@ const SpecialPrices = () => {
   const { hasPermission } = useAdminAuth();
 
   const [specialPrices, setSpecialPrices] = useState([]);
-  const [products, setProducts] = useState([]);
-  // 'categories' se sigue fetcheando aquí, pero solo para 'getTargetName'.
-  // El formulario (SpecialPriceForm) ya no lo necesita como prop.
-  const [categories, setCategories] = useState([]);
+  
+  // Categorías y Productos desde Caché
+  const { data: categoriesData } = useCategoriesCache();
+  const categories = useMemo(() => categoriesData || [], [categoriesData]);
+
+  const { data: productsData } = useAdminProductsBasic();
+  const products = useMemo(() => productsData || [], [productsData]);
+
   const [loading, setLoading] = useState(true);
   const [editingPrice, setEditingPrice] = useState(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -73,37 +80,21 @@ const SpecialPrices = () => {
   const canEdit = hasPermission('special-prices.edit');
   const canDelete = hasPermission('special-prices.delete');
 
-  // fetchData sigue trayendo categories para getTargetName
+  // Solo fetchear promociones de precios especiales
   const fetchData = useCallback(async () => {
-     setLoading(true);
+    setLoading(true);
     try {
-      const [pricesRes, productsRes, categoriesRes] = await Promise.all([
-        supabase.rpc('get_special_prices_with_details'),
-        supabase
-          .from('products')
-          .select('id, name')
-          .eq('is_active', true)
-          .order('name'),
-        supabase
-          .from('categories')
-          .select('id, name')
-          .order('name')
-      ]);
+      const pricesRes = await supabase.rpc('get_special_prices_with_details');
 
       if (pricesRes.error) throw pricesRes.error;
-      if (productsRes.error) throw productsRes.error;
-      if (categoriesRes.error) throw categoriesRes.error;
 
-      const adaptedPrices = pricesRes.data.map(price => ({
+      const adaptedPrices = (pricesRes.data || []).map(price => ({
         ...price,
         products: price.product_name ? { name: price.product_name } : null,
         categories: price.category_name ? { name: price.category_name } : null
       }));
 
       setSpecialPrices(adaptedPrices);
-      setProducts(productsRes.data || []);
-      setCategories(categoriesRes.data || []); // Sigue siendo necesario aquí
-
     } catch (error) {
       console.error('Fetch error:', error);
       showAlert(`Error al cargar datos: ${error.message}`);
@@ -116,45 +107,33 @@ const SpecialPrices = () => {
     fetchData();
   }, [fetchData]);
 
-  // ... (Realtime sin cambios) ...
+  // Realtime mediante Canal Compartido
   useEffect(() => {
-    const channel = supabase
-      .channel('special-prices-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'special_prices',
-          select: 'id, product_id, category_id, override_price, start_date, end_date, reason, target_customer_ids'
-        },
-        (payload) => {
-          console.log('Special price change detected:', payload);
+    const unsubscribe = subscribeToTableChanges('special_prices', (payload) => {
+      console.log('Special price change detected (Shared Realtime):', payload);
 
-          if (payload.eventType === 'INSERT') {
-            fetchData();
-          } else if (payload.eventType === 'UPDATE') {
-            setSpecialPrices(prev => prev.map(price =>
-              price.id === payload.new.id
-                ? { ...price, ...payload.new }
-                : price
-            ));
-             if (editingPrice?.id === payload.new.id) {
-               fetchData();
-             }
-          } else if (payload.eventType === 'DELETE') {
-            setSpecialPrices(prev => prev.filter(price => price.id !== payload.old.id));
-            if (editingPrice?.id === payload.old.id) {
-                 setIsFormVisible(false);
-                 setEditingPrice(null);
-             }
-          }
+      if (payload.eventType === 'INSERT') {
+        fetchData();
+      } else if (payload.eventType === 'UPDATE') {
+        setSpecialPrices(prev => prev.map(price =>
+          price.id === payload.new.id
+            ? { ...price, ...payload.new }
+            : price
+        ));
+        if (editingPrice?.id === payload.new.id) {
+          fetchData();
         }
-      )
-      .subscribe();
+      } else if (payload.eventType === 'DELETE') {
+        setSpecialPrices(prev => prev.filter(price => price.id !== payload.old.id));
+        if (editingPrice?.id === payload.old.id) {
+          setIsFormVisible(false);
+          setEditingPrice(null);
+        }
+      }
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      if (unsubscribe) unsubscribe();
     };
   }, [fetchData, editingPrice]);
 

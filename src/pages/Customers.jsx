@@ -14,6 +14,8 @@ import ClientOnly from "../components/ClientOnly";
 import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { generateKey } from '../utils/cacheAdminUtils';
+import { fetchCustomerStatsBatch } from '../lib/customerQueries';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -551,65 +553,36 @@ export default function Customers() {
 
   // --- (PASO C) fetchCustomers ELIMINADO ---
 
-  // --- (PASO D) Crear Función para Calcular Stats Básicos ---
+  // --- (PASO D) Función Optimizada para Cargar Stats en Batch ---
   const calculateBasicStats = useCallback(async (customersList) => {
     if (!customersList || customersList.length === 0) return [];
     setLoading(true);
     try {
-      const statsPromises = customersList.map(async (customer) => {
-        try {
-          // Usar RPC (get_customer_basic_stats)
-          // Query optimizada: Solo COUNT y SUM, no traer todos los pedidos
-          const { data: stats, error } = await supabase.rpc('get_customer_basic_stats', {
-            p_customer_id: customer.id
-          });
+      const customerIds = customersList.map(c => c.id);
+      const statsData = await fetchCustomerStatsBatch(customerIds);
 
-          // Si la RPC falla O no devuelve datos (p.ej. no existe), usar fallback
-          if (error || !stats) {
-            if (error) console.error(`Error en RPC para cliente ${customer.id}:`, error);
-
-            const { data: ordersData, error: ordersError } = await supabase
-              .from('orders')
-              .select('status, total_amount')
-              .eq('customer_id', customer.id);
-
-            if (ordersError) throw ordersError;
-
-            const totalOrders = ordersData?.length || 0;
-            const completedOrders = ordersData?.filter(o => o.status === 'completado').length || 0;
-            const totalSpent = ordersData
-              ?.filter(o => o.status === 'completado')
-              .reduce((sum, o) => sum + parseFloat(o.total_amount), 0) || 0;
-
-            return {
-              ...customer,
-              orders: ordersData || [], // El fallback sí trae 'orders'
-              totalOrders,
-              completedOrders,
-              totalSpent
-            };
+      const statsMap = new Map();
+      if (Array.isArray(statsData)) {
+        statsData.forEach(s => {
+          if (s && s.customer_id) {
+            statsMap.set(s.customer_id, s);
           }
+        });
+      }
 
-          // stats es un array, tomamos el primer (y único) objeto
-          const statsObject = stats?.[0];
-
-          return {
-            ...customer,
-            totalOrders: statsObject?.total_orders || 0,
-            completedOrders: statsObject?.completed_orders || 0,
-            totalSpent: statsObject?.total_spent || 0,
-            // Simular 'orders' (para CustomerCard) basado en el conteo de la RPC
-            //orders: Array(statsObject?.total_orders || 0).fill({})
-          };
-        } catch (error) {
-          console.error(`Error loading stats for customer ${customer.id}:`, error);
-          return { ...customer, totalOrders: 0, completedOrders: 0, totalSpent: 0, orders: [] };
-        }
+      const enrichedCustomers = customersList.map(customer => {
+        const stats = statsMap.get(customer.id);
+        return {
+          ...customer,
+          totalOrders: Number(stats?.total_orders || 0),
+          completedOrders: Number(stats?.completed_orders || 0),
+          totalSpent: Number(stats?.total_spent || 0)
+        };
       });
-      const enrichedCustomers = await Promise.all(statsPromises);
+
       setCustomersWithStats(enrichedCustomers);
     } catch (error) {
-      console.error('Error calculating stats:', error);
+      console.error('Error calculando estadísticas en batch:', error);
       showAlert(`Error al calcular estadísticas: ${error.message}`);
     } finally {
       setLoading(false);
@@ -627,49 +600,41 @@ export default function Customers() {
   }, [customersBasic, calculateBasicStats]);
   // --- FIN PASO E ---
 
-  // --- (PASO J) Actualizar Realtime ---
+  // --- (PASO J) Actualizar Realtime mediante Canal Compartido ---
   useEffect(() => {
     if (!canView) return;
-    const channel = supabase
-      .channel('customers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'customers',
-          select: 'id, name, phone, referral_code, referral_count'
-        },
-        (payload) => {
-          console.log('[Customers] Cambio detectado:', payload.eventType);
 
-          if (payload.eventType === 'INSERT') {
-            invalidate('customers:basic');
-          } else if (payload.eventType === 'UPDATE') {
-            const cached = getCached('customers:basic');
-            if (cached) {
-              const updated = cached.data.map(c =>
-                c.id === payload.new.id ? { ...c, ...payload.new } : c
-              );
-              setCached('customers:basic', updated);
-            }
-            setCustomersWithStats(prev => prev.map(c =>
-              c.id === payload.new.id
-                ? { ...c, ...payload.new }
-                : c
-            ));
-          } else if (payload.eventType === 'DELETE') {
-            const cached = getCached('customers:basic');
-            if (cached) {
-              const filtered = cached.data.filter(c => c.id !== payload.old.id);
-              setCached('customers:basic', filtered);
-            }
-            setCustomersWithStats(prev => prev.filter(c => c.id !== payload.old.id));
-          }
+    const unsubscribe = subscribeToTableChanges('customers', (payload) => {
+      console.log('[Customers] Cambio detectado (Shared Realtime):', payload.eventType);
+
+      if (payload.eventType === 'INSERT') {
+        invalidate('customers:basic');
+      } else if (payload.eventType === 'UPDATE') {
+        const cached = getCached('customers:basic');
+        if (cached) {
+          const updated = cached.data.map(c =>
+            c.id === payload.new.id ? { ...c, ...payload.new } : c
+          );
+          setCached('customers:basic', updated);
         }
-      )
-      .subscribe();
-    return () => supabase.removeChannel(channel);
+        setCustomersWithStats(prev => prev.map(c =>
+          c.id === payload.new.id
+            ? { ...c, ...payload.new }
+            : c
+        ));
+      } else if (payload.eventType === 'DELETE') {
+        const cached = getCached('customers:basic');
+        if (cached) {
+          const filtered = cached.data.filter(c => c.id !== payload.old.id);
+          setCached('customers:basic', filtered);
+        }
+        setCustomersWithStats(prev => prev.filter(c => c.id !== payload.old.id));
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [canView, invalidate, getCached, setCached]);
   // --- FIN PASO J ---
 

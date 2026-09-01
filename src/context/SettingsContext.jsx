@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react'; // <-- Añadir useCallback
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 
 const SettingsContext = createContext();
 
@@ -9,8 +10,8 @@ export const SettingsProvider = ({ children }) => {
     const [settings, setSettings] = useState({});
     const [loading, setLoading] = useState(true);
 
-    const fetchSettings = useCallback(async () => { // <-- Envolver en useCallback
-        setLoading(true); // <-- Indicar carga al refetch
+    const fetchSettings = useCallback(async () => {
+        setLoading(true);
         const { data, error } = await supabase.from('settings').select('*');
         if (error) {
             console.error("Error fetching settings:", error);
@@ -22,22 +23,21 @@ export const SettingsProvider = ({ children }) => {
             setSettings(settingsMap);
         }
         setLoading(false);
-    }, []); // <-- Dependencias vacías para estabilidad
+    }, []);
 
     useEffect(() => {
         fetchSettings();
-        // Suscripción a cambios (opcional pero recomendable)
-        const channel = supabase.channel('public:settings')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
-                console.log('Settings changed!', payload);
-                fetchSettings(); // Recargar al detectar cambios
-            })
-            .subscribe();
+
+        // Suscripción compartida a cambios
+        const unsubscribe = subscribeToTableChanges('settings', (payload) => {
+            console.log('Settings changed (Shared Realtime)!', payload);
+            fetchSettings();
+        });
 
         return () => {
-            supabase.removeChannel(channel);
+            if (unsubscribe) unsubscribe();
         };
-    }, [fetchSettings]); // <-- fetchSettings como dependencia
+    }, [fetchSettings]);
 
     const getSetting = (key) => {
         return settings[key] || null; // Devolver null es más seguro que {}
