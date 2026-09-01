@@ -520,18 +520,11 @@ export default function Customers() {
   // --- (PASO F/J/N) Importar hooks de caché ---
   const { getCached, setCached, invalidate } = useCacheAdmin();
 
-  // --- (PASO B) Reemplazar Estado de Clientes ---
-  const {
-    data: customersBasicData,
-    isLoading: loadingBasic,
-    refetch: refetchCustomers // No se usa pero está disponible
-  } = useCustomersBasicCache();
-  // Corrección para 'null'
-  const customersBasic = useMemo(() => customersBasicData || [], [customersBasicData]);
-
   const [customersWithStats, setCustomersWithStats] = useState([]);
-  const [loading, setLoading] = useState(false); // Para stats y cargas secundarias
-  // --- FIN PASO B ---
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 50;
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -542,63 +535,74 @@ export default function Customers() {
   const [editingAddress, setEditingAddress] = useState(null);
   const [deletingAddress, setDeletingAddress] = useState(null);
 
-  // --- (PASO C) Paginación eliminada ---
-  // const currentPage = useRef(1);
-  // const ITEMS_PER_PAGE = 20;
-
   const canView = hasPermission('clientes.view');
   const canEdit = hasPermission('clientes.edit');
 
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
-  // --- (PASO C) fetchCustomers ELIMINADO ---
-
-  // --- (PASO D) Función Optimizada para Cargar Stats en Batch ---
-  const calculateBasicStats = useCallback(async (customersList) => {
-    if (!customersList || customersList.length === 0) return [];
+  // --- NUEVO: Fetch paginado y búsqueda del lado del servidor ---
+  const fetchCustomers = useCallback(async (isLoadMore = false) => {
+    if (!canView) return;
     setLoading(true);
     try {
-      const customerIds = customersList.map(c => c.id);
-      const statsData = await fetchCustomerStatsBatch(customerIds);
+        let query = supabase
+            .from('customers')
+            .select('id, name, phone, referral_code, referral_count, created_at')
+            .order('created_at', { ascending: false });
 
-      const statsMap = new Map();
-      if (Array.isArray(statsData)) {
-        statsData.forEach(s => {
-          if (s && s.customer_id) {
-            statsMap.set(s.customer_id, s);
-          }
-        });
-      }
+        if (debouncedSearchTerm) {
+            query = query.or(`name.ilike.%${debouncedSearchTerm}%,phone.ilike.%${debouncedSearchTerm}%`);
+        }
 
-      const enrichedCustomers = customersList.map(customer => {
-        const stats = statsMap.get(customer.id);
-        return {
-          ...customer,
-          totalOrders: Number(stats?.total_orders || 0),
-          completedOrders: Number(stats?.completed_orders || 0),
-          totalSpent: Number(stats?.total_spent || 0)
-        };
-      });
+        const currentPage = isLoadMore ? page : 0;
+        const from = currentPage * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
 
-      setCustomersWithStats(enrichedCustomers);
+        const { data, error } = await query.range(from, to);
+        if (error) throw error;
+
+        if (data) {
+            const customerIds = data.map(c => c.id);
+            let statsMap = new Map();
+            if (customerIds.length > 0) {
+                const statsData = await fetchCustomerStatsBatch(customerIds);
+                if (Array.isArray(statsData)) {
+                    statsData.forEach(s => {
+                        if (s && s.customer_id) statsMap.set(s.customer_id, s);
+                    });
+                }
+            }
+
+            const enriched = data.map(customer => {
+                const stats = statsMap.get(customer.id);
+                return {
+                    ...customer,
+                    totalOrders: Number(stats?.total_orders || 0),
+                    completedOrders: Number(stats?.completed_orders || 0),
+                    totalSpent: Number(stats?.total_spent || 0)
+                };
+            });
+
+            if (isLoadMore) {
+                setCustomersWithStats(prev => [...prev, ...enriched]);
+                setPage(currentPage + 1);
+            } else {
+                setCustomersWithStats(enriched);
+                setPage(1);
+            }
+            setHasMore(data.length === PAGE_SIZE);
+        }
     } catch (error) {
-      console.error('Error calculando estadísticas en batch:', error);
-      showAlert(`Error al calcular estadísticas: ${error.message}`);
+        console.error('Error fetching customers:', error);
+        showAlert(`Error: ${error.message}`);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  }, [showAlert]);
-  // --- FIN PASO D ---
+  }, [debouncedSearchTerm, page, canView, showAlert]);
 
-  // --- (PASO E) Cargar Stats Cuando Clientes Cambian ---
   useEffect(() => {
-    if (!customersBasic || customersBasic.length === 0) {
-      setCustomersWithStats([]);
-      return;
-    }
-    calculateBasicStats(customersBasic);
-  }, [customersBasic, calculateBasicStats]);
-  // --- FIN PASO E ---
+    fetchCustomers(false);
+  }, [debouncedSearchTerm]);
 
   // --- (PASO J) Actualizar Realtime mediante Canal Compartido ---
   useEffect(() => {
@@ -608,26 +612,15 @@ export default function Customers() {
       console.log('[Customers] Cambio detectado (Shared Realtime):', payload.eventType);
 
       if (payload.eventType === 'INSERT') {
-        invalidate('customers:basic');
+        // Al insertar, mejor recargamos la página 1 para mantener el orden
+        fetchCustomers(false);
       } else if (payload.eventType === 'UPDATE') {
-        const cached = getCached('customers:basic');
-        if (cached) {
-          const updated = cached.data.map(c =>
-            c.id === payload.new.id ? { ...c, ...payload.new } : c
-          );
-          setCached('customers:basic', updated);
-        }
         setCustomersWithStats(prev => prev.map(c =>
           c.id === payload.new.id
             ? { ...c, ...payload.new }
             : c
         ));
       } else if (payload.eventType === 'DELETE') {
-        const cached = getCached('customers:basic');
-        if (cached) {
-          const filtered = cached.data.filter(c => c.id !== payload.old.id);
-          setCached('customers:basic', filtered);
-        }
         setCustomersWithStats(prev => prev.filter(c => c.id !== payload.old.id));
       }
     });
@@ -635,21 +628,10 @@ export default function Customers() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [canView, invalidate, getCached, setCached]);
+  }, [canView, fetchCustomers]);
   // --- FIN PASO J ---
 
-  // --- (PASO K) loadMoreCustomers ELIMINADO ---
-
-  // --- (PASO L) Actualizar filteredCustomers ---
-  const filteredCustomers = useMemo(() => {
-    if (!debouncedSearchTerm) return customersWithStats;
-    const lowerSearch = debouncedSearchTerm.toLowerCase();
-    return customersWithStats.filter(c =>
-      c.name.toLowerCase().includes(lowerSearch) ||
-      (c.phone && c.phone.includes(debouncedSearchTerm))
-    );
-  }, [customersWithStats, debouncedSearchTerm]);
-  // --- FIN PASO L ---
+  const filteredCustomers = customersWithStats; // Ya están filtrados por el servidor
 
   // --- (PASO F) Modificar handleSelectCustomer ---
   const handleSelectCustomer = useCallback(async (customer) => {
@@ -874,8 +856,17 @@ export default function Customers() {
         )}
       </div>
 
-      {/* --- (PASO K) Paginación eliminada --- */}
-
+      {hasMore && (
+        <div className={styles.loadMoreContainer} style={{ textAlign: 'center', margin: '20px 0' }}>
+          <button 
+            className={styles.primaryButton}
+            onClick={() => fetchCustomers(true)}
+            disabled={loading}
+          >
+            {loading ? 'Cargando...' : 'Cargar Más'}
+          </button>
+        </div>
+      )}
       {selectedCustomer && (
         <div className={styles.modalOverlay} onClick={() => setSelectedCustomer(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>

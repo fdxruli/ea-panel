@@ -52,41 +52,11 @@ export const fetchCustomerStatsBatch = async (customerIds) => {
   });
 
   if (error) {
-    // Fallback: si la RPC batch no existe, hacer llamadas individuales con concurrencia limitada
-    console.warn('[customerQueries] RPC batch no disponible, usando fallback con concurrencia limitada');
-    return fetchCustomerStatsBatchFallback(customerIds);
+    console.error('[customerQueries] Error al obtener stats en batch:', error);
+    throw error;
   }
 
   return data || [];
-};
-
-/**
- * Fallback con concurrencia limitada para cuando no existe la RPC batch.
- * @param {string[]} customerIds 
- * @returns {Promise<Array>}
- */
-const fetchCustomerStatsBatchFallback = async (customerIds) => {
-  const MAX_CONCURRENT = 5; // Máximo 5 peticiones simultáneas
-  const results = [];
-  
-  for (let i = 0; i < customerIds.length; i += MAX_CONCURRENT) {
-    const batch = customerIds.slice(i, i + MAX_CONCURRENT);
-    const batchResults = await Promise.all(
-      batch.map(customerId => 
-        supabase.rpc('get_customer_basic_stats', { p_customer_id: customerId })
-          .then(({ data, error }) => {
-            if (error) {
-              console.error(`[customerQueries] Error en stats de cliente ${customerId}:`, error);
-              return null;
-            }
-            return data?.[0] || null;
-          })
-      )
-    );
-    results.push(...batchResults.filter(Boolean));
-  }
-  
-  return results;
 };
 
 /**

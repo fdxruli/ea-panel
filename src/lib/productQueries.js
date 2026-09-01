@@ -67,41 +67,11 @@ export const fetchProductStatsBatch = async (productIds) => {
   });
 
   if (error) {
-    // Fallback: si la RPC batch no existe, hacer llamadas individuales con concurrencia limitada
-    console.warn('[productQueries] RPC batch no disponible, usando fallback con concurrencia limitada');
-    return fetchProductStatsBatchFallback(productIds);
+    console.error('[productQueries] Error al obtener stats en batch:', error);
+    throw error;
   }
 
   return data || [];
-};
-
-/**
- * Fallback con concurrencia limitada para cuando no existe la RPC batch.
- * @param {string[]} productIds
- * @returns {Promise<Array>}
- */
-const fetchProductStatsBatchFallback = async (productIds) => {
-  const MAX_CONCURRENT = 5; // Máximo 5 peticiones simultáneas
-  const results = [];
-
-  for (let i = 0; i < productIds.length; i += MAX_CONCURRENT) {
-    const batch = productIds.slice(i, i + MAX_CONCURRENT);
-    const batchResults = await Promise.all(
-      batch.map(productId =>
-        supabase.rpc('get_product_stats_single', { p_product_id: productId })
-          .then(({ data, error }) => {
-            if (error) {
-              console.error(`[productQueries] Error en stats de producto ${productId}:`, error);
-              return null;
-            }
-            return data?.[0] || null;
-          })
-      )
-    );
-    results.push(...batchResults.filter(Boolean));
-  }
-
-  return results;
 };
 
 /**
