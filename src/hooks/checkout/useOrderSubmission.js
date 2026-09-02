@@ -67,6 +67,15 @@ export const useOrderSubmission = ({
     async (isGuest) => {
       if (isSubmitting || isNetworkBlocked) return;
 
+      if (cartItems.length === 0) {
+        showAlert(
+          'Tu carrito está vacío. Añade productos para continuar.',
+          'warning'
+        );
+        onClose();
+        return;
+      }
+
       if (!isBusinessOpen) {
         showAlert(
           'Lo sentimos, el negocio está cerrado y no podemos procesar tu pedido ahora.'

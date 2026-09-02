@@ -8,7 +8,12 @@ export const AlertProvider = ({ children }) => {
     const [alert, setAlert] = useState(null);
 
     const showAlert = useCallback((message, type = 'info', onConfirm = null) => {
-        setAlert({ message, type, key: Date.now(), onConfirm });
+        setAlert((prev) => {
+            if (prev && prev.type === 'error' && type === 'info') {
+                return prev;
+            }
+            return { message, type, key: Date.now(), onConfirm };
+        });
     }, []);
 
     const closeAlert = () => {
