@@ -74,6 +74,23 @@ async function syncMovimientoToSupabase(movimiento) {
   }
 }
 
+const toFiniteAmount = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+const calcularTotalEnCaja = (caja, totals = {}) => {
+  if (!caja) return 0;
+
+  return roundCurrency(
+    toFiniteAmount(caja.monto_inicial) +
+      toFiniteAmount(totals.ventasContado) +
+      toFiniteAmount(totals.abonosFiado) +
+      toFiniteAmount(caja.entradas_efectivo) -
+      toFiniteAmount(caja.salidas_efectivo)
+  );
+};
+
 // ============================================================
 // HOOK PRINCIPAL: useCaja
 // ============================================================
@@ -502,15 +519,7 @@ export function useCaja() {
   // ============================================================
 
   const calcularTotalTeorico = async () => {
-    if (!cajaActual) return 0;
-    const { ventasContado, abonosFiado } = totalesTurno;
-    const ingresos = roundCurrency(
-      (cajaActual.monto_inicial || 0) +
-      (ventasContado || 0) +
-      (abonosFiado || 0) +
-      (cajaActual.entradas_efectivo || 0)
-    );
-    return roundCurrency(ingresos - (cajaActual.salidas_efectivo || 0));
+    return calcularTotalEnCaja(cajaActual, totalesTurno);
   };
 
   // ============================================================
@@ -642,6 +651,8 @@ export function useCaja() {
   // VALORES DERIVADOS
   // ============================================================
 
+  const totalEnCaja = calcularTotalEnCaja(cajaActual, totalesTurno);
+
   // Una caja está abierta si su estado es 'abierta' y pertenece a este usuario
   const cajaEstaAbierta = cajaActual?.estado === 'abierta' &&
     (cajaActual?.user_id === userId || cajaActual?.opened_by === userId);
@@ -655,6 +666,7 @@ export function useCaja() {
     isLoading,
     syncStatus,
     totalesTurno,
+    totalEnCaja,
     // Operaciones
     abrirCaja,
     ajustarMontoInicial,

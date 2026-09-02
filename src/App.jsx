@@ -109,7 +109,7 @@ function App() {
           <SettingsProvider>
             <BusinessHoursProvider>
               <ReloadPrompt />
-              <ErrorBoundary>
+              <ErrorBoundary scope="application">
                 <Suspense fallback={<FullscreenLoader />}>
                   <Routes>
                     {/* --- Client Routes --- */}
@@ -161,7 +161,8 @@ function App() {
                     <Route
                       path="/admin"
                       element={
-                        <Suspense fallback={<FullscreenLoader />}>
+                        <ErrorBoundary scope="admin">
+                          <Suspense fallback={<FullscreenLoader />}>
                           {/* 1. El Provider realiza la petición y guarda el estado absoluto */}
                           <AdminAuthProvider>
                             {/* 2. Drafts consumen la identidad canónica del AuthContext */}
@@ -170,7 +171,8 @@ function App() {
                               <AdminRoute />
                             </AdminDraftProvider>
                           </AdminAuthProvider>
-                        </Suspense>
+                          </Suspense>
+                        </ErrorBoundary>
                       }
                     >
                       {/* 4. Si AdminRoute permite el paso (Renderiza Outlet), se cargan el Layout y su caché */}
