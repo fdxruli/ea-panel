@@ -68,6 +68,7 @@ const bottomNavLabels = ["Dashboard", "Crear Pedido", "Pedidos", "Productos"];
 
 // Rutas que pertenecen al menú (para marcar el botón "Menú" como activo)
 const menuOnlyRoutes = [
+  '/admin/caja',
   '/admin/configuracion',
   '/admin/clientes',
   '/admin/referidos',
