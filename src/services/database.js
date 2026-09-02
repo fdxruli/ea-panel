@@ -225,6 +225,11 @@ export function initDB() {
 
         // C. CAJAS: Para encontrar la caja abierta actual sin recorrer todo el historial
         ensureIndex(STORES.CAJAS, 'estado', 'estado', { unique: false });
+        // C2. CAJAS: Índices de auditoría por usuario (v26 - caja por cajero)
+        ensureIndex(STORES.CAJAS, 'opened_by', 'opened_by', { unique: false });
+        ensureIndex(STORES.CAJAS, 'user_id', 'user_id', { unique: false });
+        // C3. MOVIMIENTOS_CAJA: Auditoría de quién realizó cada movimiento
+        ensureIndex(STORES.MOVIMIENTOS_CAJA, 'realizado_por', 'realizado_por', { unique: false });
       };
     });
 

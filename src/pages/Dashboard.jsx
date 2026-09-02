@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "../context/AlertContext";
 import styles from './Dashboard.module.css';
 import { subscribeToTables } from "../lib/sharedAdminRealtime";
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { StatCard } from "../components/StatCard";
 import { exportToCSV } from "../utils/exportUtils";
@@ -177,6 +177,83 @@ const ProfitMarginChart = memo(({ profitData }) => {
 });
 ProfitMarginChart.displayName = 'ProfitMarginChart';
 
+// Gráfica de tendencia: ventas diarias
+const DailySalesChart = memo(({ dailySales }) => {
+    const chartData = useMemo(() => ({
+        labels: dailySales.map(d => {
+            const date = new Date(d.day);
+            return date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+        }),
+        datasets: [{
+            label: 'Ventas del día',
+            data: dailySales.map(d => d.revenue),
+            fill: true,
+            backgroundColor: 'rgba(52, 152, 219, 0.12)',
+            borderColor: 'rgba(52, 152, 219, 1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(52, 152, 219, 1)',
+            pointRadius: 4,
+            tension: 0.35,
+        }],
+    }), [dailySales]);
+
+    const options = useMemo(() => ({
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                animation: false,
+                callbacks: {
+                    label: ctx => `Ventas: ${formatCurrency(ctx.parsed.y)}`,
+                    afterLabel: (ctx) => {
+                        const d = dailySales[ctx.dataIndex];
+                        return d ? `Pedidos: ${d.orders_count}` : '';
+                    }
+                }
+            }
+        },
+        scales: {
+            x: { ticks: { maxRotation: 40, minRotation: 40, font: { size: 11 } } },
+            y: {
+                beginAtZero: true,
+                ticks: { callback: v => formatCurrency(v).replace('MX$', '$').replace(',', '') }
+            }
+        }
+    }), [dailySales]);
+
+    if (!dailySales || dailySales.length === 0) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: '#aaa' }}>
+                Sin datos de ventas diarias en este período.
+            </div>
+        );
+    }
+
+    return <Line data={chartData} options={options} />;
+});
+DailySalesChart.displayName = 'DailySalesChart';
+
+// Chip de crecimiento
+const GrowthChip = memo(({ growthPercent }) => {
+    if (growthPercent === null || growthPercent === undefined) return null;
+    const isPositive = growthPercent >= 0;
+    const color = isPositive ? '#27ae60' : '#e74c3c';
+    const bg = isPositive ? 'rgba(39,174,96,0.1)' : 'rgba(231,76,60,0.1)';
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            background: bg, color, borderRadius: '20px',
+            padding: '3px 10px', fontSize: '0.82rem', fontWeight: 700,
+            marginLeft: '10px',
+        }}>
+            {isPositive ? '▲' : '▼'} {Math.abs(growthPercent).toFixed(1)}% vs período anterior
+        </span>
+    );
+});
+GrowthChip.displayName = 'GrowthChip';
+
 const DownloadIcon = memo(() => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
@@ -310,6 +387,8 @@ export default function Dashboard() {
     const top6Products = useMemo(() => profitableProducts.slice(0, 6), [profitableProducts]);
     const top5Products = useMemo(() => profitableProducts.slice(0, 5), [profitableProducts]);
     const top8Products = useMemo(() => profitableProducts.slice(0, 8), [profitableProducts]);
+    const dailySales = useMemo(() => stats.daily_sales || [], [stats]);
+    const growthPercent = stats.growth_percent ?? null;
 
     if (isLoading && !statsRaw) {
         return <DashboardSkeleton />;
@@ -328,7 +407,10 @@ export default function Dashboard() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1 className={styles.title}>Dashboard Avanzado</h1>
+                <h1 className={styles.title}>
+                    Dashboard Avanzado
+                    <GrowthChip growthPercent={growthPercent} />
+                </h1>
                 <p className={styles.subtitle}>Análisis completo de rentabilidad y operaciones de tu negocio.</p>
 
                 <div className={styles.dateFilterMobile}>
@@ -437,6 +519,16 @@ export default function Dashboard() {
 
             {hasData && (
                 <div className={styles.mainGrid}>
+                    {/* 📈 Tendencia de Ventas Diarias — siempre visible primero */}
+                    <div className={`${styles.chartCard} ${styles.profitability}`} style={{ gridColumn: '1 / -1' }}>
+                        <div className={styles.chartHeader}>
+                            <h3>📈 Tendencia de Ventas Diarias</h3>
+                        </div>
+                        <div className={styles.chartContainer}>
+                            <DailySalesChart dailySales={dailySales} />
+                        </div>
+                    </div>
+
                     <div className={`${styles.chartCard} ${styles.profitability}`}>
                         <div className={styles.chartHeader}>
                             <h3>💹 Análisis de Rentabilidad</h3>

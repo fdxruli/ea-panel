@@ -30,7 +30,8 @@ const sections = [
     { key: 'terminos', label: 'Términos y Cond.' },
     { key: 'registrar-admin', label: 'Gestionar Admins' },
     { key: 'special-prices', label: 'Precios Especiales' },
-    { key: 'configuracion', label: 'Configuración General' }
+    { key: 'configuracion', label: 'Configuración General' },
+    { key: 'caja', label: '💰 Caja / POS (Vender)' },
 ];
 
 
@@ -39,6 +40,35 @@ const actions = ['view', 'edit', 'delete'];
 
 // OPTIMIZACIÓN 1: Memoizar fila de permisos individual
 const PermissionRow = memo(({ section, permissions, onPermissionChange }) => {
+    // La sección 'caja' tiene su propio toggle de acceso especial
+    if (section.key === 'caja') {
+        return (
+            <tr style={{ background: 'rgba(46, 204, 113, 0.06)' }}>
+                <td>
+                    <strong>{section.label}</strong>
+                    <br />
+                    <small style={{ color: '#888', fontSize: '0.75rem' }}>
+                        Permite operar el POS (abrir/cerrar turnos, registrar ventas)
+                    </small>
+                </td>
+                <td colSpan={2} style={{ textAlign: 'center', fontStyle: 'italic', color: '#aaa', fontSize: '0.8rem' }}>
+                    —
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                    <input
+                        type="checkbox"
+                        checked={permissions['caja']?.access || false}
+                        onChange={() => onPermissionChange('caja', 'access')}
+                        className={styles.checkbox}
+                        title="Permitir acceso a Caja / POS"
+                    />
+                    <br />
+                    <small style={{ color: '#888', fontSize: '0.72rem' }}>Acceso</small>
+                </td>
+            </tr>
+        );
+    }
+
     return (
         <tr>
             <td>{section.label}</td>
@@ -199,7 +229,12 @@ export default function RegisterAdmin() {
     // OPTIMIZACIÓN 5: Funciones auxiliares para permisos por defecto
     const getDefaultAdminPermissions = useCallback(() => {
         return sections.reduce((acc, section) => {
-            acc[section.key] = { view: true, edit: true, delete: true };
+            // 'caja' solo tiene 'access', no la matriz estándar view/edit/delete
+            if (section.key === 'caja') {
+                acc[section.key] = { access: true };
+            } else {
+                acc[section.key] = { view: true, edit: true, delete: true };
+            }
             return acc;
         }, {});
     }, []);
@@ -217,7 +252,8 @@ export default function RegisterAdmin() {
             'terminos': { view: false },
             'registrar-admin': { view: false },
             'special-prices': { view: false },
-            'configuracion': { view: false }
+            'configuracion': { view: false },
+            'caja': { access: false },  // Sin acceso por defecto; el admin lo habilita
         };
     }, []);
 
