@@ -322,6 +322,12 @@ export default function CheckoutModal({ phone, onClose }) {
             return;
         }
 
+        if (cartItems.length === 0) {
+            showAlert("Tu carrito está vacío. Añade productos para continuar.", "warning");
+            onClose();
+            return;
+        }
+
         if (!isGuest) {
             if (!customer) {
                 showAlert("Error: No se detectó tu sesión. Por favor, recarga la página.");
