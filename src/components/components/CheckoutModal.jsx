@@ -9,6 +9,7 @@ import { useUserData } from '../context/UserDataContext';
 import AddressModal from './AddressModal';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import { GUEST_CUSTOMER_ID, BUSINESS_PHONE } from '../config/constantes';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 import DOMPurify from 'dompurify';
 
 // Iconos (sin cambios)
@@ -86,6 +87,13 @@ export default function CheckoutModal({ phone, onClose }) {
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
     const [addressToEdit, setAddressToEdit] = useState(null);
     const [justSavedAddressId, setJustSavedAddressId] = useState(null);
+
+    // Si el carrito se vacía mientras el modal está abierto (ej. por stock en realtime), lo cerramos
+    useEffect(() => {
+        if (cartItems.length === 0) {
+            onClose();
+        }
+    }, [cartItems.length, onClose]);
 
     // Scheduling
     const [isScheduling, setIsScheduling] = useState(false);
@@ -423,6 +431,8 @@ export default function CheckoutModal({ phone, onClose }) {
             const businessNumber = BUSINESS_PHONE;
             const whatsappUrl = `https://api.whatsapp.com/send?phone=${businessNumber}&text=${encodeURIComponent(message)}`;
 
+            broadcastStoreChange('order_changed', { orderCode: order.order_code });
+
             showAlert(
                 "¡Pedido creado! Serás redirigido a WhatsApp.",
                 'success',
@@ -438,10 +448,15 @@ export default function CheckoutModal({ phone, onClose }) {
         } catch (error) {
             console.error("Error al procesar el pedido:", error);
             setIsSubmitting(false);
-            if (error.message && error.message.includes('Stock insuficiente')) {
-                showAlert(`¡Oops! Algo se agotó mientras pedías.`, 'error');
+
+            const errMessage = error?.message || error?.error?.message || error?.details || String(error);
+
+            if (errMessage.includes('Stock insuficiente')) {
+                const detail = errMessage.replace(/^.*?Stock insuficiente/i, 'Stock insuficiente');
+                showAlert(`⚠️ Lo sentimos, un producto o ingrediente se agotó justo antes de completar tu pedido:\n\n${detail}\n\nHemos actualizado el menú y tu carrito.`, 'error');
+                broadcastStoreChange('order_changed');
             } else {
-                showAlert(`Error: ${error.message}`, 'error');
+                showAlert(`Error: ${errMessage}`, 'error');
             }
         }
     };
