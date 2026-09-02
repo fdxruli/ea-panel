@@ -15,6 +15,7 @@ const ChevronDown = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" hei
 // ... (mapa de rutas sin cambios) ...
 const routeToGroupMap = {
   '/admin': 'gestionPrincipal',
+  '/admin/caja': 'gestionPrincipal',
   '/admin/crear-pedido': 'gestionPrincipal',
   '/admin/pedidos': 'gestionPrincipal',
   '/admin/productos': 'catalogo',
@@ -104,6 +105,7 @@ export default function Sidebar({ isSidebarOpen, closeSidebar }) {
         {/* ... (Todo el JSX de SidebarGroup sin cambios) ... */}
         <SidebarGroup groupKey="gestionPrincipal" title="Gestión Principal">
           {hasPermission('dashboard.view') && <NavLink to="/admin" end className={getNavLinkClass} onClick={closeSidebar}>Dashboard</NavLink>}
+          {hasPermission('dashboard.view') && <NavLink to="/admin/caja" className={getNavLinkClass} onClick={closeSidebar}>Caja (POS)</NavLink>}
           {hasPermission('crear-pedido.view') && <NavLink to="/admin/crear-pedido" className={getNavLinkClass} onClick={closeSidebar}>Crear Pedido</NavLink>}
           {hasPermission('pedidos.view') && <NavLink to="/admin/pedidos" className={getNavLinkClass} onClick={closeSidebar}>Pedidos</NavLink>}
         </SidebarGroup>
