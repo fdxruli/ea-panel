@@ -5,85 +5,160 @@ import ProductMenu from '../components/pos/ProductMenu';
 import OrderSummary from '../components/pos/OrderSummary';
 import ScannerModal from '../components/common/ScannerModal';
 import PaymentModal from '../components/common/PaymentModal';
-import QuickCajaModal from '../components/common/QuickCajaModal';
 import PrescriptionModal from '../components/pos/PrescriptionModal';
 import { useCaja } from '../hooks/useCaja';
 import { useOrderStore } from '../store/useOrderStore';
 import { processSale } from '../services/salesService';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
-// --- CAMBIOS: Importamos los nuevos stores especializados ---
 import { useProductStore } from '../store/useProductStore';
 import { useStatsStore } from '../store/useStatsStore';
 
-import { loadData, saveBulk, saveData, queryByIndex, queryBatchesByProductIdAndActive, STORES, processBatchDeductions } from '../services/database';
+import { loadData, STORES } from '../services/database';
 import { showMessageModal, sendWhatsAppMessage } from '../services/utils';
 import { useAppStore } from '../store/useAppStore';
 import { useDebounce } from '../hooks/useDebounce';
 import { useFeatureConfig } from '../hooks/useFeatureConfig';
 import './PosPage.css';
 
+// ============================================================
+// OVERLAY: Caja Cerrada
+// ============================================================
+
+function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
+  const [monto, setMonto] = useState('');
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const val = parseFloat(monto);
+    if (!isNaN(val) && val >= 0) {
+      onAbrirTurno(val);
+      setMonto('');
+    } else {
+      showMessageModal('Ingresa un monto válido (puede ser 0).');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 10010,
+      background: 'rgba(15, 15, 30, 0.92)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      backdropFilter: 'blur(6px)',
+    }}>
+      <div style={{
+        background: 'var(--card-background-color, #fff)',
+        borderRadius: '16px',
+        padding: '40px 32px',
+        maxWidth: '420px', width: '90%',
+        textAlign: 'center',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+      }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>🔒</div>
+        <h2 style={{ margin: '0 0 8px', color: 'var(--text-dark, #1a1a1a)', fontSize: '1.4rem' }}>
+          Caja Cerrada
+        </h2>
+
+        {!hasAccess ? (
+          <>
+            <p style={{ color: 'var(--text-light, #666)', marginBottom: '24px' }}>
+              No tienes permiso para abrir una caja. Contacta al administrador.
+            </p>
+            <button
+              className="btn btn-cancel"
+              style={{ width: '100%' }}
+              onClick={() => navigate('/admin/dashboard')}
+            >
+              ← Ir al Dashboard
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-light, #666)', marginBottom: '24px', lineHeight: '1.5' }}>
+              Para registrar ventas debes abrir tu turno.<br />
+              <strong>Ingresa el fondo inicial de tu caja.</strong>
+            </p>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group" style={{ textAlign: 'left', marginBottom: '16px' }}>
+                <label className="form-label" htmlFor="pos-caja-monto">
+                  Fondo Inicial ($):
+                </label>
+                <input
+                  id="pos-caja-monto"
+                  type="number"
+                  className="form-input"
+                  step="0.01"
+                  min="0"
+                  value={monto}
+                  onChange={e => setMonto(e.target.value)}
+                  autoFocus
+                  placeholder="0.00"
+                  required
+                />
+                <small style={{ color: 'var(--text-light)', fontSize: '0.8rem' }}>
+                  Puedes ingresar 0 si la caja empieza vacía.
+                </small>
+              </div>
+              <button
+                type="submit"
+                className="btn btn-save"
+                style={{ width: '100%', marginBottom: '10px', padding: '14px' }}
+              >
+                📋 Abrir Mi Turno
+              </button>
+            </form>
+            <button
+              className="btn btn-cancel"
+              style={{ width: '100%' }}
+              onClick={() => navigate('/admin/caja')}
+            >
+              Ir a Gestión de Caja
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// COMPONENTE PRINCIPAL
+// ============================================================
+
 export default function PosPage() {
   const verifySessionIntegrity = useAppStore((state) => state.verifySessionIntegrity);
+  const { hasPermission } = useAdminAuth();
   const features = useFeatureConfig();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [isQuickCajaOpen, setIsQuickCajaOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  // Esperamos 300ms después de que el usuario deje de escribir para buscar en la BD
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-
   const [isProcessing, setIsProcessing] = useState(false);
   const [isMobileOrderOpen, setIsMobileOrderOpen] = useState(false);
 
   useEffect(() => {
     if (isMobileOrderOpen) {
-      // A) Cuando se abre el modal, empujamos un estado "falso" al historial
       window.history.pushState({ modal: 'cart' }, document.title);
-
-      // B) Definimos qué pasa cuando el usuario da "Atrás" (popstate)
-      const handlePopState = () => {
-        // Cerramos el modal
-        setIsMobileOrderOpen(false);
-        // Nota: Como el usuario ya dio atrás, el historial ya se limpió solo.
-      };
-
+      const handlePopState = () => setIsMobileOrderOpen(false);
       window.addEventListener('popstate', handlePopState);
-
-      // C) Limpieza
-      return () => {
-        window.removeEventListener('popstate', handlePopState);
-
-        // D) CASO ESPECIAL: Si el modal se cierra por código (ej. al cobrar),
-        // el estado "falso" sigue en el historial. Debemos regresarlo manualmente
-        // solo si NO fue cerrado por el botón atrás (detectado por history.state).
-        // Sin embargo, para evitar complejidad y bugs, la estrategia más segura 
-        // en PWA simple es solo escuchar. 
-        // Si quieres ser muy estricto:
-        /* if (window.history.state?.modal === 'cart') {
-           window.history.back(); 
-        }
-        */
-      };
+      return () => window.removeEventListener('popstate', handlePopState);
     }
   }, [isMobileOrderOpen]);
 
-  // --- CAMBIO: Usamos useProductStore para buscar ---
   const searchProducts = useProductStore((state) => state.searchProducts);
-
-  // Ejecutar búsqueda en base de datos cuando el término "debounced" cambie
   useEffect(() => {
     searchProducts(debouncedSearchTerm);
   }, [debouncedSearchTerm]);
 
-  const { cajaActual, abrirCaja } = useCaja();
+  // ─── Caja ───────────────────────────────────────────────────────
+  const { cajaActual, cajaEstaAbierta, abrirCaja } = useCaja();
   const { order, clearOrder, getTotalPrice } = useOrderStore();
   const companyName = useAppStore((state) => state.companyProfile?.name || 'Tu Negocio');
 
-  // --- CAMBIO: Usamos useProductStore para obtener el menú y la función de recarga ---
-  // Nota: 'loadInitialProducts' es el equivalente a la carga inicial/refresco en el nuevo store
   const allProducts = useProductStore((state) => state.menu);
   const refreshData = useProductStore((state) => state.loadInitialProducts);
 
@@ -99,28 +174,36 @@ export default function PosPage() {
       try {
         const categoryData = await loadData(STORES.CATEGORIES);
         setCategories(categoryData || []);
-        // Cargamos los productos iniciales
         await refreshData();
       } catch (error) {
-        console.error("Error cargando datos:", error);
+        console.error('Error cargando datos:', error);
       }
     };
     loadExtras();
-  }, []); // Dependencias vacías para cargar solo al montar
+  }, []);
 
-  // Filtramos localmente por Categoría y Tipo (búsqueda por texto ya viene filtrada del store)
   const filteredProducts = useMemo(() => {
-    // 1. Filtro base (Vendibles)
     let items = (allProducts || []).filter(p => p.productType === 'sellable' || !p.productType);
-
-    // 2. Filtro de Categoría
     if (selectedCategoryId) {
       items = items.filter(p => p.categoryId === selectedCategoryId);
     }
-
     return items;
   }, [allProducts, selectedCategoryId]);
 
+  // ─── Permiso de acceso a caja ───────────────────────────────────
+  // Los admins (role === 'admin') tienen acceso por defecto a todo.
+  // Los staff necesitan permiso explícito 'caja.access'.
+  const hasCajaAccess = hasPermission('caja.access');
+
+  // ─── Handler: Abrir turno desde el overlay ─────────────────────
+  const handleAbrirTurno = async (monto) => {
+    const success = await abrirCaja(monto);
+    if (success) {
+      showMessageModal('✅ Turno abierto correctamente. ¡A vender!');
+    }
+  };
+
+  // ─── Checkout ───────────────────────────────────────────────────
   const handleInitiateCheckout = () => {
     const licenseDetails = useAppStore.getState().licenseDetails;
     if (!licenseDetails || !licenseDetails.valid) {
@@ -158,10 +241,9 @@ export default function PosPage() {
   const handleProcessOrder = async (paymentData, forceSale = false) => {
     if (isProcessing) return;
 
-    // 1. Verificar sesión
     const isSessionValid = await verifySessionIntegrity();
     if (!isSessionValid) {
-      showMessageModal('Sesion invalida o licencia expirada. El sistema se recargará.', () => {
+      showMessageModal('Sesión inválida o licencia expirada. El sistema se recargará.', () => {
         window.location.reload();
       });
       return;
@@ -169,18 +251,17 @@ export default function PosPage() {
 
     setIsProcessing(true);
 
-    // 2. Validación rápida de caja (Solo si es efectivo)
-    if (paymentData.paymentMethod === 'efectivo' && (!cajaActual || cajaActual.estado !== 'abierta')) {
+    // Segunda línea de defensa: verificar caja justo antes de procesar
+    if (!cajaEstaAbierta) {
       setIsPaymentModalOpen(false);
-      setIsQuickCajaOpen(true);
       setIsProcessing(false);
+      showMessageModal('⚠️ Debes abrir tu turno de caja antes de registrar ventas.');
       return;
     }
 
     try {
       setIsPaymentModalOpen(false);
 
-      // 3. Llamada al servicio con la bandera 'ignoreStock'
       const result = await processSale({
         order,
         paymentData,
@@ -189,49 +270,31 @@ export default function PosPage() {
         features,
         companyName,
         tempPrescriptionData,
-        ignoreStock: forceSale // Pasamos true si el usuario ya confirmó
+        ignoreStock: forceSale,
+        cajaId: cajaActual?.id, // Ligamos la venta al turno actual
       });
 
       if (result.success) {
-        // --- ÉXITO ---
         clearOrder();
         setTempPrescriptionData(null);
         setIsMobileOrderOpen(false);
         showMessageModal('✅ ¡Venta registrada correctamente!');
-
-        // Recargar inventario visualmente
         await refreshData();
       } else {
-        // --- MANEJO DE RESPUESTAS NO EXITOSAS ---
-
         if (result.errorType === 'RACE_CONDITION') {
-          // Caso: Stock cambió mientras cobraban (concurrencia)
           showMessageModal(`⚠️ ${result.message} Se han actualizado los datos. Intenta cobrar de nuevo.`);
           await refreshData();
-        }
-        else if (result.errorType === 'STOCK_WARNING') {
-          // ⚠️ CASO ADVERTENCIA: Faltan insumos, pero permitimos decidir
+        } else if (result.errorType === 'STOCK_WARNING') {
           showMessageModal(
             result.message,
-            () => {
-              // Callback de Confirmación: El usuario elige "Sí, Vender Igual"
-              // Volvemos a ejecutar la función pero forzando la venta
-              handleProcessOrder(paymentData, true);
-            },
-            {
-              confirmButtonText: 'Sí, Vender Igual', // Texto del botón de confirmar
-              type: 'warning' // Estilo visual (amarillo/naranja)
-            }
+            () => handleProcessOrder(paymentData, true),
+            { confirmButtonText: 'Sí, Vender Igual', type: 'warning' }
           );
-        }
-        else {
-          // Otros errores (bloqueantes)
+        } else {
           showMessageModal(`Error: ${result.message}`, null, { type: 'error' });
         }
       }
-
     } catch (error) {
-      // --- ERROR NO CONTROLADO (CRASH) ---
       console.error('Error crítico en UI:', error);
       showMessageModal(`Error inesperado: ${error.message}`);
     } finally {
@@ -239,23 +302,16 @@ export default function PosPage() {
     }
   };
 
-  const handleQuickCajaSubmit = async (monto) => {
-    const success = await abrirCaja(monto);
-    if (success) {
-      setIsQuickCajaOpen(false);
-      setIsPaymentModalOpen(true);
-    } else {
-      setIsQuickCajaOpen(false);
-    }
-  };
-
-  const handleBarcodeScanned = (code) => {
-    // Si tienes lógica específica de escaneo manual, va aquí.
-    // El ScannerModal ya maneja la adición al carrito internamente en modo POS.
-  };
-
   return (
     <>
+      {/* OVERLAY BLOQUEANTE — visible si caja cerrada */}
+      {!cajaEstaAbierta && (
+        <CajaCerradaOverlay
+          hasAccess={hasCajaAccess}
+          onAbrirTurno={handleAbrirTurno}
+        />
+      )}
+
       <div className="pos-page-layout">
         <div className="pos-grid">
           <ProductMenu
@@ -279,9 +335,7 @@ export default function PosPage() {
           tabIndex={0}
           aria-label={`Ver carrito con ${totalItemsCount} artículos, total $${total.toFixed(2)}`}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              setIsMobileOrderOpen(true);
-            }
+            if (e.key === 'Enter' || e.key === ' ') setIsMobileOrderOpen(true);
           }}
         >
           <div className="cart-info">
@@ -295,13 +349,8 @@ export default function PosPage() {
       {isMobileOrderOpen && (
         <div className="modal" style={{ display: 'flex', zIndex: 10005, alignItems: 'flex-end' }}>
           <div className="modal-content" style={{
-            borderRadius: '20px 20px 0 0',
-            width: '100%',
-            height: '85vh',
-            maxWidth: '100%',
-            padding: '0',
-            animation: 'slideUp 0.3s ease-out',
-            overflow: 'hidden'
+            borderRadius: '20px 20px 0 0', width: '100%', height: '85vh',
+            maxWidth: '100%', padding: '0', animation: 'slideUp 0.3s ease-out', overflow: 'hidden'
           }}>
             <OrderSummary
               onOpenPayment={handleInitiateCheckout}
@@ -319,12 +368,6 @@ export default function PosPage() {
         onClose={() => setIsPaymentModalOpen(false)}
         onConfirm={handleProcessOrder}
         total={total}
-      />
-
-      <QuickCajaModal
-        show={isQuickCajaOpen}
-        onClose={() => setIsQuickCajaOpen(false)}
-        onConfirm={handleQuickCajaSubmit}
       />
 
       <PrescriptionModal
