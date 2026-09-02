@@ -39,6 +39,7 @@ const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions.jsx"));
 const RegisterAdmin = lazy(() => import("./pages/RegisterAdmin.jsx"));
 const SpecialPrices = lazy(() => import("./pages/SpecialPrices.jsx"));
 const BusinessHours = lazy(() => import("./pages/BusinessHours.jsx"));
+const CajaPage = lazy(() => import("./pages/CajaPage.jsx"));
 const CreateOrder = lazy(() => import("./pages/CreateOrder.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Settings = lazy(() => import("./pages/Settings.jsx"));
@@ -179,6 +180,7 @@ function App() {
                         </CacheAdminProvider>
                       }>
                         <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
+                        <Route path="caja" element={<PermissionWrapper permissionKey="dashboard.view" element={<CajaPage />} />} />
                         <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
                         <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
                         <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />

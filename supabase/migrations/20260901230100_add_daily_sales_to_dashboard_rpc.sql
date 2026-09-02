@@ -8,7 +8,7 @@
 --   profitableProducts  - top products by profit (completed orders only)
 --   recentOrders        - last 10 orders with customer name
 --   totalRevenue        - sum of total_amount for completed orders in range
---   totalCosts          - sum of (quantity * cost_price) for completed orders in range
+--   totalCosts          - sum of (quantity * cost) for completed orders in range
 --   totalProfit         - totalRevenue - totalCosts
 --   profitMargin        - (totalProfit / totalRevenue) * 100, rounded to 1 dp
 --   avgOrderValue       - average order total_amount for completed orders in range
@@ -79,7 +79,7 @@ BEGIN
     LEFT JOIN (
         SELECT
             order_id,
-            SUM(quantity * COALESCE(cost_price, 0)) AS item_costs
+            SUM(quantity * COALESCE(cost, 0)) AS item_costs
         FROM order_items
         GROUP BY order_id
     ) oi ON oi.order_id = o.id
@@ -151,12 +151,12 @@ BEGIN
         SELECT
             oi.product_id,
             SUM(oi.quantity * oi.price)                           AS revenue,
-            SUM(oi.quantity * COALESCE(oi.cost_price, 0))         AS total_cost,
+            SUM(oi.quantity * COALESCE(oi.cost, 0))         AS total_cost,
             SUM(oi.quantity * oi.price)
-                - SUM(oi.quantity * COALESCE(oi.cost_price, 0))   AS profit,
+                - SUM(oi.quantity * COALESCE(oi.cost, 0))   AS profit,
             SUM(oi.quantity)                                       AS qty,
             AVG(oi.price)                                          AS avg_price,
-            AVG(oi.cost_price)                                     AS avg_cost
+            AVG(oi.cost)                                     AS avg_cost
         FROM order_items oi
         JOIN orders o ON o.id = oi.order_id
         WHERE o.status     = 'completado'
