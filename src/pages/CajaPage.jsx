@@ -5,6 +5,34 @@ import { showMessageModal } from '../services/utils';
 import { downloadBackupSmart } from '../services/dataTransfer';
 import './CajaPage.css';
 
+const CashRegisterIcon = ({ size = 24 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 10h16v9H4z" />
+    <path d="M6 10V6h12v4" />
+    <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h8" />
+  </svg>
+);
+
+const LockIcon = ({ size = 32 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="5" y="10" width="14" height="10" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v2" />
+  </svg>
+);
+
+const DownloadIcon = ({ size = 16 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+  </svg>
+);
+
 // --- Componente Local: Modal para abrir caja manualmente ---
 const AbrirCajaModal = ({ show, onClose, onSave }) => {
   const [amount, setAmount] = useState('');
@@ -27,12 +55,17 @@ const AbrirCajaModal = ({ show, onClose, onSave }) => {
   if (!show) return null;
 
   return (
-    <div className="modal" style={{ display: 'flex', zIndex: 1200 }}>
-      <div className="modal-content" style={{ maxWidth: '400px' }}>
-        <h3 className="modal-title">📋 Abrir Turno de Caja</h3>
-        <p style={{ marginBottom: '15px', color: 'var(--text-light)', fontSize: '0.9rem' }}>
-          Ingresa el fondo inicial con el que comienza tu turno.
-          Puede ser 0 si la caja empieza vacía.
+    <div className="modal caja-modal" style={{ display: 'flex', zIndex: 1200 }}>
+      <div className="modal-content caja-modal-content">
+        <div className="caja-modal-heading">
+          <span className="caja-modal-icon"><CashRegisterIcon size={20} /></span>
+          <div>
+            <span className="caja-modal-kicker">Inicio de jornada</span>
+            <h3 className="modal-title">Abrir turno de caja</h3>
+          </div>
+        </div>
+        <p className="caja-modal-description">
+          Ingresa el fondo inicial con el que comienza tu turno. Puede ser 0 si la caja empieza vacía.
         </p>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -49,9 +82,9 @@ const AbrirCajaModal = ({ show, onClose, onSave }) => {
               required
             />
           </div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'flex-end' }}>
+          <div className="caja-modal-actions">
             <button type="button" className="btn btn-cancel" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-save">Abrir Turno</button>
+            <button type="submit" className="btn btn-save"><CashRegisterIcon size={16} /> Abrir turno</button>
           </div>
         </form>
       </div>
@@ -81,10 +114,16 @@ const EditInitialModal = ({ show, onClose, onSave, currentAmount }) => {
   if (!show) return null;
 
   return (
-    <div className="modal" style={{ display: 'flex', zIndex: 1200 }}>
-      <div className="modal-content" style={{ maxWidth: '400px' }}>
-        <h3 className="modal-title">Ajustar Fondo Inicial</h3>
-        <p style={{ marginBottom: '15px', color: 'var(--text-light)', fontSize: '0.9rem' }}>
+    <div className="modal caja-modal" style={{ display: 'flex', zIndex: 1200 }}>
+      <div className="modal-content caja-modal-content">
+        <div className="caja-modal-heading">
+          <span className="caja-modal-icon"><CashRegisterIcon size={20} /></span>
+          <div>
+            <span className="caja-modal-kicker">Configuración del turno</span>
+            <h3 className="modal-title">Ajustar fondo inicial</h3>
+          </div>
+        </div>
+        <p className="caja-modal-description">
           Corrige el monto inicial si el dinero físico real es diferente.
         </p>
         <form onSubmit={handleSubmit}>
@@ -100,7 +139,7 @@ const EditInitialModal = ({ show, onClose, onSave, currentAmount }) => {
               min="0"
             />
           </div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'flex-end' }}>
+          <div className="caja-modal-actions">
             <button type="button" className="btn btn-cancel" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-save">Actualizar</button>
           </div>
@@ -113,21 +152,34 @@ const EditInitialModal = ({ show, onClose, onSave, currentAmount }) => {
 // --- Badge de sincronización ---
 const SyncBadge = ({ status }) => {
   const config = {
-    idle:    { icon: '☁️', text: 'Sin sync', color: '#999' },
-    syncing: { icon: '⏳', text: 'Sincronizando...', color: '#f1a32b' },
-    ok:      { icon: '✅', text: 'Sincronizado', color: '#27ae60' },
-    error:   { icon: '⚠️', text: 'Error de sync', color: '#e74c3c' },
-  }[status] || { icon: '☁️', text: '', color: '#999' };
+    idle: { text: 'Sincronización pendiente', tone: 'neutral' },
+    syncing: { text: 'Sincronizando…', tone: 'syncing' },
+    ok: { text: 'Sincronizado', tone: 'ok' },
+    error: { text: 'Error de sincronización', tone: 'error' },
+  };
+
+  const current = config[status] || config.idle;
 
   return (
-    <span style={{
-      fontSize: '0.72rem', color: config.color, display: 'flex',
-      alignItems: 'center', gap: '4px', fontWeight: 500
-    }}>
-      {config.icon} {config.text}
+    <span className={'caja-sync-badge ' + current.tone}>
+      <span className="caja-sync-dot" aria-hidden="true" />
+      {current.text}
     </span>
   );
 };
+
+const CajaPageHeader = ({ isOpen = false }) => (
+  <header className="caja-page-header">
+    <div>
+      <span className="caja-eyebrow">Operación diaria</span>
+      <h1>Caja</h1>
+      <p>{isOpen ? 'Controla el efectivo y consulta el estado de tu turno.' : 'Abre tu turno para comenzar a operar.'}</p>
+    </div>
+    <div className={isOpen ? 'caja-page-header-icon is-open' : 'caja-page-header-icon'}>
+      <CashRegisterIcon size={30} />
+    </div>
+  </header>
+);
 
 // --- COMPONENTE PRINCIPAL ---
 export default function CajaPage() {
@@ -219,38 +271,31 @@ export default function CajaPage() {
 
   if (isLoading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div className="caja-loading">
         <div className="spinner-loader"></div>
-        <p style={{ marginTop: '10px', color: 'var(--text-light)' }}>Cargando estado de caja...</p>
+        <p>Cargando estado de caja...</p>
       </div>
     );
   }
 
-  // Cálculo del total en tiempo real
-  const totalEnCaja = cajaActual ? (
-    (cajaActual.monto_inicial || 0) +
-    (totalesTurno.ventasContado || 0) +
-    (totalesTurno.abonosFiado || 0) +
-    (cajaActual.entradas_efectivo || 0) -
-    (cajaActual.salidas_efectivo || 0)
-  ) : 0;
-
-  // ─── SI NO HAY CAJA ABIERTA: mostrar pantalla de apertura ───────
   if (!cajaEstaAbierta) {
     return (
-      <div className="caja-grid">
-        <div className="caja-card status-card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 24px' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔒</div>
-          <h2 style={{ marginBottom: '8px' }}>No tienes un turno abierto</h2>
-          <p style={{ color: 'var(--text-light)', marginBottom: '28px' }}>
+      <div className="caja-grid caja-page caja-grid-empty">
+        <CajaPageHeader />
+        <div id="caja-status-container" className="caja-card status-card empty-state-card">
+          <div className="caja-empty-icon">
+            <LockIcon size={34} />
+          </div>
+          <span className="caja-eyebrow">Turno cerrado</span>
+          <h2>No tienes un turno abierto</h2>
+          <p className="caja-empty-description">
             Abre tu turno para gestionar ventas, entradas y salidas de efectivo.
           </p>
           <button
-            className="btn btn-save"
-            style={{ padding: '14px 32px', fontSize: '1rem' }}
+            className="btn btn-save caja-open-button"
             onClick={() => setModalVisible('abrir')}
           >
-            📋 Abrir Mi Turno
+            <CashRegisterIcon size={18} /> Abrir mi turno
           </button>
         </div>
 
@@ -264,17 +309,18 @@ export default function CajaPage() {
   }
 
   return (
-    <div className="caja-grid">
+    <div className="caja-grid caja-page">
+      <CajaPageHeader isOpen />
 
       {/* 1. TARJETA DE ESTADO */}
-      <div className="caja-card status-card">
+      <div id="caja-status-container" className="caja-card status-card">
         <div className="status-header">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div className="status-meta">
             <span className="status-badge open">Turno Activo</span>
-            <small style={{ color: 'var(--text-light)' }}>
+            <small className="caja-muted-text">
               Operado por: <strong>{cajaActual?.opened_by_name || 'Desconocido'}</strong>
             </small>
-            <small style={{ color: 'var(--text-light)' }}>
+            <small className="caja-muted-text">
               Inicio: {cajaActual?.fecha_apertura
                 ? new Date(cajaActual.fecha_apertura).toLocaleString()
                 : '...'}
@@ -283,33 +329,27 @@ export default function CajaPage() {
           </div>
 
           <button
-            className="btn"
-            style={{
-              padding: '6px 12px', fontSize: '0.85rem',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--card-background-color)',
-              color: 'var(--text-dark)',
-              display: 'flex', alignItems: 'center', gap: '5px'
-            }}
+            className="btn caja-btn-ghost backup-button"
             onClick={handleBackup}
             disabled={isBackupLoading}
             title="Descargar copia de seguridad"
           >
-            {isBackupLoading ? '⏳...' : '💾 Respaldo'}
+            <DownloadIcon size={16} />
+            {isBackupLoading ? 'Generando…' : 'Respaldo'}
           </button>
         </div>
 
         <div className="status-body">
           <div className="info-row">
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="info-label info-label-with-action">
               Fondo Inicial
               <button
-                className="btn-icon-small"
+                className="btn-icon-small info-edit-button"
                 onClick={() => setModalVisible('edit-inicial')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '0' }}
+
                 title="Corregir fondo inicial"
               >
-                ✏️
+                <EditIcon />
               </button>
             </span>
             <span className="amount neutral">${cajaActual?.monto_inicial?.toFixed(2) || '0.00'}</span>
@@ -336,27 +376,25 @@ export default function CajaPage() {
             <span className="amount negative">- ${cajaActual?.salidas_efectivo?.toFixed(2) || '0.00'}</span>
           </div>
 
-          <div className="info-row" style={{ borderTop: '2px solid #eee', marginTop: '10px', paddingTop: '10px', borderBottom: 'none' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Total en Caja</span>
-            <span className="amount" style={{ fontSize: '1.4rem', color: 'var(--primary-color)' }}>
-              ${totalEnCaja.toFixed(2)}
-            </span>
+          <div className="info-row total-row">
+            <span className="info-label">Total en Caja</span>
+            <span className="amount total-amount">${totalEnCaja.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
       {/* 2. TARJETA DE ACCIONES */}
-      <div className="caja-card actions-card">
+      <div id="caja-actions-container" className="caja-card actions-card">
         <h3 className="actions-title">Control de Efectivo</h3>
         <div className="actions-grid">
           <button className="btn btn-audit full-width" onClick={() => setIsAuditOpen(true)}>
-            🛡️ Corte de Caja (Cerrar Turno)
+            Corte de caja · cerrar turno
           </button>
           <button className="btn btn-entry half-width" onClick={() => setModalVisible('entrada')}>
-            + Entrada
+            <span className="action-symbol">+</span> Entrada
           </button>
           <button className="btn btn-exit half-width" onClick={() => setModalVisible('salida')}>
-            - Salida
+            <span className="action-symbol">−</span> Salida
           </button>
         </div>
       </div>
@@ -366,24 +404,18 @@ export default function CajaPage() {
         <h3 className="subtitle">Movimientos del Turno</h3>
         <div id="caja-movements-list">
           {movimientosCaja.length === 0 ? (
-            <p className="empty-message" style={{ textAlign: 'center', color: '#999', fontStyle: 'italic' }}>
-              No hay movimientos manuales.
-            </p>
+            <p className="empty-message movement-empty">No hay movimientos manuales.</p>
           ) : (
             movimientosCaja.map(mov => (
-              <div key={mov.id} className="movement-item" style={{
-                borderLeft: `4px solid ${mov.tipo === 'entrada' ? 'var(--success-color)' : 'var(--error-color)'}`,
-                marginBottom: '8px', padding: '8px',
-                backgroundColor: 'var(--light-background)', borderRadius: '4px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 500 }}>{mov.concepto}</span>
-                  <span style={{ fontWeight: 'bold', color: mov.tipo === 'entrada' ? 'var(--success-color)' : 'var(--error-color)' }}>
+              <div key={mov.id} className={mov.tipo === 'entrada' ? 'movement-item movement-entry' : 'movement-item movement-exit'}>
+                <div className="movement-line">
+                  <span className="movement-concept">{mov.concepto}</span>
+                  <span className={mov.tipo === 'entrada' ? 'movement-amount positive' : 'movement-amount negative'}>
                     {mov.tipo === 'entrada' ? '+' : '-'}${mov.monto.toFixed(2)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
-                  <small style={{ color: 'var(--text-light)' }}>
+                <div className="movement-meta-row">
+                  <small className="movement-meta">
                     {mov.realizado_por_name && `Por: ${mov.realizado_por_name} · `}
                     {new Date(mov.fecha).toLocaleTimeString()}
                   </small>
@@ -400,30 +432,30 @@ export default function CajaPage() {
         {historialCajas.length === 0 ? (
           <p className="empty-message">No hay historial.</p>
         ) : (
-          <div className="history-list" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+          <div className="history-list">
             {historialCajas.map(c => (
-              <div key={c.id} className="history-item" style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <div key={c.id} className="history-item">
+                <div className="history-header">
                   <strong>{new Date(c.fecha_apertura).toLocaleDateString()}</strong>
                   <span
                     className={`status-badge ${!c.diferencia || Math.abs(c.diferencia) < 1 ? 'success' : 'error'}`}
-                    style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                    
                   >
                     {Math.abs(c.diferencia || 0) < 1 ? 'Cuadrada' : 'Descuadre'}
                   </span>
                 </div>
                 {/* Auditoría de usuario */}
                 {(c.opened_by_name || c.closed_by_name) && (
-                  <small style={{ color: 'var(--text-light)', display: 'block', marginBottom: '2px' }}>
+                  <small className="history-meta">
                     {c.opened_by_name && `Abrió: ${c.opened_by_name}`}
                     {c.closed_by_name && ` · Cerró: ${c.closed_by_name}`}
                   </small>
                 )}
-                <p style={{ fontSize: '0.85rem', color: '#666', margin: 0 }}>
+                <p className="history-amount">
                   Cierre: {c.monto_cierre ? `$${c.monto_cierre.toFixed(2)}` : 'N/A'}
                 </p>
                 {c.diferencia && Math.abs(c.diferencia) > 0 && (
-                  <small style={{ color: c.diferencia > 0 ? 'var(--success-color)' : 'var(--error-color)' }}>
+                  <small className={c.diferencia > 0 ? 'history-difference positive' : 'history-difference negative'}>
                     Dif: {c.diferencia > 0 ? '+' : ''}${c.diferencia.toFixed(2)}
                   </small>
                 )}
@@ -449,8 +481,8 @@ export default function CajaPage() {
       />
 
       {modalVisible === 'entrada' && (
-        <div className="modal" style={{ display: 'flex' }}>
-          <div className="modal-content">
+        <div className="modal caja-modal" style={{ display: 'flex' }}>
+          <div className="modal-content caja-modal-content">
             <h2 className="modal-title">Entrada de Efectivo</h2>
             <form onSubmit={handleEntradaSubmit}>
               <div className="form-group">
@@ -461,7 +493,7 @@ export default function CajaPage() {
                 <label className="form-label">Concepto:</label>
                 <input name="entrada-concepto-input" type="text" className="form-input" placeholder="Ej: Cambio, Aporte extra" required />
               </div>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <div className="caja-modal-actions">
                 <button type="button" className="btn btn-cancel" onClick={() => setModalVisible(null)}>Cancelar</button>
                 <button type="submit" className="btn btn-save">Guardar</button>
               </div>
@@ -471,8 +503,8 @@ export default function CajaPage() {
       )}
 
       {modalVisible === 'salida' && (
-        <div className="modal" style={{ display: 'flex' }}>
-          <div className="modal-content">
+        <div className="modal caja-modal" style={{ display: 'flex' }}>
+          <div className="modal-content caja-modal-content">
             <h2 className="modal-title">Salida de Efectivo</h2>
             <form onSubmit={handleSalidaSubmit}>
               <div className="form-group">
@@ -483,7 +515,7 @@ export default function CajaPage() {
                 <label className="form-label">Concepto:</label>
                 <input name="salida-concepto-input" type="text" className="form-input" placeholder="Ej: Pago proveedor" required />
               </div>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <div className="caja-modal-actions">
                 <button type="button" className="btn btn-cancel" onClick={() => setModalVisible(null)}>Cancelar</button>
                 <button type="submit" className="btn btn-delete">Registrar Salida</button>
               </div>

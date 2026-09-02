@@ -13,6 +13,12 @@ const DashboardIcon = () => (
   </svg>
 );
 
+const CashRegisterIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 10h16v9H4zM6 10V6h12v4M8 14h.01M12 14h.01M16 14h.01M8 17h8" />
+  </svg>
+);
+
 const CreateIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -58,17 +64,17 @@ const adminLinks = [
 // === ENLACES PRINCIPALES DE LA BARRA INFERIOR ===
 const bottomNavLinks = [
   { to: "/admin", icon: <DashboardIcon />, label: "Dashboard", permissionKey: "dashboard.view" },
+  { to: "/admin/caja", icon: <CashRegisterIcon />, label: "Caja", permissionKey: "dashboard.view" },
   { to: "/admin/crear-pedido", icon: <CreateIcon />, label: "Crear", permissionKey: "crear-pedido.view" },
   { to: "/admin/pedidos", icon: <OrdersIcon />, label: "Pedidos", permissionKey: "pedidos.view" },
   { to: "/admin/productos", icon: <ProductsIcon />, label: "Productos", permissionKey: "productos.view" },
 ];
 
 // Labels de los enlaces principales (para filtrar en el menú modal)
-const bottomNavLabels = ["Dashboard", "Crear Pedido", "Pedidos", "Productos"];
+const bottomNavLabels = ["Dashboard", "Caja (POS)", "Crear Pedido", "Pedidos", "Productos"];
 
 // Rutas que pertenecen al menú (para marcar el botón "Menú" como activo)
 const menuOnlyRoutes = [
-  '/admin/caja',
   '/admin/configuracion',
   '/admin/clientes',
   '/admin/referidos',
