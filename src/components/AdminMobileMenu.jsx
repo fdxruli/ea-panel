@@ -40,6 +40,7 @@ const MenuIcon = () => (
 // === LISTA COMPLETA DE ENLACES ===
 const adminLinks = [
   { to: "/admin", label: "Dashboard", permissionKey: "dashboard.view" },
+  { to: "/admin/caja", label: "Caja (POS)", permissionKey: "dashboard.view" },
   { to: "/admin/crear-pedido", label: "Crear Pedido", permissionKey: "crear-pedido.view" },
   { to: "/admin/pedidos", label: "Pedidos", permissionKey: "pedidos.view" },
   { to: "/admin/clientes", label: "Clientes", permissionKey: "clientes.view" },
