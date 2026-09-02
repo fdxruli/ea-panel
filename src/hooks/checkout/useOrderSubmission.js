@@ -188,10 +188,10 @@ export const useOrderSubmission = ({
         }
 
         if (error?.message && error.message.includes('Stock insuficiente')) {
-          // Extraer la parte descriptiva del error de stock de PostgreSQL
-          const detail = error.message.replace(/^.*?Stock insuficiente/i, 'Stock insuficiente');
+          const match = error.message.match(/Stock insuficiente para "([^"]+)"/i);
+          const productName = match ? match[1] : 'un producto';
           showAlert(
-            `⚠️ Lo sentimos, un producto o ingrediente se agotó justo antes de completar tu pedido:\n\n${detail}\n\nHemos actualizado el menú y tu carrito.`,
+            `Lo sentimos, el producto "${productName}" se nos ha agotado antes de completar el pedido.`,
             'error'
           );
           // Forzar sincronización de catálogo en todos los clientes conectados
