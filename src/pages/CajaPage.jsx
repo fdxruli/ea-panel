@@ -95,20 +95,28 @@ const AbrirCajaModal = ({ show, onClose, onSave }) => {
 // --- Componente Local: Modal para ajustar fondo inicial ---
 const EditInitialModal = ({ show, onClose, onSave, currentAmount }) => {
   const [amount, setAmount] = useState('');
+  const [motivo, setMotivo] = useState('');
 
   useEffect(() => {
-    if (show) setAmount(currentAmount !== undefined ? currentAmount : '');
+    if (show) {
+      setAmount(currentAmount !== undefined ? currentAmount : '');
+      setMotivo('');
+    }
   }, [show, currentAmount]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const val = parseFloat(amount);
-    if (!isNaN(val) && val >= 0) {
-      onSave(val);
-      onClose();
-    } else {
-      alert('Ingresa un monto válido');
+    if (isNaN(val) || val < 0) {
+      alert('Ingresa un monto válido mayor o igual a 0');
+      return;
     }
+    if (!motivo.trim()) {
+      alert('Debes indicar el motivo del ajuste para la bitácora de auditoría');
+      return;
+    }
+    onSave(val, motivo.trim());
+    onClose();
   };
 
   if (!show) return null;
@@ -119,12 +127,12 @@ const EditInitialModal = ({ show, onClose, onSave, currentAmount }) => {
         <div className="caja-modal-heading">
           <span className="caja-modal-icon"><CashRegisterIcon size={20} /></span>
           <div>
-            <span className="caja-modal-kicker">Configuración del turno</span>
+            <span className="caja-modal-kicker">Auditoría del turno</span>
             <h3 className="modal-title">Ajustar fondo inicial</h3>
           </div>
         </div>
         <p className="caja-modal-description">
-          Corrige el monto inicial si el dinero físico real es diferente.
+          Este cambio quedará registrado en la bitácora de auditoría de caja con tu usuario.
         </p>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -137,11 +145,23 @@ const EditInitialModal = ({ show, onClose, onSave, currentAmount }) => {
               autoFocus
               step="0.01"
               min="0"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Motivo del ajuste (Obligatorio):</label>
+            <input
+              type="text"
+              className="form-input"
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              placeholder="Ej: Corrección de conteo matutino, billetes de cambio"
+              required
             />
           </div>
           <div className="caja-modal-actions">
             <button type="button" className="btn btn-cancel" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-save">Actualizar</button>
+            <button type="submit" className="btn btn-save">Guardar con Auditoría</button>
           </div>
         </form>
       </div>
@@ -195,7 +215,8 @@ export default function CajaPage() {
     ajustarMontoInicial,
     realizarAuditoriaYCerrar,
     registrarMovimiento,
-    calcularTotalTeorico
+    calcularTotalTeorico,
+    recargarCaja,
   } = useCaja();
 
   const [modalVisible, setModalVisible] = useState(null); // 'abrir', 'entrada', 'salida', 'edit-inicial'
@@ -241,8 +262,8 @@ export default function CajaPage() {
     }
   };
 
-  const handleAuditConfirm = async (montoFisico, comentarios) => {
-    const result = await realizarAuditoriaYCerrar(montoFisico, comentarios);
+  const handleAuditConfirm = async (montoFisico, comentarios, detalleCierre = null) => {
+    const result = await realizarAuditoriaYCerrar(montoFisico, comentarios, detalleCierre);
     if (result.success) {
       setIsAuditOpen(false);
       showMessageModal('✅ Corte realizado con éxito.');
@@ -308,6 +329,12 @@ export default function CajaPage() {
     );
   }
 
+  const totalEnCaja = (cajaActual?.monto_inicial || 0) +
+    (totalesTurno?.ventasContado || 0) +
+    (totalesTurno?.abonosFiado || 0) +
+    (cajaActual?.entradas_efectivo || 0) -
+    (cajaActual?.salidas_efectivo || 0);
+
   return (
     <div className="caja-grid caja-page">
       <CajaPageHeader isOpen />
@@ -326,6 +353,15 @@ export default function CajaPage() {
                 : '...'}
             </small>
             <SyncBadge status={syncStatus} />
+            <button
+              type="button"
+              className="btn-icon-small"
+              onClick={() => recargarCaja(true)}
+              title="Forzar sincronización con la nube"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
+            >
+              🔄
+            </button>
           </div>
 
           <button

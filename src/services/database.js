@@ -219,6 +219,7 @@ export function initDB() {
         // A. SALES: Para filtrar pedidos por estado (KDS) y por Cliente+Fecha
         ensureIndex(STORES.SALES, 'fulfillment_status', 'fulfillmentStatus', { unique: false });
         ensureIndex(STORES.SALES, 'customer_date', ['customerId', 'timestamp'], { unique: false });
+        ensureIndex(STORES.SALES, 'caja_id', 'caja_id', { unique: false });
 
         // B. PRODUCT_BATCHES: Para selección FIFO ultra-rápida (Producto + Activo + Fecha Creación)
         ensureIndex(STORES.PRODUCT_BATCHES, 'product_active_date', ['productId', 'isActive', 'createdAt'], { unique: false });

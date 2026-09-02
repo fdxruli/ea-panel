@@ -65,7 +65,8 @@ export const processSale = async ({
     features,
     companyName,
     tempPrescriptionData,
-    ignoreStock = false
+    ignoreStock = false,
+    cajaId = null
 }) => {
     console.time('Service:ProcessSale');
 
@@ -352,6 +353,7 @@ export const processSale = async ({
         const sale = {
             id: new Date().toISOString(),
             timestamp: new Date().toISOString(),
+            caja_id: cajaId || null,
             items: processedItems,
             total: total,
             customerId: paymentData.customerId,

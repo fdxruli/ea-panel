@@ -10,6 +10,7 @@ import { GUEST_CUSTOMER_ID } from "../config/constantes";
 import { subscribeToTableChanges } from "../lib/sharedAdminRealtime";
 import { useCacheAdmin } from "../context/CacheAdminContext";
 import { broadcastOrderUpdate, broadcastStoreChange } from "../lib/broadcastRealtime";
+import { useCaja } from "../hooks/useCaja";
 
 // ==================== CUSTOM HOOKS ====================
 
@@ -290,6 +291,7 @@ CancellationModal.displayName = 'CancellationModal';
 
 export default function Orders() {
   const { getCached, setCached, invalidate } = useCacheAdmin();
+  const { cajaActual, cajaEstaAbierta, registrarMovimiento } = useCaja();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("activos");
@@ -361,6 +363,7 @@ export default function Orders() {
           id,
           order_code,
           customer_id,
+          caja_id,
           status,
           total_amount,
           scheduled_for,
@@ -482,6 +485,23 @@ export default function Orders() {
     }
 
     const targetOrder = orders.find(o => o.id === orderId);
+
+    // Integración de cobro en efectivo con caja abierta
+    if (newStatus === 'completado' && targetOrder && !targetOrder.caja_id) {
+      if (cajaEstaAbierta && (targetOrder.total_amount || 0) > 0) {
+        const confirmarCobro = window.confirm(
+          `¿Deseas registrar el cobro de este pedido ($${targetOrder.total_amount.toFixed(2)}) como ingreso en efectivo a tu caja abierta?`
+        );
+        if (confirmarCobro) {
+          updateData.caja_id = cajaActual.id;
+          await registrarMovimiento(
+            'entrada',
+            targetOrder.total_amount,
+            `Cobro Pedido #${targetOrder.order_code}`
+          );
+        }
+      }
+    }
 
     // ✅ MEJORA: Marcar pedido como "actualizando" para feedback visual
     setUpdatingStatusId(orderId);
