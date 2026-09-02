@@ -190,6 +190,7 @@ export default function CajaPage() {
     movimientosCaja,
     isLoading,
     totalesTurno,
+    totalEnCaja,
     syncStatus,
     abrirCaja,
     ajustarMontoInicial,
