@@ -25,7 +25,9 @@ const makeDraft = (suffix, options = {}) => createDraft({
   ...options,
 });
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms) => new Promise((resolve) => {
+  setTimeout(resolve, ms);
+});
 
 afterEach(async () => {
   await clearAllDraftsForTests();
@@ -122,7 +124,7 @@ test('findDraft returns absence for an unknown owner', async () => {
 test('findDraft deterministically returns the most recently updated matching draft', async () => {
   await makeDraft('old', { workflow: 'same', now: 1000 });
   await makeDraft('new', { workflow: 'same', now: 2000 });
-  assert.equal((await findDraft({ ownerKey: 'owner-a', workflow: 'same' })).id, 'draft-new');
+  assert.equal((await findDraft({ ownerKey: 'owner-a', workflow: 'same', now: 2500 })).id, 'draft-new');
 });
 
 test('deleteDraft and hasDraft', async () => {
@@ -199,7 +201,7 @@ test('cleanup removes expired records', async () => {
 
 test('incompatible stored version is rejected and cleaned up', async () => {
   const created = await makeDraft('version');
-  const request = globalThis.indexedDB.open('ea-panel-admin-drafts', 1);
+  const request = globalThis.indexedDB.open('ea-panel-admin-drafts');
   const database = await new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -256,7 +258,7 @@ test('duplicate create surfaces an IndexedDB write error', async () => {
 });
 
 test('flushDraft waits for the immediate persistence write', async () => {
-  const created = await makeDraft('flush', { now: 1000 });
+  const created = await makeDraft('flush');
   const flushed = await flushDraft({ ...created, payload: { value: 'flushed' } });
   assert.deepEqual((await getDraft(created.id)).payload, { value: 'flushed' });
   assert.equal(flushed.id, created.id);

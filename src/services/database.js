@@ -131,13 +131,15 @@ function isConnectionValid(db) {
 export function initDB() {
   return new Promise((resolve, reject) => {
     if (dbConnection.isOpening && dbConnection.openPromise) {
-      return dbConnection.openPromise.then(resolve).catch(reject);
+      dbConnection.openPromise.then(resolve).catch(reject);
+      return;
     }
     if (isConnectionValid(dbConnection.instance)) {
-      return resolve(dbConnection.instance);
+      resolve(dbConnection.instance);
+      return;
     }
     if (dbConnection.instance) {
-      try { dbConnection.instance.close(); } catch (e) { }
+      try { dbConnection.instance.close(); } catch { /* La conexión ya estaba cerrada. */ }
       dbConnection.instance = null;
     }
     if (dbConnection.instance) {
@@ -147,7 +149,8 @@ export function initDB() {
         // Intentamos una transacción dummy muy ligera
         const tx = dbConnection.instance.transaction([STORES.MENU], 'readonly');
         tx.abort(); // Si no falla al crearla, está viva. Abortamos para no gastar.
-        return resolve(dbConnection.instance);
+        resolve(dbConnection.instance);
+        return;
       } catch (error) {
         console.warn("⚠️ Conexión IDB perdida en segundo plano. Reconectando...", error);
         dbConnection.instance = null; // Forzamos reconexión
@@ -431,7 +434,9 @@ async function executeWithRetry(operation, maxRetries = 3) {
       if (recoverableErrors.includes(error.name)) {
         console.warn(`🔄 Reintento ${attempt}/${maxRetries} por: ${error.name}`);
         dbConnection.instance = null;
-        await new Promise(resolve => setTimeout(resolve, 200 * attempt));
+        await new Promise(resolve => {
+          setTimeout(resolve, 200 * attempt);
+        });
       } else {
         throw error;
       }
@@ -763,7 +768,7 @@ export const saveBulk = async (storeName, data) => saveData(storeName, data);
 
 export function closeDB() {
   if (dbConnection.instance) {
-    try { dbConnection.instance.close(); } catch (e) { }
+    try { dbConnection.instance.close(); } catch { /* La conexión ya estaba cerrada. */ }
     dbConnection.instance = null;
   }
 }

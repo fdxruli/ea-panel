@@ -19,6 +19,7 @@ export const ThemeProvider = ({ children }) => {
         if (theme === 'dark' || (theme === 'system' && isDarkSystem)) {
             root.setAttribute('data-theme', 'dark');
         } else {
+            // El tema claro se representa sin atributo data-theme.
         }
         localStorage.setItem(THEME_STORAGE_KEY, theme);
     }, [theme]);

@@ -96,8 +96,9 @@ const calcularTotalEnCaja = (caja, totals = {}) => {
 // ============================================================
 
 export function useCaja() {
-  const { userId, adminData } = useAdminAuth();
+  const { userId, adminData, hasPermission } = useAdminAuth();
   const adminName = adminData?.name || 'Desconocido';
+  const canOperateCaja = hasPermission('caja.access');
 
   const [cajaActual, setCajaActual] = useState(null);       // La caja activa del usuario
   const [historialCajas, setHistorialCajas] = useState([]); // Historial de cajas cerradas
@@ -187,7 +188,10 @@ export function useCaja() {
   // ============================================================
 
   const cargarEstadoCaja = useCallback(async (forceRemoteCheck = true) => {
-    if (!userId) {
+    if (!userId || !canOperateCaja) {
+      setCajaActual(null);
+      setMovimientosCaja([]);
+      setTotalesTurno({ ventasContado: 0, abonosFiado: 0 });
       setIsLoading(false);
       return;
     }
@@ -312,7 +316,7 @@ export function useCaja() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, adminName, cargarMovimientos, calcularTotalesSesion]);
+  }, [userId, adminName, canOperateCaja, cargarMovimientos, calcularTotalesSesion]);
 
   // Carga inicial al montar o cambiar de usuario
   useEffect(() => {
@@ -324,7 +328,7 @@ export function useCaja() {
   // ============================================================
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !canOperateCaja) return undefined;
 
     const channelName = `realtime-caja-${userId.slice(0, 8)}`;
     const channel = supabase
@@ -372,13 +376,18 @@ export function useCaja() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, cargarEstadoCaja]);
+  }, [userId, canOperateCaja, cargarEstadoCaja]);
 
   // ============================================================
   // ABRIR CAJA (Atómico y Seguro con RPC)
   // ============================================================
 
   const abrirCaja = async (montoInicial) => {
+    if (!canOperateCaja) {
+      showMessageModal('❌ No tienes permiso para operar la caja.');
+      return false;
+    }
+
     if (!userId) {
       showMessageModal('❌ Error: No hay usuario autenticado.');
       return false;
@@ -470,6 +479,10 @@ export function useCaja() {
   // ============================================================
 
   const ajustarMontoInicial = async (nuevoMonto, motivo = '') => {
+    if (!canOperateCaja) {
+      showMessageModal('❌ No tienes permiso para operar la caja.');
+      return false;
+    }
     if (!cajaActual) return false;
     const montoNum = parseFloat(nuevoMonto);
     if (isNaN(montoNum) || montoNum < 0) {
@@ -518,15 +531,14 @@ export function useCaja() {
   // CALCULAR TOTAL TEÓRICO EN EFECTIVO
   // ============================================================
 
-  const calcularTotalTeorico = async () => {
-    return calcularTotalEnCaja(cajaActual, totalesTurno);
-  };
+  const calcularTotalTeorico = () => calcularTotalEnCaja(cajaActual, totalesTurno);
 
   // ============================================================
   // CERRAR CAJA (Arqueo y Corte)
   // ============================================================
 
   const realizarAuditoriaYCerrar = async (montoFisico, comentarios = '', detalleCierre = null) => {
+    if (!canOperateCaja) return { success: false, error: 'No tienes permiso para operar la caja.' };
     if (!cajaActual) return { success: false, error: 'No hay turno abierto para cerrar.' };
 
     try {
@@ -589,6 +601,10 @@ export function useCaja() {
   // ============================================================
 
   const registrarMovimiento = async (tipo, monto, concepto) => {
+    if (!canOperateCaja) {
+      showMessageModal('❌ No tienes permiso para operar la caja.');
+      return false;
+    }
     if (!cajaActual) {
       showMessageModal('⚠️ Debes abrir tu turno de caja antes de registrar movimientos.');
       return false;

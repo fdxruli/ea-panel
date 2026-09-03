@@ -38,6 +38,15 @@ export const useAdminCache = (key, fetcher, options = {}) => {
     const fetcherRef = useRef(fetcher);
     const onSuccessRef = useRef(onSuccess);
     const onErrorRef = useRef(onError);
+    const mountedRef = useRef(true);
+    const requestIdRef = useRef(0);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+        mountedRef.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         fetcherRef.current = fetcher;
@@ -46,8 +55,9 @@ export const useAdminCache = (key, fetcher, options = {}) => {
     }, [fetcher, onSuccess, onError]);
 
     const executeFetch = useCallback(async (isRefetch = false) => {
+        const requestId = ++requestIdRef.current;
         if (!effectiveEnabled || !key) {
-            setIsLoading(!isHydrated && enabled);
+            if (mountedRef.current) setIsLoading(!isHydrated && enabled);
             return;
         }
 
@@ -62,6 +72,7 @@ export const useAdminCache = (key, fetcher, options = {}) => {
                 setIsLoading(false);
 
                 handleFetch(key, fetcherRef.current, ttl).then(freshData => {
+                    if (!mountedRef.current || requestId !== requestIdRef.current) return;
                     setData(freshData);
                     setIsCached(false);
                     setAge(0);
@@ -84,24 +95,28 @@ export const useAdminCache = (key, fetcher, options = {}) => {
         }
 
         // Si no hay caché válido o es refetch explícito, ejecutar fetch
-        setIsLoading(true);
-        setIsError(false);
-        setError(null);
+        if (mountedRef.current && requestId === requestIdRef.current) {
+            setIsLoading(true);
+            setIsError(false);
+            setError(null);
+        }
 
         try {
             const freshData = await handleFetch(key, fetcherRef.current, ttl);
+            if (!mountedRef.current || requestId !== requestIdRef.current) return;
             setData(freshData);
             setIsCached(false);
             setAge(0);
             onSuccessRef.current?.(freshData);
         } catch (err) {
+            if (!mountedRef.current || requestId !== requestIdRef.current) return;
             console.error(`[useCache] ERROR: Falló el fetch para "${key}":`, err);
             setError(err);
             setIsError(true);
             setData(null);
             onErrorRef.current?.(err);
         } finally {
-            setIsLoading(false);
+            if (mountedRef.current && requestId === requestIdRef.current) setIsLoading(false);
         }
     }, [key, effectiveEnabled, isHydrated, enabled, refetchOnMount, staleWhileRevalidate, ttl, getCached, handleFetch]);
 

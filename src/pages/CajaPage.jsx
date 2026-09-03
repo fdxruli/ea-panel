@@ -330,12 +330,6 @@ export default function CajaPage() {
     );
   }
 
-  const totalEnCaja = (cajaActual?.monto_inicial || 0) +
-    (totalesTurno?.ventasContado || 0) +
-    (totalesTurno?.abonosFiado || 0) +
-    (cajaActual?.entradas_efectivo || 0) -
-    (cajaActual?.salidas_efectivo || 0);
-
   return (
     <div className="caja-grid caja-page">
       <CajaPageHeader isOpen />

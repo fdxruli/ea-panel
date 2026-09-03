@@ -41,7 +41,8 @@ const calculateInventoryValue = async () => {
   return new Promise((resolve, reject) => {
     // Verificación defensiva: ¿Existe el almacén?
     if (!db.objectStoreNames.contains('product_batches')) {
-      return resolve({ inventoryValue: 0, totalProcessed: 0 });
+      resolve({ inventoryValue: 0, totalProcessed: 0 });
+      return;
     }
 
     const tx = db.transaction(['product_batches'], 'readonly');
@@ -50,7 +51,7 @@ const calculateInventoryValue = async () => {
 
     // Timeout de seguridad: Si tarda más de 30s, abortamos para liberar memoria
     const timeoutId = setTimeout(() => {
-      try { tx.abort(); } catch (e) {}
+      try { tx.abort(); } catch { /* La transacción pudo finalizar justo antes. */ }
       reject(new Error('CALCULATION_TIMEOUT'));
     }, 30000);
 

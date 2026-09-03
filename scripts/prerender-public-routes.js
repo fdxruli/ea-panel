@@ -170,7 +170,9 @@ async function prerenderPublicRoutes() {
     server.close();
     try {
       fs.rmSync(tempUserDataDir, { recursive: true, force: true });
-    } catch (_) {}
+    } catch {
+      // El directorio temporal ya puede haber sido eliminado por el sistema.
+    }
   }
 
   console.log('Prerender completado.');
@@ -179,5 +181,4 @@ async function prerenderPublicRoutes() {
 prerenderPublicRoutes().catch((error) => {
   console.warn('Advertencia durante el prerender local (el build de la app continua):', error.message);
 });
-
 

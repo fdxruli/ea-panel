@@ -106,9 +106,9 @@ export const useAppStore = create((set, get) => ({
           // Sub-Paso A: Intentar validación con timeout personalizado
           const serverValidation = await Promise.race([
             revalidateLicense(localLicense.license_key),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('CUSTOM_TIMEOUT')), 5000)
-            )
+            new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('CUSTOM_TIMEOUT')), 5000);
+            })
           ]);
 
           console.log('✅ [AppStore] Respuesta del servidor:', serverValidation);
@@ -342,7 +342,9 @@ export const useAppStore = create((set, get) => ({
     try {
       if (state.realtimeSubscription) {
         await get().stopRealtimeSecurity();
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => {
+          setTimeout(resolve, 200);
+        });
       }
 
       const channel = startLicenseListener(

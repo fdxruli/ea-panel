@@ -46,7 +46,7 @@ const MenuIcon = () => (
 // === LISTA COMPLETA DE ENLACES ===
 const adminLinks = [
   { to: "/admin", label: "Dashboard", permissionKey: "dashboard.view" },
-  { to: "/admin/caja", label: "Caja (POS)", permissionKey: "dashboard.view" },
+  { to: "/admin/caja", label: "Caja (POS)", permissionKey: "caja.access" },
   { to: "/admin/crear-pedido", label: "Crear Pedido", permissionKey: "crear-pedido.view" },
   { to: "/admin/pedidos", label: "Pedidos", permissionKey: "pedidos.view" },
   { to: "/admin/clientes", label: "Clientes", permissionKey: "clientes.view" },
@@ -64,14 +64,14 @@ const adminLinks = [
 // === ENLACES PRINCIPALES DE LA BARRA INFERIOR ===
 const bottomNavLinks = [
   { to: "/admin", icon: <DashboardIcon />, label: "Dashboard", permissionKey: "dashboard.view" },
-  { to: "/admin/caja", icon: <CashRegisterIcon />, label: "Caja", permissionKey: "dashboard.view" },
+  { to: "/admin/caja", icon: <CashRegisterIcon />, label: "Caja", permissionKey: "caja.access" },
   { to: "/admin/crear-pedido", icon: <CreateIcon />, label: "Crear", permissionKey: "crear-pedido.view" },
   { to: "/admin/pedidos", icon: <OrdersIcon />, label: "Pedidos", permissionKey: "pedidos.view" },
   { to: "/admin/productos", icon: <ProductsIcon />, label: "Productos", permissionKey: "productos.view" },
 ];
 
 // Labels de los enlaces principales (para filtrar en el menú modal)
-const bottomNavLabels = ["Dashboard", "Caja (POS)", "Crear Pedido", "Pedidos", "Productos"];
+const bottomNavRoutes = new Set(bottomNavLinks.map(link => link.to));
 
 // Rutas que pertenecen al menú (para marcar el botón "Menú" como activo)
 const menuOnlyRoutes = [
@@ -95,9 +95,7 @@ export default function AdminMobileNav() {
   const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
 
   // Filtrar enlaces del menú modal (excluir los que están en la barra inferior)
-  const filteredMenuLinks = adminLinks.filter(link =>
-    !bottomNavLabels.includes(link.label)
-  );
+  const filteredMenuLinks = adminLinks.filter(link => !bottomNavRoutes.has(link.to));
 
   // Verificar si la ruta actual pertenece al menú modal
   const isMenuActive = menuOnlyRoutes.some(route =>

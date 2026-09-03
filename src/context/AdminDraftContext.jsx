@@ -10,12 +10,9 @@ import {
   listDrafts as listStoredDrafts,
   updateDraft as updateStoredDraft,
 } from '../lib/adminDraftStorage';
+import { getAdminDraftOwnerKey } from '../lib/adminDraftIdentity';
 
 const AdminDraftContext = createContext(null);
-
-export const getAdminDraftOwnerKey = ({ status, userId } = {}) => (
-  status === 'ADMIN' && typeof userId === 'string' && userId ? userId : null
-);
 
 export const AdminDraftProvider = ({ children }) => {
   const { status, userId } = useAdminAuth();

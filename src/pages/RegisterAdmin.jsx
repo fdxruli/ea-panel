@@ -5,13 +5,13 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import DOMPurify from 'dompurify';
 import styles from './RegisterAdmin.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
-import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { manageAdminUser } from '../services/adminUserService';
 import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 
-const fetchAdminsList = async () => {
-    return await supabase
+const fetchAdminsList = () => {
+    return supabase
         .from('admins')
         .select('*')
         .order('created_at', { ascending: false });
@@ -138,7 +138,7 @@ PermissionsMatrix.displayName = 'PermissionsMatrix';
 
 
 // OPTIMIZACIÓN 3: Componente de tarjeta de admin memoizado
-const AdminCard = memo(({ admin, canEdit, onEdit, onDelete }) => {
+const AdminCard = memo(({ admin, canEdit, canDelete, onEdit, onDelete }) => {
     return (
         <div className={styles.adminCard}>
             <div className={styles.adminInfo}>
@@ -150,22 +150,26 @@ const AdminCard = memo(({ admin, canEdit, onEdit, onDelete }) => {
                 </div>
                 <p className={styles.adminEmail}>{admin.email}</p>
             </div>
-            {canEdit && (
+            {(canEdit || canDelete) && (
                 <div className={styles.adminActions}>
-                    <button
-                        onClick={() => onEdit(admin)}
-                        className={styles.editButton}
-                        aria-label="Editar administrador"
-                    >
-                        Editar
-                    </button>
-                    <button
-                        onClick={() => onDelete(admin.id)}
-                        className={styles.deleteButton}
-                        aria-label="Eliminar administrador"
-                    >
-                        Eliminar
-                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => onEdit(admin)}
+                            className={styles.editButton}
+                            aria-label="Editar administrador"
+                        >
+                            Editar
+                        </button>
+                    )}
+                    {canDelete && (
+                        <button
+                            onClick={() => onDelete(admin.id)}
+                            className={styles.deleteButton}
+                            aria-label="Eliminar administrador"
+                        >
+                            Eliminar
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -183,8 +187,7 @@ export default function RegisterAdmin() {
 
     const {
         data: cachedAdmins,
-        isLoading: loadingAdmins,
-        refetch: refetchAdmins
+        isLoading: loadingAdmins
     } = useAdminCache('admins:all', fetchAdminsList, {
         ttl: DEFAULT_TTL.MEDIUM,
         staleWhileRevalidate: true
@@ -288,8 +291,7 @@ export default function RegisterAdmin() {
     }, [formData, editingAdmin]);
 
 
-    // CORRECCIÓN: closeModal ANTES de handleSubmit (sin useCallback)
-    const closeModal = () => {
+    const closeModal = useCallback(() => {
         setIsModalOpen(false);
         setEditingAdmin(null);
         setFormData({
@@ -299,7 +301,7 @@ export default function RegisterAdmin() {
             role: 'staff'
         });
         setPermissions({});
-    };
+    }, []);
 
     // OPTIMIZACIÓN 10: Submit optimizado
     const handleSubmit = useCallback(async (e) => {
@@ -314,63 +316,23 @@ export default function RegisterAdmin() {
 
         try {
             if (editingAdmin) {
-                // Actualizar admin existente
-                const { error } = await supabase
-                    .from('admins')
-                    .update({
-                        name: formData.name,
-                        role: formData.role,
-                        permissions
-                    })
-                    .eq('id', editingAdmin.id);
-
-                if (error) throw error;
+                await manageAdminUser({
+                    action: 'update',
+                    targetId: editingAdmin.id,
+                    name: formData.name.trim(),
+                    role: formData.role,
+                    permissions,
+                });
                 showAlert('Administrador actualizado exitosamente.', 'success');
             } else {
-                console.log('Permisos a guardar:', permissions);
-
-                const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-                    email: formData.email,
+                await manageAdminUser({
+                    action: 'create',
+                    name: formData.name.trim(),
+                    email: formData.email.trim().toLowerCase(),
                     password: formData.password,
-                    email_confirm: true,
-                    user_metadata: {
-                        name: formData.name,
-                        role: formData.role
-                    }
+                    role: formData.role,
+                    permissions,
                 });
-
-                if (authError) throw authError;
-
-                if (!authData.user) {
-                    throw new Error('No se pudo crear el usuario');
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                const { error: updateError } = await supabase
-                    .from('admins')
-                    .update({
-                        permissions: permissions
-                    })
-                    .eq('id', authData.user.id);
-
-                if (updateError) {
-                    console.error('Error actualizando permisos:', updateError);
-                    throw updateError;
-                }
-
-                const { data: adminData, error: verifyError } = await supabase
-                    .from('admins')
-                    .select('*')
-                    .eq('id', authData.user.id)
-                    .single();
-
-                if (verifyError) {
-                    console.error('Error verificando admin:', verifyError);
-                } else {
-                    console.log('✅ Admin creado con permisos:', adminData);
-                }
-
                 showAlert('Administrador creado exitosamente.', 'success');
             }
 
@@ -383,7 +345,7 @@ export default function RegisterAdmin() {
         } finally {
             setIsSubmitting(false);
         }
-    }, [formData, permissions, editingAdmin, isFormValid, showAlert, invalidate]);
+    }, [formData, permissions, editingAdmin, isFormValid, showAlert, invalidate, closeModal]);
 
     // OPTIMIZACIÓN 11: Modal handlers memoizados
     const openModal = useCallback((admin = null) => {
@@ -421,9 +383,7 @@ export default function RegisterAdmin() {
         }
 
         try {
-            // Usar supabaseAdmin para tener permisos de eliminación
-            const { error } = await supabaseAdmin.auth.admin.deleteUser(adminId);
-            if (error) throw error;
+            await manageAdminUser({ action: 'delete', targetId: adminId });
 
             showAlert('Administrador eliminado exitosamente.', 'success');
             invalidate('admins:all');
@@ -461,6 +421,7 @@ export default function RegisterAdmin() {
                             key={admin.id}
                             admin={admin}
                             canEdit={canEdit}
+                            canDelete={canDelete}
                             onEdit={openModal}
                             onDelete={handleDelete}
                         />

@@ -58,7 +58,7 @@ export default function AdminLayout() {
         noindex
       />
 
-      <Navbar isSidebarOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+      <Navbar toggleSidebar={toggleSidebar} />
       <div className={`container ${!isSidebarOpen && isDesktop ? 'sidebar-closed' : ''}`}>
         {isDesktop && <Sidebar isSidebarOpen={isSidebarOpen} closeSidebar={closeSidebar} />}
         <main className="main-content">
