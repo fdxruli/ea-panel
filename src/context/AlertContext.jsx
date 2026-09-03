@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, useMemo } from 'react';
 
 const AlertContext = createContext();
 
@@ -16,14 +16,14 @@ export const AlertProvider = ({ children }) => {
         });
     }, []);
 
-    const closeAlert = () => {
+    const closeAlert = useCallback(() => {
         setAlert(null);
-    };
+    }, []);
 
     // NUEVO: Escuchador global de degradación de IndexedDB
     useEffect(() => {
         const handleIDBDegradation = (event) => {
-            const { message, tableName } = event.detail || {};
+            const { message } = event.detail || {};
 
             // Usamos showAlert para notificar al usuario.
             // Configuramos el tipo como 'error' para que destaque visualmente.
@@ -41,7 +41,7 @@ export const AlertProvider = ({ children }) => {
         };
     }, [showAlert]); // showAlert se incluye en las dependencias porque usamos useCallback
 
-    const value = { showAlert, closeAlert, alert };
+    const value = useMemo(() => ({ showAlert, closeAlert, alert }), [alert, closeAlert, showAlert]);
 
     return (
         <AlertContext.Provider value={value}>

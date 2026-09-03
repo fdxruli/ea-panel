@@ -506,7 +506,7 @@ export const ProductProvider = ({ children }) => {
 
             return a.name.localeCompare(b.name);
         });
-    }, [baseProducts, specialPrices, categories]);
+    }, [baseProducts, categories, customerId, specialPrices]);
 
     const visibleCategories = useMemo(() => {
         if (productsWithAppliedPrices.length === 0 || categories.length === 0) return [];
@@ -521,13 +521,13 @@ export const ProductProvider = ({ children }) => {
         fetchSpecialPrices(customerId, { background: false }).catch(() => { });
     }, [fetchBaseProductsAndCategories, fetchSpecialPrices, customerId]);
 
-    const value = {
+    const value = useMemo(() => ({
         products: productsWithAppliedPrices,
         categories: visibleCategories,
         loading: loadingProducts || loadingPrices,
         error,
         refetch,
-    };
+    }), [error, loadingPrices, loadingProducts, productsWithAppliedPrices, refetch, visibleCategories]);
 
     return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
 };

@@ -9,11 +9,29 @@ import styles from './BaseProductCard.module.css';
  * correctamente incluso si las referencias de las render props cambian por accidente.
  * Nos basamos en la inmutabilidad del objeto product y el layout.
  */
+const areSameProduct = (prevProduct, nextProduct) => {
+  if (prevProduct === nextProduct) return true;
+  if (!prevProduct || !nextProduct) return prevProduct === nextProduct;
+
+  return prevProduct.id === nextProduct.id &&
+    prevProduct.name === nextProduct.name &&
+    prevProduct.description === nextProduct.description &&
+    prevProduct.price === nextProduct.price &&
+    prevProduct.original_price === nextProduct.original_price &&
+    prevProduct.image_url === nextProduct.image_url &&
+    prevProduct.is_out_of_stock === nextProduct.is_out_of_stock &&
+    prevProduct.slug === nextProduct.slug &&
+    prevProduct.updated_at === nextProduct.updated_at &&
+    prevProduct.product_images === nextProduct.product_images;
+};
+
 const areEqual = (prevProps, nextProps) => {
-  return prevProps.product.id === nextProps.product.id &&
-    prevProps.product.updated_at === nextProps.product.updated_at &&
+  return areSameProduct(prevProps.product, nextProps.product) &&
     prevProps.layout === nextProps.layout &&
     prevProps.inactive === nextProps.inactive &&
+    prevProps.linkUrl === nextProps.linkUrl &&
+    prevProps.imagePriority === nextProps.imagePriority &&
+    prevProps.thumbnailSize === nextProps.thumbnailSize &&
     // Debes comparar las render props para reaccionar a los cambios de estado global
     prevProps.renderActions === nextProps.renderActions &&
     prevProps.renderPriceSection === nextProps.renderPriceSection &&
@@ -21,6 +39,42 @@ const areEqual = (prevProps, nextProps) => {
     prevProps.renderContentBody === nextProps.renderContentBody &&
     prevProps.renderContentTop === nextProps.renderContentTop;
 };
+
+const ProductCardContent = ({
+  product,
+  layout,
+  imageUrl,
+  imageWidths,
+  imageSizes,
+  imagePriority,
+  renderImageOverlay,
+  renderContentTop,
+  renderContentBody,
+}) => (
+  <div className={styles.innerContent}>
+    <div className={`${styles.imageContainer} ${layout === 'list' ? styles.listImageContainer : ''}`}>
+      {renderImageOverlay && (
+        <div className={styles.overlaySlot}>
+          {renderImageOverlay(product)}
+        </div>
+      )}
+      <ImageWithFallback
+        src={imageUrl}
+        alt={`Imagen de ${product.name}`}
+        className={styles.productImage}
+        imageSizes={imageWidths}
+        sizes={imageSizes}
+        priority={imagePriority}
+      />
+    </div>
+
+    <div className={styles.cardContent}>
+      {renderContentTop && renderContentTop(product)}
+      <h3 className={styles.productName}>{product.name}</h3>
+      {renderContentBody && renderContentBody(product)}
+    </div>
+  </div>
+);
 
 const BaseProductCard = memo(({
   product,
@@ -43,47 +97,30 @@ const BaseProductCard = memo(({
 
   const imageUrl = product?.image_url || product?.product_images?.[0]?.image_url || '';
   const parsedThumbnailSizes = typeof thumbnailSize === 'string'
-    ? thumbnailSize.split(',').map((value) => Number.parseInt(value.trim(), 10)).filter(Number.isFinite)
+    ? thumbnailSize.split(',').map((value) => Number(value.trim())).filter(Number.isFinite)
     : [];
   const imageWidths = parsedThumbnailSizes.length > 0 ? parsedThumbnailSizes : [360, 540, 720];
 
-  const InnerContent = () => (
-    <div className={styles.innerContent}>
-      <div
-        className={`${styles.imageContainer} ${layout === 'list' ? styles.listImageContainer : ''}`}
-        style={{ aspectRatio: layout === 'list' ? '4 / 3' : '4 / 3' }}
-      >
-        {renderImageOverlay && (
-          <div className={styles.overlaySlot}>
-            {renderImageOverlay(product)}
-          </div>
-        )}
-        <ImageWithFallback
-          src={imageUrl}
-          alt={`Imagen de ${product.name}`}
-          className={styles.productImage}
-          imageSizes={imageWidths}
-          sizes={imageSizes}
-          priority={imagePriority}
-        />
-      </div>
-
-      <div className={styles.cardContent}>
-        {renderContentTop && renderContentTop(product)}
-        <h3 className={styles.productName}>{product.name}</h3>
-        {renderContentBody && renderContentBody(product)}
-      </div>
-    </div>
-  );
+  const contentProps = {
+    product,
+    layout,
+    imageUrl,
+    imageWidths,
+    imageSizes,
+    imagePriority,
+    renderImageOverlay,
+    renderContentTop,
+    renderContentBody,
+  };
 
   return (
     <article className={cardClassName}>
       {linkUrl ? (
         <Link to={linkUrl} className={styles.productLink}>
-          <InnerContent />
+          <ProductCardContent {...contentProps} />
         </Link>
       ) : (
-        <InnerContent />
+        <ProductCardContent {...contentProps} />
       )}
 
       {(renderPriceSection || renderActions) && (

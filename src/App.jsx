@@ -1,18 +1,16 @@
 import React, { useEffect, lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 
-// Context Providers (Se cargan de inmediato, lo cual es correcto)
+// Providers principales del cliente: necesarios para el shell y el catálogo.
 import { CartProvider } from "./context/CartContext.jsx";
 import { CustomerProvider } from "./context/CustomerContext.jsx";
 import { ProductProvider } from "./context/ProductContext.jsx";
 import { UserDataProvider, useUserData } from "./context/UserDataContext.jsx";
-import { ProductExtrasProvider } from "./context/ProductExtrasContext.jsx";
 import { AlertProvider } from "./context/AlertContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { BusinessHoursProvider } from "./context/BusinessHoursContext.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
 
-// Layouts (Se cargan de inmediato, correcto)
 import ClientLayout from "./layouts/ClientLayout.jsx";
 import MenuRouteSkeleton from "./components/MenuRouteSkeleton.jsx";
 
@@ -24,24 +22,22 @@ const MyStuff = lazy(() => import("./pages/MyStuff.jsx"));
 const TermsPage = lazy(() => import("./pages/TermsPage.jsx"));
 const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage.jsx"));
 
-// --- Área de Admin ---
-// El árbol completo y sus proveedores se descargan únicamente al entrar al admin.
+// El árbol de administración y los extras se descargan solo en sus rutas.
 const AdminRoutes = lazy(() => import("./routes/AdminRoutes.jsx"));
+const ClientExtrasProvider = lazy(() => import("./context/ProductExtrasContext.jsx").then(({ ProductExtrasProvider }) => ({ default: ProductExtrasProvider })));
 
 // --- Auth & Utility Pages ---
 const Login = lazy(() => import("./pages/Login.jsx"));
 const NotFoundPage = lazy(() => import("./components/NotFoundPage.jsx"));
 
-// --- Componentes (NO son páginas, se cargan de inmediato) ---
+// --- Componentes del shell ---
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import AlertModal from "./components/AlertModal.jsx";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
-// Utils
 import { cleanupExpiredCache } from "./utils/cache.js";
 
-// Componente de Fallback de Suspense (para centrar el spinner)
 const FullscreenLoader = () => (
   <div className="fullscreen-loader">
     <LoadingSpinner />
@@ -76,11 +72,9 @@ function App() {
                         <CustomerProvider>
                           <UserDataProvider>
                             <ProductProvider>
-                              <ProductExtrasProvider>
-                                <CartProvider>
-                                  <ClientLayout />
-                                </CartProvider>
-                              </ProductExtrasProvider>
+                              <CartProvider>
+                                <ClientLayout />
+                              </CartProvider>
                             </ProductProvider>
                           </UserDataProvider>
                         </CustomerProvider>
@@ -98,28 +92,35 @@ function App() {
                         path="producto/:productSlug"
                         element={(
                           <Suspense fallback={<ClientMenuFallback />}>
-                            <Menu />
+                            <ClientExtrasProvider>
+                              <Menu />
+                            </ClientExtrasProvider>
                           </Suspense>
                         )}
                       />
                       <Route path="mis-pedidos" element={<MyOrders />} />
                       <Route path="mis-pedidos/:orderCode" element={<OrderDetailPage />} />
                       <Route path="mi-perfil" element={<MyProfile />} />
-                      <Route path="mi-actividad" element={<MyStuff />} />
+                      <Route
+                        path="mi-actividad"
+                        element={(
+                          <Suspense fallback={<FullscreenLoader />}>
+                            <ClientExtrasProvider>
+                              <MyStuff />
+                            </ClientExtrasProvider>
+                          </Suspense>
+                        )}
+                      />
                       <Route path="terminos" element={<TermsPage />} />
-                      {/* Este NotFoundPage es solo para rutas DENTRO del ClientLayout */}
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>
 
-                    {/* --- Admin Login --- */}
                     <Route path="/login" element={<Login />} />
 
                     {/* --- Admin Routes --- */}
                     <Route path="/admin/*" element={<AdminRoutes />} />
 
-                    {/* --- Global Catch-all --- */}
                     <Route path="*" element={<NotFoundPage />} />
-
                   </Routes>
                 </Suspense>
               </ErrorBoundary>

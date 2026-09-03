@@ -45,7 +45,9 @@ const fetchProductsWithDedup = async (cacheKey) => {
   try {
     return await request;
   } finally {
-    inFlightRequests.delete(cacheKey);
+    if (inFlightRequests.get(cacheKey) === request) {
+      inFlightRequests.delete(cacheKey);
+    }
   }
 };
 
@@ -85,7 +87,7 @@ export const useClientProductsBasic = (options = {}) => {
 
     try {
       const freshProducts = await fetchProductsWithDedup(cacheKey);
-      const normalizedProducts = applyProducts(freshProducts, { fromCache: false });
+      const normalizedProducts = normalizeProducts(freshProducts);
 
       if (pendingCacheWrites.get(cacheKey) === currentSequence) {
         setAsyncCache({ key: cacheKey, scope: cacheScope, ttl }, normalizedProducts).catch(console.error);
@@ -93,16 +95,18 @@ export const useClientProductsBasic = (options = {}) => {
 
       if (!mountedRef.current) return normalizedProducts;
 
+      applyProducts(normalizedProducts, { fromCache: false });
       setIsLoading(false);
       setError(null);
       return normalizedProducts;
     } catch (fetchError) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) return undefined;
 
       if (!suppressError) {
         setError(fetchError);
       }
       setIsLoading(false);
+      return undefined;
     } finally {
       if (mountedRef.current) {
         setIsValidating(false);
@@ -141,7 +145,7 @@ export const useClientProductsBasic = (options = {}) => {
 
       const { data: cachedProducts, isStale } = await getAsyncCache(cacheKey);
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) return undefined;
 
       const hasCachedProducts = cachedProducts !== null;
 
@@ -158,6 +162,8 @@ export const useClientProductsBasic = (options = {}) => {
         setIsLoading(false);
         setIsValidating(false);
       }
+
+      return undefined;
     };
 
     init();

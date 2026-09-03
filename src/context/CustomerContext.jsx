@@ -1,6 +1,5 @@
-import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { deleteFCMRegistration } from '../lib/firebaseConfig';
 
 const CustomerContext = createContext();
 
@@ -50,8 +49,10 @@ export const CustomerProvider = ({ children }) => {
   const [isCustomerLoading, setIsCustomerLoading] = useState(true);
   const isMountedRef = useRef(false);
   const sessionRestoreIdRef = useRef(0);
+  const fetchActiveTermsIdRef = useRef(null);
+  const checkAndLoginRef = useRef(null);
 
-  const fetchActiveTermsId = async () => {
+  const fetchActiveTermsId = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('terms_and_conditions').select('id').order('version', { ascending: false }).limit(1).maybeSingle();
       if (error || !data?.id) {
@@ -64,14 +65,14 @@ export const CustomerProvider = ({ children }) => {
       console.error('Error buscando terminos vigentes:', error);
       return null;
     }
-  };
+  }, []);
 
-  const resolveActiveTermsId = async (currentTermsId = null) => {
+  const resolveActiveTermsId = useCallback(async (currentTermsId = null) => {
     if (currentTermsId) return { ok: true, termsId: currentTermsId };
     if (activeTermsId) return { ok: true, termsId: activeTermsId };
     const fetchedTermsId = await fetchActiveTermsId();
     return fetchedTermsId ? { ok: true, termsId: fetchedTermsId } : { ok: false, code: 'terms_unavailable' };
-  };
+  }, [activeTermsId, fetchActiveTermsId]);
 
   const verifyCustomer = useCallback(async (phoneToVerify, currentTermsId = null) => {
     if (!phoneToVerify || phoneToVerify.length < 10) return { status: 'error', code: 'invalid_phone' };
@@ -94,21 +95,21 @@ export const CustomerProvider = ({ children }) => {
       console.error('Error inesperado verificando cliente:', error);
       return { status: 'error', code: 'unexpected_customer_lookup_error' };
     }
-  }, [activeTermsId]);
+  }, [resolveActiveTermsId]);
 
-  const persistCanonicalCustomer = (customerData) => {
+  const persistCanonicalCustomer = useCallback((customerData) => {
     const canonical = normalizeCustomer(customerData);
     if (!canonical?.id) return;
     localStorage.setItem(CUSTOMER_PHONE_KEY, canonical.phone);
     localStorage.setItem(CUSTOMER_DATA_KEY, JSON.stringify(canonical));
     localStorage.setItem(CANONICAL_CUSTOMER_ID_KEY, canonical.id);
-  };
+  }, []);
 
   const executeLogin = useCallback(async (customerData) => {
     if (!customerData.referral_code) {
       const newReferralCode = await generateUniqueReferralCode(customerData.name, customerData.phone);
       const { data: updated, error } = await supabase.from('customers').update({ referral_code: newReferralCode }).eq('id', customerData.id).select().single();
-      if (!error && updated) customerData.referral_code = newReferralCode;
+      if (!error && updated) customerData = { ...customerData, referral_code: newReferralCode };
     }
     const canonical = normalizeCustomer(customerData);
     setCustomer(canonical);
@@ -119,16 +120,37 @@ export const CustomerProvider = ({ children }) => {
       onSuccessCallback();
       setOnSuccessCallback(null);
     }
-  }, [isPhoneModalOpen, onSuccessCallback]);
+  }, [isPhoneModalOpen, onSuccessCallback, persistCanonicalCustomer]);
 
-  const clearCachedCustomerData = () => {
+  const clearCachedCustomerData = useCallback(() => {
     localStorage.removeItem(CUSTOMER_DATA_KEY);
     localStorage.removeItem(CANONICAL_CUSTOMER_ID_KEY);
     setCustomer(null);
     setPhone('');
-  };
+  }, []);
 
-  const checkAndLogin = async (phoneToLogin, options = {}) => {
+  const clearPhone = useCallback(() => {
+    const currentCustomerId = customer?.id;
+    sessionRestoreIdRef.current += 1;
+    localStorage.removeItem(CUSTOMER_PHONE_KEY);
+    localStorage.removeItem(CUSTOMER_DATA_KEY);
+    localStorage.removeItem(CANONICAL_CUSTOMER_ID_KEY);
+    setPhone('');
+    setCustomer(null);
+
+    const cleanupNotificationSession = async () => {
+      if (currentCustomerId) {
+        const { error } = await supabase.from('push_subscriptions').delete().eq('customer_id', currentCustomerId);
+        if (error) console.error('[Notifications] No se pudo limpiar la suscripcion push del cliente:', error);
+      }
+      const { deleteFCMRegistration } = await import('../lib/firebaseConfig');
+      await deleteFCMRegistration();
+    };
+
+    cleanupNotificationSession().catch(error => console.error('[Notifications] Error limpiando sesion push:', error));
+  }, [customer?.id]);
+
+  const checkAndLogin = useCallback(async (phoneToLogin, options = {}) => {
     const { requirePersistedSession = false, restoreId = null } = options;
     const result = await verifyCustomer(phoneToLogin);
     if (!isMountedRef.current) return { status: 'cancelled' };
@@ -149,17 +171,24 @@ export const CustomerProvider = ({ children }) => {
     }
     if (result.status === 'not_found') clearPhone();
     return result;
-  };
+  }, [clearCachedCustomerData, clearPhone, executeLogin, verifyCustomer]);
 
   const initializeSession = useCallback(async () => {
     const restoreId = sessionRestoreIdRef.current + 1;
     sessionRestoreIdRef.current = restoreId;
     const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
-    await fetchActiveTermsId();
+    await fetchActiveTermsIdRef.current?.();
     const canContinueRestore = isMountedRef.current && sessionRestoreIdRef.current === restoreId && localStorage.getItem(CUSTOMER_PHONE_KEY) === savedPhone;
-    if (savedPhone && canContinueRestore) await checkAndLogin(savedPhone, { requirePersistedSession: true, restoreId });
+    if (savedPhone && canContinueRestore) {
+      await checkAndLoginRef.current?.(savedPhone, { requirePersistedSession: true, restoreId });
+    }
     if (isMountedRef.current && sessionRestoreIdRef.current === restoreId) setIsCustomerLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchActiveTermsIdRef.current = fetchActiveTermsId;
+    checkAndLoginRef.current = checkAndLogin;
+  }, [checkAndLogin, fetchActiveTermsId]);
 
   const reconcileCanonicalCustomer = useCallback(async () => {
     const currentPhone = phone;
@@ -184,11 +213,11 @@ export const CustomerProvider = ({ children }) => {
       setCustomer(canonical);
       setPhone(canonical.phone);
       persistCanonicalCustomer(canonical);
-      console.info('[CustomerContext] Identidad canonica reconciliada:', canonical.id);
+      console.warn('[CustomerContext] Identidad canonica reconciliada:', canonical.id);
     } catch (error) {
       console.warn('[CustomerContext] No se pudo reconciliar la identidad al volver a foco:', error);
     }
-  }, [customer, phone]);
+  }, [customer, persistCanonicalCustomer, phone]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -212,7 +241,7 @@ export const CustomerProvider = ({ children }) => {
     };
   }, [reconcileCanonicalCustomer]);
 
-  const registerNewCustomer = async (customerPhone, name, inviterCode = null) => {
+  const registerNewCustomer = useCallback(async (customerPhone, name, inviterCode = null) => {
     const newClientReferralCode = await generateUniqueReferralCode(name, customerPhone);
     let referrerId = null;
     if (inviterCode) {
@@ -225,9 +254,9 @@ export const CustomerProvider = ({ children }) => {
       return null;
     }
     return newCustomer;
-  };
+  }, []);
 
-  const acceptTerms = async (customerId) => {
+  const acceptTerms = useCallback(async (customerId) => {
     if (!customerId) return { ok: false, code: 'invalid_customer_id' };
     const termsResolution = await resolveActiveTermsId();
     if (!termsResolution.ok) return { ok: false, code: termsResolution.code };
@@ -243,9 +272,9 @@ export const CustomerProvider = ({ children }) => {
       console.error('Error inesperado aceptando terminos:', error);
       return { ok: false, code: 'unexpected_acceptance_error' };
     }
-  };
+  }, [resolveActiveTermsId]);
 
-  const savePhoneAndContinue = async (phoneToSave, name = null) => {
+  const savePhoneAndContinue = useCallback(async (phoneToSave, name = null) => {
     const loginResult = await checkAndLogin(phoneToSave);
     if (loginResult.status === 'found') return loginResult.customer.terms_accepted;
     if (loginResult.status === 'error') return false;
@@ -259,27 +288,9 @@ export const CustomerProvider = ({ children }) => {
     if (!acceptanceResult.ok) return false;
     executeLogin({ ...customerData, terms_accepted: true });
     return true;
-  };
+  }, [acceptTerms, checkAndLogin, executeLogin, registerNewCustomer]);
 
-  function clearPhone() {
-    const currentCustomerId = customer?.id;
-    sessionRestoreIdRef.current += 1;
-    localStorage.removeItem(CUSTOMER_PHONE_KEY);
-    localStorage.removeItem(CUSTOMER_DATA_KEY);
-    localStorage.removeItem(CANONICAL_CUSTOMER_ID_KEY);
-    setPhone('');
-    setCustomer(null);
-    const cleanupNotificationSession = async () => {
-      if (currentCustomerId) {
-        const { error } = await supabase.from('push_subscriptions').delete().eq('customer_id', currentCustomerId);
-        if (error) console.error('[Notifications] No se pudo limpiar la suscripcion push del cliente:', error);
-      }
-      await deleteFCMRegistration();
-    };
-    cleanupNotificationSession().catch(error => console.error('[Notifications] Error limpiando sesion push:', error));
-  }
-
-  const togglePhoneModal = value => {
+  const togglePhoneModal = useCallback((value) => {
     if (typeof value === 'function') {
       setOnSuccessCallback(() => value);
       setPhoneModalOpen(true);
@@ -287,14 +298,46 @@ export const CustomerProvider = ({ children }) => {
       setOnSuccessCallback(null);
       setPhoneModalOpen(!!value);
     }
-  };
+  }, []);
 
-  const toggleCheckoutModal = (isOpen, mode = 'checkout') => {
+  const toggleCheckoutModal = useCallback((isOpen, mode = 'checkout') => {
     setCheckoutMode(mode);
     setCheckoutModalOpen(isOpen);
-  };
+  }, []);
 
-  const value = { phone, customer, isCustomerLoading, checkAndLogin, verifyCustomer, executeLogin, registerNewCustomer, acceptTerms, savePhoneAndContinue, clearPhone, isPhoneModalOpen, setPhoneModalOpen: togglePhoneModal, isCheckoutModalOpen, setCheckoutModalOpen: toggleCheckoutModal, checkoutMode };
+  const value = useMemo(() => ({
+    phone,
+    customer,
+    isCustomerLoading,
+    checkAndLogin,
+    verifyCustomer,
+    executeLogin,
+    registerNewCustomer,
+    acceptTerms,
+    savePhoneAndContinue,
+    clearPhone,
+    isPhoneModalOpen,
+    setPhoneModalOpen: togglePhoneModal,
+    isCheckoutModalOpen,
+    setCheckoutModalOpen: toggleCheckoutModal,
+    checkoutMode,
+  }), [
+    acceptTerms,
+    checkAndLogin,
+    checkoutMode,
+    clearPhone,
+    customer,
+    executeLogin,
+    isCheckoutModalOpen,
+    isCustomerLoading,
+    isPhoneModalOpen,
+    phone,
+    registerNewCustomer,
+    savePhoneAndContinue,
+    toggleCheckoutModal,
+    togglePhoneModal,
+    verifyCustomer,
+  ]);
 
   return <CustomerContext.Provider value={value}>{children}</CustomerContext.Provider>;
 };

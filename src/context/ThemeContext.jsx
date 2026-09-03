@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
 
 const THEME_STORAGE_KEY = 'app-theme-preference';
 
@@ -18,8 +18,6 @@ export const ThemeProvider = ({ children }) => {
 
         if (theme === 'dark' || (theme === 'system' && isDarkSystem)) {
             root.setAttribute('data-theme', 'dark');
-        } else {
-            // El tema claro se representa sin atributo data-theme.
         }
         localStorage.setItem(THEME_STORAGE_KEY, theme);
     }, [theme]);
@@ -43,10 +41,10 @@ export const ThemeProvider = ({ children }) => {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
-    const value = {
+    const value = useMemo(() => ({
         theme,
         changeTheme: setTheme
-    };
+    }), [theme]);
 
     return (
         <ThemeContext.Provider value={value}>

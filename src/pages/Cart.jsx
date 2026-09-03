@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCart } from '../context/CartContext';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
@@ -44,6 +44,7 @@ export default function Cart({ networkState }) {
     const [discountMessage, setDiscountMessage] = useState('');
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDiscountVisible, setDiscountVisible] = useState(false);
+    const closeTimerRef = useRef(null);
     const isInitialVerification = !hasResolvedOnce && isChecking;
     const isNetworkBlocked = !hasResolvedOnce || networkStatus !== NETWORK_STATUS.ONLINE;
     const checkoutButtonLabel = isInitialVerification
@@ -59,12 +60,25 @@ export default function Cart({ networkState }) {
         } else {
              setIsAnimating(false);
              setDiscountVisible(false);
+             if (closeTimerRef.current) {
+                 clearTimeout(closeTimerRef.current);
+                 closeTimerRef.current = null;
+             }
+             return undefined;
         }
     }, [isCartOpen]);
 
+    useEffect(() => () => {
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    }, []);
+
     const handleClose = useCallback(() => {
         setIsAnimating(false);
-        setTimeout(toggleCart, 600);
+        if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = window.setTimeout(() => {
+            closeTimerRef.current = null;
+            toggleCart();
+        }, 600);
     }, [toggleCart]);
 
     const handleApplyDiscount = async () => {

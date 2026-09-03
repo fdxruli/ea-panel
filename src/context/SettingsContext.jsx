@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
@@ -30,14 +30,12 @@ export const SettingsProvider = ({ children }) => {
         fetchSettings();
 
         // Suscripción compartida a cambios (Postgres CDC)
-        const unsubscribeCDC = subscribeToTableChanges('settings', (payload) => {
-            console.log('Settings changed (Shared Realtime)!', payload);
+        const unsubscribeCDC = subscribeToTableChanges('settings', () => {
             fetchSettings();
         });
 
         // Suscripción Broadcast directo
-        const unsubscribeBroadcast = subscribeToStoreBroadcast('settings_updated', (payload) => {
-            console.log('Settings changed (Broadcast)!', payload);
+        const unsubscribeBroadcast = subscribeToStoreBroadcast('settings_updated', () => {
             fetchSettings();
         });
 
@@ -47,12 +45,15 @@ export const SettingsProvider = ({ children }) => {
         };
     }, [fetchSettings]);
 
-    const getSetting = (key) => {
+    const getSetting = useCallback((key) => {
         return settings[key] || null; // Devolver null es más seguro que {}
-    };
+    }, [settings]);
 
     // Añadir refetch a las funciones expuestas
-    const value = { settings, loading, getSetting, refetch: fetchSettings };
+    const value = useMemo(
+        () => ({ settings, loading, getSetting, refetch: fetchSettings }),
+        [fetchSettings, getSetting, loading, settings]
+    );
 
     return (
         <SettingsContext.Provider value={value}>
