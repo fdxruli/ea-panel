@@ -1,672 +1,202 @@
-import React, {
-  lazy,
-  Suspense,
-  useDeferredValue,
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { useCart } from '../context/CartContext';
 import { useUserData } from '../context/UserDataContext';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import styles from './Menu.module.css';
-import ImageWithFallback from '../components/ImageWithFallback';
 import MenuRouteSkeleton from '../components/MenuRouteSkeleton';
-import SEO from '../components/SEO';
-import { getThumbnailUrl } from '../utils/imageUtils';
-import BaseProductCard from '../components/BaseProductCard';
 import { animateToCart } from '../utils/cartAnimation';
-import { MENU_LAYOUT_STORAGE_KEY } from './menuConstants';
-import {
-  defaultSeoImageAlt,
-  homeDescription,
-  homeTitle,
-  joinSiteUrl,
-  restaurantSchema,
-  resolveSeoImage,
-  siteName,
-  websiteSchema,
-} from '../seo/config';
-import { notifySeoReady } from '../seo/prerender';
 import fallbackImage from '../assets/images/fallback-product.svg';
-
-const ListIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6"></line>
-    <line x1="8" y1="12" x2="21" y2="12"></line>
-    <line x1="8" y1="18" x2="21" y2="18"></line>
-    <line x1="3" y1="6" x2="3.01" y2="6"></line>
-    <line x1="3" y1="12" x2="3.01" y2="12"></line>
-    <line x1="3" y1="18" x2="3.01" y2="18"></line>
-  </svg>
-);
-
-const GridIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7"></rect>
-    <rect x="14" y="3" width="7" height="7"></rect>
-    <rect x="14" y="14" width="7" height="7"></rect>
-    <rect x="3" y="14" width="7" height="7"></rect>
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="11" cy="11" r="7"></circle>
-    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <line x1="18" y1="6" x2="6" y2="18"></line>
-    <line x1="6" y1="6" x2="18" y2="18"></line>
-  </svg>
-);
+import MenuFilters from './menu/MenuFilters';
+import MenuFooter from './menu/MenuFooter';
+import MenuHero from './menu/MenuHero';
+import MenuProductGrid from './menu/MenuProductGrid';
+import MenuSeo from './menu/MenuSeo';
+import MenuUnavailableProduct from './menu/MenuUnavailableProduct';
+import { useMenuFilters } from './menu/useMenuFilters';
+import { getFirstAvailableProductImage, getProductDisplayImage } from './menu/menuUtils';
 
 const MOBILE_BREAKPOINT = 768;
-const EMPTY_PRODUCTS = [];
 const ProductModal = lazy(() => import('../components/ProductModal'));
 
-const getProductDisplayImage = (product) =>
-  product?.image_url || product?.product_images?.[0]?.image_url || '';
-
-const getFirstAvailableProductImage = (productList = []) => {
-  const productWithImage = productList.find((product) => Boolean(getProductDisplayImage(product)));
-  return getProductDisplayImage(productWithImage);
-};
-
-const getCategoryFallback = (name) => {
-  const compactName = name?.trim() || 'EA';
-  const parts = compactName.split(/\s+/).filter(Boolean);
-
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
-
-  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase();
-};
-
-const formatPrice = (value) => `$${Number(value || 0).toFixed(2)}`;
-
-const renderClientOverlay = (p) => {
-  if (p?.is_out_of_stock) {
-    return <span className={styles.outOfStockBadge}>Agotado</span>;
-  }
-  const hasSpecialPrice = p.original_price && p.original_price !== p.price;
-  return hasSpecialPrice ? <span className={styles.offerBadge}>Oferta</span> : null;
-};
-
-const renderClientDescription = (p) => {
-  const hasDescription = Boolean(p.description?.trim());
-  return hasDescription ? <p className={styles.productDescription}>{p.description}</p> : null;
-};
-
-const renderClientPrice = (p) => {
-  const hasSpecialPrice = p.original_price && p.original_price !== p.price;
-  return (
-    <div className={styles.priceContainer}>
-      {hasSpecialPrice ? (
-        <>
-          <span className={styles.originalPrice}>{formatPrice(p.original_price)}</span>
-          <span className={styles.specialPrice}>{formatPrice(p.price)}</span>
-        </>
-      ) : (
-        <span className={styles.price}>{formatPrice(p.price)}</span>
-      )}
-    </div>
-  );
-};
-
 export default function Menu() {
-  const { products, categories, loading, error, refetch } = useProducts();
-  const { addToCart, showToast } = useCart();
-  const { customer } = useUserData();
-  const { isOpen: isBusinessOpen, message: businessStatusMessage } = useBusinessHours();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { productSlug } = useParams();
-  const categoryRailRef = useRef(null);
-  const pathnameRef = useRef(location.pathname);
+    const { products, categories, loading, error, refetch } = useProducts();
+    const { addToCart, showToast } = useCart();
+    const { customer } = useUserData();
+    const { isOpen: isBusinessOpen, message: businessStatusMessage } = useBusinessHours();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { productSlug } = useParams();
+    const pathnameRef = useRef(location.pathname);
 
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [layout, setLayout] = useState(() => localStorage.getItem(MENU_LAYOUT_STORAGE_KEY) || 'grid');
-  const shouldShowLeadCapture = !customer;
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  const normalizedSearchQuery = deferredSearchQuery.trim().toLocaleLowerCase('es-MX');
-  const routeSelectedProduct = useMemo(() => (
-    productSlug ? products.find((product) => product.slug === productSlug) || null : null
-  ), [productSlug, products]);
-  const selectedProduct = routeSelectedProduct;
-  const activeSeoProduct = selectedProduct;
+    const {
+        selectedCategory,
+        searchQuery,
+        layout,
+        filteredProducts,
+        selectedCategoryLabel,
+        heroDescription,
+        hasCategoryFilter,
+        hasSearchFilter,
+        handleSelectCategory,
+        handleSearchChange,
+        clearSearch,
+        toggleLayout,
+    } = useMenuFilters({ products, categories });
 
-  useEffect(() => {
-    pathnameRef.current = location.pathname;
-  }, [location.pathname]);
+    const shouldShowLeadCapture = !customer;
+    const routeSelectedProduct = useMemo(() => (
+        productSlug ? products.find((product) => product.slug === productSlug) || null : null
+    ), [productSlug, products]);
+    const defaultCatalogImage = useMemo(() => getFirstAvailableProductImage(products), [products]);
+    const isMissingProductRoute = Boolean(productSlug) && !loading && !error && !routeSelectedProduct;
 
-  useEffect(() => {
-    localStorage.setItem(MENU_LAYOUT_STORAGE_KEY, layout);
-  }, [layout]);
+    useEffect(() => {
+        pathnameRef.current = location.pathname;
+    }, [location.pathname]);
 
-  const defaultCatalogImage = useMemo(() => getFirstAvailableProductImage(products), [products]);
+    const handleCloseProduct = useCallback(() => {
+        const closingPath = location.pathname;
 
-  const categoryVisuals = useMemo(() => {
-    const allEntry = {
-      id: null,
-      key: 'all',
-      name: 'Todos',
-      imageUrl: defaultCatalogImage,
-      fallback: 'EA',
-      hasOffer: false,
-    };
+        if (pathnameRef.current === closingPath) {
+            navigate('/');
+        }
+    }, [location.pathname, navigate]);
 
-    const productsByCategory = new Map();
-    products.forEach((product) => {
-      const categoryProducts = productsByCategory.get(product.category_id);
-      if (categoryProducts) {
-        categoryProducts.push(product);
-      } else {
-        productsByCategory.set(product.category_id, [product]);
-      }
-    });
+    const handleAddToCart = useCallback((product, quantity, event) => {
+        if (!product?.id) {
+            showToast('Este producto no esta disponible en este momento.');
+            return;
+        }
 
-    const visualCategories = categories.map((category) => {
-      const categoryProducts = productsByCategory.get(category.id) || EMPTY_PRODUCTS;
-      const hasOffer = categoryProducts.some(
-        (product) => product.original_price && product.original_price !== product.price
-      );
+        if (product.is_out_of_stock) {
+            showToast('Lo sentimos, este producto se encuentra agotado.');
+            return;
+        }
 
-      return {
-        id: category.id,
-        key: category.id,
-        name: category.name,
-        imageUrl: getFirstAvailableProductImage(categoryProducts),
-        fallback: getCategoryFallback(category.name),
-        hasOffer,
-      };
-    });
+        const parsedQuantity = Number(quantity);
+        const safeQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
+            ? parsedQuantity
+            : 1;
 
-    const allHasOffer = visualCategories.some((cat) => cat.hasOffer);
+        // Client-side guard only. Final availability must be revalidated server-side.
+        if (!isBusinessOpen) {
+            showToast('🕒 Estamos cerrados ahora mismo, no se pueden añadir productos al carrito.');
+            return;
+        }
 
-    return [{ ...allEntry, hasOffer: allHasOffer }, ...visualCategories];
-  }, [categories, defaultCatalogImage, products]);
+        addToCart(product, safeQuantity);
 
-  useEffect(() => {
-    const activeElement = categoryRailRef.current?.querySelector('[data-active-category="true"]');
+        const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
+        if (isMobile && event?.currentTarget) {
+            const imgSrc = getProductDisplayImage(product) || fallbackImage;
+            const animationTriggered = animateToCart({
+                originElement: event.currentTarget,
+                imgSrc,
+                motionProfile: 'compact-mobile',
+            });
 
-    if (activeElement) {
-      activeElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
-      });
-    }
-  }, [selectedCategory, categoryVisuals.length]);
+            if (animationTriggered) return;
+        }
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesCategory = selectedCategory
-        ? product.category_id === selectedCategory
-        : true;
+        showToast(`${safeQuantity} x ${product.name} añadido(s) al carrito.`);
+    }, [addToCart, isBusinessOpen, showToast]);
 
-      if (!matchesCategory) {
-        return false;
-      }
-
-      if (!normalizedSearchQuery) {
-        return true;
-      }
-
-      const searchableName = String(product.name || '').toLocaleLowerCase('es-MX');
-      const searchableDescription = String(product.description || '').toLocaleLowerCase('es-MX');
-
-      return searchableName.includes(normalizedSearchQuery)
-        || searchableDescription.includes(normalizedSearchQuery);
-    });
-  }, [products, selectedCategory, normalizedSearchQuery]);
-
-  const selectedCategoryLabel = useMemo(() => {
-    if (!selectedCategory) {
-      return 'Todo el menu';
-    }
-
-    return categories.find((category) => category.id === selectedCategory)?.name || 'Todo el menu';
-  }, [categories, selectedCategory]);
-
-  const heroDescription = useMemo(() => {
-    if (!selectedCategory) {
-      return 'Preparados al momento, bañados en tus salsas favoritas y listos para llevar hasta tu puerta.';
-    }
-
-    const category = categories.find((c) => c.id === selectedCategory);
-
-    if (category?.description && category.description.trim() !== '') {
-      return category.description.trim();
-    }
-
-    return `Descubre nuestra selección de ${selectedCategoryLabel.toLowerCase()}. Elige tus favoritos y nosotros nos encargamos del resto.`;
-  }, [selectedCategory, selectedCategoryLabel, categories]);
-
-  const handleCloseProduct = useCallback(() => {
-    const closingPath = location.pathname;
-
-    if (pathnameRef.current === closingPath) {
-      navigate('/');
-    }
-  }, [location.pathname, navigate]);
-
-  const handleSelectCategory = useCallback((categoryId) => {
-    setSelectedCategory(categoryId);
-  }, []);
-
-  const clearSearch = useCallback(() => {
-    setSearchQuery('');
-  }, []);
-
-  const toggleLayout = useCallback(() => {
-    setLayout((currentLayout) => (currentLayout === 'list' ? 'grid' : 'list'));
-  }, []);
-
-  const handleAddToCart = useCallback((product, quantity, event) => {
-    if (!product?.id) {
-      showToast('Este producto no esta disponible en este momento.');
-      return;
-    }
-
-    if (product.is_out_of_stock) {
-      showToast('Lo sentimos, este producto se encuentra agotado.');
-      return;
-    }
-
-    const parsedQuantity = Number(quantity);
-    const safeQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
-      ? parsedQuantity
-      : 1;
-
-    // Client-side guard only. Final availability must be revalidated server-side.
-    if (!isBusinessOpen) {
-      showToast('🕒 Estamos cerrados ahora mismo, no se pueden añadir productos al carrito.');
-      return;
-    }
-
-    addToCart(product, safeQuantity);
-
-    const quantityAdded = safeQuantity;
-    const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
-
-    if (isMobile && event?.currentTarget) {
-      const imgSrc = getProductDisplayImage(product) || fallbackImage;
-
-      const animationTriggered = animateToCart({
-        originElement: event.currentTarget,
-        imgSrc,
-        motionProfile: 'compact-mobile',
-      });
-
-      if (animationTriggered) {
-        return;
-      }
-    }
-
-    showToast(`${quantityAdded} x ${product.name} añadido(s) al carrito.`);
-  }, [isBusinessOpen, addToCart, showToast]);
-
-  const renderClientActions = useCallback((p) => {
-    if (p.is_out_of_stock) {
-      return (
-        <button
-          type="button"
-          className={`${styles.cardActionButton} ${styles.cardActionButtonOutOfStock}`}
-          disabled={true}
-        >
-          Agotado
-        </button>
-      );
-    }
-
-    return (
-      <button
-        type="button"
-        className={`${styles.cardActionButton} ${!isBusinessOpen ? styles.cardActionButtonClosed : ''}`}
-        onClick={(event) => {
-          event.preventDefault();
-          handleAddToCart(p, 1, event);
-        }}
-        disabled={!isBusinessOpen}
-      >
-        {isBusinessOpen ? 'Añadir' : 'Cerrado'}
-      </button>
-    );
-  }, [isBusinessOpen, handleAddToCart]);
-
-  const isProductRoute = Boolean(productSlug);
-  const isMissingProductRoute = isProductRoute && !loading && !error && !routeSelectedProduct;
-  const selectedProductCategoryName = activeSeoProduct
-    ? categories.find((category) => category.id === activeSeoProduct.category_id)?.name
-    : null;
-  const productDescription = activeSeoProduct?.description?.trim()
-    || (activeSeoProduct
-      ? `Pide ${activeSeoProduct.name} de ${selectedProductCategoryName?.toLowerCase() || 'nuestro menu'} en ${siteName}. Servicio a domicilio en La Trinitaria, Chiapas.`
-      : '');
-  const canonicalUrl = activeSeoProduct
-    ? joinSiteUrl(`/producto/${activeSeoProduct.slug}`)
-    : isMissingProductRoute
-      ? joinSiteUrl(`/producto/${productSlug}`)
-      : joinSiteUrl('/');
-  const seoImage = resolveSeoImage(
-    getProductDisplayImage(activeSeoProduct) || defaultCatalogImage || fallbackImage
-  );
-  const seoImageAlt = activeSeoProduct
-    ? `${activeSeoProduct.name} de ${siteName}`
-    : defaultSeoImageAlt;
-  const currentSchema = activeSeoProduct ? {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: activeSeoProduct.name,
-    description: productDescription,
-    image: [seoImage],
-    category: selectedProductCategoryName || undefined,
-    seller: {
-      '@type': 'Restaurant',
-      name: siteName,
-      url: joinSiteUrl('/'),
-    },
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'MXN',
-      price: Number(activeSeoProduct.price || 0).toFixed(2),
-      availability: 'https://schema.org/InStock',
-      url: canonicalUrl,
-      seller: {
-        '@type': 'Organization',
-        name: siteName,
-      },
-    },
-  } : isMissingProductRoute ? null : [restaurantSchema, websiteSchema];
-
-  const pageTitle = activeSeoProduct
-    ? `${activeSeoProduct.name} | ${siteName}`
-    : isMissingProductRoute
-      ? `Producto no encontrado | ${siteName}`
-      : homeTitle;
-  const pageDescription = activeSeoProduct
-    ? productDescription
-    : isMissingProductRoute
-      ? 'El producto que buscas no existe o ya no esta disponible en Entre Alas.'
-      : homeDescription;
-
-  useEffect(() => {
-    if (loading) {
-      return;
-    }
-
-    if (!productSlug || routeSelectedProduct || isMissingProductRoute || error) {
-      notifySeoReady();
-    }
-  }, [error, isMissingProductRoute, loading, productSlug, routeSelectedProduct]);
-
-  if (isMissingProductRoute) {
-    return (
-      <>
-        <SEO
-          title={pageTitle}
-          description={pageDescription}
-          type="website"
-          canonicalUrl={canonicalUrl}
-          image={seoImage}
-          imageAlt={seoImageAlt}
-          noindex
-        />
-        <div className={styles.errorContainer}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={styles.errorIcon}>
-            <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"></path>
-            <path d="M9 9l6 6"></path>
-            <path d="M15 9l-6 6"></path>
-          </svg>
-          <h2 className={styles.errorTitle}>Producto no disponible</h2>
-          <p className={styles.errorMessage}>El producto que buscas ya no esta disponible o fue retirado del menu publico.</p>
-          <Link to="/" className={styles.errorRetryButton}>Volver al menu</Link>
-        </div>
-      </>
-    );
-  }
-
-  if (loading) {
-    return (
-      <>
-        <SEO
-          title={pageTitle}
-          description={pageDescription}
-          type="website"
-          schemaMarkup={currentSchema}
-          canonicalUrl={canonicalUrl}
-          image={seoImage}
-          imageAlt={seoImageAlt}
-          noindex={isMissingProductRoute}
-        />
-        <MenuRouteSkeleton layout={layout} showLeadCapture={shouldShowLeadCapture} />
-      </>
-    );
-  }
-
-  const hasAnyProducts = products.length > 0;
-  const hasCategoryFilter = Boolean(selectedCategory);
-  const hasSearchFilter = Boolean(normalizedSearchQuery);
-
-  return (
-    <>
-      <SEO
-        title={pageTitle}
-        description={pageDescription}
-        type={activeSeoProduct ? 'product' : 'website'}
-        schemaMarkup={currentSchema}
-        canonicalUrl={canonicalUrl}
-        image={seoImage}
-        imageAlt={seoImageAlt}
-        noindex={isMissingProductRoute}
-      />
-
-      <div className={`${styles.menuContainer} ${shouldShowLeadCapture ? styles.menuContainerWithLeadCapture : ''}`}>
-        <section className={styles.menuHero}>
-          <div className={styles.heroCopy}>
-            <h1>{selectedCategory ? selectedCategoryLabel : '¿Qué se te antoja hoy?'}</h1>
-            <p>{heroDescription}</p>
-          </div>
-
-          <div className={styles.heroStats}>
-            <span className={`${styles.heroStatus} ${isBusinessOpen ? styles.heroStatusOpen : styles.heroStatusClosed}`}>
-              <span className={styles.statusDot}></span>
-              {isBusinessOpen ? 'Abierto • Recibe en minutos' : 'Cerrado por ahora'}
-            </span>
-            {businessStatusMessage && <span className={styles.heroMessage}>{businessStatusMessage}</span>}
-          </div>
-        </section>
-
-        <div className={styles.filters}>
-          <div className={styles.filterHeader}>
-            <div>
-              <p className={styles.filterEyebrow}>Categorias</p>
-              <h2>{selectedCategoryLabel}</h2>
-            </div>
-
-            <div className={styles.layoutToggle}>
-              <button
-                type="button"
-                onClick={toggleLayout}
-                title={layout === 'list' ? 'Cambiar a vista de cuadrícula' : 'Cambiar a vista de lista'}
-                aria-label={layout === 'list' ? 'Cambiar a vista de cuadrícula' : 'Cambiar a vista de lista'}
-              >
-                {layout === 'list' ? <GridIcon /> : <ListIcon />}
-              </button>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              width: '100%',
-              marginBottom: '0.85rem',
-              padding: '0.7rem 0.85rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: '999px',
-              background: 'var(--bg-secondary)',
-              boxSizing: 'border-box',
-            }}
-          >
-            <SearchIcon />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Buscar por nombre o descripción"
-              aria-label="Buscar productos del menú"
-              enterKeyHint="search"
-              autoComplete="off"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                border: 0,
-                outline: 'none',
-                background: 'transparent',
-                color: 'var(--text-primary)',
-                fontSize: '0.95rem',
-              }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                aria-label="Limpiar búsqueda"
-                title="Limpiar búsqueda"
-                style={{
-                  width: 34,
-                  height: 34,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  border: 0,
-                  borderRadius: '50%',
-                  background: 'transparent',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                <CloseIcon />
-              </button>
-            )}
-          </div>
-
-          <div ref={categoryRailRef} className={styles.categoryRail} aria-label="Categorias del menu">
-            {categoryVisuals.map((category) => {
-              const isActive = selectedCategory === category.id;
-
-              return (
+    const renderClientActions = useCallback((product) => {
+        if (product.is_out_of_stock) {
+            return (
                 <button
-                  key={category.key}
-                  type="button"
-                  className={`${styles.categoryButton} ${isActive ? styles.categoryButtonActive : ''}`}
-                  onClick={() => handleSelectCategory(category.id)}
-                  aria-pressed={isActive}
-                  data-active-category={isActive ? 'true' : 'false'}
+                    type="button"
+                    className={`${styles.cardActionButton} ${styles.cardActionButtonOutOfStock}`}
+                    disabled={true}
                 >
-                  <span className={styles.categoryCircle}>
-                    {category.imageUrl ? (
-                      <ImageWithFallback
-                        src={getThumbnailUrl(category.imageUrl, 180, 180)}
-                        alt={`Categoria ${category.name}`}
-                        className={styles.categoryImage}
-                        imageSizes={[120, 180, 240]}
-                        sizes="76px"
-                      />
-                    ) : (
-                      <span className={styles.categoryFallback}>{category.fallback}</span>
-                    )}
-                    {category.hasOffer && <span className={styles.categoryOfferBadge}>Oferta</span>}
-                  </span>
-                  <span className={styles.categoryName}>{category.name}</span>
+                    Agotado
                 </button>
-              );
-            })}
-          </div>
-        </div>
+            );
+        }
 
-        <div className={`${styles.productList} ${styles[layout]}`}>
-          {error ? (
-            <div className={`${styles.emptyState} ${styles.errorState}`}>
-              <p>Tardó demasiado en cargar. Verifica tu conexión.</p>
-              <button type="button" onClick={refetch} className={styles.errorRetryButtonInline}>Reintentar</button>
-            </div>
-          ) : filteredProducts.length > 0 ? (
-            filteredProducts.map((product, index) => (
-              <BaseProductCard
-                key={product.id}
-                product={product}
-                layout={layout}
-                inactive={Boolean(product.is_out_of_stock)}
-                linkUrl={`/producto/${product.slug}`}
-                imagePriority={index < 4}
-                renderImageOverlay={renderClientOverlay}
-                renderContentBody={renderClientDescription}
-                renderPriceSection={renderClientPrice}
-                renderActions={renderClientActions}
-              />
-            ))
-          ) : !hasAnyProducts ? (
-            <div className={styles.emptyState}>
-              <p>No hay productos disponibles en este momento.</p>
-            </div>
-          ) : hasSearchFilter ? (
-            <div className={styles.emptyState}>
-              <p>No encontramos productos para “{searchQuery.trim()}”.</p>
-              {hasCategoryFilter && (
-                <p style={{ marginTop: '0.5rem', fontSize: '0.88rem', fontWeight: 500 }}>
-                  Prueba con otra búsqueda o cambia de categoría.
-                </p>
-              )}
-            </div>
-          ) : hasCategoryFilter ? (
-            <div className={styles.emptyState}>
-              <p>No hay productos disponibles en esta categoría.</p>
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <p>No hay productos disponibles en este momento.</p>
-            </div>
-          )}
-        </div>
+        return (
+            <button
+                type="button"
+                className={`${styles.cardActionButton} ${!isBusinessOpen ? styles.cardActionButtonClosed : ''}`}
+                onClick={(event) => {
+                    event.preventDefault();
+                    handleAddToCart(product, 1, event);
+                }}
+                disabled={!isBusinessOpen}
+            >
+                {isBusinessOpen ? 'Añadir' : 'Cerrado'}
+            </button>
+        );
+    }, [handleAddToCart, isBusinessOpen]);
 
-        {selectedProduct && (
-          <Suspense fallback={null}>
-            <ProductModal
-              key={selectedProduct.id ?? selectedProduct.slug}
-              product={selectedProduct}
-              onClose={handleCloseProduct}
-              onAddToCart={handleAddToCart}
+    return (
+        <>
+            <MenuSeo
+                activeProduct={routeSelectedProduct}
+                categories={categories}
+                defaultCatalogImage={defaultCatalogImage}
+                error={error}
+                isMissingProductRoute={isMissingProductRoute}
+                loading={loading}
+                productSlug={productSlug}
             />
-          </Suspense>
-        )}
 
-        {!customer && (
-          <footer className={styles.seoFooter}>
-            <div className={styles.footerContent}>
-              <div className={styles.socialProof}>
-                <span className={styles.socialProofText}>¿Aún no te decides?</span>
-                <a href="https://www.facebook.com/EntreAlasDarkitchen" target="_blank" rel="noopener noreferrer" className={styles.socialProofLink}>Conocenos más en Facebook</a>
-              </div>
-              <div className={styles.footerBottom}>
-                <p>&copy; {new Date().getFullYear()} Entre Alas. Todos los derechos reservados.</p>
-              </div>
-            </div>
-          </footer>
-        )}
-      </div>
-    </>
-  );
+            {isMissingProductRoute ? (
+                <MenuUnavailableProduct />
+            ) : loading ? (
+                <MenuRouteSkeleton layout={layout} showLeadCapture={shouldShowLeadCapture} />
+            ) : (
+                <div className={`${styles.menuContainer} ${shouldShowLeadCapture ? styles.menuContainerWithLeadCapture : ''}`}>
+                    <MenuHero
+                        selectedCategory={selectedCategory}
+                        selectedCategoryLabel={selectedCategoryLabel}
+                        heroDescription={heroDescription}
+                        isBusinessOpen={isBusinessOpen}
+                        businessStatusMessage={businessStatusMessage}
+                    />
+
+                    <MenuFilters
+                        products={products}
+                        categories={categories}
+                        defaultCatalogImage={defaultCatalogImage}
+                        selectedCategory={selectedCategory}
+                        selectedCategoryLabel={selectedCategoryLabel}
+                        onSelectCategory={handleSelectCategory}
+                        searchQuery={searchQuery}
+                        onSearchChange={handleSearchChange}
+                        onClearSearch={clearSearch}
+                        layout={layout}
+                        onToggleLayout={toggleLayout}
+                    />
+
+                    <MenuProductGrid
+                        products={products}
+                        filteredProducts={filteredProducts}
+                        layout={layout}
+                        error={error}
+                        onRefetch={refetch}
+                        searchQuery={searchQuery}
+                        hasSearchFilter={hasSearchFilter}
+                        hasCategoryFilter={hasCategoryFilter}
+                        renderActions={renderClientActions}
+                    />
+
+                    {routeSelectedProduct && (
+                        <Suspense fallback={null}>
+                            <ProductModal
+                                key={routeSelectedProduct.id ?? routeSelectedProduct.slug}
+                                product={routeSelectedProduct}
+                                onClose={handleCloseProduct}
+                                onAddToCart={handleAddToCart}
+                            />
+                        </Suspense>
+                    )}
+
+                    {!customer && <MenuFooter />}
+                </div>
+            )}
+        </>
+    );
 }
