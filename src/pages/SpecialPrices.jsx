@@ -1,6 +1,6 @@
 /* src/pages/SpecialPrices.jsx (Migrado) */
 
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import SpecialPriceForm from '../components/SpecialPriceForm';
 import styles from './SpecialPrices.module.css';
@@ -88,7 +88,6 @@ const SpecialPrices = () => {
   const {
     data: cachedPrices,
     isLoading: loadingPrices,
-    refetch: refetchSpecialPrices
   } = useAdminCache('special_prices:all', fetchSpecialPrices, {
     ttl: DEFAULT_TTL.MEDIUM,
     staleWhileRevalidate: true
@@ -104,6 +103,11 @@ const SpecialPrices = () => {
   const [editingPrice, setEditingPrice] = useState(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [priceToDelete, setPriceToDelete] = useState(null);
+  const editingPriceRef = useRef(editingPrice);
+
+  useEffect(() => {
+    editingPriceRef.current = editingPrice;
+  }, [editingPrice]);
 
   const canEdit = hasPermission('special-prices.edit');
   const canDelete = hasPermission('special-prices.delete');
@@ -113,7 +117,7 @@ const SpecialPrices = () => {
     const unsubscribe = subscribeToTableChanges('special_prices', (payload) => {
       console.log('[SpecialPrices] Cambio detectado (Shared Realtime):', payload);
       invalidate('special_prices:all');
-      if (editingPrice?.id === payload.old?.id && payload.eventType === 'DELETE') {
+      if (editingPriceRef.current?.id === payload.old?.id && payload.eventType === 'DELETE') {
         setIsFormVisible(false);
         setEditingPrice(null);
       }
@@ -122,7 +126,7 @@ const SpecialPrices = () => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [invalidate, editingPrice]);
+  }, [invalidate]);
 
   const handleFormSubmit = useCallback(() => {
     invalidate('special_prices:all');
@@ -151,7 +155,7 @@ const SpecialPrices = () => {
         .eq('id', priceToDelete.id);
       if (error) throw error;
       showAlert('Promoción eliminada con éxito.', 'success');
-      setSpecialPrices(prev => prev.filter(p => p.id !== priceToDelete.id));
+      setLocalPrices(prev => (prev || specialPrices).filter(p => p.id !== priceToDelete.id));
       invalidate('special_prices:all');
       broadcastStoreChange('special_prices_updated', { action: 'delete' });
     } catch (error) {
@@ -160,7 +164,7 @@ const SpecialPrices = () => {
     } finally {
       setPriceToDelete(null);
     }
-  }, [priceToDelete, canDelete, showAlert, invalidate]);
+  }, [priceToDelete, canDelete, showAlert, invalidate, specialPrices]);
 
 
   // getTargetName sigue usando las 'categories' locales de este componente
@@ -199,7 +203,6 @@ const SpecialPrices = () => {
   }, [specialPrices]);
 
   const stats = useMemo(() => {
-      const now = new Date().toISOString().split('T')[0];
     return {
       total: specialPrices.length,
       active: activeAndUpcomingPrices.length,

@@ -214,7 +214,9 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
               lastError = error;
               console.error(`Upload attempt ${attempt} failed:`, error);
               if (attempt < maxRetries) {
-                  await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                  await new Promise(resolve => {
+                    setTimeout(resolve, 1000 * attempt);
+                  });
               }
           }
       }

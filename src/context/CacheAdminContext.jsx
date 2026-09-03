@@ -1,5 +1,5 @@
 /* src/context/CacheAdminContext.jsx */
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAdminAuth } from './AdminAuthContext';
 import {
     isExpired,
@@ -27,7 +27,6 @@ export const CacheAdminProvider = ({ children }) => {
     const [cache, setCache] = useState({});
     const [isHydrated, setIsHydrated] = useState(false);
     const inFlightRequests = useRef(new Map());
-    const cleanupIntervalRef = useRef(null);
     const { status } = useAdminAuth();
     const throttledInvalidateRef = useRef(null);
 
@@ -71,24 +70,6 @@ export const CacheAdminProvider = ({ children }) => {
         return () => {
             isMounted = false;
             clearInterval(intervalId);
-        };
-    }, []);
-
-    useEffect(() => {
-        cleanupIntervalRef.current = setInterval(() => {
-            const now = Date.now();
-            const ORPHAN_THRESHOLD_MS = 30000;
-            inFlightRequests.current.forEach((request, key) => {
-                const elapsed = now - request.startTime;
-                if (elapsed > ORPHAN_THRESHOLD_MS && request.status === 'pending') {
-                    console.warn(`[CacheAdmin] Petición huérfana detectada para "${key}" (${elapsed}ms). Limpiando...`);
-                    inFlightRequests.current.delete(key);
-                }
-            });
-        }, 10000);
-
-        return () => {
-            if (cleanupIntervalRef.current) clearInterval(cleanupIntervalRef.current);
         };
     }, []);
 
@@ -159,6 +140,7 @@ export const CacheAdminProvider = ({ children }) => {
                 }
             } else if (keyOrPattern instanceof RegExp) {
                 for (const key in nextCache) {
+                    keyOrPattern.lastIndex = 0;
                     if (keyOrPattern.test(key)) {
                         delete nextCache[key];
                         removeStorageItem(key);
@@ -176,7 +158,7 @@ export const CacheAdminProvider = ({ children }) => {
         const existingRequest = inFlightRequests.current.get(key);
         if (existingRequest) return existingRequest.promise;
 
-        const startTime = Date.now();
+        const request = { promise: null };
         const fetchPromise = (async () => {
             try {
                 const result = await fetcher();
@@ -193,41 +175,49 @@ export const CacheAdminProvider = ({ children }) => {
                 setCached(key, data, ttl);
                 return data;
             } finally {
-                inFlightRequests.current.delete(key);
+                // Una petición antigua nunca debe borrar una nueva que reutilice la clave.
+                if (inFlightRequests.current.get(key) === request) {
+                    inFlightRequests.current.delete(key);
+                }
             }
         })();
 
-        inFlightRequests.current.set(key, { promise: fetchPromise, startTime, status: 'pending' });
+        request.promise = fetchPromise;
+        inFlightRequests.current.set(key, request);
         return fetchPromise;
     }, [setCached]);
 
-    const refresh = useCallback(async (key, fetcher, ttl) => {
+    const refresh = useCallback((key, fetcher, ttl) => {
         invalidate(key);
         return handleFetch(key, fetcher, ttl);
     }, [invalidate, handleFetch]);
 
-    const preload = useCallback(async (key, fetcher, ttl) => {
+    const preload = useCallback((key, fetcher, ttl) => {
         const cached = getCached(key);
-        if (!cached) handleFetch(key, fetcher, ttl).catch(() => {});
+        if (!cached) return handleFetch(key, fetcher, ttl).catch(() => {});
+        return undefined;
     }, [getCached, handleFetch]);
 
     const invalidateThrottled = useCallback((keyOrPattern) => {
         invalidate(keyOrPattern, { throttled: true });
     }, [invalidate]);
 
+    const clear = useCallback(() => invalidate('*'), [invalidate]);
+    const contextValue = useMemo(() => ({
+        DEFAULT_TTL,
+        isHydrated,
+        getCached,
+        setCached,
+        invalidate,
+        invalidateThrottled,
+        refresh,
+        preload,
+        clear,
+        handleFetch,
+    }), [isHydrated, getCached, setCached, invalidate, invalidateThrottled, refresh, preload, clear, handleFetch]);
+
     return (
-        <CacheAdminContext.Provider value={{
-            DEFAULT_TTL,
-            isHydrated,
-            getCached,
-            setCached,
-            invalidate,
-            invalidateThrottled,
-            refresh,
-            preload,
-            clear: () => invalidate('*'),
-            handleFetch,
-        }}>
+        <CacheAdminContext.Provider value={contextValue}>
             {children}
         </CacheAdminContext.Provider>
     );

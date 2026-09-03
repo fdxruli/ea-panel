@@ -8,15 +8,17 @@ const PLACEHOLDER_IMAGE = 'https://placehold.co/300x200?text=Imagen+no+disponibl
  * Añade el parámetro 'width' a la URL existente.
  */
 const getSupabaseTransformUrl = (src, width) => {
-  // --- ¡NUEVA LÍNEA! ---
-  // Si la URL ya tiene parámetros de transformación, no la modificamos.
-  if (src && (src.includes('?transform=') || src.includes('&transform='))) {
+  if (typeof src !== 'string' || !src) {
     return src;
   }
-  // --- FIN DE LÍNEA NUEVA ---
+
+  // Si la URL ya tiene parámetros de transformación, no la modificamos.
+  if (src.includes('?transform=') || src.includes('&transform=')) {
+    return src;
+  }
 
   // No transformar placeholders o URLs que ya sean inválidas
-  if (!src || src.includes('placehold.co') || typeof src !== 'string') {
+  if (src.includes('placehold.co')) {
     return src;
   }
 
@@ -25,9 +27,22 @@ const getSupabaseTransformUrl = (src, width) => {
     // Usamos 'width' para el redimensionamiento
     url.searchParams.set('width', width.toString());
     return url.toString();
-  } catch (e) {
+  } catch {
     // Si no es una URL válida, devolver el original
     return src;
+  }
+};
+
+const addCacheBuster = (src) => {
+  if (typeof src !== 'string' || !src) return src;
+  const cacheBuster = Date.now().toString();
+
+  try {
+    const url = new URL(src);
+    url.searchParams.set('t', cacheBuster);
+    return url.toString();
+  } catch {
+    return `${src}${src.includes('?') ? '&' : '?'}t=${cacheBuster}`;
   }
 };
 
@@ -53,8 +68,8 @@ export default function ImageWithFallback({
 
   const handleError = () => {
     // Solo reintentamos una vez si había un 'src' original
-    if (retries === 0 && src) {
-      const retrySrc = `${src}?t=${new Date().getTime()}`;
+    if (retries === 0 && typeof src === 'string' && src) {
+      const retrySrc = addCacheBuster(src);
       setImageSrc(retrySrc);
       setRetries(prev => prev + 1);
     } else {
@@ -64,34 +79,34 @@ export default function ImageWithFallback({
     }
   };
 
+  const srcSet = useMemo(() => {
+    if (!Array.isArray(imageSizes) || imageSizes.length === 0 || typeof src !== 'string') {
+      return null;
+    }
+
+    return imageSizes
+      .map(width => `${getSupabaseTransformUrl(src, width)} ${width}w`)
+      .join(', ');
+  }, [src, imageSizes]);
+
   if (hasError) {
     // Muestra un div con estilo de placeholder si la imagen final falla
+    const placeholderClassName = [styles.placeholder, className].filter(Boolean).join(' ');
     return (
-      <div className={`${styles.placeholder} ${className}`} {...props}>
+      <div className={placeholderClassName} {...props}>
         <span>{alt}</span>
       </div>
     );
   }
 
-  // --- Lógica de SrcSet ---
-  const srcSet = useMemo(() => {
-    if (!imageSizes || !Array.isArray(imageSizes) || imageSizes.length === 0) {
-      return null;
-    }
-    return imageSizes
-      .map(width => `${getSupabaseTransformUrl(src, width)} ${width}w`)
-      .join(', ');
-  }, [src, imageSizes]);
-  // --- Fin Lógica ---
-
   return (
     <img
       // El 'src' por defecto será la versión más grande que pedimos (o 800px)
-      src={getSupabaseTransformUrl(src, imageSizes ? imageSizes[imageSizes.length - 1] : 800)}
-      srcSet={srcSet}
+      src={getSupabaseTransformUrl(imageSrc, imageSizes ? imageSizes[imageSizes.length - 1] : 800)}
+      srcSet={retries === 0 ? srcSet : undefined}
       sizes={sizes}
       alt={alt}
-      className={`${styles.image} ${className}`}
+      className={[styles.image, className].filter(Boolean).join(' ')}
       onError={handleError}
       loading={priority ? 'eager' : 'lazy'} // Carga prioritaria si 'priority' es true
       fetchPriority={priority ? 'high' : 'auto'} // Pista al navegador

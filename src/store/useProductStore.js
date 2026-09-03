@@ -22,31 +22,33 @@ export const useProductStore = create((set, get) => ({
   menuPageSize: 50,
   hasMoreProducts: true,
 
-  searchProducts : async (query) => {
-    if (!query || query.trim().length < 2) {
-      get().loadInitialProducts();
-      return;
+  searchProducts: async (query) => {
+    const normalizedQuery = query?.trim() || '';
+    if (normalizedQuery.length < 2) {
+      return get().loadInitialProducts();
     }
     set({ isLoading: true });
     try {
       // Intento 1: Buscar por código de barras (Rápido)
-      const byCode = await searchProductByBarcode(query);
+      const byCode = await searchProductByBarcode(normalizedQuery);
       if (byCode) {
         set({ menu: [byCode], isLoading: false, hasMoreProducts: false });
-        return;
+        return byCode;
       }
       // Intento 1.5: Buscar por SKU (Variante especifica)
-      const bySKU = await searchProductBySKU(query);
+      const bySKU = await searchProductBySKU(normalizedQuery);
       if (bySKU) {
         set({ menu: [bySKU], isLoading: false, hasMoreProducts: false });
-        return;
+        return bySKU;
       }
       // Intento 2: Buscar por nombre en la BD
-      const results = await searchProductsInDB(query);
+      const results = await searchProductsInDB(normalizedQuery);
       set({ menu: results, isLoading: false, hasMoreProducts: false });
+      return results;
     } catch (error) {
       console.error("Error en búsqueda:", error);
       set({ isLoading: false });
+      return [];
     }
   },
 
@@ -97,31 +99,6 @@ export const useProductStore = create((set, get) => ({
       });
     } catch (error) {
       console.error("Error paginando:", error);
-    }
-  },
-
-  searchProducts: async (query) => {
-    if (!query || query.trim().length < 2) {
-      get().loadInitialProducts();
-      return;
-    }
-    set({ isLoading: true });
-    try {
-      // Intento 1: Buscar por código de barras (Rápido)
-      const byCode = await searchProductByBarcode(query);
-      if (byCode) {
-        set({ menu: [byCode], isLoading: false, hasMoreProducts: false });
-        return;
-      }
-
-      // Intento 2: Buscar por nombre en la BD
-      const results = await searchProductsInDB(query);
-      
-      // Carga directa de resultados
-      set({ menu: results, isLoading: false, hasMoreProducts: false });
-    } catch (error) {
-      console.error("Error en búsqueda:", error);
-      set({ isLoading: false });
     }
   },
 

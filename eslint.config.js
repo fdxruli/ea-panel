@@ -138,12 +138,21 @@ export default defineConfig([
       'vite.config.js',
       'scripts/**/*.{js,mjs,cjs}',
       'api/**/*.{js,mjs,cjs}',
+      'scratch_get_rpc.mjs',
+      'update_rpc.mjs',
     ],
     languageOptions: {
       globals: globals.node,
     },
     rules: {
       'no-console': 'off',
+    },
+  },
+  {
+    name: 'node/tests',
+    files: ['tests/**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 

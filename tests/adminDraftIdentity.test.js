@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getAdminDraftOwnerKey } from '../src/context/AdminDraftContext.jsx';
+import { getAdminDraftOwnerKey } from '../src/lib/adminDraftIdentity.js';
 
 test('admin session user id is the ownerKey', () => {
   assert.equal(getAdminDraftOwnerKey({ status: 'ADMIN', userId: 'admin-a' }), 'admin-a');

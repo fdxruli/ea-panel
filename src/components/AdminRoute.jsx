@@ -37,7 +37,9 @@ const AdminRoute = () => {
                 try {
                   const { supabase } = await import('../lib/supabaseClient');
                   await supabase.auth.signOut();
-                } catch (_) {}
+                } catch (error) {
+                  console.warn('[AdminRoute] No se pudo cerrar la sesión remota.', error);
+                }
                 localStorage.clear();
                 window.location.href = '/login';
               }}

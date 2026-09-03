@@ -146,7 +146,7 @@ export const revalidateLicense = async function (licenseKeyProp) {
         try {
             const ls = localStorage.getItem('lanzo_license');
             if (ls) storedLicense = JSON.parse(ls)?.data;
-        } catch (e) { }
+        } catch { /* El almacenamiento local puede contener JSON inválido. */ }
 
         const licenseKey = licenseKeyProp || storedLicense?.license_key;
 
@@ -214,7 +214,7 @@ export const revalidateLicense = async function (licenseKeyProp) {
             try {
                 const ls = localStorage.getItem('lanzo_license');
                 if (ls) storedLicense = JSON.parse(ls)?.data;
-            } catch (e) { }
+            } catch { /* El almacenamiento local puede contener JSON inválido. */ }
 
             if (storedLicense && storedLicense.license_key) {
                 return {

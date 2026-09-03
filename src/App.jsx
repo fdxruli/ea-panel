@@ -1,5 +1,5 @@
 import React, { useEffect, lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 // Context Providers (Se cargan de inmediato, lo cual es correcto)
 import { CartProvider } from "./context/CartContext.jsx";
@@ -8,17 +8,12 @@ import { ProductProvider } from "./context/ProductContext.jsx";
 import { UserDataProvider, useUserData } from "./context/UserDataContext.jsx";
 import { ProductExtrasProvider } from "./context/ProductExtrasContext.jsx";
 import { AlertProvider } from "./context/AlertContext.jsx";
-import { AdminAuthProvider, useAdminAuth } from "./context/AdminAuthContext.jsx";
-import { AdminDraftProvider } from "./context/AdminDraftContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { BusinessHoursProvider } from "./context/BusinessHoursContext.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
-import { CacheAdminProvider } from "./context/CacheAdminContext.jsx";
 
 // Layouts (Se cargan de inmediato, correcto)
-import AdminLayout from "./layouts/AdminLayout.jsx";
 import ClientLayout from "./layouts/ClientLayout.jsx";
-import AdminRoute from "./components/AdminRoute.jsx";
 import MenuRouteSkeleton from "./components/MenuRouteSkeleton.jsx";
 
 // --- Páginas de Cliente ---
@@ -29,21 +24,9 @@ const MyStuff = lazy(() => import("./pages/MyStuff.jsx"));
 const TermsPage = lazy(() => import("./pages/TermsPage.jsx"));
 const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage.jsx"));
 
-// --- Páginas de Admin ---
-const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
-const Orders = lazy(() => import("./pages/Orders.jsx"));
-const Products = lazy(() => import("./pages/Products.jsx"));
-const Customers = lazy(() => import("./pages/Customers.jsx"));
-const Discounts = lazy(() => import("./pages/Discounts.jsx"));
-const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions.jsx"));
-const RegisterAdmin = lazy(() => import("./pages/RegisterAdmin.jsx"));
-const SpecialPrices = lazy(() => import("./pages/SpecialPrices.jsx"));
-const BusinessHours = lazy(() => import("./pages/BusinessHours.jsx"));
-const CajaPage = lazy(() => import("./pages/CajaPage.jsx"));
-const CreateOrder = lazy(() => import("./pages/CreateOrder.jsx"));
-const Referrals = lazy(() => import("./pages/Referrals.jsx"));
-const Settings = lazy(() => import("./pages/Settings.jsx"));
-const Ingredients = lazy(() => import("./pages/Ingredients.jsx"));
+// --- Área de Admin ---
+// El árbol completo y sus proveedores se descargan únicamente al entrar al admin.
+const AdminRoutes = lazy(() => import("./routes/AdminRoutes.jsx"));
 
 // --- Auth & Utility Pages ---
 const Login = lazy(() => import("./pages/Login.jsx"));
@@ -57,32 +40,6 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 // Utils
 import { cleanupExpiredCache } from "./utils/cache.js";
-
-// Wrapper for Admin Permissions (Sin cambios)
-const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
-  const { hasPermission, loading } = useAdminAuth();
-
-  if (loading) {
-    // `loading` es true solo durante el arranque en frío (status === 'RESOLVING').
-    // Los TOKEN_REFRESHED usan revalidación silenciosa y nunca activan este spinner.
-    return (
-      <div className="fullscreen-loader">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  if (hasPermission(permissionKey)) {
-    return element;
-  }
-
-  if (isIndex) {
-    return <Navigate to="/login" replace />;
-  }
-
-  const canViewDashboard = hasPermission('dashboard.view');
-  return <Navigate to={canViewDashboard ? "/admin" : "/login"} replace />;
-};
 
 // Componente de Fallback de Suspense (para centrar el spinner)
 const FullscreenLoader = () => (
@@ -158,45 +115,7 @@ function App() {
                     <Route path="/login" element={<Login />} />
 
                     {/* --- Admin Routes --- */}
-                    <Route
-                      path="/admin"
-                      element={
-                        <ErrorBoundary scope="admin">
-                          <Suspense fallback={<FullscreenLoader />}>
-                          {/* 1. El Provider realiza la petición y guarda el estado absoluto */}
-                          <AdminAuthProvider>
-                            {/* 2. Drafts consumen la identidad canónica del AuthContext */}
-                            <AdminDraftProvider>
-                              {/* 3. La ruta evalúa el estado y bloquea/deja pasar */}
-                              <AdminRoute />
-                            </AdminDraftProvider>
-                          </AdminAuthProvider>
-                          </Suspense>
-                        </ErrorBoundary>
-                      }
-                    >
-                      {/* 4. Si AdminRoute permite el paso (Renderiza Outlet), se cargan el Layout y su caché */}
-                      <Route element={
-                        <CacheAdminProvider>
-                          <AdminLayout />
-                        </CacheAdminProvider>
-                      }>
-                        <Route index element={<PermissionWrapper permissionKey="dashboard.view" element={<Dashboard />} isIndex={true} />} />
-                        <Route path="caja" element={<PermissionWrapper permissionKey="dashboard.view" element={<CajaPage />} />} />
-                        <Route path="pedidos" element={<PermissionWrapper permissionKey="pedidos.view" element={<Orders />} />} />
-                        <Route path="crear-pedido" element={<PermissionWrapper permissionKey="crear-pedido.view" element={<CreateOrder />} />} />
-                        <Route path="productos" element={<PermissionWrapper permissionKey="productos.view" element={<Products />} />} />
-                        <Route path="clientes" element={<PermissionWrapper permissionKey="clientes.view" element={<Customers />} />} />
-                        <Route path="referidos" element={<PermissionWrapper permissionKey="referidos.view" element={<Referrals />} />} />
-                        <Route path="descuentos" element={<PermissionWrapper permissionKey="descuentos.view" element={<Discounts />} />} />
-                        <Route path="terminos" element={<PermissionWrapper permissionKey="terminos.view" element={<TermsAndConditions />} />} />
-                        <Route path="registrar-admin" element={<PermissionWrapper permissionKey="registrar-admin.view" element={<RegisterAdmin />} />} />
-                        <Route path="special-prices" element={<PermissionWrapper permissionKey="special-prices.view" element={<SpecialPrices />} />} />
-                        <Route path="horarios" element={<PermissionWrapper permissionKey="horarios.view" element={<BusinessHours />} />} />
-                        <Route path="configuracion" element={<PermissionWrapper permissionKey="configuracion.view" element={<Settings />} />} />
-                        <Route path="ingredientes" element={<PermissionWrapper permissionKey="productos.view" element={<Ingredients />} />} />
-                      </Route>
-                    </Route>
+                    <Route path="/admin/*" element={<AdminRoutes />} />
 
                     {/* --- Global Catch-all --- */}
                     <Route path="*" element={<NotFoundPage />} />

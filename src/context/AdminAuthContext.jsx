@@ -5,6 +5,7 @@ import React, {
     useEffect,
     useRef,
     useState,
+    useMemo,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
@@ -96,27 +97,30 @@ export const AdminAuthProvider = ({ children }) => {
      * de forma no determinista.
      */
     const revalidatingRef = useRef(false);
+    const resolveGenerationRef = useRef(0);
 
     // -------------------------------------------------------------------------
     // fullResolve — Para arranque en frío o cambio real de identidad.
     // Pone status en 'RESOLVING' para mostrar el spinner global.
     // -------------------------------------------------------------------------
     const fullResolve = useCallback(async (session) => {
+        const generation = ++resolveGenerationRef.current;
+
         if (!session) {
-            if (mountedRef.current) {
+            if (mountedRef.current && generation === resolveGenerationRef.current) {
                 setAuthState({ status: 'UNAUTHENTICATED', userId: null, adminData: null, error: null });
             }
             return;
         }
 
         // Solo mostramos RESOLVING en arranque/cambio de identidad.
-        if (mountedRef.current) {
+        if (mountedRef.current && generation === resolveGenerationRef.current) {
             setAuthState(prev => ({ ...prev, status: 'RESOLVING', userId: session.user.id }));
         }
 
         const { data, error, isNetworkError } = await queryAdminRecord(session.user.id);
 
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || generation !== resolveGenerationRef.current) return;
 
         if (error) {
             const msg = error.message?.toLowerCase() || '';
@@ -168,6 +172,8 @@ export const AdminAuthProvider = ({ children }) => {
     const silentRevalidate = useCallback(async (session) => {
         if (!session) return;
 
+        const generation = resolveGenerationRef.current;
+
         // Semáforo: si ya hay una revalidación en curso, la descartamos.
         if (revalidatingRef.current) {
             console.warn('[AdminAuth] Revalidación silenciosa omitida — ya hay una en curso.');
@@ -178,7 +184,12 @@ export const AdminAuthProvider = ({ children }) => {
         try {
             const { data, error, isNetworkError } = await queryAdminRecord(session.user.id);
 
-            if (!mountedRef.current) return;
+            if (
+                !mountedRef.current
+                || generation !== resolveGenerationRef.current
+                || authStateRef.current.userId !== session.user.id
+                || authStateRef.current.status !== 'ADMIN'
+            ) return;
 
             if (error) {
                 if (isNetworkError) {
@@ -252,6 +263,7 @@ export const AdminAuthProvider = ({ children }) => {
             switch (event) {
                 case 'SIGNED_OUT':
                     // Cierre de sesión explícito: limpieza inmediata, sin consulta a DB.
+                    resolveGenerationRef.current += 1;
                     setAuthState({ status: 'UNAUTHENTICATED', userId: null, adminData: null, error: null });
                     break;
 
@@ -322,9 +334,10 @@ export const AdminAuthProvider = ({ children }) => {
     // `loading` es true ÚNICAMENTE durante el arranque en frío o cambio de identidad.
     // TOKEN_REFRESHED y USER_UPDATED NO activan loading gracias a silentRevalidate.
     const loading = authState.status === 'RESOLVING';
+    const value = useMemo(() => ({ ...authState, loading, hasPermission }), [authState, loading, hasPermission]);
 
     return (
-        <AdminAuthContext.Provider value={{ ...authState, loading, hasPermission }}>
+        <AdminAuthContext.Provider value={value}>
             {children}
         </AdminAuthContext.Provider>
     );
