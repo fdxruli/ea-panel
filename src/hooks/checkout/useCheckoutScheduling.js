@@ -3,9 +3,8 @@
  * Custom hook that manages checkout scheduling state and validates
  * the 2-hour advance rule.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  getLocalYYYYMMDD,
   buildScheduledISO,
   validateScheduleAdvance,
   getDefaultScheduleDetails,
@@ -24,28 +23,20 @@ import {
  */
 export const useCheckoutScheduling = () => {
   const [isScheduling, setIsScheduling] = useState(false);
-  const [scheduledTime, setScheduledTime] = useState(null);
-  const [scheduleError, setScheduleError] = useState(null);
   const [scheduleDetails, setScheduleDetails] = useState(getDefaultScheduleDetails());
 
-  // Recompute ISO string whenever scheduling is toggled or details change
-  useEffect(() => {
+  const { scheduledTime, scheduleError } = useMemo(() => {
     if (!isScheduling) {
-      setScheduledTime(null);
-      setScheduleError(null);
-      return;
+      return { scheduledTime: null, scheduleError: null };
     }
 
     const result = buildScheduledISO(scheduleDetails);
 
     if (!result.ok) {
-      setScheduledTime(null);
-      setScheduleError(result.error);
-      return;
+      return { scheduledTime: null, scheduleError: result.error };
     }
 
-    setScheduledTime(result.isoString);
-    setScheduleError(null);
+    return { scheduledTime: result.isoString, scheduleError: null };
   }, [isScheduling, scheduleDetails]);
 
   const handleToggleScheduling = useCallback((shouldSchedule) => {
@@ -54,10 +45,6 @@ export const useCheckoutScheduling = () => {
     if (shouldSchedule) {
       // Reset to default schedule (now + 2 hours) when enabling
       setScheduleDetails(getDefaultScheduleDetails());
-      setScheduleError(null);
-    } else {
-      setScheduledTime(null);
-      setScheduleError(null);
     }
   }, []);
 

@@ -5,6 +5,7 @@ import React, {
     useContext,
     useEffect,
     useCallback,
+    useMemo,
     useRef,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -231,7 +232,7 @@ export const UserDataProvider = ({ children }) => {
 
         return () => {
             cancelled = true;
-            if (requestIdRef.current === currentRequestId) ++requestIdRef.current;
+            if (requestIdRef.current === currentRequestId) requestIdRef.current += 1;
         };
     }, [
         phone,
@@ -379,13 +380,18 @@ export const UserDataProvider = ({ children }) => {
         resetUserData();
     }, [invalidateIdentityCaches, resetUserData]);
 
-    const value = {
+    const refetch = useCallback(
+        () => fetchAndCacheUserData(phone, canonicalCustomerId),
+        [canonicalCustomerId, fetchAndCacheUserData, phone]
+    );
+
+    const value = useMemo(() => ({
         ...userData,
         loading,
         error,
-        refetch: () => fetchAndCacheUserData(phone, canonicalCustomerId),
+        refetch,
         logout,
-    };
+    }), [error, loading, logout, refetch, userData]);
 
     return (
         <UserDataContext.Provider value={value}>

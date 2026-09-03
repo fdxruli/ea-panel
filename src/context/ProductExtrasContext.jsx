@@ -1,5 +1,6 @@
 // src/context/ProductExtrasContext.jsx
-import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from './CustomerContext';
 import { getCache, setCache } from '../utils/cache';
@@ -11,6 +12,10 @@ export const useProductExtras = () => useContext(ProductExtrasContext);
 
 export const ProductExtrasProvider = ({ children }) => {
     const { phone } = useCustomer();
+    const { pathname } = useLocation();
+    const extrasEnabled = pathname === '/mi-actividad' || pathname.startsWith('/producto/');
+    const extrasEnabledRef = useRef(extrasEnabled);
+    extrasEnabledRef.current = extrasEnabled;
     const [allReviews, setAllReviews] = useState([]);
     const [favorites, setFavorites] = useState([]);
     const [customerId, setCustomerId] = useState(null);
@@ -19,6 +24,8 @@ export const ProductExtrasProvider = ({ children }) => {
     // --- FUNCIÓN PRINCIPAL DE FETCH Y CACHÉ (SIN CAMBIOS SIGNIFICATIVOS) ---
     // fetchAndCacheExtras todavía se necesita para la carga inicial y para los favoritos.
     const fetchAndCacheExtras = useCallback(async (currentCustomerId) => {
+        if (!extrasEnabledRef.current) return;
+
         setLoading(true);
         try {
             // 1. Las reseñas se obtienen para carga inicial/refetch completo.
@@ -28,6 +35,7 @@ export const ProductExtrasProvider = ({ children }) => {
                 .order('created_at', { ascending: false });
 
             const validReviews = revData || [];
+            if (!extrasEnabledRef.current) return;
             setAllReviews(validReviews);
             setCache(CACHE_KEYS.REVIEWS, validReviews);
 
@@ -40,6 +48,7 @@ export const ProductExtrasProvider = ({ children }) => {
                     .eq('customer_id', currentCustomerId);
 
                 const validFavorites = favData || [];
+                if (!extrasEnabledRef.current) return;
                 setFavorites(validFavorites);
                 setCache(favoritesCacheKey, validFavorites);
             } else {
@@ -54,6 +63,16 @@ export const ProductExtrasProvider = ({ children }) => {
 
     // --- useEffect para CARGA INICIAL (SIN CAMBIOS) ---
     useEffect(() => {
+        if (!extrasEnabled) {
+            setAllReviews([]);
+            setFavorites([]);
+            setCustomerId(null);
+            setLoading(false);
+            return undefined;
+        }
+
+        let cancelled = false;
+
         const initializeAndFetch = async () => {
             setLoading(true);
             let currentId = null;
@@ -62,38 +81,45 @@ export const ProductExtrasProvider = ({ children }) => {
             if (phone) {
                 const { data } = await supabase.from('customers').select('id').eq('phone', phone).maybeSingle();
                 currentId = data ? data.id : null;
+                if (cancelled) return;
                 setCustomerId(currentId);
 
                 if (currentId) {
                     const favoritesCacheKey = `${CACHE_KEYS.FAVORITES}-${currentId}`;
                     const { data: cachedFavs, isStale } = getCache(favoritesCacheKey, CACHE_TTL.PRODUCT_EXTRAS);
+                    if (cancelled) return;
                     if (cachedFavs) setFavorites(cachedFavs);
                     if (isStale || !cachedFavs) shouldRevalidate = true;
                 }
             } else {
+                if (cancelled) return;
                 setCustomerId(null);
                 setFavorites([]);
             }
 
             const { data: cachedRevs, isStale } = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
+            if (cancelled) return;
             if (cachedRevs) setAllReviews(cachedRevs);
             if (isStale || !cachedRevs) shouldRevalidate = true;
 
             if (shouldRevalidate) {
                 await fetchAndCacheExtras(currentId);
-            } else {
+            } else if (!cancelled) {
                 setLoading(false);
             }
         };
 
         initializeAndFetch();
-    }, [phone, fetchAndCacheExtras]);
+        return () => {
+            cancelled = true;
+        };
+    }, [extrasEnabled, phone, fetchAndCacheExtras]);
 
     // --- 👇 useEffect para REALTIME CON ACTUALIZACIÓN INCREMENTAL ---
     useEffect(() => {
-        const handleChanges = (payload) => {
-            console.log('Cambio detectado en extras, actualizando...', payload);
+        if (!extrasEnabled) return undefined;
 
+        const handleChanges = (payload) => {
             // --- ✅ Lógica Incremental para Reseñas ---
             if (payload.table === 'product_reviews') {
                 const { eventType, new: newRecord, old: oldRecord } = payload;
@@ -116,9 +142,8 @@ export const ProductExtrasProvider = ({ children }) => {
 
 
                 if (eventType === 'INSERT') {
-                    console.log('Insertando nueva reseña...');
                     fetchReviewWithRelations(newRecord.id).then(fullNewRecord => {
-                        if (fullNewRecord) {
+                        if (fullNewRecord && extrasEnabledRef.current) {
                             setAllReviews(prev => {
                                 // Evitar duplicados si la inserción llega muy rápido
                                 if (prev.some(r => r.id === fullNewRecord.id)) {
@@ -132,9 +157,8 @@ export const ProductExtrasProvider = ({ children }) => {
                     });
 
                 } else if (eventType === 'UPDATE') {
-                     console.log('Actualizando reseña existente...');
                     fetchReviewWithRelations(newRecord.id).then(fullUpdatedRecord => {
-                         if (fullUpdatedRecord) {
+                         if (fullUpdatedRecord && extrasEnabledRef.current) {
                             setAllReviews(prev => {
                                 const updatedReviews = prev.map(r =>
                                     r.id === fullUpdatedRecord.id ? fullUpdatedRecord : r
@@ -146,8 +170,8 @@ export const ProductExtrasProvider = ({ children }) => {
                      });
 
                 } else if (eventType === 'DELETE') {
-                    console.log('Eliminando reseña...');
                     const deletedId = oldRecord.id;
+                    if (!extrasEnabledRef.current) return;
                     setAllReviews(prev => {
                         const updatedReviews = prev.filter(r => r.id !== deletedId);
                         setCache(CACHE_KEYS.REVIEWS, updatedReviews); // Actualizar caché
@@ -164,7 +188,6 @@ export const ProductExtrasProvider = ({ children }) => {
                 // y ya están filtrados por customerId en la consulta.
                 const customerIdAffected = payload.new?.customer_id || payload.old?.customer_id;
                 if (customerIdAffected === customerId) {
-                    console.log('Actualizando favoritos para el cliente actual...');
                     fetchAndCacheExtras(customerId);
                 }
             }
@@ -183,27 +206,26 @@ export const ProductExtrasProvider = ({ children }) => {
         return () => {
             supabase.removeChannel(channel);
         };
-    // Quitamos fetchAndCacheExtras de las dependencias aquí, ya que no queremos
-    // que este efecto se re-ejecute cada vez que esa función (estable) se redefine.
-    // Solo depende de customerId para la lógica de favoritos.
-    }, [customerId]);
+    // La función es estable; el canal solo cambia de identidad al cambiar el cliente.
+    }, [customerId, extrasEnabled, fetchAndCacheExtras]);
     // --- FIN useEffect REALTIME ---
 
     // --- myReviews calculado con useMemo (sin cambios) ---
     const myReviews = useMemo(() => {
         if (!customerId) return [];
-        console.log("Contexto: Recalculando myReviews...");
         return allReviews.filter(review => review.customer_id === customerId);
     }, [allReviews, customerId]);
 
-    const value = {
+    const refetch = useCallback(() => fetchAndCacheExtras(customerId), [customerId, fetchAndCacheExtras]);
+
+    const value = useMemo(() => ({
         reviews: allReviews,
         myReviews,
         favorites,
         customerId,
         loading,
-        refetch: () => fetchAndCacheExtras(customerId) // refetch sigue haciendo fetch completo
-    };
+        refetch,
+    }), [allReviews, customerId, favorites, loading, myReviews, refetch]);
 
     return (
         <ProductExtrasContext.Provider value={value}>

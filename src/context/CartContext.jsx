@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useProducts } from './ProductContext';
 
@@ -21,9 +21,7 @@ export const CartProvider = ({ children }) => {
     });
 
     const [isCartOpen, setIsCartOpen] = useState(false);
-    const [subtotal, setSubtotal] = useState(0);
     const [discount, setDiscount] = useState(null);
-    const [total, setTotal] = useState(0);
 
     // Notificaciones
     const [cartNotification, setCartNotification] = useState(''); // Para modales de alerta (items eliminados)
@@ -102,7 +100,7 @@ export const CartProvider = ({ children }) => {
                 showToast("Algunos precios en tu carrito se han actualizado a su valor actual.");
             }
         }
-    }, [liveProducts, productsLoading]);
+    }, [liveProducts, productsLoading, showToast]);
 
     // 3. Cálculos de Totales y Descuentos (Sin cambios mayores)
     const calculateDiscount = useCallback((currentSubtotal, items, discountDetails) => {
@@ -121,15 +119,22 @@ export const CartProvider = ({ children }) => {
         return (applicableValue * (discountDetails.value / 100));
     }, []);
 
-    useEffect(() => {
-        const newSubtotal = cartItems.reduce((sum, item) => (sum + (Number(item.price) || 0) * (Number(item.quantity) || 0)), 0);
-        setSubtotal(newSubtotal);
-        const discountAmount = calculateDiscount(newSubtotal, cartItems, discount?.details);
-        setTotal(newSubtotal - discountAmount);
-    }, [cartItems, discount, calculateDiscount]);
+    const subtotal = useMemo(() => (
+        cartItems.reduce(
+            (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0),
+            0
+        )
+    ), [cartItems]);
+
+    const discountAmount = useMemo(
+        () => calculateDiscount(subtotal, cartItems, discount?.details),
+        [calculateDiscount, cartItems, discount?.details, subtotal]
+    );
+
+    const total = subtotal - discountAmount;
 
     // 4. Funciones del carrito (Sin cambios)
-    const applyDiscount = async (code, customerId) => {
+    const applyDiscount = useCallback(async (code, customerId) => {
         if (!customerId) return { success: false, message: 'Debes iniciar sesión para usar un código.' };
         const upperCaseCode = code.toUpperCase();
         try {
@@ -169,9 +174,9 @@ export const CartProvider = ({ children }) => {
             console.error("Error applying discount:", error);
             return { success: false, message: 'Ocurrió un error inesperado al validar el código.' };
         }
-    };
+    }, [calculateDiscount, cartItems]);
 
-    const removeDiscount = () => setDiscount(null);
+    const removeDiscount = useCallback(() => setDiscount(null), []);
     const closeCart = useCallback(() => {
         setIsCartOpen(false);
     }, []);
@@ -192,7 +197,7 @@ export const CartProvider = ({ children }) => {
     }, []);
 
     const updateQuantity = useCallback((productId, quantity) => {
-        const numQuantity = parseInt(quantity, 10);
+        const numQuantity = Number(quantity);
         if (isNaN(numQuantity) || numQuantity < 1) {
             removeFromCart(productId);
             return;
@@ -211,16 +216,36 @@ export const CartProvider = ({ children }) => {
         setCartItems(newItems);
     }, [clearCart]);
 
-    const discountAmount = calculateDiscount(subtotal, cartItems, discount?.details);
+    const clearCartNotification = useCallback(() => setCartNotification(''), []);
 
-    const value = {
+    const value = useMemo(() => ({
         cartItems, addToCart, removeFromCart, updateQuantity, clearCart, subtotal, total,
         discount: discount ? { ...discount, amount: discountAmount } : null,
         applyDiscount, removeDiscount, isCartOpen, toggleCart, closeCart, cartNotification,
-        clearCartNotification: () => setCartNotification(''),
+        clearCartNotification,
         toast, showToast,
         replaceCart,
-    };
+    }), [
+        addToCart,
+        applyDiscount,
+        cartItems,
+        cartNotification,
+        clearCart,
+        clearCartNotification,
+        closeCart,
+        discount,
+        discountAmount,
+        isCartOpen,
+        removeDiscount,
+        replaceCart,
+        removeFromCart,
+        showToast,
+        subtotal,
+        toast,
+        toggleCart,
+        total,
+        updateQuantity,
+    ]);
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

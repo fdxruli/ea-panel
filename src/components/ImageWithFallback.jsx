@@ -46,14 +46,13 @@ const addCacheBuster = (src) => {
   }
 };
 
-
 export default function ImageWithFallback({
   src,
   alt,
   className,
-  imageSizes, // Array de anchos, ej: [200, 400, 600]
-  sizes,      // String de CSS, ej: "(max-width: 600px) 50vw, 33vw"
-  priority = false, // true para imágenes LCP (Largest Contentful Paint)
+  imageSizes,
+  sizes,
+  priority = false,
   ...props
 }) {
   const [imageSrc, setImageSrc] = useState(src || PLACEHOLDER_IMAGE);
@@ -90,7 +89,6 @@ export default function ImageWithFallback({
   }, [src, imageSizes]);
 
   if (hasError) {
-    // Muestra un div con estilo de placeholder si la imagen final falla
     const placeholderClassName = [styles.placeholder, className].filter(Boolean).join(' ');
     return (
       <div className={placeholderClassName} {...props}>
@@ -101,15 +99,14 @@ export default function ImageWithFallback({
 
   return (
     <img
-      // El 'src' por defecto será la versión más grande que pedimos (o 800px)
       src={getSupabaseTransformUrl(imageSrc, imageSizes ? imageSizes[imageSizes.length - 1] : 800)}
       srcSet={retries === 0 ? srcSet : undefined}
       sizes={sizes}
       alt={alt}
       className={[styles.image, className].filter(Boolean).join(' ')}
       onError={handleError}
-      loading={priority ? 'eager' : 'lazy'} // Carga prioritaria si 'priority' es true
-      fetchPriority={priority ? 'high' : 'auto'} // Pista al navegador
+      loading={priority ? 'eager' : 'lazy'}
+      fetchPriority={priority ? 'high' : 'auto'}
       {...props}
     />
   );

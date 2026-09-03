@@ -1,4 +1,7 @@
 import React, {
+  lazy,
+  Suspense,
+  useDeferredValue,
   useState,
   useEffect,
   useMemo,
@@ -11,7 +14,6 @@ import { useCart } from '../context/CartContext';
 import { useUserData } from '../context/UserDataContext';
 import { useBusinessHours } from '../context/BusinessHoursContext';
 import styles from './Menu.module.css';
-import ProductModal from '../components/ProductModal';
 import ImageWithFallback from '../components/ImageWithFallback';
 import MenuRouteSkeleton from '../components/MenuRouteSkeleton';
 import SEO from '../components/SEO';
@@ -67,6 +69,8 @@ const CloseIcon = () => (
 );
 
 const MOBILE_BREAKPOINT = 768;
+const EMPTY_PRODUCTS = [];
+const ProductModal = lazy(() => import('../components/ProductModal'));
 
 const getProductDisplayImage = (product) =>
   product?.image_url || product?.product_images?.[0]?.image_url || '';
@@ -133,7 +137,8 @@ export default function Menu() {
   const [searchQuery, setSearchQuery] = useState('');
   const [layout, setLayout] = useState(() => localStorage.getItem(MENU_LAYOUT_STORAGE_KEY) || 'grid');
   const shouldShowLeadCapture = !customer;
-  const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase('es-MX');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = deferredSearchQuery.trim().toLocaleLowerCase('es-MX');
   const routeSelectedProduct = useMemo(() => (
     productSlug ? products.find((product) => product.slug === productSlug) || null : null
   ), [productSlug, products]);
@@ -160,8 +165,18 @@ export default function Menu() {
       hasOffer: false,
     };
 
+    const productsByCategory = new Map();
+    products.forEach((product) => {
+      const categoryProducts = productsByCategory.get(product.category_id);
+      if (categoryProducts) {
+        categoryProducts.push(product);
+      } else {
+        productsByCategory.set(product.category_id, [product]);
+      }
+    });
+
     const visualCategories = categories.map((category) => {
-      const categoryProducts = products.filter((product) => product.category_id === category.id);
+      const categoryProducts = productsByCategory.get(category.id) || EMPTY_PRODUCTS;
       const hasOffer = categoryProducts.some(
         (product) => product.original_price && product.original_price !== product.price
       );
@@ -268,7 +283,7 @@ export default function Menu() {
       return;
     }
 
-    const parsedQuantity = Number.parseInt(quantity, 10);
+    const parsedQuantity = Number(quantity);
     const safeQuantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0
       ? parsedQuantity
       : 1;
@@ -628,12 +643,14 @@ export default function Menu() {
         </div>
 
         {selectedProduct && (
-          <ProductModal
-            key={selectedProduct.id ?? selectedProduct.slug}
-            product={selectedProduct}
-            onClose={handleCloseProduct}
-            onAddToCart={handleAddToCart}
-          />
+          <Suspense fallback={null}>
+            <ProductModal
+              key={selectedProduct.id ?? selectedProduct.slug}
+              product={selectedProduct}
+              onClose={handleCloseProduct}
+              onAddToCart={handleAddToCart}
+            />
+          </Suspense>
         )}
 
         {!customer && (

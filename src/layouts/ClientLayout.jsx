@@ -1,5 +1,5 @@
 // src/layouts/ClientLayout.jsx
-import React, { useState, useEffect } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, Link, NavLink } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useProducts } from "../context/ProductContext";
@@ -11,17 +11,19 @@ import useNetworkState from "../hooks/useNetworkState";
 import { NETWORK_STATUS } from "../lib/networkState";
 import { supabase } from "../lib/supabaseClient";
 
-// Componentes
-import Cart from "../pages/Cart";
-import PhoneModal from "../components/PhoneModal";
-import CheckoutModal from "../components/CheckoutModal";
+// Componentes pesados: solo se descargan cuando el cliente los necesita.
+const Cart = lazy(() => import("../pages/Cart"));
+const PhoneModal = lazy(() => import("../components/PhoneModal"));
+const CheckoutModal = lazy(() => import("../components/CheckoutModal"));
 import FloatingCartButton from "../components/FloatingCartButton";
 import UserMenu from "../components/UserMenu";
-import AddressModal from "../components/AddressModal";
-import NotificationManager from "../components/NotificationManager";
+const AddressModal = lazy(() => import("../components/AddressModal"));
+const NotificationManager = lazy(() => import("../components/NotificationManager"));
 import MaintenancePage from "../components/MaintenancePage";
 import ClosedMessage from "../components/ClosedMessage";
 import './ClientLayout.css';
+
+const EMPTY_VISIBILITY_SETTINGS = {};
 
 // Iconos existentes...
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
@@ -39,7 +41,7 @@ const FlameIcon = () => (
 const LoginIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></svg>;
 
 export default function ClientLayout() {
-  const { toast, cartItems, toggleCart } = useCart();
+  const { toast, cartItems, isCartOpen, toggleCart } = useCart();
   const { notification } = useProducts();
   const {
     status: networkStatus,
@@ -50,6 +52,7 @@ export default function ClientLayout() {
 
   const {
     isCheckoutModalOpen,
+    isPhoneModalOpen,
     setCheckoutModalOpen,
     setPhoneModalOpen, // <--- Necesario para abrir el modal manualmente
     phone,
@@ -65,17 +68,20 @@ export default function ClientLayout() {
   const { isOpen: isBusinessOpen, loading: hoursLoading } = useBusinessHours();
 
   const maintenanceSetting = settings.maintenance_mode || { enabled: false };
-  const visibilitySettings = settings.client_visibility || {};
+  const visibilitySettings = settings.client_visibility || EMPTY_VISIBILITY_SETTINGS;
   const isMaintenanceMode = maintenanceSetting?.enabled === true;
   const maintenanceMessage = maintenanceSetting?.message;
 
-  const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  const networkState = {
+  const totalItems = useMemo(
+    () => cartItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
+    [cartItems]
+  );
+  const networkState = useMemo(() => ({
     status: networkStatus,
     latencyMs,
     isChecking,
     hasResolvedOnce,
-  };
+  }), [hasResolvedOnce, isChecking, latencyMs, networkStatus]);
   const showNetworkBanner = hasResolvedOnce && networkStatus !== NETWORK_STATUS.ONLINE;
   const isOffline = networkStatus === NETWORK_STATUS.OFFLINE;
   const networkBannerMessage = isOffline
@@ -91,7 +97,7 @@ export default function ClientLayout() {
   }, [isFirstAddressRequired, customer, setIsFirstAddressRequired]);
 
 
-  const handleSaveFirstAddress = async (addressData) => {
+  const handleSaveFirstAddress = useCallback(async (addressData) => {
     const { error } = await supabase.from('customer_addresses').insert({
       ...addressData,
       customer_id: customer.id,
@@ -101,16 +107,16 @@ export default function ClientLayout() {
       refetchUserData();
       setAddressModalOpen(false);
     }
-  };
+  }, [customer?.id, refetchUserData]);
 
-  const handleCheckoutClose = (shouldOpenAuth) => {
+  const handleCheckoutClose = useCallback((shouldOpenAuth) => {
     setCheckoutModalOpen(false);
     if (shouldOpenAuth === true) {
       setPhoneModalOpen(() => setCheckoutModalOpen(true));
     }
-  };
+  }, [setCheckoutModalOpen, setPhoneModalOpen]);
 
-  const mobileNavItems = [
+  const mobileNavItems = useMemo(() => [
     { to: "/", label: "Inicio", icon: <HomeIcon />, end: true },
     (visibilitySettings.my_profile_page !== false) && {
       to: "/mi-perfil",
@@ -130,13 +136,19 @@ export default function ClientLayout() {
       icon: <ClipboardIcon />,
       replace: true,
     },
-  ].filter(Boolean);
+  ].filter(Boolean), [visibilitySettings]);
 
   const splitIndex = Math.ceil(mobileNavItems.length / 2);
-  const leadingMobileNavItems = mobileNavItems.slice(0, splitIndex);
-  const trailingMobileNavItems = mobileNavItems.slice(splitIndex);
+  const leadingMobileNavItems = useMemo(
+    () => mobileNavItems.slice(0, splitIndex),
+    [mobileNavItems, splitIndex]
+  );
+  const trailingMobileNavItems = useMemo(
+    () => mobileNavItems.slice(splitIndex),
+    [mobileNavItems, splitIndex]
+  );
 
-  const renderMobileNavItems = (items) => items.map(({ to, label, icon, replace = false, end = false }) => (
+  const renderMobileNavItems = useCallback((items) => items.map(({ to, label, icon, replace = false, end = false }) => (
     <NavLink
       key={to}
       to={to}
@@ -147,7 +159,10 @@ export default function ClientLayout() {
       {icon}
       <span className="bottom-nav-label">{label}</span>
     </NavLink>
-  ));
+  )), []);
+
+  const openPhoneModal = useCallback(() => setPhoneModalOpen(true), [setPhoneModalOpen]);
+  const closeAddressModal = useCallback(() => setAddressModalOpen(false), []);
 
   return (
     <div
@@ -192,19 +207,29 @@ export default function ClientLayout() {
           </div>
         )}
 
-        <PhoneModal />
-        <NotificationManager />
+        {isPhoneModalOpen && (
+          <Suspense fallback={null}>
+            <PhoneModal />
+          </Suspense>
+        )}
+        {customer && (
+          <Suspense fallback={null}>
+            <NotificationManager />
+          </Suspense>
+        )}
         {notification && <div className="update-toast">{notification}</div>}
         {toast.message && <div key={toast.key} className="toast-notification">{toast.message}</div>}
 
         {isAddressModalOpen && customer && (
-          <AddressModal
-            isOpen={isAddressModalOpen}
-            onClose={() => setAddressModalOpen(false)}
-            onSave={handleSaveFirstAddress}
-            address={null}
-            customerId={customer.id}
-          />
+          <Suspense fallback={null}>
+            <AddressModal
+              isOpen={isAddressModalOpen}
+              onClose={closeAddressModal}
+              onSave={handleSaveFirstAddress}
+              address={null}
+              customerId={customer.id}
+            />
+          </Suspense>
         )}
 
         <header className="client-header">
@@ -223,7 +248,7 @@ export default function ClientLayout() {
             {!customer && (
               <button
                 className="mobile-login-btn"
-                onClick={() => setPhoneModalOpen(true)}
+                onClick={openPhoneModal}
                 aria-label="Ingresar número"
               >
                 <LoginIcon />
@@ -244,7 +269,7 @@ export default function ClientLayout() {
               ) : (
                 <button
                   className="desktop-login-btn"
-                  onClick={() => setPhoneModalOpen(true)}
+                  onClick={openPhoneModal}
                 >
                   <LoginIcon /> {/* Usamos el icono que ya tienes importado */}
                   <span>Iniciar Sesión</span>
@@ -257,16 +282,22 @@ export default function ClientLayout() {
       </div>
 
       {/* Carrito Lateral */}
-      <Cart networkState={networkState} />
+      {isCartOpen && (
+        <Suspense fallback={null}>
+          <Cart networkState={networkState} />
+        </Suspense>
+      )}
 
       {/* Modal de Checkout */}
       {isCheckoutModalOpen && (
-        <CheckoutModal
-          phone={phone}
-          onClose={handleCheckoutClose}
-          mode={checkoutMode}
-          networkState={networkState}
-        />
+        <Suspense fallback={null}>
+          <CheckoutModal
+            phone={phone}
+            onClose={handleCheckoutClose}
+            mode={checkoutMode}
+            networkState={networkState}
+          />
+        </Suspense>
       )}
 
       {!customer && <FloatingCartButton />}
