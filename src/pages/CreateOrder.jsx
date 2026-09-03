@@ -14,6 +14,9 @@ import DOMPurify from 'dompurify';
 import { useCategoriesCache } from '../hooks/useCategoriesCache';
 import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
+import { useCaja } from '../hooks/useCaja';
+import { useNavigate } from 'react-router-dom';
+import { showMessageModal } from '../services/utils';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -84,6 +87,69 @@ ProductItem.displayName = 'ProductItem';
 const DRAFT_ID = 'admin-create-order-draft';
 const WORKFLOW = 'create-order';
 
+// ============================================================
+// OVERLAY: Caja Cerrada
+// ============================================================
+function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
+  const [monto, setMonto] = useState('');
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const val = parseFloat(monto);
+    if (!isNaN(val) && val >= 0) {
+      onAbrirTurno(val);
+      setMonto('');
+    } else {
+      showMessageModal('Ingresa un monto válido (puede ser 0).');
+    }
+  };
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      minHeight: '60vh', width: '100%', padding: '2rem 1rem'
+    }}>
+      <div className={styles.modalContent} style={{ textAlign: 'center', margin: 'auto' }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+        <h2 style={{ margin: '0 0 12px', color: 'var(--text-color, #ffffff)', fontSize: '1.5rem' }}>
+          Caja Cerrada
+        </h2>
+        {!hasAccess ? (
+          <>
+            <p style={{ color: 'var(--text-light, #666)', marginBottom: '24px' }}>
+              No tienes permiso para abrir una caja. Contacta al administrador.
+            </p>
+            <button className="admin-button-secondary" style={{ width: '100%' }} onClick={() => navigate('/admin/dashboard')}>
+              ← Ir al Dashboard
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ color: 'var(--text-light, #666)', marginBottom: '24px', lineHeight: '1.5' }}>
+              Para crear pedidos debes abrir tu turno.<br />
+              <strong>Ingresa el fondo inicial de tu caja.</strong>
+            </p>
+            <form onSubmit={handleSubmit}>
+              <div className="form-group" style={{ textAlign: 'left', marginBottom: '16px' }}>
+                <label className="form-label" htmlFor="create-caja-monto" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Fondo Inicial ($):</label>
+                <input id="create-caja-monto" type="number" style={{ width: '100%', padding: '0.8rem', borderRadius: '0.5rem', border: '1px solid var(--border-color, #ccc)', backgroundColor: 'var(--bg-color, #1a1a1a)', color: 'var(--text-color, #ffffff)' }} step="0.01" min="0" value={monto} onChange={e => setMonto(e.target.value)} autoFocus placeholder="0.00" required />
+                <small style={{ color: 'var(--text-light)', fontSize: '0.8rem' }}>Puedes ingresar 0 si la caja empieza vacía.</small>
+              </div>
+              <button type="submit" className="admin-button-primary" style={{ width: '100%', marginBottom: '10px' }}>
+                📋 Abrir Mi Turno
+              </button>
+            </form>
+            <button className="admin-button-secondary" style={{ width: '100%' }} onClick={() => navigate('/admin/caja')}>
+              Ir a Gestión de Caja
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ==================== COMPONENTE PRINCIPAL ====================
 
 export default function CreateOrder() {
@@ -146,6 +212,17 @@ export default function CreateOrder() {
     const debouncedProductSearch = useDebounce(productSearch, 300);
 
     const canEdit = hasPermission('crear-pedido.edit');
+    const hasCajaAccess = hasPermission('caja.access');
+    const { cajaEstaAbierta, abrirCaja } = useCaja();
+
+    const handleAbrirTurno = async (monto) => {
+        const success = await abrirCaja(monto);
+        if (success) {
+            showMessageModal('Caja abierta exitosamente.');
+        } else {
+            showMessageModal('Hubo un error al intentar abrir la caja.');
+        }
+    };
 
     // --- (PASO C) ELIMINADO: useEffect(fetchInitialData, ...) ---
 
@@ -570,6 +647,17 @@ export default function CreateOrder() {
     }
 
     // ==================== RENDERIZADO ====================
+    if (!cajaEstaAbierta) {
+        return (
+            <div className={styles.container}>
+                <CajaCerradaOverlay
+                    hasAccess={hasCajaAccess}
+                    onAbrirTurno={handleAbrirTurno}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className={styles.container}>
             <h1>Crear Nuevo Pedido</h1>

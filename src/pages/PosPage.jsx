@@ -42,21 +42,12 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 10010,
-      background: 'rgba(15, 15, 30, 0.92)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backdropFilter: 'blur(6px)',
+      minHeight: '100%', width: '100%', padding: '2rem 1rem'
     }}>
-      <div style={{
-        background: 'var(--card-background-color, #fff)',
-        borderRadius: '16px',
-        padding: '40px 32px',
-        maxWidth: '420px', width: '90%',
-        textAlign: 'center',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-      }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>🔒</div>
-        <h2 style={{ margin: '0 0 8px', color: 'var(--text-dark, #1a1a1a)', fontSize: '1.4rem' }}>
+      <div className="modal-content" style={{ textAlign: 'center', margin: 'auto', maxWidth: '420px', padding: '2rem', border: '1px solid var(--border-color, #eaeaea)' }}>
+        <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+        <h2 style={{ margin: '0 0 12px', color: 'var(--text-dark, #1a1a1a)', fontSize: '1.5rem' }}>
           Caja Cerrada
         </h2>
 
@@ -65,29 +56,25 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
             <p style={{ color: 'var(--text-light, #666)', marginBottom: '24px' }}>
               No tienes permiso para abrir una caja. Contacta al administrador.
             </p>
-            <button
-              className="btn btn-cancel"
-              style={{ width: '100%' }}
-              onClick={() => navigate('/admin/dashboard')}
-            >
+            <button className="admin-button-secondary" style={{ width: '100%' }} onClick={() => navigate('/admin/dashboard')}>
               ← Ir al Dashboard
             </button>
           </>
         ) : (
           <>
             <p style={{ color: 'var(--text-light, #666)', marginBottom: '24px', lineHeight: '1.5' }}>
-              Para registrar ventas debes abrir tu turno.<br />
+              Para procesar ventas debes abrir tu turno.<br />
               <strong>Ingresa el fondo inicial de tu caja.</strong>
             </p>
             <form onSubmit={handleSubmit}>
               <div className="form-group" style={{ textAlign: 'left', marginBottom: '16px' }}>
-                <label className="form-label" htmlFor="pos-caja-monto">
+                <label className="form-label" htmlFor="pos-caja-monto" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
                   Fondo Inicial ($):
                 </label>
                 <input
                   id="pos-caja-monto"
                   type="number"
-                  className="form-input"
+                  style={{ width: '100%', padding: '0.8rem', borderRadius: '0.5rem', border: '1px solid var(--border-color, #ccc)', backgroundColor: 'var(--bg-color, #1a1a1a)', color: 'var(--text-color, #ffffff)' }}
                   step="0.01"
                   min="0"
                   value={monto}
@@ -102,14 +89,14 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
               </div>
               <button
                 type="submit"
-                className="btn btn-save"
-                style={{ width: '100%', marginBottom: '10px', padding: '14px' }}
+                className="admin-button-primary"
+                style={{ width: '100%', marginBottom: '10px' }}
               >
                 📋 Abrir Mi Turno
               </button>
             </form>
             <button
-              className="btn btn-cancel"
+              className="admin-button-secondary"
               style={{ width: '100%' }}
               onClick={() => navigate('/admin/caja')}
             >
@@ -302,15 +289,19 @@ export default function PosPage() {
     }
   };
 
-  return (
-    <>
-      {/* OVERLAY BLOQUEANTE — visible si caja cerrada */}
-      {!cajaEstaAbierta && (
+  if (!cajaEstaAbierta) {
+    return (
+      <div className="pos-page-layout" style={{ display: 'flex', minHeight: '60vh' }}>
         <CajaCerradaOverlay
           hasAccess={hasCajaAccess}
           onAbrirTurno={handleAbrirTurno}
         />
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <>
 
       <div className="pos-page-layout">
         <div className="pos-grid">
