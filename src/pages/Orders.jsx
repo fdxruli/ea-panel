@@ -477,6 +477,10 @@ export default function Orders() {
 
   // ✅ Handler de actualización de estado con feedback visual mejorado
   const updateStatus = async (orderId, newStatus) => {
+    if (!cajaEstaAbierta) {
+      alert("Debes abrir tu turno de caja antes de poder gestionar pedidos.");
+      return;
+    }
     let updateData = { status: newStatus };
     if (newStatus === 'cancelado') {
       const reason = prompt("Motivo de la cancelación (opcional):");
@@ -486,20 +490,27 @@ export default function Orders() {
 
     const targetOrder = orders.find(o => o.id === orderId);
 
-    // Integración de cobro en efectivo con caja abierta
+    // Integración de cobro en efectivo con caja obligatoria
     if (newStatus === 'completado' && targetOrder && !targetOrder.caja_id) {
-      if (cajaEstaAbierta && (targetOrder.total_amount || 0) > 0) {
+      if (!cajaEstaAbierta) {
+        alert("Debes abrir tu turno de caja antes de poder completar y cobrar pedidos.");
+        return; // Detiene la actualización
+      }
+      
+      if ((targetOrder.total_amount || 0) > 0) {
         const confirmarCobro = window.confirm(
-          `¿Deseas registrar el cobro de este pedido ($${targetOrder.total_amount.toFixed(2)}) como ingreso en efectivo a tu caja abierta?`
+          `¿Registrar el cobro de este pedido ($${targetOrder.total_amount.toFixed(2)}) en la caja abierta actual?`
         );
-        if (confirmarCobro) {
-          updateData.caja_id = cajaActual.id;
-          await registrarMovimiento(
-            'entrada',
-            targetOrder.total_amount,
-            `Cobro Pedido #${targetOrder.order_code}`
-          );
+        if (!confirmarCobro) {
+           // Si el admin cancela, tampoco completamos el pedido para evitar descuadres.
+           return;
         }
+        updateData.caja_id = cajaActual.id;
+        await registrarMovimiento(
+          'entrada',
+          targetOrder.total_amount,
+          `Cobro Pedido #${targetOrder.order_code}`
+        );
       }
     }
 
@@ -543,6 +554,11 @@ export default function Orders() {
   // Handler de confirmación de cancelación con feedback visual
   const handleCancelConfirm = useCallback(async (reason) => {
     if (!cancellingOrderId) return;
+    
+    if (!cajaEstaAbierta) {
+      alert("Debes abrir tu turno de caja antes de poder cancelar pedidos.");
+      return;
+    }
 
     const targetOrder = orders.find(o => o.id === cancellingOrderId);
 
