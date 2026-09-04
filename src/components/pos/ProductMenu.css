@@ -32,6 +32,9 @@
   padding: var(--spacing-sm);
   background-color: var(--secondary-color);
   color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .pos-controls .btn-scan:hover {
@@ -153,9 +156,9 @@
 }
 
 .empty-icon {
-  font-size: 3rem;
   margin-bottom: 15px;
   opacity: 0.5;
+  display: inline-flex;
   filter: grayscale(100%);
   /* Para que el emoji se vea grisáceo */
 }

@@ -212,6 +212,16 @@
     width: 100%;
 }
 
+.actionSpinner {
+    animation: ordersIconSpin 1s linear infinite;
+}
+
+.errorMessage {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
 
 .deliveryButton {
     background-color: var(--color-accent);
@@ -398,6 +408,10 @@
 
 .errorBanner button.dismissButton:hover {
     color: #922b21;
+}
+
+@keyframes ordersIconSpin {
+    to { transform: rotate(360deg); }
 }
 
 /* ✅ MEJORA: Indicador visual de pedido actualizando */

@@ -17,6 +17,7 @@ import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 import { useCaja } from '../hooks/useCaja';
 import { useNavigate } from 'react-router-dom';
 import { showMessageModal } from '../services/utils';
+import { ArrowLeft, ClipboardList, FileText, LockKeyhole } from 'lucide-react';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -111,7 +112,9 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
       minHeight: '60vh', width: '100%', padding: '2rem 1rem'
     }}>
       <div className={styles.modalContent} style={{ textAlign: 'center', margin: 'auto' }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+        <div style={{ marginBottom: '16px', color: 'var(--color-primary, #4db6ac)' }}>
+          <LockKeyhole size={56} strokeWidth={1.7} aria-hidden="true" />
+        </div>
         <h2 style={{ margin: '0 0 12px', color: 'var(--text-color, #ffffff)', fontSize: '1.5rem' }}>
           Caja Cerrada
         </h2>
@@ -121,7 +124,7 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
               No tienes permiso para abrir una caja. Contacta al administrador.
             </p>
             <button className="admin-button-secondary" style={{ width: '100%' }} onClick={() => navigate('/admin/dashboard')}>
-              ← Ir al Dashboard
+              <ArrowLeft size={16} aria-hidden="true" /> Ir al Dashboard
             </button>
           </>
         ) : (
@@ -137,7 +140,7 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
                 <small style={{ color: 'var(--text-light)', fontSize: '0.8rem' }}>Puedes ingresar 0 si la caja empieza vacía.</small>
               </div>
               <button type="submit" className="admin-button-primary" style={{ width: '100%', marginBottom: '10px' }}>
-                📋 Abrir Mi Turno
+                <ClipboardList size={17} aria-hidden="true" /> Abrir Mi Turno
               </button>
             </form>
             <button className="admin-button-secondary" style={{ width: '100%' }} onClick={() => navigate('/admin/caja')}>
@@ -666,7 +669,7 @@ export default function CreateOrder() {
             {isDraftRestored && (
                 <div className={styles.draftBanner} role="alert">
                     <span className={styles.draftBannerText}>
-                        📝 Borrador recuperado automáticamente
+                        <FileText size={17} aria-hidden="true" /> Borrador recuperado automáticamente
                     </span>
                     <button
                         type="button"
@@ -928,8 +931,8 @@ export default function CreateOrder() {
                                         onChange={(e) => setNewCustomerCountryCode(e.target.value)}
                                         className={styles.countrySelect} // <--- AQUI aplicamos la clase nueva
                                     >
-                                        <option value="+52">🇲🇽 +52</option>
-                                        <option value="+1">🇺🇸 +1</option>
+                                        <option value="+52">+52</option>
+                                        <option value="+1">+1</option>
                                     </select>
 
                                     <input

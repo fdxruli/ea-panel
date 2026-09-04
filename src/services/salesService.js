@@ -184,7 +184,7 @@ export const processSale = async ({
                 return {
                     success: false,
                     errorType: 'STOCK_WARNING',
-                    message: `⚠️ STOCK INSUFICIENTE REAL:\n\n${details}\n\nEl total de ingredientes requeridos para todo el pedido supera lo que tienes en cocina.`,
+                    message: `STOCK INSUFICIENTE REAL:\n\n${details}\n\nEl total de ingredientes requeridos para todo el pedido supera lo que tienes en cocina.`,
                     missingData: missingIngredients
                 };
             }
@@ -265,7 +265,7 @@ export const processSale = async ({
             const realProductId = orderItem.parentId || orderItem.id;
             const product = allProducts.find(p => p.id === realProductId);
 
-            // 🟢 CORRECCIÓN: Definir hasRecipe AQUÍ TAMBIÉN para usarlo en la condición
+            // CORRECCIÓN: Definir hasRecipe aquí también para usarlo en la condición
             const hasRecipe = features.hasRecipes && product?.recipe && product.recipe.length > 0;
 
             // Definir 'quantityToDeduct'

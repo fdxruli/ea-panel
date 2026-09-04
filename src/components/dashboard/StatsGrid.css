@@ -31,6 +31,9 @@
   margin: 0;
   font-size: 0.9rem;
   color: var(--text-light);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* Selector de Tiempo (Pastilla) */
@@ -52,6 +55,9 @@
   color: var(--text-light);
   cursor: pointer;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .filter-pill:hover {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 // --- CAMBIO: Usamos useProductStore en lugar de useDashboardStore ---
 import { useProductStore } from '../../store/useProductStore';
 import { roundCurrency } from '../../services/utils';
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import './RecipeBuilderModal.css';
 
 export default function RecipeBuilderModal({ show, onClose, existingRecipe, onSave, productName }) {
@@ -106,7 +107,7 @@ export default function RecipeBuilderModal({ show, onClose, existingRecipe, onSa
 
         {availableIngredients.length === 0 ? (
           <div className="warning-box">
-            ⚠️ No tienes productos marcados como "Ingrediente" o no se han cargado los lotes. <br />
+            <AlertTriangle size={17} aria-hidden="true" /> No tienes productos marcados como "Ingrediente" o no se han cargado los lotes. <br />
             Asegúrate de haber creado Insumos y haber registrado su stock inicial.
           </div>
         ) : (
@@ -150,7 +151,9 @@ export default function RecipeBuilderModal({ show, onClose, existingRecipe, onSa
               />
             </div>
 
-            <button type="button" className="btn btn-add-ing" onClick={handleAdd}>+</button>
+            <button type="button" className="btn btn-add-ing" onClick={handleAdd} aria-label="Agregar ingrediente">
+              <Plus size={17} aria-hidden="true" />
+            </button>
           </div>
         )}
 
@@ -178,7 +181,9 @@ export default function RecipeBuilderModal({ show, onClose, existingRecipe, onSa
                     <td>{item.quantity} {item.unit}</td>
                     <td>${(item.estimatedCost || 0).toFixed(2)}</td>
                     <td>
-                      <button className="btn-icon-remove" onClick={() => handleRemove(item.ingredientId)}>🗑️</button>
+                      <button className="btn-icon-remove" onClick={() => handleRemove(item.ingredientId)} aria-label="Eliminar ingrediente">
+                        <Trash2 size={15} aria-hidden="true" />
+                      </button>
                     </td>
                   </tr>
                 ))

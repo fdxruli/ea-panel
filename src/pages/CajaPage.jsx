@@ -4,6 +4,7 @@ import AuditModal from '../components/common/AuditModal';
 import { showMessageModal } from '../services/utils';
 import { downloadBackupSmart } from '../services/dataTransfer';
 import './CajaPage.css';
+import { RefreshCw } from 'lucide-react';
 
 const CashRegisterIcon = ({ size = 24 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -230,7 +231,7 @@ export default function CajaPage() {
     const success = await abrirCaja(monto);
     if (success) {
       setModalVisible(null);
-      showMessageModal('✅ Turno abierto correctamente.');
+      showMessageModal('Turno abierto correctamente.');
     }
   };
 
@@ -267,7 +268,7 @@ export default function CajaPage() {
     const result = await realizarAuditoriaYCerrar(montoFisico, comentarios, detalleCierre);
     if (result.success) {
       setIsAuditOpen(false);
-      showMessageModal('✅ Corte realizado con éxito.');
+      showMessageModal('Corte realizado con éxito.');
     } else {
       if (result.error?.details) {
         handleActionableError(result.error);
@@ -282,7 +283,7 @@ export default function CajaPage() {
     setIsBackupLoading(true);
     try {
       await downloadBackupSmart();
-      showMessageModal('✅ Respaldo generado correctamente.');
+      showMessageModal('Respaldo generado correctamente.');
     } catch (e) {
       console.error(e);
       showMessageModal('Error al respaldar.', null, { type: 'error' });
@@ -355,7 +356,7 @@ export default function CajaPage() {
               title="Forzar sincronización con la nube"
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
             >
-              🔄
+              <RefreshCw size={15} aria-hidden="true" />
             </button>
           </div>
 

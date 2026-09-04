@@ -4,30 +4,42 @@
 import { showMessage } from '../store/useMessageStore';
 import toast from 'react-hot-toast';
 
+const DECORATIVE_STATUS_PREFIX = /^\s*(?:[\p{Extended_Pictographic}\uFE0F\u200D]+\s*)+/u;
+
+const getDisplayMessage = (message) => (
+  typeof message === 'string'
+    ? message.replace(DECORATIVE_STATUS_PREFIX, '').trimStart()
+    : message
+);
+
 /**
  * Muestra un mensaje al usuario.
  * - Si hay 'onConfirm', usa el MODAL (porque requiere interacción).
  * - Si NO hay 'onConfirm', usa un TOAST (rápido y no intrusivo).
  */
 export function showMessageModal(message, onConfirm = null, options = {}) {
+  const displayMessage = getDisplayMessage(message);
 
   // CASO A: Es una Confirmación (Ej: "¿Eliminar cliente?") -> USAR MODAL
   if (typeof onConfirm === 'function') {
-    showMessage(message, onConfirm, options);
+    showMessage(displayMessage, onConfirm, options);
     return;
   }
 
   // CASO B: Es solo información -> USAR TOAST
   // Detectamos si es error buscando palabras clave o si pasas options.type
   const isError = options.type === 'error' ||
-    message.toLowerCase().includes('error') ||
-    message.toLowerCase().includes('falló') ||
-    message.startsWith('⚠️');
+    displayMessage.toLowerCase().includes('error') ||
+    displayMessage.toLowerCase().includes('falló') ||
+    displayMessage.toLowerCase().includes('fallo') ||
+    displayMessage.toLowerCase().includes('no se pudo') ||
+    displayMessage.toLowerCase().includes('no tienes permiso') ||
+    displayMessage.toLowerCase().includes('se requiere');
 
   if (isError) {
-    toast.error(message, { duration: 4000 });
+    toast.error(displayMessage, { duration: 4000 });
   } else {
-    toast.success(message, { duration: 3000 });
+    toast.success(displayMessage, { duration: 3000 });
   }
 }
 
@@ -323,7 +335,7 @@ export const tryEnablePersistence = async () => {
       const isPersisted = await navigator.storage.persisted();
       if (!isPersisted) {
         const result = await navigator.storage.persist();
-        console.log(`Solicitud de persistencia: ${result ? 'CONCEDIDA ✅' : 'DENEGADA ⚠️'}`);
+        console.log(`Solicitud de persistencia: ${result ? 'CONCEDIDA' : 'DENEGADA'}`);
         return result;
       }
       return true; // Ya estaba persistente

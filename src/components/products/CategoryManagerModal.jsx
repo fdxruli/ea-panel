@@ -1,6 +1,7 @@
 // src/components/products/CategoryManagerModal.jsx
 import React, { useState, useEffect } from 'react';
 import './CategoryManagerModal.css'
+import { Pencil, Trash2 } from 'lucide-react';
 
 export default function CategoryManagerModal({ show, onClose, categories, onSave, onDelete }) {
   const [name, setName] = useState('');
@@ -70,8 +71,12 @@ export default function CategoryManagerModal({ show, onClose, categories, onSave
               <div key={cat.id} className="category-item-managed">
                 <span>{cat.name}</span>
                 <div className="category-item-controls">
-                  <button className="edit-category-btn" onClick={() => handleEdit(cat)}>✏️</button>
-                  <button className="delete-category-btn" onClick={() => handleDelete(cat.id)}>🗑️</button>
+                  <button className="edit-category-btn" onClick={() => handleEdit(cat)} aria-label="Editar categoría" title="Editar">
+                    <Pencil size={15} aria-hidden="true" />
+                  </button>
+                  <button className="delete-category-btn" onClick={() => handleDelete(cat.id)} aria-label="Eliminar categoría" title="Eliminar">
+                    <Trash2 size={15} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
             ))

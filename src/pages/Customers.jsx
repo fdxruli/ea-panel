@@ -16,6 +16,7 @@ import { generateKey } from '../utils/cacheAdminUtils';
 import { fetchCustomerStatsBatch } from '../lib/customerQueries';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 // --- FIN PASO A ---
+import { CircleCheck, Gift, Info, Star, Trash2, X } from 'lucide-react';
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
 const UserIcon = memo(() => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>));
@@ -226,7 +227,7 @@ const CustomerCard = memo(({ customer, onSelect }) => {
 
       {customer.referral_code && (
         <div className={styles.referralBadge}>
-          🎁 Código: {customer.referral_code}
+          <Gift size={15} aria-hidden="true" /> Código: {customer.referral_code}
         </div>
       )}
     </div>
@@ -323,7 +324,9 @@ const CustomerFormModal = memo(({ isOpen, onClose, onSave, customer = null }) =>
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.formModal} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.closeButton} onClick={onClose}>✕</button>
+        <button className={styles.closeButton} onClick={onClose} aria-label="Cerrar">
+          <X size={18} aria-hidden="true" />
+        </button>
         <h2>{customer ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
@@ -339,8 +342,8 @@ const CustomerFormModal = memo(({ isOpen, onClose, onSave, customer = null }) =>
                 onChange={(e) => setCountryCode(e.target.value)}
                 style={{ width: '110px', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
               >
-                <option value="+52">🇲🇽 +52</option>
-                <option value="+1">🇺🇸 +1</option>
+                <option value="+52">+52</option>
+                <option value="+1">+1</option>
                 {/* Puedes agregar más ladas aquí */}
               </select>
               <input
@@ -466,7 +469,9 @@ const AddressFormModal = memo(({ isOpen, onClose, onSave, address = null, custom
     <div className={styles.modalOverlay} onClick={onClose}>
       {/* ... (JSX del modal de dirección, sin cambios) ... */}
       <div className={styles.addressFormModal} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.closeButton} onClick={onClose}>✕</button>
+        <button className={styles.closeButton} onClick={onClose} aria-label="Cerrar">
+          <X size={18} aria-hidden="true" />
+        </button>
         <h2>{address ? 'Editar Dirección' : 'Nueva Dirección'}</h2>
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}><label htmlFor="label">Nombre de la Dirección *</label><input id="label" type="text" placeholder="Ej: Casa, Oficina, etc." value={formData.label} onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))} required /></div>
@@ -478,9 +483,15 @@ const AddressFormModal = memo(({ isOpen, onClose, onSave, address = null, custom
                 <DynamicMapPicker ref={mapPickerRef} onLocationSelect={handleLocationSelect} initialPosition={mapInitialPosition} isDraggable={true} />
               </React.Suspense>
             </div>
-            {formData.coords && (<div className={styles.coordsInfo}>✅ Ubicación seleccionada: {formData.coords.lat.toFixed(6)}, {formData.coords.lng.toFixed(6)}</div>)}
+            {formData.coords && (
+              <div className={styles.coordsInfo}>
+                <CircleCheck size={15} aria-hidden="true" /> Ubicación seleccionada: {formData.coords.lat.toFixed(6)}, {formData.coords.lng.toFixed(6)}
+              </div>
+            )}
           </div>
-          <div className={styles.infoNote}>💡 La primera dirección que agregues será la predeterminada automáticamente. Puedes cambiarla después usando el botón "⭐ Predeterminar".</div>
+          <div className={styles.infoNote}>
+            <Info size={16} aria-hidden="true" /> La primera dirección que agregues será la predeterminada automáticamente. Puedes cambiarla después usando el botón "Predeterminar".
+          </div>
           <div className={styles.modalActions}>
             <button type="button" onClick={onClose} className={styles.cancelButton}>Cancelar</button>
             <button type="submit" className={styles.submitButton} disabled={isSubmitting || !formData.coords}>{isSubmitting ? 'Guardando...' : (address ? 'Actualizar' : 'Crear')}</button>
@@ -905,7 +916,9 @@ export default function Customers() {
       {selectedCustomer && (
         <div className={styles.modalOverlay} onClick={() => setSelectedCustomer(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <button className={styles.closeButton} onClick={() => setSelectedCustomer(null)}>✕</button>
+            <button className={styles.closeButton} onClick={() => setSelectedCustomer(null)} aria-label="Cerrar">
+              <X size={18} aria-hidden="true" />
+            </button>
 
             <div className={styles.modalHeader}>
               <div className={styles.modalHeaderLeft}>
@@ -975,7 +988,7 @@ export default function Customers() {
                         )}
                         {addr.address_reference && (
                           <small className={styles.reference}>
-                            📍 {addr.address_reference}
+                            <MapPinIcon /> {addr.address_reference}
                           </small>
                         )}
                         {canEdit && (
@@ -985,7 +998,7 @@ export default function Customers() {
                                 className={styles.setDefaultButton}
                                 onClick={() => handleSetDefaultAddress(addr.id)}
                               >
-                                ⭐ Predeterminar
+                                <Star size={14} aria-hidden="true" /> Predeterminar
                               </button>
                             )}
                             <button
@@ -998,7 +1011,7 @@ export default function Customers() {
                               className={styles.deleteAddressButton}
                               onClick={() => handleDeleteAddress(addr)}
                             >
-                              🗑️ Eliminar
+                              <Trash2 size={14} aria-hidden="true" /> Eliminar
                             </button>
                           </div>
                         )}

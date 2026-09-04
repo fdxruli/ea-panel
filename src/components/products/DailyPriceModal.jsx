@@ -3,6 +3,7 @@ import { saveData, saveBulkSafe, STORES } from '../../services/database';
 import { showMessageModal } from '../../services/utils';
 // 1. IMPORTAR STORE PARA OBTENER CATEGORÍAS
 import { useProductStore } from '../../store/useProductStore';
+import { FileText } from 'lucide-react';
 
 export default function DailyPriceModal({ show, onClose, products, onRefresh }) {
     const [editedProducts, setEditedProducts] = useState({});
@@ -55,7 +56,7 @@ export default function DailyPriceModal({ show, onClose, products, onRefresh }) 
         const result = await saveBulkSafe(STORES.MENU, updates);
         if (result.success) {
             await onRefresh();
-            showMessageModal(`✅ Precios actualizados para ${updates.length} productos.`);
+            showMessageModal(`Precios actualizados para ${updates.length} productos.`);
             setEditedProducts({});
             onClose();
         } else {
@@ -69,7 +70,9 @@ export default function DailyPriceModal({ show, onClose, products, onRefresh }) 
     return (
         <div className="modal" style={{ display: 'flex', zIndex: 2300 }}>
             <div className="modal-content" style={{ maxWidth: '700px', height: '80vh', display: 'flex', flexDirection: 'column' }}>
-                <h2 className="modal-title">📝 Actualización Rápida de Precios</h2>
+                <h2 className="modal-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <FileText size={20} aria-hidden="true" /> Actualización Rápida de Precios
+                </h2>
                 <p style={{ marginBottom: '10px', color: '#666' }}>Ajusta costos y precios según el mercado de hoy.</p>
 
                 {/* 4. UI DE FILTROS ENCABEZADO */}

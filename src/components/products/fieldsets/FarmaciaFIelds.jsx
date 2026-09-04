@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function FarmaciaFields({
   sustancia, setSustancia,
@@ -58,7 +59,7 @@ export default function FarmaciaFields({
           onChange={(e) => setRequiresPrescription(e.target.checked)}
         />
         <label htmlFor="product-prescription" style={{ margin: 0, fontWeight: '600', color: requiresPrescription ? 'var(--error-color)' : 'inherit' }}>
-          ⚠️ Requiere Receta Médica (Antibiótico/Controlado)
+          <AlertTriangle size={15} aria-hidden="true" /> Requiere Receta Médica (Antibiótico/Controlado)
         </label>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { downloadInventorySmart, processImport, downloadFile, generatePharmacyRe
 import { showMessageModal } from '../../services/utils';
 import { loadData, STORES } from '../../services/database';
 import { useFeatureConfig } from '../../hooks/useFeatureConfig';
+import { AlertTriangle, Download, FileText, FolderOpen, Pill, Upload } from 'lucide-react';
 
 export default function DataTransferModal({ show, onClose, onRefresh }) {
   const [activeTab, setActiveTab] = useState('export');
@@ -22,7 +23,7 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
       // Ya no cargamos datos aquí, la función 'smart' se encarga internamente
       await downloadInventorySmart();
 
-      showMessageModal('✅ Archivo de inventario generado correctamente.');
+      showMessageModal('Archivo de inventario generado correctamente.');
     } catch (error) {
       console.error(error);
       showMessageModal('Error al generar la exportación.');
@@ -43,7 +44,7 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
       } else {
         const date = new Date().toISOString().split('T')[0];
         downloadFile(csvContent, `libro_control_farmacia_${date}.csv`);
-        showMessageModal('✅ Libro de Control generado correctamente.');
+        showMessageModal('Libro de Control generado correctamente.');
       }
     } catch (error) {
       console.error(error);
@@ -96,20 +97,22 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
   return (
     <div className="modal" style={{ display: 'flex', zIndex: 2500 }}>
       <div className="modal-content" style={{ maxWidth: '600px' }}>
-        <h2 className="modal-title">Gestión Masiva de Datos</h2>
+        <h2 className="modal-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+          <FileText size={20} aria-hidden="true" /> Gestión Masiva de Datos
+        </h2>
 
         <div className="tabs-container">
           <button
             className={`tab-btn ${activeTab === 'export' ? 'active' : ''}`}
             onClick={() => setActiveTab('export')}
           >
-            📤 Exportar / Respaldo
+            <Download size={16} aria-hidden="true" /> Exportar / Respaldo
           </button>
           <button
             className={`tab-btn ${activeTab === 'import' ? 'active' : ''}`}
             onClick={() => setActiveTab('import')}
           >
-            📥 Importar CSV
+            <Upload size={16} aria-hidden="true" /> Importar CSV
           </button>
         </div>
 
@@ -123,7 +126,7 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
 
               <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button className="btn btn-save" onClick={handleExport} disabled={isLoading}>
-                  {isLoading ? 'Generando...' : '⬇️ Descargar Inventario Completo'}
+                  {isLoading ? 'Generando...' : <><Download size={16} aria-hidden="true" /> Descargar Inventario Completo</>}
                 </button>
 
                 {/* BOTÓN CONDICIONAL: SOLO VISIBLE SI ES FARMACIA */}
@@ -134,7 +137,7 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
                     disabled={isLoading}
                     style={{ backgroundColor: '#0ea5e9' }}
                   >
-                    💊 Descargar Libro de Control (COFEPRIS)
+                    <Pill size={16} aria-hidden="true" /> Descargar Libro de Control (COFEPRIS)
                   </button>
                 )}
               </div>
@@ -149,7 +152,7 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
                 backgroundColor: 'var(--background-color)'
               }}>
                 <label htmlFor="csv-upload" className="btn btn-secondary" style={{ cursor: 'pointer', display: 'inline-block' }}>
-                  {isLoading ? 'Procesando...' : '📂 Seleccionar Archivo CSV'}
+                  {isLoading ? 'Procesando...' : <><FolderOpen size={16} aria-hidden="true" /> Seleccionar Archivo CSV</>}
                 </label>
                 <input
                   id="csv-upload"
@@ -172,7 +175,9 @@ export default function DataTransferModal({ show, onClose, onRefresh }) {
                   backgroundColor: '#fee2e2', padding: '10px', borderRadius: '5px',
                   border: '1px solid #ef4444'
                 }}>
-                  <h4 style={{ color: '#b91c1c', margin: '0 0 5px 0' }}>⚠️ Advertencias de importación:</h4>
+                  <h4 style={{ color: '#b91c1c', margin: '0 0 5px 0', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <AlertTriangle size={16} aria-hidden="true" /> Advertencias de importación:
+                  </h4>
                   <ul style={{ margin: 0, paddingLeft: '20px', color: '#b91c1c' }}>
                     {importLog.errors.map((err, idx) => (
                       <li key={idx}>{err}</li>

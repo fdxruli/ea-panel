@@ -9,6 +9,21 @@ import { StatCard } from "../components/StatCard";
 import { exportToCSV } from "../utils/exportUtils";
 import { useAdminCache } from "../hooks/useAdminCache";
 import DashboardSkeleton from "../components/DashboardSkeleton";
+import {
+    Banknote,
+    ChartColumn,
+    ChartNoAxesCombined,
+    CircleCheck,
+    CircleDollarSign,
+    CircleX,
+    Clock3,
+    Package,
+    Target,
+    TrendingUp,
+    Trophy,
+    Users,
+    Zap
+} from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -461,14 +476,14 @@ export default function Dashboard() {
                     value={formatCurrency(stats.totalProfit)}
                     subtitle={`Margen: ${(stats.profitMargin || 0).toFixed(1)}%`}
                     color="#2ecc71"
-                    icon="💰"
+                    icon={<CircleDollarSign size={24} aria-hidden="true" />}
                     helpKey="totalProfit"
                 />
                 <StatCard
                     title="Ingresos Totales"
                     value={formatCurrency(stats.totalRevenue)}
                     color="#3498db"
-                    icon="💵"
+                    icon={<Banknote size={24} aria-hidden="true" />}
                     helpKey="totalRevenue"
                 />
                 <StatCard
@@ -476,14 +491,14 @@ export default function Dashboard() {
                     value={formatCurrency(stats.totalCosts)}
                     subtitle="Costos de producción"
                     color="#e74c3c"
-                    icon="📊"
+                    icon={<ChartColumn size={24} aria-hidden="true" />}
                     helpKey="totalCosts"
                 />
                 <StatCard
                     title="Valor Promedio/Pedido"
                     value={formatCurrency(stats.avgOrderValue)}
                     color="#f1c40f"
-                    icon="📦"
+                    icon={<Package size={24} aria-hidden="true" />}
                     helpKey="avgOrderValue"
                 />
                 <StatCard
@@ -491,38 +506,38 @@ export default function Dashboard() {
                     value={stats.totalCustomers || 0}
                     subtitle="Clientes registrados"
                     color="#9b59b6"
-                    icon="👥"
+                    icon={<Users size={24} aria-hidden="true" />}
                     helpKey="totalCustomers"
                 />
                 <StatCard
                     title="Pedidos Pendientes"
                     value={stats.pendingOrders || 0}
                     color="#e67e22"
-                    icon="⌛"
+                    icon={<Clock3 size={24} aria-hidden="true" />}
                     helpKey="pendingOrders"
                 />
                 <StatCard
                     title="Pedidos Completados"
                     value={stats.completedOrders || 0}
                     color="#2ecc71"
-                    icon="✅"
+                    icon={<CircleCheck size={24} aria-hidden="true" />}
                     helpKey="completedOrders"
                 />
                 <StatCard
                     title="Órdenes Canceladas"
                     value={stats.canceledOrders || 0}
                     color="#95a5a6"
-                    icon="❌"
+                    icon={<CircleX size={24} aria-hidden="true" />}
                     helpKey="canceledOrders"
                 />
             </div>
 
             {hasData && (
                 <div className={styles.mainGrid}>
-                    {/* 📈 Tendencia de Ventas Diarias — siempre visible primero */}
+                    {/* Tendencia de Ventas Diarias — siempre visible primero */}
                     <div className={`${styles.chartCard} ${styles.profitability}`} style={{ gridColumn: '1 / -1' }}>
                         <div className={styles.chartHeader}>
-                            <h3>📈 Tendencia de Ventas Diarias</h3>
+                            <h3><TrendingUp size={20} aria-hidden="true" /> Tendencia de Ventas Diarias</h3>
                         </div>
                         <div className={styles.chartContainer}>
                             <DailySalesChart dailySales={dailySales} />
@@ -531,7 +546,7 @@ export default function Dashboard() {
 
                     <div className={`${styles.chartCard} ${styles.profitability}`}>
                         <div className={styles.chartHeader}>
-                            <h3>💹 Análisis de Rentabilidad</h3>
+                            <h3><ChartNoAxesCombined size={20} aria-hidden="true" /> Análisis de Rentabilidad</h3>
                             <button onClick={handleExportProfitability} className={styles.exportButton}>
                                 <DownloadIcon /> Exportar
                             </button>
@@ -543,7 +558,7 @@ export default function Dashboard() {
 
                     <div className={`${styles.chartCard} ${styles.marginAnalysis}`}>
                         <div className={styles.chartHeader}>
-                            <h3>🎯 Márgenes de Ganancia</h3>
+                            <h3><Target size={20} aria-hidden="true" /> Márgenes de Ganancia</h3>
                             <button onClick={handleExportMargins} className={styles.exportButton}>
                                 <DownloadIcon /> Exportar
                             </button>
@@ -554,7 +569,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className={`${styles.chartCard} ${styles.topProducts}`}>
-                        <h3>🏆 Top Productos Más Rentables</h3>
+                        <h3><Trophy size={20} aria-hidden="true" /> Top Productos Más Rentables</h3>
                         <div className={styles.profitableList}>
                             {top8Products.map((product, index) => (
                                 <div key={`${product.name}-${index}`} className={styles.profitableItem}>
@@ -576,7 +591,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className={`${styles.chartCard} ${styles.recentOrders}`}>
-                        <h3>⚡ Pedidos Recientes</h3>
+                        <h3><Zap size={20} aria-hidden="true" /> Pedidos Recientes</h3>
                         <ul className={styles.recentList}>
                             {recentOrders.map((order, index) => (
                                 <li key={`${order.id}-${index}`} className={styles.recentOrderItem}>

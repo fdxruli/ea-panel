@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useStatsStore } from '../../store/useStatsStore';
 import { loadData, saveBulkSafe, STORES, archiveOldData } from '../../services/database';
+import { Archive, ChartNoAxesCombined, Package, RefreshCw } from 'lucide-react';
 
 export default function MaintenanceSettings() {
   const loadStats = useStatsStore((state) => state.loadStats);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRecalculateProfits = async () => {
-    if (!window.confirm("⚠️ ¿Deseas recalcular todas las ventas usando los COSTOS ACTUALES?\n\nEsto corregirá ganancias negativas, pero sobrescribirá el historial de costos.")) return;
+    if (!window.confirm("¿Deseas recalcular todas las ventas usando los COSTOS ACTUALES?\n\nEsto corregirá ganancias negativas, pero sobrescribirá el historial de costos.")) return;
 
     setIsProcessing(true);
     try {
@@ -45,12 +46,12 @@ export default function MaintenanceSettings() {
 
         if (result.success) {
           await loadStats(true);
-          alert(`✅ Reparación completada. Se actualizaron ${updatedCount} ventas.`);
+          alert(`Reparación completada. Se actualizaron ${updatedCount} ventas.`);
         } else {
           alert(`Error al guardar correcciones: ${result.error?.message}`);
         }
       } else {
-        alert("✅ No se encontraron discrepancias de costos.");
+        alert("No se encontraron discrepancias de costos.");
       }
     } catch (e) {
       console.error(e);
@@ -60,7 +61,7 @@ export default function MaintenanceSettings() {
   };
 
   const handleSyncStock = async () => {
-    if (!window.confirm("⚠️ ¿Sincronizar stock visible con la suma de lotes?")) return;
+    if (!window.confirm("¿Sincronizar stock visible con la suma de lotes?")) return;
 
     setIsProcessing(true);
     try {
@@ -100,12 +101,12 @@ export default function MaintenanceSettings() {
 
         if (result.success) {
           await loadStats(true);
-          alert(`✅ Sincronización completada. Se corrigió el stock de ${updates.length} productos.`);
+          alert(`Sincronización completada. Se corrigió el stock de ${updates.length} productos.`);
         } else {
           alert(`Error al sincronizar: ${result.error?.message}`);
         }
       } else {
-        alert("✅ El inventario ya está perfectamente sincronizado.");
+        alert("El inventario ya está perfectamente sincronizado.");
       }
     } catch (e) {
       console.error(e);
@@ -125,7 +126,7 @@ export default function MaintenanceSettings() {
         a.href = url;
         a.download = `ARCHIVO_HISTORICO_${new Date().toISOString()}.json`;
         a.click();
-        alert(`✅ Se archivaron y limpiaron ${oldSales.length} ventas antiguas.`);
+        alert(`Se archivaron y limpiaron ${oldSales.length} ventas antiguas.`);
       } else {
         alert("No hay ventas antiguas para archivar.");
       }
@@ -148,36 +149,36 @@ export default function MaintenanceSettings() {
           {/* HERRAMIENTA 1 */}
           <div className="maintenance-tool-card">
             <div className="tool-info">
-              <h4>📊 Reparar Ganancias</h4>
+              <h4><ChartNoAxesCombined size={18} aria-hidden="true" /> Reparar Ganancias</h4>
               <p>- Recalcula reportes históricos con costos actuales si ves negativos.</p>
             </div>
             <button className="btn btn-secondary" onClick={handleRecalculateProfits} disabled={isProcessing}>
-              {isProcessing ? '...' : '🔄 Ejecutar'}
+              {isProcessing ? '...' : <><RefreshCw size={15} aria-hidden="true" /> Ejecutar</>}
             </button>
           </div>
 
           {/* HERRAMIENTA 2 */}
           <div className="maintenance-tool-card">
             <div className="tool-info">
-              <h4>📦 Sincronizar Stock</h4>
+              <h4><Package size={18} aria-hidden="true" /> Sincronizar Stock</h4>
               <p>- Corrige discrepancias si ves "Agotado" pero tienes lotes.</p>
               <p>- Este problema puede llegar a presentarse despues de una actualizacion del sistema</p>
             </div>
             <button className="btn btn-primary" onClick={handleSyncStock} disabled={isProcessing}>
-              {isProcessing ? '...' : '🧩 Sincronizar'}
+              {isProcessing ? '...' : <><RefreshCw size={15} aria-hidden="true" /> Sincronizar</>}
             </button>
           </div>
 
           {/* HERRAMIENTA 3 */}
           <div className="maintenance-tool-card" style={{ borderColor: '#7c3aed' }}>
             <div className="tool-info">
-              <h4 style={{ color: '#7c3aed' }}>🗄️ Archivar Historial</h4>
+              <h4 style={{ color: '#7c3aed' }}><Archive size={18} aria-hidden="true" /> Archivar Historial</h4>
               <p>- Limpia ventas antiguas para acelerar. </p>
               <p>- Se descargará un archivo JSON con las ventas eliminadas.</p>
               <p>- Recomendado cada 6 meses o más.</p>
             </div>
             <button className="btn btn-secondary" onClick={handleArchive} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none' }}>
-              📦 Archivar
+              <Archive size={15} aria-hidden="true" /> Archivar
             </button>
           </div>
         </div>

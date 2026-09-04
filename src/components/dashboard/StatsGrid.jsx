@@ -2,9 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { 
   TrendingUp, 
   ShoppingBag, 
-  CreditCard, 
-  DollarSign, 
-  Package, 
+  CreditCard,
+  CalendarDays,
+  DollarSign,
+  Globe2,
+  Package,
   Activity
 } from 'lucide-react';
 import { useSalesStore } from '../../store/useSalesStore';
@@ -62,9 +64,9 @@ export default function StatsGrid({ stats }) {
           <h3>Resumen de Negocio</h3>
           {/* SUBTÍTULO DINÁMICO QUE EXPLICA TODO */}
           <p className="stats-subtitle">
-            {timeRange === 'today' 
-              ? '📊 Mostrando solo las ventas de HOY.' 
-              : '🌎 Mostrando el acumulado desde que iniciaste.'}
+            {timeRange === 'today'
+              ? <><CalendarDays size={15} aria-hidden="true" /> Mostrando solo las ventas de HOY.</>
+              : <><Globe2 size={15} aria-hidden="true" /> Mostrando el acumulado desde que iniciaste.</>}
           </p>
         </div>
         
@@ -74,14 +76,14 @@ export default function StatsGrid({ stats }) {
             onClick={() => setTimeRange('today')}
             title="Ver solo lo de hoy"
           >
-            📅 Hoy
+            <CalendarDays size={15} aria-hidden="true" /> Hoy
           </button>
           <button 
             className={`filter-pill ${timeRange === 'all' ? 'active' : ''}`}
             onClick={() => setTimeRange('all')}
             title="Ver acumulado histórico"
           >
-            🌎 Total Global
+            <Globe2 size={15} aria-hidden="true" /> Total Global
           </button>
         </div>
       </div>

@@ -11,6 +11,7 @@ import { subscribeToTableChanges } from "../lib/sharedAdminRealtime";
 import { useCacheAdmin } from "../context/CacheAdminContext";
 import { broadcastOrderUpdate, broadcastStoreChange } from "../lib/broadcastRealtime";
 import { useCaja } from "../hooks/useCaja";
+import { AlertTriangle, LoaderCircle, MessageCircle, X } from 'lucide-react';
 
 // ==================== CUSTOM HOOKS ====================
 
@@ -38,7 +39,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
   // Detectar si es pedido de invitado
   const isGuest = order.customer_id === GUEST_CUSTOMER_ID;
 
-  // ✅ MEJORA: Verificar si este pedido está siendo actualizado
+  // Mejora: verificar si este pedido está siendo actualizado
   const isUpdating = updatingStatusId === order.id;
 
   // Memoizar formato de fecha
@@ -113,10 +114,12 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
         <div className={styles.infoSection}>
           <h4>Cliente</h4>
           <p className={styles.customerInfo}>
-            {/* ✅ Lógica visual diferenciada para Invitados */}
+            {/* Lógica visual diferenciada para invitados */}
             {isGuest ? (
               <span>
-                <strong style={{ color: '#25D366' }}>👋 Invitado (WhatsApp)</strong>
+                <strong style={{ color: '#25D366', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <MessageCircle size={16} aria-hidden="true" /> Invitado (WhatsApp)
+                </strong>
                 <br />
                 <small style={{ color: '#666' }}>Revisar chat para dirección</small>
               </span>
@@ -173,7 +176,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
               disabled={isUpdating}
               className={styles.processButton}
             >
-              {isUpdating ? '⏳' : 'Procesar'}
+              {isUpdating ? <LoaderCircle className={styles.actionSpinner} size={16} aria-label="Actualizando" /> : 'Procesar'}
             </button>
           )}
           {canEdit && order.status === 'en_proceso' && (
@@ -182,7 +185,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
               disabled={isUpdating}
               className={styles.processButton}
             >
-              {isUpdating ? '⏳' : 'Enviar'}
+              {isUpdating ? <LoaderCircle className={styles.actionSpinner} size={16} aria-label="Actualizando" /> : 'Enviar'}
             </button>
           )}
           {canEdit && order.status === 'en_envio' && (
@@ -191,7 +194,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
               disabled={isUpdating}
               className={styles.completeButton}
             >
-              {isUpdating ? '⏳' : 'Completar'}
+              {isUpdating ? <LoaderCircle className={styles.actionSpinner} size={16} aria-label="Actualizando" /> : 'Completar'}
             </button>
           )}
           {canEdit && order.status !== 'completado' && order.status !== 'cancelado' && (
@@ -200,7 +203,7 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
               disabled={isUpdating}
               className={styles.cancelButton}
             >
-              {isUpdating ? '⏳' : 'Cancelar'}
+              {isUpdating ? <LoaderCircle className={styles.actionSpinner} size={16} aria-label="Actualizando" /> : 'Cancelar'}
             </button>
           )}
           {canEdit && (order.status === 'pendiente' || order.status === 'en_proceso') && (
@@ -296,7 +299,7 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("activos");
 
-  // ✅ Debounce de búsqueda
+  // Debounce de búsqueda
   const debouncedSearchTerm = useDebounce(searchTerm, 700);
 
   // Clave de caché para estado inicial
@@ -304,7 +307,7 @@ export default function Orders() {
   const initialCached = getCached(initialCacheKey);
 
   const [orders, setOrders] = useState(() => (initialCached && !initialCached.isExpired) ? (initialCached.data?.orders || []) : []);
-  // ✅ MEJORA: Separar loading inicial del de operaciones
+  // Mejora: separar loading inicial del de operaciones
   const [initialLoading, setInitialLoading] = useState(() => !initialCached || initialCached.isExpired);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(() => initialCached?.data?.hasMore ?? true);
@@ -312,7 +315,7 @@ export default function Orders() {
   const [deliveryInfo, setDeliveryInfo] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
   const [cancellingOrderId, setCancellingOrderId] = useState(null);
-  // ✅ Estados para feedback visual en operaciones
+  // Estados para feedback visual en operaciones
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
   const [actionError, setActionError] = useState(null);
 
@@ -330,7 +333,7 @@ export default function Orders() {
     filtersRef.current = { search: debouncedSearchTerm, status: statusFilter };
   }, [debouncedSearchTerm, statusFilter]);
 
-  // ✅ OPTIMIZACIÓN: Fetch con caché y paginación
+  // Optimización: fetch con caché y paginación
   const fetchOrders = useCallback(async (page = 1, append = false, search = "", status = "activos", forceRefresh = false) => {
     const cacheKey = `orders:${status}:${search}:p${page}`;
 
@@ -347,7 +350,7 @@ export default function Orders() {
     }
 
     try {
-      // ✅ MEJORA: Solo setLoading en la primera carga si no hay datos
+      // Mejora: solo setLoading en la primera carga si no hay datos
       if (page === 1 && !append) {
         setInitialLoading(prev => orders.length === 0 ? true : prev);
       } else {
@@ -432,7 +435,7 @@ export default function Orders() {
     fetchOrders(1, false, debouncedSearchTerm, statusFilter);
   }, [fetchOrders, debouncedSearchTerm, statusFilter]);
 
-  // ✅ OPTIMIZACIÓN: Realtime con actualización selectiva
+      // Optimización: realtime con actualización selectiva
   useEffect(() => {
     const unsubscribe = subscribeToTableChanges('orders', (payload) => {
       console.log('[Orders] Cambio en pedidos detectado (Shared Realtime):', payload);
@@ -475,7 +478,7 @@ export default function Orders() {
     }
   }, [loadingMore, hasMore, fetchOrders, debouncedSearchTerm, statusFilter]);
 
-  // ✅ Handler de actualización de estado con feedback visual mejorado
+  // Handler de actualización de estado con feedback visual mejorado
   const updateStatus = async (orderId, newStatus) => {
     if (!cajaEstaAbierta) {
       alert("Debes abrir tu turno de caja antes de poder gestionar pedidos.");
@@ -514,7 +517,7 @@ export default function Orders() {
       }
     }
 
-    // ✅ MEJORA: Marcar pedido como "actualizando" para feedback visual
+    // Mejora: marcar pedido como "actualizando" para feedback visual
     setUpdatingStatusId(orderId);
     setActionError(null);
 
@@ -546,7 +549,7 @@ export default function Orders() {
     } catch (err) {
       setActionError('Error de conexión al actualizar el pedido');
     } finally {
-      // ✅ MEJORA: Quitar indicador después de un breve delay para UX
+    // Mejora: quitar indicador después de un breve delay para UX
       setTimeout(() => setUpdatingStatusId(null), 500);
     }
   };
@@ -562,7 +565,7 @@ export default function Orders() {
 
     const targetOrder = orders.find(o => o.id === cancellingOrderId);
 
-    // ✅ MEJORA: Marcar como actualizando
+    // Mejora: marcar como actualizando
     setUpdatingStatusId(cancellingOrderId);
     setActionError(null);
 
@@ -589,7 +592,7 @@ export default function Orders() {
         });
       }
 
-      // ✅ MEJORA: Feedback visual de éxito implícito (el pedido se actualiza via realtime)
+    // Mejora: feedback visual de éxito implícito (el pedido se actualiza via realtime)
       setCancellingOrderId(null);
     } catch (error) {
       console.error('Error cancelling order:', error);
@@ -599,7 +602,7 @@ export default function Orders() {
     }
   }, [cancellingOrderId, orders]);
 
-  // ✅ OPTIMIZACIÓN: Caché de direcciones (CON SOPORTE PARA GUEST)
+  // Optimización: caché de direcciones (con soporte para invitados)
   const handleShowDeliveryInfo = useCallback(async (order) => {
     try {
       // 1. CASO INVITADO: No buscamos en BD, creamos info manual.
@@ -661,16 +664,20 @@ export default function Orders() {
     setEditingOrder(null);
   }, [fetchOrders]);
 
-  // ✅ MEJORA: Spinner solo en carga inicial
+  // Mejora: spinner solo en carga inicial
   if (initialLoading) return <LoadingSpinner />;
 
   return (
     <div className={styles.container}>
-      {/* ✅ Banner de errores de acciones */}
+      {/* Banner de errores de acciones */}
       {actionError && (
         <div className={styles.errorBanner}>
-          <span>⚠️ {actionError}</span>
-          <button onClick={() => setActionError(null)} className={styles.dismissButton}>✕</button>
+          <span className={styles.errorMessage}>
+            <AlertTriangle size={18} aria-hidden="true" /> {actionError}
+          </span>
+          <button onClick={() => setActionError(null)} className={styles.dismissButton} aria-label="Cerrar mensaje">
+            <X size={16} aria-hidden="true" />
+          </button>
         </div>
       )}
 

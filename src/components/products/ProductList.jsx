@@ -4,6 +4,7 @@ import LazyImage from '../common/LazyImage';
 import { useFeatureConfig } from '../../hooks/useFeatureConfig';
 import { useProductStore } from '../../store/useProductStore';
 import WasteModal from './WasteModal';
+import { ArrowDown, Clock3, MapPin, Pencil, Pill, Trash2 } from 'lucide-react';
 import './ProductList.css';
 
 export default function ProductList({ products, categories, isLoading, onEdit, onDelete, onToggleStatus }) {
@@ -110,8 +111,8 @@ export default function ProductList({ products, categories, isLoading, onEdit, o
                       )}
 
                       {item.sustancia && (
-                        <p style={{ color: 'var(--secondary-color)', fontWeight: '500', fontSize: '0.8rem', justifyContent: 'flex-start' }}>
-                          💊 {item.sustancia}
+                        <p style={{ color: 'var(--secondary-color)', fontWeight: '500', fontSize: '0.8rem', justifyContent: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Pill size={14} aria-hidden="true" /> {item.sustancia}
                         </p>
                       )}
 
@@ -122,11 +123,13 @@ export default function ProductList({ products, categories, isLoading, onEdit, o
                           color: '#475569',
                           padding: '2px 6px',
                           borderRadius: '4px',
-                          display: 'inline-block',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
                           marginTop: '2px',
                           border: '1px solid #cbd5e1'
                         }}>
-                          📍 {item.location}
+                          <MapPin size={14} aria-hidden="true" /> {item.location}
                         </div>
                       )}
 
@@ -168,7 +171,7 @@ export default function ProductList({ products, categories, isLoading, onEdit, o
 
                       {isNearingExpiry && (
                         <span className="alert-indicator nearing-expiry-indicator">
-                          {expiryDays === 0 ? '⏰ Caduca HOY' : `⏰ Caduca en ${expiryDays} días`}
+                          <Clock3 size={13} aria-hidden="true" /> {expiryDays === 0 ? 'Caduca HOY' : `Caduca en ${expiryDays} días`}
                         </span>
                       )}
                       
@@ -192,11 +195,11 @@ export default function ProductList({ products, categories, isLoading, onEdit, o
                     )}
 
                     <button className="edit-product-btn" onClick={() => onEdit(item)} title="Editar">
-                      ✏️
+                      <Pencil size={16} aria-hidden="true" />
                     </button>
 
                     <button className="delete-product-btn" onClick={() => onDelete(item)} title="Eliminar">
-                      🗑️
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -218,7 +221,7 @@ export default function ProductList({ products, categories, isLoading, onEdit, o
                     Cargando...
                   </>
                 ) : (
-                  '⬇️ Cargar más productos'
+                  <><ArrowDown size={15} aria-hidden="true" /> Cargar más productos</>
                 )}
               </button>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginTop: '5px' }}>

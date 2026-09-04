@@ -29,7 +29,7 @@ export default function RestockSuggestions() {
     text += `\nGenerado por Lanzo POS`;
 
     navigator.clipboard.writeText(text)
-      .then(() => showMessageModal('✅ Lista copiada al portapapeles. Pégala en WhatsApp.'))
+      .then(() => showMessageModal('Lista copiada al portapapeles. Pégala en WhatsApp.'))
       .catch(() => showMessageModal('Error al copiar.', null, { type: 'error' }));
   };
 

@@ -9,6 +9,7 @@ import { manageAdminUser } from '../services/adminUserService';
 import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { CircleDollarSign, X } from 'lucide-react';
 
 const fetchAdminsList = () => {
     return supabase
@@ -31,7 +32,7 @@ const sections = [
     { key: 'registrar-admin', label: 'Gestionar Admins' },
     { key: 'special-prices', label: 'Precios Especiales' },
     { key: 'configuracion', label: 'Configuración General' },
-    { key: 'caja', label: '💰 Caja / POS (Vender)' },
+    { key: 'caja', label: 'Caja / POS (Vender)' },
 ];
 
 
@@ -45,7 +46,9 @@ const PermissionRow = memo(({ section, permissions, onPermissionChange }) => {
         return (
             <tr style={{ background: 'rgba(46, 204, 113, 0.06)' }}>
                 <td>
-                    <strong>{section.label}</strong>
+                    <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <CircleDollarSign size={16} aria-hidden="true" /> {section.label}
+                    </strong>
                     <br />
                     <small style={{ color: '#888', fontSize: '0.75rem' }}>
                         Permite operar el POS (abrir/cerrar turnos, registrar ventas)
@@ -340,7 +343,7 @@ export default function RegisterAdmin() {
             invalidate('admins:all');
 
         } catch (error) {
-            console.error('❌ Error completo:', error);
+            console.error('Error completo:', error);
             showAlert(`Error: ${error.message}`, 'error');
         } finally {
             setIsSubmitting(false);
@@ -445,7 +448,7 @@ export default function RegisterAdmin() {
                                 className={styles.closeButton}
                                 aria-label="Cerrar"
                             >
-                                ✕
+                                <X size={18} aria-hidden="true" />
                             </button>
                         </div>
 

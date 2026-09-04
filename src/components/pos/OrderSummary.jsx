@@ -2,7 +2,7 @@
 import React from 'react';
 import { useOrderStore } from '../../store/useOrderStore';
 // 1. IMPORTAMOS EL ICONO DE BASURA (Trash2)
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, FileText, ShoppingCart, Trash2 } from 'lucide-react';
 import './OrderSummary.css';
 
 export default function OrderSummary({ onOpenPayment, isMobileModal, onClose }) {
@@ -50,7 +50,10 @@ export default function OrderSummary({ onOpenPayment, isMobileModal, onClose }) 
       {!isMobileModal && <h2>Resumen del Pedido</h2>}
 
       {order.length === 0 ? (
-        <p className="empty-message">No hay productos en el pedido</p>
+        <div className="empty-message">
+          <ShoppingCart className="empty-message-icon" size={56} aria-hidden="true" />
+          <span>No hay productos en el pedido</span>
+        </div>
       ) : (
         <>
           <div className="order-list">
@@ -68,7 +71,7 @@ export default function OrderSummary({ onOpenPayment, isMobileModal, onClose }) 
                       {item.exceedsStock && (
                         <div className="stock-error-container">
                           <div className="stock-error-text">
-                            <strong>⚠️ Stock Insuficiente</strong>
+                            <strong><AlertTriangle size={14} aria-hidden="true" /> Stock Insuficiente</strong>
                             <span>Solo quedan <b>{item.stock}</b> disponibles.</span>
                           </div>
 
@@ -90,7 +93,7 @@ export default function OrderSummary({ onOpenPayment, isMobileModal, onClose }) 
                         ))}
                       </div>
                     )}
-                    {item.notes && <div className="order-item-notes">📝 {item.notes}</div>}
+                    {item.notes && <div className="order-item-notes"><FileText size={13} aria-hidden="true" /> {item.notes}</div>}
                     <div className="order-item-price">${item.price.toFixed(2)} {item.saleType === 'bulk' ? ` / ${item.bulkData?.purchase?.unit || 'kg'}` : ''}</div>
                   </div>
 

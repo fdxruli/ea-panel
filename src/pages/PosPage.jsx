@@ -19,6 +19,7 @@ import { showMessageModal, sendWhatsAppMessage } from '../services/utils';
 import { useAppStore } from '../store/useAppStore';
 import { useDebounce } from '../hooks/useDebounce';
 import { useFeatureConfig } from '../hooks/useFeatureConfig';
+import { ArrowLeft, ClipboardList, LockKeyhole } from 'lucide-react';
 import './PosPage.css';
 
 // ============================================================
@@ -46,7 +47,9 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
       minHeight: '100%', width: '100%', padding: '2rem 1rem'
     }}>
       <div className="modal-content" style={{ textAlign: 'center', margin: 'auto', maxWidth: '420px', padding: '2rem', border: '1px solid var(--border-color, #eaeaea)' }}>
-        <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>🔒</div>
+        <div style={{ marginBottom: '16px', color: 'var(--color-primary, #4db6ac)' }}>
+          <LockKeyhole size={56} strokeWidth={1.7} aria-hidden="true" />
+        </div>
         <h2 style={{ margin: '0 0 12px', color: 'var(--text-dark, #1a1a1a)', fontSize: '1.5rem' }}>
           Caja Cerrada
         </h2>
@@ -57,7 +60,7 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
               No tienes permiso para abrir una caja. Contacta al administrador.
             </p>
             <button className="admin-button-secondary" style={{ width: '100%' }} onClick={() => navigate('/admin/dashboard')}>
-              ← Ir al Dashboard
+              <ArrowLeft size={16} aria-hidden="true" /> Ir al Dashboard
             </button>
           </>
         ) : (
@@ -92,7 +95,7 @@ function CajaCerradaOverlay({ hasAccess, onAbrirTurno }) {
                 className="admin-button-primary"
                 style={{ width: '100%', marginBottom: '10px' }}
               >
-                📋 Abrir Mi Turno
+                <ClipboardList size={17} aria-hidden="true" /> Abrir Mi Turno
               </button>
             </form>
             <button
@@ -186,7 +189,7 @@ export default function PosPage() {
   const handleAbrirTurno = async (monto) => {
     const success = await abrirCaja(monto);
     if (success) {
-      showMessageModal('✅ Turno abierto correctamente. ¡A vender!');
+      showMessageModal('Turno abierto correctamente. ¡A vender!');
     }
   };
 
@@ -194,7 +197,7 @@ export default function PosPage() {
   const handleInitiateCheckout = () => {
     const licenseDetails = useAppStore.getState().licenseDetails;
     if (!licenseDetails || !licenseDetails.valid) {
-      showMessageModal('⚠️ Error de Seguridad: Licencia no válida.');
+      showMessageModal('Error de Seguridad: Licencia no válida.');
       return;
     }
     const itemsToProcess = order.filter(item => item.quantity && item.quantity > 0);
@@ -242,7 +245,7 @@ export default function PosPage() {
     if (!cajaEstaAbierta) {
       setIsPaymentModalOpen(false);
       setIsProcessing(false);
-      showMessageModal('⚠️ Debes abrir tu turno de caja antes de registrar ventas.');
+      showMessageModal('Debes abrir tu turno de caja antes de registrar ventas.');
       return;
     }
 
@@ -265,11 +268,11 @@ export default function PosPage() {
         clearOrder();
         setTempPrescriptionData(null);
         setIsMobileOrderOpen(false);
-        showMessageModal('✅ ¡Venta registrada correctamente!');
+        showMessageModal('¡Venta registrada correctamente!');
         await refreshData();
       } else {
         if (result.errorType === 'RACE_CONDITION') {
-          showMessageModal(`⚠️ ${result.message} Se han actualizado los datos. Intenta cobrar de nuevo.`);
+          showMessageModal(`${result.message} Se han actualizado los datos. Intenta cobrar de nuevo.`);
           await refreshData();
         } else if (result.errorType === 'STOCK_WARNING') {
           showMessageModal(

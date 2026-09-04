@@ -79,12 +79,12 @@ export const useRecycleBinStore = create((set, get) => ({
         if (txResult.success) {
             // Si la venta se restauró, borramos de la papelera de forma segura
             await deleteDataSafe(STORES.DELETED_SALES, sale.timestamp);
-            alert("✅ Pedido restaurado y stock descontado nuevamente.");
+            alert("Pedido restaurado y stock descontado nuevamente.");
         } else {
             // Manejo de error controlado
             console.error(txResult.error);
             const msg = txResult.error?.message || "Error desconocido en transacción";
-            alert(`⚠️ No se pudo restaurar: ${msg}`);
+            alert(`No se pudo restaurar: ${msg}`);
             return;
         }
 

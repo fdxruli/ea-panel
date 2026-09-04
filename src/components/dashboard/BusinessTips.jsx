@@ -292,7 +292,7 @@ const useBusinessIntelligence = (sales, menu, customers, wasteLogs, businessType
     if (!sales || sales.length === 0) {
       return [{
         id: 'welcome', type: TIP_TYPES.INTRO, icon: 'Zap', priority: 1,
-        title: '🚀 Iniciando Motores',
+        title: 'Iniciando Motores',
         message: 'El sistema de inteligencia está activo. Registra tus primeras ventas para recibir análisis.',
         action: { label: 'Ir a Punto de Venta', link: '/' }
       }];

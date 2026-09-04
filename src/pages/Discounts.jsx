@@ -14,6 +14,7 @@ import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { broadcastStoreChange } from '../lib/broadcastRealtime';
+import { Plus, Power } from 'lucide-react';
 // --- FIN PASO A ---
 
 // Fetcher optimizado para descuentos
@@ -64,7 +65,7 @@ const DiscountTableRow = memo(({
                         className={styles.toggleButton}
                         aria-label={discount.is_active ? "Desactivar" : "Activar"}
                     >
-                        {discount.is_active ? "🔴 Desactivar" : "🟢 Activar"}
+                        <Power size={15} aria-hidden="true" /> {discount.is_active ? "Desactivar" : "Activar"}
                     </button>
                 </td>
             )}
@@ -393,7 +394,7 @@ export default function Discounts() {
                         className={styles.submitButton}
                         disabled={!newDiscount.code || !newDiscount.value}
                     >
-                        ➕ Crear Descuento
+                        <Plus size={17} aria-hidden="true" /> Crear Descuento
                     </button>
                 </div>
             )}

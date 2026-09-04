@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, X } from 'lucide-react';
+import { Bell, Box, CircleCheck, CircleX, Info, MapPin, RefreshCw, X } from 'lucide-react';
 
 const COMMON_UNITS = [
   { val: 'kg', label: 'Kilogramos (kg)' },
@@ -39,7 +39,7 @@ export default function AbarrotesFields({
 
       {/* 1. UBICACIÓN Y PROVEEDOR */}
       <div className="form-group" style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '15px' }}>
-        <label className="form-label">📍 Ubicación en Bodega / Pasillo</label>
+        <label className="form-label"><MapPin size={15} aria-hidden="true" /> Ubicación en Bodega / Pasillo</label>
         <input type="text" className="form-input" placeholder="Ej: Pasillo 4, Estante B" value={location || ''} onChange={(e) => setLocation(e.target.value)} />
       </div>
 
@@ -107,7 +107,9 @@ export default function AbarrotesFields({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#1e40af' }}>🔄 Conversión de Compra</h4>
+              <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#1e40af', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <RefreshCw size={15} aria-hidden="true" /> Conversión de Compra
+              </h4>
 
               <button
                 type="button"
@@ -155,14 +157,18 @@ export default function AbarrotesFields({
 
               <div style={{ display: 'grid', gap: '10px' }}>
                 <div style={{ backgroundColor: '#f0fdf4', padding: '10px', borderRadius: '6px', borderLeft: '4px solid #16a34a' }}>
-                  <strong style={{ color: '#166534', display: 'block', marginBottom: '2px' }}>✅ SÍ: Ejemplo "Clavos a Granel"</strong>
+                  <strong style={{ color: '#166534', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '2px' }}>
+                    <CircleCheck size={15} aria-hidden="true" /> SÍ: Ejemplo "Clavos a Granel"
+                  </strong>
                   <span style={{ color: '#15803d' }}>
                     Compras una caja de 25kg, pero vendes piezas sueltas. <br />
                     El sistema traduce: <strong>1 Kg = 200 Clavos</strong>.
                   </span>
                 </div>
                 <div style={{ backgroundColor: '#fff7ed', padding: '10px', borderRadius: '6px', borderLeft: '4px solid #ea580c' }}>
-                  <strong style={{ color: '#c2410c', display: 'block', marginBottom: '2px' }}>❌ NO: Ejemplo "Cemento"</strong>
+                  <strong style={{ color: '#c2410c', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '2px' }}>
+                    <CircleX size={15} aria-hidden="true" /> NO: Ejemplo "Cemento"
+                  </strong>
                   <span style={{ color: '#9a3412' }}>
                     Compras 10 bultos de 50kg y vendes kilos.<br />
                     <strong>Mejor ingresa "500" directo al stock.</strong> Es más claro ver "Quedan 450 kilos" que "Quedan 9.0 bultos".
@@ -215,7 +221,7 @@ export default function AbarrotesFields({
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <span style={{ fontSize: '1.2rem' }}>📦</span>
+                <Box size={19} aria-hidden="true" />
                 <div>
                   <strong>Ejemplo:</strong> Si ingresas 1 <span style={{ fontWeight: 'bold', textDecoration: 'underline' }}>{conversionFactor.purchaseUnit || '(Unidad de Compra)'}</span>,
                   el sistema sumará <span style={{ fontWeight: '800', color: 'var(--success-color)', fontSize: '1em' }}>{conversionFactor.factor || 0} {unit}</span> a tu inventario.
@@ -236,7 +242,9 @@ export default function AbarrotesFields({
           borderRadius: '8px',
           borderLeft: '4px solid var(--warning-color)'
         }}>
-          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-dark)' }}>🔔 Alertas de Stock</h4>
+          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--text-dark)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Bell size={15} aria-hidden="true" /> Alertas de Stock
+          </h4>
           <div style={{ display: 'flex', gap: '15px' }}>
             <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
               <label className="form-label" style={{ fontSize: '0.85rem' }}>Mínimo (Reordenar)</label>

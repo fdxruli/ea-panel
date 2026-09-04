@@ -952,6 +952,16 @@
   color: var(--text-primary);
 }
 
+.coordsInfo,
+.infoNote,
+.referralBadge,
+.setDefaultButton,
+.deleteAddressButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .coordsDisplay {
   font-family: 'Courier New', monospace;
   color: var(--text-secondary);

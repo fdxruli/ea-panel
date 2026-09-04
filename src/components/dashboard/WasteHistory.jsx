@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText, TrendingDown } from 'lucide-react';
 
 export default function WasteHistory({ logs }) {
     const totalLoss = logs.reduce((sum, log) => sum + (log.lossAmount || 0), 0);
@@ -6,7 +7,9 @@ export default function WasteHistory({ logs }) {
     return (
         <div className="sales-history-container" style={{ marginTop: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <h3 className="subtitle" style={{ marginBottom: 0, color: 'var(--error-color)' }}>📉 Historial de Mermas y Desperdicios</h3>
+                <h3 className="subtitle" style={{ marginBottom: 0, color: 'var(--error-color)', display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <TrendingDown size={19} aria-hidden="true" /> Historial de Mermas y Desperdicios
+                </h3>
                 <div style={{ textAlign: 'right' }}>
                     <small>Pérdida Total Registrada</small>
                     <div style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--error-color)' }}>
@@ -40,7 +43,7 @@ export default function WasteHistory({ logs }) {
                                 </div>
                                 {log.notes && (
                                     <div style={{ fontSize: '0.85rem', fontStyle: 'italic', marginTop: '4px', color: '#888' }}>
-                                        📝 {log.notes}
+                                        <FileText size={14} aria-hidden="true" /> {log.notes}
                                     </div>
                                 )}
                             </div>

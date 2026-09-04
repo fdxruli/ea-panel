@@ -55,8 +55,9 @@
 }
 
 .data-warning-icon {
-  font-size: 1.5rem;
+  display: inline-flex;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 /* Modo Oscuro */

@@ -15,6 +15,7 @@ import QuickVariantEntry from './QuickVariantEntry';
 
 import RecipeBuilderModal from './RecipeBuilderModal';
 import WholesaleManagerModal from './WholesaleManagerModal';
+import { Camera, ChevronDown, ChevronUp, LoaderCircle, Search } from 'lucide-react';
 
 const defaultPlaceholder = 'https://placehold.co/100x100/CCCCCC/000000?text=Elegir';
 
@@ -252,7 +253,7 @@ export default function ProductForm({
         // 1. VALIDACIÓN PREVIA (Recetas / Restaurantes)
         if (features.hasRecipes && productType === 'sellable' && recipe.length === 0) {
             showMessageModal(
-                '⚠️ Receta Incompleta: Has marcado este producto como "Platillo" pero no has agregado ingredientes. Agrega insumos o cambia el tipo a "Insumo/Venta Simple".',
+                'Receta Incompleta: Has marcado este producto como "Platillo" pero no has agregado ingredientes. Agrega insumos o cambia el tipo a "Insumo/Venta Simple".',
                 null,
                 { type: 'error' }
             );
@@ -289,7 +290,7 @@ export default function ProductForm({
                 ? { enabled: true, selectionStrategy: 'fifo' }
                 : (doesTrackStock ? { enabled: true, selectionStrategy: 'fifo' } : { enabled: false });
 
-            // 5. GENERACIÓN DE ID (TRUCO DE VINCULACIÓN) 🪄
+            // 5. Generación de ID (truco de vinculación)
             // Si es nuevo, generamos el ID aquí mismo. Esto es vital para poder usar este ID
             // al guardar las variantes (hijos) inmediatamente después.
             const productIdToUse = internalEditingProduct?.id || generateID('prod');
@@ -336,7 +337,7 @@ export default function ProductForm({
                 return;
             }
 
-            // 7. PROCESAR Y GUARDAR VARIANTES (HIJOS) 📦
+            // 7. Procesar y guardar variantes (hijos)
             if (hasQuickVariants) {
                 // Filtramos filas vacías o inválidas
                 const validVariants = quickVariants.filter(v => (v.talla || v.color) && (parseFloat(v.stock) > 0 || v.sku));
@@ -396,8 +397,12 @@ export default function ProductForm({
                         <label className="form-label">Código de Barras</label>
                         <div className="input-with-button">
                             <input className="form-input" type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-                            <button type="button" className="btn-scan-inline" onClick={() => setIsScannerOpen(true)}>📷</button>
-                            <button type="button" className="btn-lookup" onClick={() => handleBarcodeLookup(barcode)} disabled={isLookingUp}>🔍</button>
+                            <button type="button" className="btn-scan-inline" onClick={() => setIsScannerOpen(true)} aria-label="Escanear código">
+                                <Camera size={17} aria-hidden="true" />
+                            </button>
+                            <button type="button" className="btn-lookup" onClick={() => handleBarcodeLookup(barcode)} disabled={isLookingUp} aria-label="Buscar código">
+                                <Search size={17} aria-hidden="true" />
+                            </button>
                         </div>
                     </div>
 
@@ -554,7 +559,9 @@ export default function ProductForm({
 
                     <button type="button" className="btn-toggle-specific" onClick={() => setShowSpecificData(!showSpecificData)}>
                         {showSpecificData ? 'Ocultar detalles (Foto, Cat, Desc)' : 'Agregar Foto, Categoría o Descripción'}
-                        {showSpecificData ? ' 🔼' : ' 🔽'}
+                        {showSpecificData
+                            ? <ChevronUp size={16} aria-hidden="true" />
+                            : <ChevronDown size={16} aria-hidden="true" />}
                     </button>
 
                     {showSpecificData && (
@@ -592,7 +599,7 @@ export default function ProductForm({
                             style={{ flex: 2, opacity: isSaving ? 0.7 : 1, cursor: isSaving ? 'wait' : 'pointer' }}
                             disabled={isSaving}
                         >
-                            {isSaving ? '⏳ Guardando...' : 'Guardar Producto'}
+                            {isSaving ? <><LoaderCircle className="product-form-spinner" size={16} aria-hidden="true" /> Guardando...</> : 'Guardar Producto'}
                         </button>
                         <button type="button" className="btn btn-cancel" style={{ flex: 1 }} onClick={onCancel}>Cancelar</button>
                     </div>

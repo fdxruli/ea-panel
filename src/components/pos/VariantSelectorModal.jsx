@@ -1,5 +1,6 @@
 // src/components/pos/VariantSelectorModal.jsx
 import React, { useState, useEffect, useMemo } from 'react';
+import { AlertTriangle } from 'lucide-react';
 // CAMBIO: Importamos el store correcto
 import { useProductStore } from '../../store/useProductStore';
 import './ProductModifiersModal.css'; 
@@ -98,7 +99,7 @@ export default function VariantSelectorModal({ show, onClose, product, onConfirm
             <p style={{textAlign: 'center', padding: '20px'}}>Cargando stock...</p>
           ) : groupedVariants.length === 0 ? (
             <div className="variant-empty-state">
-                ⚠️ No hay variantes con stock disponible.
+                <AlertTriangle size={20} aria-hidden="true" /> No hay variantes con stock disponible.
             </div>
           ) : (
             <div className="modifier-options-grid">

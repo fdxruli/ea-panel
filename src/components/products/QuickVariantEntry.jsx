@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { generateID } from '../../services/utils';
+import { Plus, Sparkles, WandSparkles, X } from 'lucide-react';
 
 export default function QuickVariantEntry({ basePrice, baseCost, onVariantsChange }) {
   // Estado local para las filas de variantes
@@ -45,7 +46,9 @@ export default function QuickVariantEntry({ basePrice, baseCost, onVariantsChang
 
   return (
     <div className="quick-variant-container" style={{ marginTop: '20px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '15px', backgroundColor: '#f9fafb' }}>
-      <h4 style={{ margin: '0 0 10px 0', color: 'var(--primary-color)' }}>⚡ Ingreso Rápido de Variantes</h4>
+      <h4 style={{ margin: '0 0 10px 0', color: 'var(--primary-color)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+        <Sparkles size={17} aria-hidden="true" /> Ingreso Rápido de Variantes
+      </h4>
       
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
@@ -103,12 +106,16 @@ export default function QuickVariantEntry({ basePrice, baseCost, onVariantsChang
                       style={{ padding: '6px', fontSize:'0.8rem' }}
                     />
                     {!row.sku && row.talla && (
-                        <button type="button" onClick={() => generateSKU(row.id, row.talla, row.color)} style={{border:'none', background:'none', cursor:'pointer', fontSize:'1.2rem'}} title="Generar SKU">🪄</button>
+                        <button type="button" onClick={() => generateSKU(row.id, row.talla, row.color)} style={{border:'none', background:'none', cursor:'pointer', fontSize:'1.2rem'}} title="Generar SKU" aria-label="Generar SKU">
+                          <WandSparkles size={17} aria-hidden="true" />
+                        </button>
                     )}
                   </div>
                 </td>
                 <td style={{padding: '5px', textAlign:'center'}}>
-                  <button type="button" onClick={() => removeRow(row.id)} style={{ color: 'var(--error-color)', background: 'none', border: 'none', cursor: 'pointer' }}>✖</button>
+                  <button type="button" onClick={() => removeRow(row.id)} style={{ color: 'var(--error-color)', background: 'none', border: 'none', cursor: 'pointer' }} aria-label="Eliminar variante">
+                    <X size={16} aria-hidden="true" />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -122,7 +129,7 @@ export default function QuickVariantEntry({ basePrice, baseCost, onVariantsChang
         className="btn btn-secondary" 
         style={{ marginTop: '10px', width: '100%', padding: '8px', fontSize: '0.9rem', borderStyle: 'dashed' }}
       >
-        + Agregar otra Variante
+        <Plus size={16} aria-hidden="true" /> Agregar otra Variante
       </button>
     </div>
   );

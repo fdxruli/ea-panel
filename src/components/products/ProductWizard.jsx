@@ -3,14 +3,32 @@ import { useFeatureConfig } from '../../hooks/useFeatureConfig';
 import { generateID, showMessageModal } from '../../services/utils';
 import ScannerModal from '../common/ScannerModal';
 import QuickVariantEntry from './QuickVariantEntry';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Boxes,
+  Camera,
+  Check,
+  CircleDollarSign,
+  Clock3,
+  CookingPot,
+  GlassWater,
+  Package,
+  Scale,
+  Shirt,
+  Sparkles,
+  Save,
+  Utensils
+} from 'lucide-react';
 import './ProductWizard.css';
 
 // Pasos del asistente
 const STEPS = [
-  { id: 1, title: 'Identidad', icon: '📦' },
-  { id: 2, title: 'Precios', icon: '💰' },
-  { id: 3, title: 'Inventario', icon: '📊' },
-  { id: 4, title: 'Detalles', icon: '✨' }
+  { id: 1, title: 'Identidad', icon: Package },
+  { id: 2, title: 'Precios', icon: CircleDollarSign },
+  { id: 3, title: 'Inventario', icon: Boxes },
+  { id: 4, title: 'Detalles', icon: Sparkles }
 ];
 
 export default function ProductWizard({ onSave, onCancel, categories }) {
@@ -122,7 +140,9 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
                     value={data.barcode}
                     onChange={e => setData({...data, barcode: e.target.value})}
                 />
-                <button className="btn-scan-inline" onClick={() => setIsScannerOpen(true)}>📷</button>
+                <button className="btn-scan-inline" onClick={() => setIsScannerOpen(true)} aria-label="Escanear código">
+                  <Camera size={17} aria-hidden="true" />
+                </button>
                 </div>
             </div>
         )}
@@ -148,7 +168,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
   // --- PASO 2: DINERO (Standard) ---
   const renderStep2 = () => (
     <div className="wizard-step fade-in">
-      <h3>Hablemos de dinero 💰</h3>
+      <h3><CircleDollarSign size={21} aria-hidden="true" /> Hablemos de dinero</h3>
       
       <div className="money-grid">
         <div className="form-group">
@@ -158,7 +178,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
                 value={data.cost} onChange={e => setData({...data, cost: e.target.value})}
             />
         </div>
-        <div className="arrow-separator">➡️</div>
+        <div className="arrow-separator"><ArrowRight size={22} aria-hidden="true" /></div>
         <div className="form-group highlight">
             <label>Precio Venta *</label>
             <input 
@@ -183,7 +203,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
     if (features.hasVariants) {
         return (
             <div className="wizard-step fade-in">
-                <h3>Variantes y Tallas 👕</h3>
+                <h3><Shirt size={21} aria-hidden="true" /> Variantes y Tallas</h3>
                 <p className="wizard-subtitle">Agrega las tallas y colores que tienes disponibles.</p>
                 <QuickVariantEntry 
                     basePrice={parseFloat(data.price)}
@@ -198,14 +218,14 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
     if (features.hasRecipes) {
         return (
             <div className="wizard-step fade-in">
-                <h3>Tipo de Producto 🍽️</h3>
+                <h3><Utensils size={21} aria-hidden="true" /> Tipo de Producto</h3>
                 
                 <div style={{display:'flex', gap:'15px', marginBottom:'20px'}}>
                     <div 
                         className={`selection-card ${data.isPreparedDish ? 'selected' : ''}`}
                         onClick={() => setData({...data, isPreparedDish: true, trackStock: false, stock: ''})}
                     >
-                        <span style={{fontSize:'2rem'}}>🍳</span>
+                        <CookingPot size={32} aria-hidden="true" />
                         <strong>Platillo Preparado</strong>
                         <small>Se cocina al momento. (Stock depende de insumos)</small>
                     </div>
@@ -214,7 +234,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
                         className={`selection-card ${!data.isPreparedDish ? 'selected' : ''}`}
                         onClick={() => setData({...data, isPreparedDish: false, trackStock: true})}
                     >
-                        <span style={{fontSize:'2rem'}}>🥤</span>
+                        <GlassWater size={32} aria-hidden="true" />
                         <strong>Producto / Bebida</strong>
                         <small>Se vende tal cual se compra. (Stock directo)</small>
                     </div>
@@ -237,7 +257,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
     // C) CASO GENERAL / ABARROTES / FRUTERÍA
     return (
         <div className="wizard-step fade-in">
-            <h3>Inventario Inicial 📦</h3>
+            <h3><Package size={21} aria-hidden="true" /> Inventario Inicial</h3>
             
             {/* Toggle para Venta a Granel (Frutería/Ferretería) */}
             {(features.hasBulk || features.hasDailyPricing) && (
@@ -248,7 +268,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
                             checked={data.unit !== 'pza'} 
                             onChange={e => setData({...data, unit: e.target.checked ? 'kg' : 'pza'})}
                         />
-                        ¿Se vende por peso (Kilo/Granel)? ⚖️
+                        <Scale size={16} aria-hidden="true" /> ¿Se vende por peso (Kilo/Granel)?
                     </label>
                 </div>
             )}
@@ -289,7 +309,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
   // --- PASO 4: DETALLES (Personalizados) ---
   const renderStep4 = () => (
     <div className="wizard-step fade-in">
-        <h3>Últimos detalles ✨</h3>
+        <h3><Sparkles size={21} aria-hidden="true" /> Últimos detalles</h3>
         
         {/* FARMACIA: Checkbox controlado */}
         {features.hasLabFields && (
@@ -300,7 +320,9 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
                         checked={data.requiresPrescription} 
                         onChange={e => setData({...data, requiresPrescription: e.target.checked})}
                     />
-                    <span style={{color:'var(--error-color)', fontWeight:'bold'}}>⚠️ Requiere Receta Médica</span>
+                    <span style={{color:'var(--error-color)', fontWeight:'bold', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'}}>
+                      <AlertTriangle size={15} aria-hidden="true" /> Requiere Receta Médica
+                    </span>
                 </label>
                 <small style={{display:'block', marginTop:'5px', color:'#666'}}>Para antibióticos o controlados.</small>
             </div>
@@ -309,7 +331,7 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
         {/* RESTAURANTE: Tiempo de preparación */}
         {features.hasRecipes && data.isPreparedDish && (
              <div className="form-group">
-                <label>⏱️ Tiempo de Preparación (minutos)</label>
+                <label><Clock3 size={15} aria-hidden="true" /> Tiempo de Preparación (minutos)</label>
                 <input 
                     type="number" className="form-input" placeholder="Ej: 15"
                     value={data.prepTime} onChange={e => setData({...data, prepTime: e.target.value})}
@@ -333,7 +355,9 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
             <p><strong>{data.name}</strong></p>
             <p>Precio: ${data.price}</p>
             {data.isPreparedDish ? (
-                <p style={{color:'var(--secondary-color)'}}>🥘 Platillo de Cocina</p>
+                <p style={{color:'var(--secondary-color)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem'}}>
+                  <CookingPot size={15} aria-hidden="true" /> Platillo de Cocina
+                </p>
             ) : (
                 <p>Stock Inicial: {features.hasVariants ? 'Según Variantes' : (data.stock || 0)} {data.unit}</p>
             )}
@@ -344,13 +368,18 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
   return (
     <div className="product-wizard-container">
       <div className="wizard-header">
-        {STEPS.map((s, idx) => (
-            <div key={s.id} className={`step-indicator ${step === s.id ? 'active' : ''} ${step > s.id ? 'completed' : ''}`}>
-                <div className="step-icon">{step > s.id ? '✓' : s.icon}</div>
-                <span className="step-label">{s.title}</span>
-                {idx < STEPS.length - 1 && <div className="step-line"></div>}
-            </div>
-        ))}
+        {STEPS.map((s, idx) => {
+            const StepIcon = s.icon;
+            return (
+              <div key={s.id} className={`step-indicator ${step === s.id ? 'active' : ''} ${step > s.id ? 'completed' : ''}`}>
+                  <div className="step-icon">
+                    {step > s.id ? <Check size={17} aria-hidden="true" /> : <StepIcon size={17} aria-hidden="true" />}
+                  </div>
+                  <span className="step-label">{s.title}</span>
+                  {idx < STEPS.length - 1 && <div className="step-line"></div>}
+              </div>
+            );
+        })}
       </div>
 
       <div className="wizard-content">
@@ -362,15 +391,15 @@ export default function ProductWizard({ onSave, onCancel, categories }) {
 
       <div className="wizard-footer">
         {step > 1 ? (
-            <button className="btn btn-secondary" onClick={handleBack}>Atrás</button>
+            <button className="btn btn-secondary" onClick={handleBack}><ArrowLeft size={16} aria-hidden="true" /> Atrás</button>
         ) : (
             <button className="btn btn-cancel" onClick={onCancel}>Cancelar</button>
         )}
 
         {step < 4 ? (
-            <button className="btn btn-primary" onClick={handleNext}>Siguiente ➝</button>
+            <button className="btn btn-primary" onClick={handleNext}>Siguiente <ArrowRight size={16} aria-hidden="true" /></button>
         ) : (
-            <button className="btn btn-save" onClick={handleFinish}>¡Guardar Producto! 🎉</button>
+            <button className="btn btn-save" onClick={handleFinish}><Save size={16} aria-hidden="true" /> ¡Guardar Producto!</button>
         )}
       </div>
 

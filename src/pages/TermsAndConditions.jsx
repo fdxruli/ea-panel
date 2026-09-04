@@ -8,6 +8,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { X } from 'lucide-react';
 
 const fetchTermsData = async () => {
   return await supabase
@@ -255,7 +256,7 @@ export default function TermsAndConditions() {
                 className={styles.closeButton}
                 aria-label="Cerrar"
               >
-                ✕
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 

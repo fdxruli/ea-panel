@@ -1,4 +1,5 @@
 import React from 'react';
+import { Apple, Scale } from 'lucide-react';
 
 export default function FruteriaFields({
     saleType, setSaleType,
@@ -33,7 +34,7 @@ export default function FruteriaFields({
                     }}
                     onClick={() => handleTypeChange('unit')}
                 >
-                    🍎 Por Pieza / Manojo
+                    <Apple size={16} aria-hidden="true" /> Por Pieza / Manojo
                 </button>
 
                 {/* BOTÓN DERECHO: Por Peso */}
@@ -47,7 +48,7 @@ export default function FruteriaFields({
                     }}
                     onClick={() => handleTypeChange('bulk')}
                 >
-                    ⚖️ Por Peso (Granel)
+                    <Scale size={16} aria-hidden="true" /> Por Peso (Granel)
                 </button>
             </div>
 

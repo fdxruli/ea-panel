@@ -10,6 +10,7 @@ import { showMessageModal } from '../../services/utils';
 import { useFeatureConfig } from '../../hooks/useFeatureConfig';
 import { useCaja } from '../../hooks/useCaja';
 import { generateID } from '../../services/utils';
+import { Pencil, Save, Trash2, Wallet } from 'lucide-react';
 import './BatchManager.css';
 
 /**
@@ -122,7 +123,7 @@ const BatchForm = ({ product, batchToEdit, onClose, onSave, features, menu }) =>
     // Lógica de pago desde caja
     if (pagadoDeCaja && !isEditing) {
       if (!cajaActual || cajaActual.estado !== 'abierta') {
-        showMessageModal("⚠️ La caja está cerrada. Abre la caja para registrar el pago.");
+        showMessageModal("La caja está cerrada. Abre la caja para registrar el pago.");
         return false;
       }
       const totalCosto = nCost * nStock;
@@ -143,7 +144,7 @@ const BatchForm = ({ product, batchToEdit, onClose, onSave, features, menu }) =>
       );
 
       if (isDuplicate) {
-        showMessageModal(`⚠️ El SKU "${sku}" ya está en uso en otro lote/producto.`);
+        showMessageModal(`El SKU "${sku}" ya está en uso en otro lote/producto.`);
         return false;
       }
     }
@@ -294,7 +295,9 @@ const BatchForm = ({ product, batchToEdit, onClose, onSave, features, menu }) =>
                 checked={pagadoDeCaja}
                 onChange={(e) => setPagadoDeCaja(e.target.checked)}
               />
-              <label htmlFor="pay-from-caja" style={{ fontSize: '0.9rem' }}>💸 Pagar con dinero de Caja</label>
+              <label htmlFor="pay-from-caja" style={{ fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Wallet size={15} aria-hidden="true" /> Pagar con dinero de Caja
+              </label>
             </div>
           )}
 
@@ -307,7 +310,7 @@ const BatchForm = ({ product, batchToEdit, onClose, onSave, features, menu }) =>
                 onClick={() => handleProcessSave(false)}
                 style={{ backgroundColor: 'var(--secondary-color)' }}
               >
-                💾 Guardar y Agregar Otra Talla/Lote
+                <Save size={15} aria-hidden="true" /> Guardar y Agregar Otra Talla/Lote
               </button>
             )}
 
@@ -427,7 +430,7 @@ export default function BatchManager({ selectedProductId, onProductSelect }) {
       // Refrescamos la lista global de productos para ver el nuevo stock total en la tabla
       await refreshData();
 
-      showMessageModal('✅ Lote guardado y stock total actualizado.');
+      showMessageModal('Lote guardado y stock total actualizado.');
 
     } catch (error) {
       console.error(error);
@@ -542,8 +545,12 @@ export default function BatchManager({ selectedProductId, onProductSelect }) {
                       <span className={`batch-badge ${batch.stock > 0 ? 'activo' : 'agotado'}`}>{batch.stock}</span>
                     </td>
                     <td>
-                      <button className="btn-action" onClick={() => handleEditBatch(batch)}>✏️</button>
-                      <button className="btn-action" onClick={() => handleDeleteBatch(batch)}>🗑️</button>
+                      <button className="btn-action" onClick={() => handleEditBatch(batch)} aria-label="Editar lote" title="Editar">
+                        <Pencil size={15} aria-hidden="true" />
+                      </button>
+                      <button className="btn-action" onClick={() => handleDeleteBatch(batch)} aria-label="Eliminar lote" title="Eliminar">
+                        <Trash2 size={15} aria-hidden="true" />
+                      </button>
                     </td>
                   </tr>
                 ))}

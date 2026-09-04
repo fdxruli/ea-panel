@@ -1,6 +1,7 @@
 // src/components/products/WholesaleManagerModal.jsx
 import React, { useState, useEffect } from 'react';
 import { showMessageModal } from '../../services/utils';
+import { Plus, Trash2 } from 'lucide-react';
 import './WholesaleManagerModal.css';
 
 export default function WholesaleManagerModal({ show, onClose, tiers, onSave, basePrice }) {
@@ -83,7 +84,7 @@ export default function WholesaleManagerModal({ show, onClose, tiers, onSave, ba
             />
           </div>
           <button type="button" className="btn btn-save" style={{ marginBottom: 0, width: 'auto' }} onClick={handleAdd}>
-            +
+            <Plus size={16} aria-hidden="true" />
           </button>
         </div>
 
@@ -111,7 +112,7 @@ export default function WholesaleManagerModal({ show, onClose, tiers, onSave, ba
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error-color)' }}
                         onClick={() => handleRemove(tier.min)}
                       >
-                        🗑️
+                        <Trash2 size={15} aria-hidden="true" />
                       </button>
                     </td>
                   </tr>
