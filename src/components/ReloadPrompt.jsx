@@ -12,6 +12,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 import styles from './ReloadPrompt.module.css';
+import { CheckCircle2 } from 'lucide-react';
 
 const INSTALL_PROMPT_DISMISSED_KEY = 'pwa-install-dismissed_at';
 const INSTALL_PROMPT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -309,7 +310,7 @@ function ReloadPrompt() {
   if (offlineReady) {
     return (
       <div className={styles.toast} role="status">
-        <div className={styles.toastIcon} aria-hidden="true">✅</div>
+        <div className={styles.toastIcon} aria-hidden="true"><CheckCircle2 size={22} /></div>
         <div className={styles.message}>
           <strong>¡App lista para offline!</strong>
           <span>Podrás ver el menú aunque pierdas conexión.</span>

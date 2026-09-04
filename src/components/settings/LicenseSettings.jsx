@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import DeviceManager from '../common/DeviceManager';
+import { Info, LockKeyhole } from 'lucide-react';
 
 const BUSINESS_RUBROS = [
     { id: 'food_service', label: 'Restaurante / Cocina' },
@@ -46,10 +47,10 @@ export default function LicenseSettings() {
         if (maxRubrosAllowed === 1 && businessType.length > 0) {
             // Si intenta tocar el que ya tiene seleccionado (intentar quitarlo)
             if (businessType.includes(rubroId)) {
-                alert("🔒 El rubro está bloqueado por tu licencia de prueba. No puedes deseleccionarlo.");
+                alert("El rubro está bloqueado por tu licencia de prueba. No puedes deseleccionarlo.");
             } else {
                 // Si intenta tocar otro (intentar cambiar)
-                alert("🔒 Tu licencia de prueba está vinculada al rubro seleccionado inicialmente. Contáctanos para cambiarlo.");
+                alert("Tu licencia de prueba está vinculada al rubro seleccionado inicialmente. Contáctanos para cambiarlo.");
             }
             return; // Detenemos aquí. No se permite cambio.
         }
@@ -124,7 +125,7 @@ export default function LicenseSettings() {
             {/* Mensaje visual de Bloqueo */}
             {maxRubrosAllowed === 1 && (
                 <p style={{ fontSize: '0.9rem', color: 'var(--primary-color)', marginBottom: '10px', backgroundColor: '#eff6ff', padding: '10px', borderRadius: '6px', borderLeft: '4px solid var(--primary-color)' }}>
-                    ℹ️ <strong>Modo Prueba Activado:</strong> El rubro está vinculado a tu licencia y no se puede cambiar aquí.
+                    <Info size={16} aria-hidden="true" /> <strong>Modo Prueba Activado:</strong> El rubro está vinculado a tu licencia y no se puede cambiar aquí.
                 </p>
             )}
 
@@ -156,11 +157,11 @@ export default function LicenseSettings() {
 
                             {/* Candado si está bloqueado por licencia general o trial */}
                             {(isNotAllowedByLicense || (isTrialLocked && !isSelected)) && (
-                                <span style={{ position: 'absolute', top: 2, right: 5, fontSize: '0.9rem' }}>🔒</span>
+                                <LockKeyhole size={14} aria-hidden="true" style={{ position: 'absolute', top: 4, right: 5 }} />
                             )}
                             {/* Candado VERDE si es el seleccionado en modo trial (es fijo) */}
                             {(isTrialLocked && isSelected) && (
-                                <span style={{ position: 'absolute', top: 2, right: 5, fontSize: '0.9rem' }}>🔒</span>
+                                <LockKeyhole size={14} aria-hidden="true" style={{ position: 'absolute', top: 4, right: 5 }} />
                             )}
                         </div>
                     );

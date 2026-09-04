@@ -106,7 +106,7 @@ export const useSalesStore = create((set, get) => ({
         // 6. Recargar UI solo si hubo éxito
         get().loadRecentSales();
         useStatsStore.getState().loadStats();
-        alert("✅ Venta eliminada, stock restaurado y estadísticas actualizadas.");
+        alert("Venta eliminada, stock restaurado y estadísticas actualizadas.");
       } else {
         alert(`Error al eliminar: ${deleteResult.error?.message}`);
       }

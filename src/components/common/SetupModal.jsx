@@ -3,18 +3,31 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { compressImage } from '../../services/utils';
 import LazyImage from './LazyImage';
-import { ChevronDown, CheckCircle, Lock } from 'lucide-react'; 
+import {
+  Apple,
+  Camera,
+  ChefHat,
+  ChevronDown,
+  CheckCircle,
+  Hammer,
+  Info,
+  Lock,
+  Pill,
+  Rocket,
+  Shirt,
+  ShoppingCart
+} from 'lucide-react';
 import './SetupModal.css';
 
 const logoPlaceholder = 'https://placehold.co/100x100/FFFFFF/4A5568?text=L';
 
 const BUSINESS_RUBROS = [
-  { id: 'food_service', label: 'Restaurante / Cocina', icon: '🍳' },
-  { id: 'abarrotes', label: 'Abarrotes / Tienda', icon: '🛒' },
-  { id: 'farmacia', label: 'Farmacia', icon: '💊' },
-  { id: 'verduleria/fruteria', label: 'Frutería / Verdulería', icon: '🍎' },
-  { id: 'apparel', label: 'Ropa / Calzado', icon: '👕' },
-  { id: 'hardware', label: 'Ferretería', icon: '🔨' },
+  { id: 'food_service', label: 'Restaurante / Cocina', icon: ChefHat },
+  { id: 'abarrotes', label: 'Abarrotes / Tienda', icon: ShoppingCart },
+  { id: 'farmacia', label: 'Farmacia', icon: Pill },
+  { id: 'verduleria/fruteria', label: 'Frutería / Verdulería', icon: Apple },
+  { id: 'apparel', label: 'Ropa / Calzado', icon: Shirt },
+  { id: 'hardware', label: 'Ferretería', icon: Hammer },
 ];
 
 export default function SetupModal() {
@@ -114,7 +127,7 @@ export default function SetupModal() {
     e.preventDefault();
     
     if (selectedTypes.length === 0) {
-      setError('⚠️ Debes seleccionar al menos un rubro para finalizar.');
+      setError('Debes seleccionar al menos un rubro para finalizar.');
       // Si están en el paso 1 y le dan Enter, nos aseguramos que vean el error del paso 2
       if (activeSection !== 'type') setActiveSection('type');
       return;
@@ -192,7 +205,7 @@ export default function SetupModal() {
                     <div className="mini-logo-upload">
                         <label htmlFor="logo-upload" className="logo-preview-wrapper">
                             <LazyImage src={logoPreview} alt="Logo" />
-                            <div className="overlay">📷</div>
+                            <div className="overlay"><Camera size={18} aria-hidden="true" /></div>
                         </label>
                         <input id="logo-upload" type="file" accept="image/*" 
                             onChange={handleImageChange} style={{display:'none'}} />
@@ -241,7 +254,7 @@ export default function SetupModal() {
 
                 {maxRubrosAllowed === 1 && (
                   <div className="trial-badge" style={{marginBottom: '10px', fontSize: '0.9rem', color: 'var(--primary-color)', backgroundColor: '#fff3cd', padding: '8px', borderRadius: '6px'}}>
-                    ℹ️ <strong>Atención:</strong> Tu plan actual permite seleccionar <strong>1 rubro</strong> principal.
+                    <Info size={16} aria-hidden="true" /> <strong>Atención:</strong> Tu plan actual permite seleccionar <strong>1 rubro</strong> principal.
                   </div>
                 )}
 
@@ -250,6 +263,7 @@ export default function SetupModal() {
                     // Verificar visualmente si está bloqueado por licencia
                     const isLockedByLicense = !isAllAllowed && !allowedRubrosList.includes(rubro.id);
                     const isSelected = selectedTypes.includes(rubro.id);
+                    const RubroIcon = rubro.icon;
 
                     return (
                       <div
@@ -259,7 +273,9 @@ export default function SetupModal() {
                         style={isLockedByLicense ? { opacity: 0.5, cursor: 'not-allowed', filter: 'grayscale(1)' } : {}}
                         title={isLockedByLicense ? "No incluido en tu licencia" : ""}
                       >
-                        <span className="rubro-icon">{rubro.icon}</span>
+                        <span className="rubro-icon">
+                          <RubroIcon size={28} strokeWidth={1.8} aria-hidden="true" />
+                        </span>
                         <span className="rubro-label">{rubro.label}</span>
                         {isLockedByLicense && <span style={{fontSize:'0.65rem', color:'var(--error-color)', marginTop:'2px'}}>Bloqueado</span>}
                       </div>
@@ -271,7 +287,7 @@ export default function SetupModal() {
 
                 <div className="step-actions end">
                   <button type="submit" className="btn btn-save btn-finish">
-                    ¡Finalizar y Empezar! 🚀
+                    <Rocket size={18} aria-hidden="true" /> ¡Finalizar y Empezar!
                   </button>
                 </div>
               </div>

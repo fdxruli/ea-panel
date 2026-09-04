@@ -1,6 +1,7 @@
 // src/components/common/AuditModal.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import './AbonoModal.css';
+import { AlertTriangle, ArrowLeft, ArrowRight, Banknote, Calculator, CircleCheck } from 'lucide-react';
 
 const BILLETES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS = [20, 10, 5, 2, 1, 0.5];
@@ -91,7 +92,7 @@ export default function AuditModal({ show, onClose, onConfirmAudit, calcularTeor
                                 style={{ flex: 1, padding: '8px 12px', fontSize: '0.9rem' }}
                                 onClick={() => setConteoMode('desglose')}
                             >
-                                💵 Desglose de Billetes y Monedas
+                                <Banknote size={16} aria-hidden="true" /> Desglose de Billetes y Monedas
                             </button>
                             <button
                                 type="button"
@@ -99,7 +100,7 @@ export default function AuditModal({ show, onClose, onConfirmAudit, calcularTeor
                                 style={{ flex: 1, padding: '8px 12px', fontSize: '0.9rem' }}
                                 onClick={() => setConteoMode('directo')}
                             >
-                                🔢 Monto Total Directo
+                                <Calculator size={16} aria-hidden="true" /> Monto Total Directo
                             </button>
                         </div>
 
@@ -200,7 +201,7 @@ export default function AuditModal({ show, onClose, onConfirmAudit, calcularTeor
                                 onClick={handleNext}
                                 disabled={montoFisicoFinal <= 0 && !montoDirecto && totalDesglose === 0}
                             >
-                                Siguiente: Comparar Cuadre ➔
+                                Siguiente: Comparar Cuadre <ArrowRight size={16} aria-hidden="true" />
                             </button>
                         </div>
                     </>
@@ -226,9 +227,16 @@ export default function AuditModal({ show, onClose, onConfirmAudit, calcularTeor
                                 fontWeight: 'bold',
                                 fontSize: '1.05rem'
                             }}>
-                                {hayDiferencia
-                                    ? `⚠️ ${diferencia < 0 ? 'Faltante en caja' : 'Sobrante en caja'}: ${diferencia > 0 ? '+' : ''}$${diferencia.toFixed(2)}`
-                                    : '✅ ¡Caja Cuadrada Perfectamente!'}
+                                {hayDiferencia ? (
+                                    <>
+                                        <AlertTriangle size={18} aria-hidden="true" />
+                                        {diferencia < 0 ? 'Faltante en caja' : 'Sobrante en caja'}: {diferencia > 0 ? '+' : ''}${diferencia.toFixed(2)}
+                                    </>
+                                ) : (
+                                    <>
+                                        <CircleCheck size={18} aria-hidden="true" /> ¡Caja Cuadrada Perfectamente!
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -249,7 +257,7 @@ export default function AuditModal({ show, onClose, onConfirmAudit, calcularTeor
                         )}
 
                         <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                            <button className="btn btn-cancel" onClick={() => setStep(1)}>⬅ Volver a contar</button>
+                            <button className="btn btn-cancel" onClick={() => setStep(1)}><ArrowLeft size={16} aria-hidden="true" /> Volver a contar</button>
                             <button
                                 className="btn btn-save"
                                 onClick={handleSubmit}

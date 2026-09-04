@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function PrescriptionModal({ show, onClose, onConfirm, itemsRequiringPrescription }) {
     const [doctorName, setDoctorName] = useState('');
@@ -19,7 +20,9 @@ export default function PrescriptionModal({ show, onClose, onConfirm, itemsRequi
     return (
         <div className="modal" style={{ display: 'flex', zIndex: 'var(--z-modal-critical)' }}>
             <div className="modal-content" style={{ maxWidth: '500px', borderLeft: '5px solid var(--warning-color)' }}>
-                <h2 className="modal-title">⚠️ Medicamento Controlado</h2>
+                <h2 className="modal-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <AlertTriangle size={20} aria-hidden="true" /> Medicamento Controlado
+                </h2>
                 <p style={{ marginBottom: '15px', fontSize: '0.9rem', color: 'var(--text-light)' }}>
                     Los siguientes productos requieren receta médica. Por normativa, ingresa los datos del médico prescriptor:
                 </p>

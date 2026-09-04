@@ -4,6 +4,7 @@ import { saveDataSafe, STORES } from '../../services/database';
 import { generateID, showMessageModal, roundCurrency } from '../../services/utils';
 // --- CAMBIO: Usamos el store correcto (Estadísticas) ---
 import { useStatsStore } from '../../store/useStatsStore';
+import { Trash2 } from 'lucide-react';
 
 export default function WasteModal({ show, onClose, product, onConfirm }) {
     const [quantity, setQuantity] = useState('');
@@ -64,7 +65,7 @@ export default function WasteModal({ show, onClose, product, onConfirm }) {
 
         const lossAmount = (product.cost || 0) * qty;
         await adjustInventoryValue(-lossAmount);
-        showMessageModal(`✅ Merma registrada. Stock actualizado.\nPérdida estimada: $${lossAmount.toFixed(2)}`);
+        showMessageModal(`Merma registrada. Stock actualizado.\nPérdida estimada: $${lossAmount.toFixed(2)}`);
 
         onConfirm();
         onClose();
@@ -74,7 +75,9 @@ export default function WasteModal({ show, onClose, product, onConfirm }) {
     return (
         <div className="modal" style={{ display: 'flex', zIndex: 2200 }}>
             <div className="modal-content" style={{ maxWidth: '400px' }}>
-                <h2 className="modal-title" style={{ color: 'var(--error-color)' }}>🗑️ Registrar Merma</h2>
+                <h2 className="modal-title" style={{ color: 'var(--error-color)', display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Trash2 size={20} aria-hidden="true" /> Registrar Merma
+                </h2>
                 <p>Producto: <strong>{product.name}</strong></p>
                 <p style={{ fontSize: '0.9rem' }}>Stock actual: {product.stock}</p>
 
@@ -90,10 +93,10 @@ export default function WasteModal({ show, onClose, product, onConfirm }) {
                     <div className="form-group">
                         <label className="form-label">Motivo</label>
                         <select className="form-input" value={reason} onChange={e => setReason(e.target.value)}>
-                            <option value="caducado">🤢 Se pudrió / Caducó</option>
-                            <option value="dañado">🤕 Se aplastó / Dañado</option>
-                            <option value="robo">🕵️ Robo / Faltante</option>
-                            <option value="degustacion">😋 Degustación / Regalo</option>
+                            <option value="caducado">Se pudrió / Caducó</option>
+                            <option value="dañado">Se aplastó / Dañado</option>
+                            <option value="robo">Robo / Faltante</option>
+                            <option value="degustacion">Degustación / Regalo</option>
                         </select>
                     </div>
 

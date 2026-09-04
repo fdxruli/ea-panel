@@ -1,7 +1,7 @@
 import React from 'react';
-import { 
-  // RotateCcw, // <-- Lo quitamos porque estaba fallando
-  Trash2, 
+import {
+  RotateCcw,
+  Trash2,
   ShoppingBag, 
   User, 
   Package, 
@@ -25,12 +25,15 @@ export default function RecycleBin({ items, onRestoreItem }) {
   return (
     <div className="movement-history-container">
       <div className="bin-header">
-        <h3 className="subtitle" style={{margin:0, border: 'none'}}>🗑️ Papelera de Reciclaje</h3>
+        <h3 className="subtitle" style={{margin:0, border: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.45rem'}}>
+          <Trash2 size={19} aria-hidden="true" /> Papelera de Reciclaje
+        </h3>
         <span className="bin-count">{items.length} items</span>
       </div>
       
       {items.length === 0 ? (
         <div className="recycle-empty-message">
+            <Trash2 size={40} aria-hidden="true" />
             Papelera vacía. Todo está limpio.
         </div>
       ) : (
@@ -52,15 +55,14 @@ export default function RecycleBin({ items, onRestoreItem }) {
                 </div>
               </div>
 
-              {/* Botón Restaurar CORREGIDO */}
+              {/* Botón Restaurar */}
               <button 
                 className="btn-restore-icon" 
                 onClick={() => onRestoreItem(item)}
                 title="Restaurar este elemento"
-                // Usamos un símbolo unicode directo para asegurar que se vea siempre
-                style={{ fontSize: '1.2rem', fontWeight: 'bold' }} 
+                aria-label="Restaurar elemento"
               >
-                ⟲
+                <RotateCcw size={17} aria-hidden="true" />
               </button>
             </div>
           ))}

@@ -18,6 +18,7 @@ import { useFeatureConfig } from '../hooks/useFeatureConfig';
 import DailyPriceModal from '../components/products/DailyPriceModal';
 import { useAppStore } from '../store/useAppStore';
 import ProductWizard from '../components/products/ProductWizard';
+import { Download, FilePenLine, Sparkles, Upload, Wrench } from 'lucide-react';
 import './ProductsPage.css';
 
 export default function ProductsPage() {
@@ -113,7 +114,7 @@ export default function ProductsPage() {
 
             await deleteCategoryCascading(categoryId);
             await refreshData();
-            showMessageModal('✅ Categoría eliminada.');
+            showMessageModal('Categoría eliminada.');
         } catch (error) {
             // Si el error es de nuestro tipo DatabaseError
             if (error.name === 'DatabaseError') {
@@ -358,7 +359,7 @@ export default function ProductsPage() {
                             style={{ backgroundColor: '#f97316' }}
                             onClick={() => setShowDailyPrice(true)}
                         >
-                            📝 Actualizar Precios del Día
+                            <FilePenLine size={16} aria-hidden="true" /> Actualizar Precios del Día
                         </button>
                     )}
 
@@ -366,7 +367,7 @@ export default function ProductsPage() {
                         className="btn btn-secondary btn-action-header"
                         onClick={() => setShowDataTransfer(true)}
                     >
-                        📥 / 📤 Importar y Exportar
+                        <Download size={16} aria-hidden="true" /> <Upload size={16} aria-hidden="true" /> Importar y Exportar
                     </button>
                 </div>
 
@@ -431,11 +432,11 @@ export default function ProductsPage() {
                                 <div className="theme-toggle-container">
                                     <label className="theme-radio-label">
                                         <input type="radio" checked={isWizardMode} onChange={() => setIsWizardMode(true)} />
-                                        <span className="theme-radio-text">✨ Modo Asistido (Fácil)</span>
+                                        <span className="theme-radio-text"><Sparkles size={16} aria-hidden="true" /> Modo Asistido (Fácil)</span>
                                     </label>
                                     <label className="theme-radio-label">
                                         <input type="radio" checked={!isWizardMode} onChange={() => setIsWizardMode(false)} />
-                                        <span className="theme-radio-text">🛠️ Modo Experto</span>
+                                        <span className="theme-radio-text"><Wrench size={16} aria-hidden="true" /> Modo Experto</span>
                                     </label>
                                 </div>
                             </div>

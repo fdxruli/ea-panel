@@ -564,6 +564,9 @@
     color: var(--text-primary);
     flex: 1;
     min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
 }
 
 .discardDraftButton {

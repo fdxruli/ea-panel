@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { loadData, STORES } from '../../services/database';
 import { useFeatureConfig } from '../../hooks/useFeatureConfig';
+import { RefreshCw } from 'lucide-react';
 
 export default function VariantInventoryView() {
   const [items, setItems] = useState([]);
@@ -73,7 +74,9 @@ export default function VariantInventoryView() {
     <div className="product-list-container" style={{animation: 'fadeIn 0.3s'}}>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 20}}>
         <h3 className="subtitle" style={{margin:0}}>Inventario por Talla y Color</h3>
-        <button className="btn btn-secondary" onClick={loadInventory}>🔄 Actualizar</button>
+        <button className="btn btn-secondary" onClick={loadInventory}>
+          <RefreshCw size={15} aria-hidden="true" /> Actualizar
+        </button>
       </div>
 
       <div className="search-container">

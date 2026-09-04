@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Carrot, CookingPot, Plus, Sparkles, Trash2, Utensils, X } from 'lucide-react';
 
 export default function RestauranteFields({
   productType, setProductType,
@@ -60,7 +61,7 @@ export default function RestauranteFields({
               checked={productType === 'sellable'}
               onChange={() => setProductType('sellable')}
             />
-            <span className="theme-radio-text">🍽️ Platillo (Venta)</span>
+            <span className="theme-radio-text"><Utensils size={16} aria-hidden="true" /> Platillo (Venta)</span>
           </label>
           <label className="theme-radio-label" style={{ flex: 1, textAlign: 'center' }}>
             <input
@@ -68,7 +69,7 @@ export default function RestauranteFields({
               checked={productType === 'ingredient'}
               onChange={() => setProductType('ingredient')}
             />
-            <span className="theme-radio-text">🥕 Insumo (Inventario)</span>
+            <span className="theme-radio-text"><Carrot size={16} aria-hidden="true" /> Insumo (Inventario)</span>
           </label>
         </div>
       </div>
@@ -86,7 +87,7 @@ export default function RestauranteFields({
                 style={{ width: '100%', justifyContent: 'center' }}
                 onClick={onManageRecipe}
               >
-                🥘 Configurar Receta
+                <CookingPot size={16} aria-hidden="true" /> Configurar Receta
               </button>
               <small style={{ display: 'block', marginTop: '5px', color: 'var(--text-light)', fontSize: '0.8rem' }}>Define qué insumos se descuentan.</small>
             </div>
@@ -99,10 +100,10 @@ export default function RestauranteFields({
                 value={printStation}
                 onChange={(e) => setPrintStation(e.target.value)}
               >
-                <option value="kitchen">🍳 Cocina</option>
-                <option value="bar">🍹 Barra / Bebidas</option>
-                <option value="dessert">🍰 Postres</option>
-                <option value="none">🚫 No Imprimir</option>
+                <option value="kitchen">Cocina</option>
+                <option value="bar">Barra / Bebidas</option>
+                <option value="dessert">Postres</option>
+                <option value="none">No Imprimir</option>
               </select>
             </div>
           </div>
@@ -121,7 +122,9 @@ export default function RestauranteFields({
 
           {/* 3. GESTOR DE MODIFICADORES (NUEVO) */}
           <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
-            <label className="form-label" style={{ color: 'var(--primary-color)' }}>✨ Modificadores / Extras</label>
+            <label className="form-label" style={{ color: 'var(--primary-color)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              <Sparkles size={16} aria-hidden="true" /> Modificadores / Extras
+            </label>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: '10px' }}>
               Ej: "Elige tu Salsa", "Agrega papas", "Término de carne".
             </p>
@@ -150,7 +153,9 @@ export default function RestauranteFields({
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                     <strong style={{ color: 'var(--text-dark)' }}>{group.name}</strong>
-                    <button type="button" style={{ color: 'var(--error-color)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => removeModifierGroup(idx)}>Eliminar Grupo</button>
+                    <button type="button" style={{ color: 'var(--error-color)', background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }} onClick={() => removeModifierGroup(idx)}>
+                      <Trash2 size={14} aria-hidden="true" /> Eliminar Grupo
+                    </button>
                   </div>
 
                   {/* Agregar Opción al Grupo */}
@@ -166,7 +171,7 @@ export default function RestauranteFields({
                         priceInput.value = '';
                         nameInput.focus();
                       }
-                    }}>+</button>
+                    }} aria-label="Agregar opción"><Plus size={15} aria-hidden="true" /></button>
                   </div>
 
                   {/* Lista de Opciones del Grupo */}
@@ -174,7 +179,9 @@ export default function RestauranteFields({
                     {group.options.map((opt, optIdx) => (
                       <li key={optIdx} style={{ fontSize: '0.9rem', color: 'var(--text-color)', marginBottom: '4px' }}>
                         {opt.name} {opt.price > 0 && <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>(+${opt.price})</span>}
-                        <button type="button" style={{ marginLeft: '10px', color: '#999', border: 'none', background: 'none', cursor: 'pointer' }} onClick={() => removeOptionFromGroup(idx, optIdx)}>x</button>
+                        <button type="button" style={{ marginLeft: '10px', color: '#999', border: 'none', background: 'none', cursor: 'pointer' }} onClick={() => removeOptionFromGroup(idx, optIdx)} aria-label="Eliminar opción">
+                          <X size={14} aria-hidden="true" />
+                        </button>
                       </li>
                     ))}
                   </ul>

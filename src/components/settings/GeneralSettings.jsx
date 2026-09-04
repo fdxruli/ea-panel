@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { compressImage } from '../../services/utils';
+import { Monitor, Moon, Sun } from 'lucide-react';
 
 const logoPlaceholder = 'https://placehold.co/100x100/FFFFFF/4A5568?text=L';
 
@@ -135,7 +136,7 @@ export default function GeneralSettings() {
             <label key={theme} className="theme-radio-label">
                 <input type="radio" name="theme" value={theme} checked={activeTheme === theme} onChange={handleThemeChange} />
                 <span className="theme-radio-text">
-                    {theme === 'light' ? '☀️ Claro' : theme === 'dark' ? '🌙 Oscuro' : '💻 Sistema'}
+                    {theme === 'light' ? <><Sun size={16} aria-hidden="true" /> Claro</> : theme === 'dark' ? <><Moon size={16} aria-hidden="true" /> Oscuro</> : <><Monitor size={16} aria-hidden="true" /> Sistema</>}
                 </span>
             </label>
         ))}

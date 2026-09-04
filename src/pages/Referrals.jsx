@@ -14,6 +14,7 @@ import { useReferralLevelsCache } from '../hooks/useReferralLevelsCache';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 // --- FIN PASO A ---
+import { Gift, Pencil } from 'lucide-react';
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
 const TrophyIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>));
@@ -184,7 +185,7 @@ const ReferralRow = memo(({ customer, onEdit, canEdit }) => {
                             }}
                             className={styles.editButton}
                         >
-                            ✏️ Editar
+                            <Pencil size={15} aria-hidden="true" /> Editar
                         </button>
                     </td>
                 )}
@@ -466,7 +467,7 @@ export default function Referrals() {
                                 </p>
                                 {level.reward_description && (
                                     <p className={styles.levelReward}>
-                                        🎁 {level.reward_description}
+                                        <Gift size={16} aria-hidden="true" /> {level.reward_description}
                                     </p>
                                 )}
                             </div>

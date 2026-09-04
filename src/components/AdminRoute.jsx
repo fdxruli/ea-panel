@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import LoadingSpinner from './LoadingSpinner'; // Ajusta a tu componente de carga
+import { AlertTriangle } from 'lucide-react';
 
 const AdminRoute = () => {
   const { status } = useAdminAuth();
@@ -23,7 +24,9 @@ const AdminRoute = () => {
     case 'ERROR':
       return (
         <div className="error-screen" style={{ padding: '3rem 1.5rem', textAlign: 'center', maxWidth: '480px', margin: 'auto' }}>
-          <h2>⚠️ Problema de acceso</h2>
+          <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={24} aria-hidden="true" /> Problema de acceso
+          </h2>
           <p style={{ color: '#666', marginTop: '0.5rem' }}>Error validando permisos o la sesión ha expirado.</p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '1.5rem' }}>
             <button

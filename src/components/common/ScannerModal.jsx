@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useZxing } from 'react-zxing';
 import { useOrderStore } from '../../store/useOrderStore';
 import { searchProductByBarcode, queryBatchesByProductIdAndActive } from '../../services/database';
+import { AlertTriangle, Camera, CameraOff, CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import './ScannerModal.css';
 
 // ✅ OPTIMIZACIÓN 1: Configuración de cámara SIMPLIFICADA
@@ -29,6 +30,7 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
   const [isScanning, setIsScanning] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [scanFeedback, setScanFeedback] = useState('');
+  const [scanFeedbackType, setScanFeedbackType] = useState('success');
   const mode = onScanSuccess ? 'single' : 'pos';
 
   // Referencias para control de escaneo
@@ -72,7 +74,8 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
       setIsScanning(false);
 
       if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-      setScanFeedback(`✓ ${code}`);
+      setScanFeedback(code);
+      setScanFeedbackType('success');
 
       processScannedCode(code);
 
@@ -129,11 +132,11 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
         } catch (error) {
           console.error('Error accediendo a cámara:', error);
           if (error.name === 'NotAllowedError') {
-            setCameraError('❌ Permiso de cámara denegado.');
+            setCameraError('Permiso de cámara denegado.');
           } else if (error.name === 'NotFoundError') {
-            setCameraError('❌ No se encontró cámara en este dispositivo.');
+            setCameraError('No se encontró cámara en este dispositivo.');
           } else {
-            setCameraError(`❌ Error: ${error.message}`);
+            setCameraError(`Error: ${error.message}`);
           }
         }
       })();
@@ -206,15 +209,18 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
           return [...prevItems, { ...safeProduct, quantity: 1 }];
         });
 
-        setScanFeedback(`✅ ${safeProduct.name} - $${finalPrice.toFixed(2)}`);
+        setScanFeedback(`${safeProduct.name} - $${finalPrice.toFixed(2)}`);
+        setScanFeedbackType('success');
       } else {
         console.warn(`Código ${code} no encontrado.`);
-        setScanFeedback(`⚠️ No encontrado: ${code}`);
+        setScanFeedback(`No encontrado: ${code}`);
+        setScanFeedbackType('warning');
         setTimeout(() => setScanFeedback(''), 2000);
       }
     } catch (error) {
       console.error('Error procesando código:', error);
-      setScanFeedback('❌ Error al buscar producto');
+      setScanFeedback('Error al buscar producto');
+      setScanFeedbackType('error');
       setTimeout(() => setScanFeedback(''), 2000);
     }
   };
@@ -247,6 +253,7 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
     setIsScanning(false);
     setCameraError(null);
     setScanFeedback('');
+    setScanFeedbackType('success');
     lastScannedRef.current = { code: null, time: 0 };
     processingRef.current = false;
     onClose();
@@ -270,9 +277,10 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
           <div className="scanner-video-container">
             {cameraError ? (
               <div className="camera-error-feedback">
+                <CameraOff size={30} aria-hidden="true" />
                 <p>{cameraError}</p>
                 <button onClick={() => { setCameraError(null); setIsScanning(true); }} className="btn btn-secondary">
-                  🔄 Reintentar
+                  <RefreshCw size={15} aria-hidden="true" /> Reintentar
                 </button>
               </div>
             ) : (
@@ -291,7 +299,12 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
                 />
                 {scanFeedback && (
                   <div className="scan-feedback-overlay">
-                    <div className="scan-feedback-message">{scanFeedback}</div>
+                    <div className={`scan-feedback-message ${scanFeedbackType}`}>
+                      {scanFeedbackType === 'success' && <CheckCircle2 size={20} aria-hidden="true" />}
+                      {scanFeedbackType === 'warning' && <AlertTriangle size={20} aria-hidden="true" />}
+                      {scanFeedbackType === 'error' && <XCircle size={20} aria-hidden="true" />}
+                      <span>{scanFeedback}</span>
+                    </div>
                   </div>
                 )}
                 <div className="scanner-reticle" style={{
@@ -300,7 +313,7 @@ export default function ScannerModal({ show, onClose, onScanSuccess }) {
                   borderRadius: '12px', pointerEvents: 'none', boxShadow: '0 0 0 9999px rgba(0,0,0,0.3)'
                 }}>
                   <div style={{ position: 'absolute', bottom: '-30px', left: '50%', transform: 'translateX(-50%)', color: 'white', fontSize: '0.9rem', textShadow: '0 2px 4px rgba(0,0,0,0.8)', whiteSpace: 'nowrap' }}>
-                    📷 Centra el código aquí
+                    <Camera size={15} aria-hidden="true" /> Centra el código aquí
                   </div>
                 </div>
               </>

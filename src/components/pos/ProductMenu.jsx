@@ -6,6 +6,7 @@ import ProductModifiersModal from './ProductModifiersModal';
 import { useFeatureConfig } from '../../hooks/useFeatureConfig';
 import VariantSelectorModal from './VariantSelectorModal';
 import './ProductMenu.css';
+import { Camera, Package, Palette, Search, Sparkles } from 'lucide-react';
 
 export default function ProductMenu({
   products,
@@ -139,7 +140,7 @@ export default function ProductMenu({
           onChange={(e) => onSearchChange(e.target.value)}
         />
         <button id="scan-barcode-btn" className="btn btn-scan" title="Escanear" onClick={onOpenScanner}>
-          📷
+          <Camera size={18} aria-hidden="true" />
         </button>
       </div>
 
@@ -153,13 +154,13 @@ export default function ProductMenu({
           {visibleProducts.length === 0 ? (
             (products.length === 0 && !searchTerm && !selectedCategoryId) ? (
               <div className="menu-empty-state">
-                <div className="empty-icon">📦</div>
+                <div className="empty-icon"><Package size={42} aria-hidden="true" /></div>
                 <p>No hay productos registrados.</p>
                 <small>Ve a la sección <strong>Productos</strong> para crear tu inventario.</small>
               </div>
             ) : (
               <div className="menu-empty-state">
-                <div className="empty-icon">🔍</div>
+                <div className="empty-icon"><Search size={42} aria-hidden="true" /></div>
                 <p>No hay coincidencias.</p>
                 <small>Intenta con otro nombre o escanea el código.</small>
               </div>
@@ -191,14 +192,14 @@ export default function ProductMenu({
                   {isOutOfStock && <div className="stock-overlay">Agotado</div>}
 
                   {hasModifiers && !isOutOfStock && (
-                    <div className="modifier-badge" style={{ position: 'absolute', top: '5px', left: '5px', background: 'var(--primary-color)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2 }}>
-                      ✨ Extras
+                    <div className="modifier-badge" style={{ position: 'absolute', top: '5px', left: '5px', background: 'var(--primary-color)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Sparkles size={12} aria-hidden="true" /> Extras
                     </div>
                   )}
 
                   {hasVariants && !isOutOfStock && (
-                    <div className="modifier-badge" style={{ position: 'absolute', top: '5px', left: '5px', background: 'var(--secondary-color)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2 }}>
-                      🎨 Opciones
+                    <div className="modifier-badge" style={{ position: 'absolute', top: '5px', left: '5px', background: 'var(--secondary-color)', color: 'white', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Palette size={12} aria-hidden="true" /> Opciones
                     </div>
                   )}
 

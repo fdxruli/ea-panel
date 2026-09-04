@@ -14,6 +14,7 @@ import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { broadcastStoreChange } from '../lib/broadcastRealtime';
+import { Minus, Pencil, Plus, Trash2 } from 'lucide-react';
 
 const fetchSpecialPrices = async () => {
   const pricesRes = await supabase.rpc('get_special_prices_with_details');
@@ -52,7 +53,7 @@ const PriceTableRow = memo(({
               className={styles.editButton}
               aria-label="Editar promoción"
             >
-              ✏️ Editar
+              <Pencil size={15} aria-hidden="true" /> Editar
             </button>
           )}
           {canDelete && (
@@ -61,7 +62,7 @@ const PriceTableRow = memo(({
               className={styles.deleteButton}
               aria-label="Eliminar promoción"
             >
-              🗑️ Eliminar
+              <Trash2 size={15} aria-hidden="true" /> Eliminar
             </button>
           )}
         </td>
@@ -238,7 +239,7 @@ const SpecialPrices = () => {
             }}
             className={styles.addButton}
           >
-            {isFormVisible ? '➖ Ocultar Formulario' : '+ Nueva Promoción'}
+            {isFormVisible ? <><Minus size={17} aria-hidden="true" /> Ocultar Formulario</> : <><Plus size={17} aria-hidden="true" /> Nueva Promoción</>}
           </button>
         )}
       </div>

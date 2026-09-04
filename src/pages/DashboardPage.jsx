@@ -18,6 +18,7 @@ import RestockSuggestions from '../components/dashboard/RestockSuggestion';
 
 import { loadData, STORES } from '../services/database';
 import { useFeatureConfig } from '../hooks/useFeatureConfig';
+import { ArrowRight, HardDriveDownload, Package } from 'lucide-react';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
@@ -56,7 +57,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    console.log("🔄 Actualizando Dashboard...");
+    console.log("Actualizando Dashboard...");
     loadStats();
     loadRecentSales();
     loadCustomers();
@@ -94,7 +95,7 @@ export default function DashboardPage() {
               className={`tab-btn ${activeTab === 'restock' ? 'active' : ''}`}
               onClick={() => setActiveTab('restock')}
             >
-              📦 Reabastecimiento
+              <Package size={16} aria-hidden="true" /> Reabastecimiento
             </button>
         )}
 
@@ -137,7 +138,7 @@ export default function DashboardPage() {
       {activeTab === 'history' && (
         <>
           <div className="data-warning-banner">
-            <span className="data-warning-icon">💾</span>
+            <span className="data-warning-icon"><HardDriveDownload size={24} aria-hidden="true" /></span>
             <div>
               <strong>Importante: Tus datos viven en este dispositivo.</strong>
               <p style={{ margin: '4px 0 0 0' }}>
@@ -157,7 +158,7 @@ export default function DashboardPage() {
                     marginLeft: '5px'
                   }}
                 >
-                  Ir a Respaldar ahora →
+                  Ir a Respaldar ahora <ArrowRight size={14} aria-hidden="true" />
                 </button>
               </p>
             </div>

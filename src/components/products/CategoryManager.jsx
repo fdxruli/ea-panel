@@ -1,6 +1,7 @@
 // src/components/products/CategoryManager.jsx
 import React, { useState } from 'react';
 import './CategoryManager.css'; // Usaremos un CSS simple o reutilizamos estilos
+import { Pencil, Trash2 } from 'lucide-react';
 
 export default function CategoryManager({ categories, onSave, onDelete }) {
   const [name, setName] = useState('');
@@ -75,8 +76,12 @@ export default function CategoryManager({ categories, onSave, onDelete }) {
                     <div key={cat.id} className="category-card-item">
                         <span className="category-name">{cat.name}</span>
                         <div className="category-actions">
-                            <button className="btn-icon edit" onClick={() => handleEdit(cat)} title="Editar">✏️</button>
-                            <button className="btn-icon delete" onClick={() => handleDelete(cat.id)} title="Eliminar">🗑️</button>
+                            <button className="btn-icon edit" onClick={() => handleEdit(cat)} title="Editar" aria-label="Editar categoría">
+                              <Pencil size={15} aria-hidden="true" />
+                            </button>
+                            <button className="btn-icon delete" onClick={() => handleDelete(cat.id)} title="Eliminar" aria-label="Eliminar categoría">
+                              <Trash2 size={15} aria-hidden="true" />
+                            </button>
                         </div>
                     </div>
                 ))

@@ -4,6 +4,7 @@ import './DeviceManager.css';
 // IMPORTAMOS EL NUEVO SERVICIO
 import { getLicenseDevicesSmart, deactivateDeviceSmart } from '../../services/licenseService';
 import { showMessageModal } from '../../services/utils';
+import { CloudOff } from 'lucide-react';
 
 export default function DeviceManager({ licenseKey }) {
   const [devices, setDevices] = useState([]);
@@ -57,7 +58,7 @@ export default function DeviceManager({ licenseKey }) {
 
   const handleDeactivate = async (deviceId) => {
     if (!navigator.onLine) {
-        showMessageModal("⚠️ Se requiere internet para desactivar un dispositivo.", null, { type: 'error' });
+        showMessageModal("Se requiere internet para desactivar un dispositivo.", null, { type: 'error' });
         return;
     }
 
@@ -69,7 +70,7 @@ export default function DeviceManager({ licenseKey }) {
     const result = await deactivateDeviceSmart(deviceId, licenseKey);
     
     if (result.success) {
-        showMessageModal('✅ Dispositivo desactivado correctamente.');
+        showMessageModal('Dispositivo desactivado correctamente.');
         await fetchDevices(); // Refrescar lista
     } else {
         showMessageModal(`Error: ${result.message}`, null, { type: 'error' });
@@ -107,7 +108,7 @@ export default function DeviceManager({ licenseKey }) {
           
           {isOfflineData ? (
               <span style={{fontSize:'0.75rem', backgroundColor:'#ffedd5', color:'#c2410c', padding:'2px 8px', borderRadius:'12px', border:'1px solid #fdba74', fontWeight:'600'}}>
-                  ☁️ Modo Offline
+                  <CloudOff size={13} aria-hidden="true" /> Modo Offline
               </span>
           ) : (
               <span style={{fontSize:'0.75rem', color:'var(--success-color)', display:'flex', alignItems:'center', gap:'4px', fontWeight:'600'}}>

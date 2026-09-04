@@ -1,6 +1,7 @@
 // src/components/products/IngredientManager.jsx
 import React, { useState } from 'react';
 import './IngredientManager.css';
+import { Pencil, Trash2 } from 'lucide-react';
 
 export default function IngredientManager({ ingredients, onSave, onDelete }) {
   // Estados del formulario
@@ -169,8 +170,12 @@ export default function IngredientManager({ ingredients, onSave, onDelete }) {
                             </div>
                         </div>
                         <div className="ing-actions">
-                            <button className="btn-icon edit" onClick={() => handleEdit(ing)} title="Editar Nombre/Unidad">✏️</button>
-                            <button className="btn-icon delete" onClick={() => handleDelete(ing.id)} title="Eliminar">🗑️</button>
+                            <button className="btn-icon edit" onClick={() => handleEdit(ing)} title="Editar Nombre/Unidad" aria-label="Editar insumo">
+                              <Pencil size={15} aria-hidden="true" />
+                            </button>
+                            <button className="btn-icon delete" onClick={() => handleDelete(ing.id)} title="Eliminar" aria-label="Eliminar insumo">
+                              <Trash2 size={15} aria-hidden="true" />
+                            </button>
                         </div>
                     </div>
                 ))

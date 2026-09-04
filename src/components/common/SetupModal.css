@@ -205,6 +205,15 @@
 
 .rubro-icon {
   font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trial-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .rubro-label {

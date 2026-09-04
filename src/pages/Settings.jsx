@@ -8,6 +8,7 @@ import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { broadcastStoreChange } from '../lib/broadcastRealtime';
+import { Info } from 'lucide-react';
 
 const fetchAdminSettings = async () => {
   const [maintenanceResult, visibilityResult] = await Promise.all([
@@ -298,7 +299,7 @@ export default function Settings() {
 
       {!canEdit && (
         <div className={styles.alertBanner}>
-          <span className={styles.alertIcon}>ℹ️</span>
+          <span className={styles.alertIcon}><Info size={18} aria-hidden="true" /></span>
           <span>Solo tienes permisos de lectura. No puedes modificar la configuración.</span>
         </div>
       )}

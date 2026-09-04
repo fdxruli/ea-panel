@@ -3,6 +3,7 @@ import React, { memo } from "react";
 import styles from "../pages/Products.module.css"; // Ajusta la ruta si es necesario
 import { useAdminAuth } from "../context/AdminAuthContext";
 import ImageWithFallback from './ImageWithFallback';
+import { Camera } from 'lucide-react';
 
 // --- ICONOS MOVIDOS AQUÍ ---
 const StarIcon = memo(() => ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ffc107" stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>));
@@ -18,7 +19,9 @@ const ProductCard = memo(({ product, categoryName, onToggle, onEdit, onManageIma
         <div className={`${styles.productCard} ${!product.is_active ? styles.inactive : ''}`}>
             <div className={styles.imageContainer}>
                 <ImageWithFallback src={product.image_url || 'https://placehold.co/300x200'} alt={product.name} />
-                <span className={styles.imageCount}>{1 + (product.product_images?.length || 0)} 📸</span>
+                <span className={styles.imageCount}>
+                    {1 + (product.product_images?.length || 0)} <Camera size={14} aria-hidden="true" />
+                </span>
             </div>
             <div className={styles.cardContent}>
                 <span className={styles.categoryTag}>{categoryName}</span>

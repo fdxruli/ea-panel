@@ -1,4 +1,5 @@
 import React from 'react';
+import { Pill } from 'lucide-react';
 import './SalesHistory.css';
 
 export default function SalesHistory({ sales, onDeleteSale }) {
@@ -52,7 +53,9 @@ export default function SalesHistory({ sales, onDeleteSale }) {
                       color: '#856404'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
-                        <strong>⚕️ Datos de Dispensación:</strong>
+                        <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <Pill size={15} aria-hidden="true" /> Datos de Dispensación:
+                        </strong>
                       </div>
                       <div>Dr(a): {sale.prescriptionDetails.doctorName}</div>
                       <div>Cédula: {sale.prescriptionDetails.licenseNumber}</div>
