@@ -65,7 +65,7 @@ const getCSTDateBoundaries = (dateStr, isEnd = false) => {
     cstDate.setUTCHours(0 - CST_OFFSET_HOURS, 0, 0, 0);
 
     if (isEnd) {
-        cstDate.setUTCHours(23, 59, 59, 999);
+        cstDate.setUTCHours(23 - CST_OFFSET_HOURS, 59, 59, 999);
     }
 
     return cstDate.toISOString();
@@ -580,9 +580,9 @@ export default function Dashboard() {
                         <ul className={styles.recentList}>
                             {recentOrders.map((order, index) => (
                                 <li key={`${order.id}-${index}`} className={styles.recentOrderItem}>
-                                    <span>{order.customer_name || 'Cliente'}</span>
+                                    <span>{order.customerName || 'Cliente'}</span>
                                     <div className={styles.orderInfo}>
-                                        <span>{formatCurrency(order.total_amount)}</span>
+                                        <span>{formatCurrency(order.totalAmount)}</span>
                                         <span className={`${styles.statusBadge} ${styles[order.status]}`}>
                                             {order.status.replace('_', ' ')}
                                         </span>
