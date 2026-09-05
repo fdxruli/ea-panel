@@ -202,31 +202,39 @@
 }
 
 .cardActions {
-    padding: 1rem 1.5rem 1.5rem;
+    padding: 0.9rem 1.2rem 1.2rem;
     margin-top: auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto;
-    grid-template-areas: 
-        "edit images"
-        "audience toggle";
-    gap: 0.8rem;
+    gap: 0.55rem;
 }
-.cardActions .toggleButton {
-    grid-area: toggle;
+
+.viewDetailButton {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    background: rgba(229, 57, 53, 0.07);
+    border: 1px solid rgba(229, 57, 53, 0.28);
+    color: var(--color-primary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
-.cardActions .editButton {
-    grid-area: edit;
-}
-.cardActions .manageButton {
-    grid-area: images;
-}
-.cardActions .audienceButton {
-    grid-area: audience;
+
+.viewDetailButton:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(229, 57, 53, 0.3);
 }
 
 .cardActions button {
-    padding: 0.8rem;
+    padding: 0.7rem;
     border-radius: 8px;
     font-weight: 600;
     border: none;
