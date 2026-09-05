@@ -15,7 +15,7 @@ import { useCategoriesCache } from '../hooks/useCategoriesCache';
 import { useAdminProductsBasic } from '../hooks/useAdminProductsBasic';
 import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 import { useCaja } from '../hooks/useCaja';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { showMessageModal } from '../services/utils';
 import { ArrowLeft, ClipboardList, FileText, LockKeyhole } from 'lucide-react';
 // --- FIN PASO A ---
@@ -217,6 +217,17 @@ export default function CreateOrder() {
     const canEdit = hasPermission('crear-pedido.edit');
     const hasCajaAccess = hasPermission('caja.access');
     const { cajaEstaAbierta, abrirCaja } = useCaja();
+    const location = useLocation();
+
+    // --- Preseleccionar cliente si viene redirigido desde el módulo CRM de Clientes ---
+    useEffect(() => {
+        if (location.state?.preselectedCustomer) {
+            setSelectedCustomer(location.state.preselectedCustomer);
+            setStep(2);
+            // Limpiar historial para evitar re-seleccionar en caso de recarga
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
 
     const handleAbrirTurno = async (monto) => {
         const success = await abrirCaja(monto);
@@ -304,9 +315,10 @@ export default function CreateOrder() {
                     p.newCustomer?.name?.trim() ||
                     p.orderNotes?.trim();
                 if (hasContent) {
-                    if (p.step != null) setStep(p.step);
-                    if (p.selectedCustomer != null) setSelectedCustomer(p.selectedCustomer);
-                    if (p.isCreatingCustomer != null) setIsCreatingCustomer(p.isCreatingCustomer);
+                    const hasPreselected = Boolean(location.state?.preselectedCustomer);
+                    if (p.step != null && !hasPreselected) setStep(p.step);
+                    if (p.selectedCustomer != null && !hasPreselected) setSelectedCustomer(p.selectedCustomer);
+                    if (p.isCreatingCustomer != null && !hasPreselected) setIsCreatingCustomer(p.isCreatingCustomer);
                     if (p.newCustomer) setNewCustomer(p.newCustomer);
                     if (p.newCustomerCountryCode) setNewCustomerCountryCode(p.newCustomerCountryCode);
                     if (Array.isArray(p.cart)) setCart(p.cart);

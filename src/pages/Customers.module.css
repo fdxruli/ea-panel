@@ -1174,10 +1174,780 @@
 }
 
 .addressMapContainer {
-  height: 150px; /* Ajusta la altura como necesites */
+  height: 150px;
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
-  margin-top: 0.5rem; /* Espacio opcional arriba */
+  margin-top: 0.5rem;
   border: 1px solid var(--border-color);
 }
+
+
+/* ==================== KPIs CONTAINER ==================== */
+.kpisContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kpiCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.kpiIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.kpiIconBlue {
+  background: rgba(52, 152, 219, 0.12);
+  color: #3498db;
+}
+
+.kpiIconGreen {
+  background: rgba(46, 204, 113, 0.12);
+  color: #2ecc71;
+}
+
+.kpiIconGold {
+  background: rgba(241, 196, 15, 0.15);
+  color: #d4ac0d;
+}
+
+.kpiIconOrange {
+  background: rgba(230, 126, 34, 0.15);
+  color: #e67e22;
+}
+
+.kpiInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kpiTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 2px 0;
+}
+
+.kpiValue {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kpiSubtitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+/* ==================== CONTROLS BAR ==================== */
+.controlsBar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.searchAndSortRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .searchAndSortRow {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.searchWrapper {
+  flex: 1;
+  position: relative;
+}
+
+.sortWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sortLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.sortSelect {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sortSelect:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(229, 115, 115, 0.2);
+}
+
+/* ==================== SEGMENT PILLS ==================== */
+.segmentPills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.segmentPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.segmentPill:hover {
+  border-color: var(--color-primary);
+  color: var(--text-primary);
+}
+
+.segmentPillActive {
+  background: var(--color-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 2px 6px rgba(229, 115, 115, 0.3);
+}
+
+.pillBadge {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+[data-theme="dark"] .pillBadge {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.segmentPillActive .pillBadge {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* ==================== SEGMENT BADGES ==================== */
+.segmentBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.badgeVip {
+  background: rgba(241, 196, 15, 0.15);
+  color: #b7950b;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+[data-theme="dark"] .badgeVip {
+  color: #f4d03f;
+}
+
+.badgeFrecuente {
+  background: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.badgeEnRiesgo {
+  background: rgba(231, 76, 60, 0.15);
+  color: #c0392b;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+[data-theme="dark"] .badgeEnRiesgo {
+  color: #e74c3c;
+}
+
+.badgeNuevo {
+  background: rgba(52, 152, 219, 0.15);
+  color: #2980b9;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.badgeInactivo {
+  background: rgba(149, 165, 166, 0.15);
+  color: #7f8c8d;
+  border: 1px solid rgba(149, 165, 166, 0.3);
+}
+
+.cardHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.lastOrderDate {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resultsSummary {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 600px) {
+  .resultsSummary {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exportButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(229, 115, 115, 0.08);
+}
+
+.viewToggle {
+  display: inline-flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.viewToggleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewToggleButton:hover {
+  color: var(--text-primary);
+}
+
+.viewToggleButtonActive {
+  background: var(--color-primary);
+  color: #ffffff !important;
+  box-shadow: 0 1px 4px var(--shadow-color);
+}
+
+/* ==================== CRM TABLE ==================== */
+.tableResponsive {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px var(--shadow-color);
+  -webkit-overflow-scrolling: touch;
+}
+
+.customerTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.customerTable th {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+}
+
+[data-theme="dark"] .customerTable th {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sortableTh {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.sortableTh:hover {
+  color: var(--color-primary);
+}
+
+.customerTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.tableRow {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.tableRow:hover {
+  background-color: rgba(229, 115, 115, 0.06);
+}
+
+[data-theme="dark"] .tableRow:hover {
+  background-color: rgba(77, 182, 172, 0.08);
+}
+
+.tableClientInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tableAvatar {
+  width: 34px;
+  height: 34px;
+  background: var(--color-primary);
+  color: var(--text-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tableClientName {
+  display: block;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.tableClientPhone {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.totalSpentCell {
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.textRight {
+  text-align: right;
+}
+
+.textCenter {
+  text-align: center;
+}
+
+.fontBold {
+  font-weight: 700;
+}
+
+.textMuted {
+  color: var(--text-secondary);
+}
+
+.viewDetailButton {
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewDetailButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(229, 115, 115, 0.08);
+}
+
+/* ===== CRM ACCIONES RÁPIDAS (PASO 5) ===== */
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.cardQuickContact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardMainActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionIconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.actionWhatsApp {
+  background: rgba(37, 211, 102, 0.12);
+  color: #25d366;
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+.actionWhatsApp:hover {
+  background: #25d366;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.actionCall {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.actionCall:hover {
+  background: #3b82f6;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.actionNewOrderButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionNewOrderButton:hover {
+  background: #f59e0b;
+  color: #111827;
+  transform: translateY(-1px);
+}
+
+.tableActionsCell {
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.tableActionGroup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tableIconAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  padding: 0;
+}
+
+.actionOrder {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.actionOrder:hover {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.modalHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .modalHeaderActions {
+    width: auto;
+  }
+}
+
+/* ===== FICHA 360° DEL CLIENTE (PASO 6) ===== */
+.metrics360Container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.metric360Item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metric360Label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.metric360Value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+}
+
+.metricHighlight {
+  color: var(--color-primary);
+}
+
+.metric360Date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.metric360Sub {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.metric360BadgeWrap {
+  margin-top: 2px;
+}
+
+/* --- PRODUCTOS FAVORITOS --- */
+.favoritesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.favoriteCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+.favoriteCard:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.favoriteRank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  font-weight: 800;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.favoriteDetails {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.favoriteName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.favoriteStats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.favoriteQty {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.bulletSeparator {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.favoriteSpent {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.emptyFavorites {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  text-align: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.emptyFavorites p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+
+

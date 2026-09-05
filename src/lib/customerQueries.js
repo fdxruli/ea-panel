@@ -108,3 +108,77 @@ export const fetchCustomerAddresses = async (customerId) => {
     .eq('customer_id', customerId)
     .order('is_default', { ascending: false });
 };
+
+/**
+ * Obtiene el directorio de clientes con stats, ordenamiento en servidor y segmentación.
+ * @param {Object} options
+ * @param {string} [options.search]
+ * @param {string} [options.sortBy] - 'spent_desc' | 'orders_desc' | 'last_order_desc' | 'created_desc' | 'name_asc'
+ * @param {string} [options.segment] - 'all' | 'vip' | 'frecuente' | 'en_riesgo' | 'nuevo' | 'inactivo'
+ * @param {number} [options.limit=50]
+ * @param {number} [options.offset=0]
+ * @returns {Promise<{customers: Array, totalCount: number}>}
+ */
+export const fetchCustomerDirectory = async ({
+  search = '',
+  sortBy = 'spent_desc',
+  segment = 'all',
+  limit = 50,
+  offset = 0
+} = {}) => {
+  const { data, error } = await supabase.rpc('get_admin_customers_directory', {
+    p_search: search.trim() || null,
+    p_sort_by: sortBy,
+    p_segment: segment,
+    p_limit: limit,
+    p_offset: offset
+  });
+
+  if (error) {
+    console.error('[customerQueries] Error en fetchCustomerDirectory:', error);
+    throw error;
+  }
+
+  const customers = (data || []).map(c => ({
+    ...c,
+    totalOrders: Number(c.total_orders || 0),
+    completedOrders: Number(c.completed_orders || 0),
+    totalSpent: Number(c.total_spent || 0),
+    avgTicket: Number(c.avg_ticket || 0)
+  }));
+  const totalCount = customers.length > 0 ? Number(customers[0].total_count) : 0;
+
+  return { customers, totalCount };
+};
+
+/**
+ * Obtiene los KPIs globales reales de clientes de todo el negocio.
+ * @returns {Promise<Object>}
+ */
+export const fetchCustomerGlobalKPIs = async () => {
+  const { data, error } = await supabase.rpc('get_admin_customer_kpis');
+  if (error) {
+    console.error('[customerQueries] Error en fetchCustomerGlobalKPIs:', error);
+    throw error;
+  }
+  return data || {};
+};
+
+/**
+ * Obtiene los productos favoritos / más pedidos de un cliente.
+ * @param {string} customerId
+ * @param {number} [limit=5]
+ * @returns {Promise<Array>}
+ */
+export const fetchCustomerFavoriteProducts = async (customerId, limit = 5) => {
+  if (!customerId) return [];
+  const { data, error } = await supabase.rpc('get_customer_favorite_products', {
+    p_customer_id: customerId,
+    p_limit: limit
+  });
+  if (error) {
+    console.error('[customerQueries] Error en fetchCustomerFavoriteProducts:', error);
+    throw error;
+  }
+  return data || [];
+};
