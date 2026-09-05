@@ -117,12 +117,14 @@ export const ProductProvider = ({ children }) => {
         return normalizedCatalog;
     }, []);
 
-    const persistBaseCatalogCache = useCallback(async (catalog) => {
+    const persistBaseCatalogCache = useCallback(async (catalog, currentCustomerId) => {
+        const prodKey = `${CACHE_KEYS.PRODUCTS}-${currentCustomerId || 'public'}`;
+        const basicKey = `${CACHE_KEYS.PRODUCTS_BASIC}-${currentCustomerId || 'public'}`;
         // Solo sobrescribimos la cache cuando Supabase respondio correctamente.
         await Promise.all([
             setAsyncCache(
                 {
-                    key: CACHE_KEYS.PRODUCTS,
+                    key: prodKey,
                     scope: CLIENT_CACHE_SCOPE,
                     ttl: CACHE_TTL.PRODUCTS,
                 },
@@ -130,7 +132,7 @@ export const ProductProvider = ({ children }) => {
             ),
             setAsyncCache(
                 {
-                    key: CACHE_KEYS.PRODUCTS_BASIC,
+                    key: basicKey,
                     scope: CLIENT_CACHE_SCOPE,
                     ttl: CACHE_TTL.PRODUCTS,
                 },
@@ -139,7 +141,7 @@ export const ProductProvider = ({ children }) => {
         ]);
     }, []);
 
-    const fetchBaseProductsAndCategories = useCallback(async ({ background = false } = {}) => {
+    const fetchBaseProductsAndCategories = useCallback(async ({ background = false, currentCustomerId = customerId } = {}) => {
         const requestSequence = ++baseFetchSequenceRef.current;
 
         if (!background && isMountedRef.current) {
@@ -149,18 +151,27 @@ export const ProductProvider = ({ children }) => {
         try {
             let productsData = [];
             const [productsRpcRes, categoriesRes] = await Promise.all([
-                supabase.rpc('get_active_menu_products'),
+                supabase.rpc('get_active_menu_products', { p_customer_id: currentCustomerId || null }),
                 supabase.from('categories').select('*'),
             ]);
 
             if (productsRpcRes.error) {
                 console.warn('[ProductContext] RPC get_active_menu_products falló, usando fallback:', productsRpcRes.error);
-                const fallbackRes = await supabase
+                let fallbackQuery = supabase
                     .from('products')
                     .select(PRODUCTS_WITH_IMAGES_SELECT)
                     .eq('is_active', true);
+                if (currentCustomerId) {
+                    fallbackQuery = fallbackQuery.or(`target_customer_ids.is.null,target_customer_ids.cs.{"${currentCustomerId}"}`);
+                } else {
+                    fallbackQuery = fallbackQuery.is('target_customer_ids', null);
+                }
+                const fallbackRes = await fallbackQuery;
                 if (fallbackRes.error) throw fallbackRes.error;
-                productsData = fallbackRes.data || [];
+                productsData = (fallbackRes.data || []).map(p => ({
+                    ...p,
+                    is_exclusive: Boolean(p.target_customer_ids && p.target_customer_ids.length > 0)
+                }));
             } else {
                 productsData = productsRpcRes.data || [];
             }
@@ -181,7 +192,7 @@ export const ProductProvider = ({ children }) => {
                 setError(null);
             }
 
-            await persistBaseCatalogCache(nextCatalog);
+            await persistBaseCatalogCache(nextCatalog, currentCustomerId);
             return nextCatalog;
         } catch (err) {
             console.error('Error fetching base data:', err);
@@ -200,7 +211,7 @@ export const ProductProvider = ({ children }) => {
                 setLoadingProducts(false);
             }
         }
-    }, [applyBaseCatalog, persistBaseCatalogCache]);
+    }, [customerId, applyBaseCatalog, persistBaseCatalogCache]);
 
     const fetchSpecialPrices = useCallback(async (currentCustomerId, { background = false } = {}) => {
         const requestSequence = ++pricesFetchSequenceRef.current;
@@ -276,9 +287,9 @@ export const ProductProvider = ({ children }) => {
         baseRealtimeTimerRef.current = window.setTimeout(() => {
             baseRealtimeTimerRef.current = null;
             scheduleAlert(baseAlertTimerRef, 'El menu se ha actualizado!', 'info', 0);
-            fetchBaseProductsAndCategories({ background: true }).catch(() => { });
+            fetchBaseProductsAndCategories({ background: true, currentCustomerId: customerId }).catch(() => { });
         }, BASE_ALERT_DELAY_MS);
-    }, [fetchBaseProductsAndCategories, scheduleAlert]);
+    }, [customerId, fetchBaseProductsAndCategories, scheduleAlert]);
 
     useEffect(() => {
         const baseChannel = supabase.channel('public:products_categories');
@@ -314,9 +325,10 @@ export const ProductProvider = ({ children }) => {
 
     useEffect(() => {
         let cancelled = false;
+        const catalogCacheKey = `${CACHE_KEYS.PRODUCTS}-${customerId || 'public'}`;
 
         const initBaseCatalog = async () => {
-            const { data: cachedCatalog } = await getAsyncCache(CACHE_KEYS.PRODUCTS);
+            const { data: cachedCatalog } = await getAsyncCache(catalogCacheKey);
 
             if (cancelled || !isMountedRef.current) return;
 
@@ -325,12 +337,12 @@ export const ProductProvider = ({ children }) => {
                 setLoadingProducts(false);
 
                 // Con SWR mostramos cache de inmediato y SIEMPRE revalidamos en segundo plano
-                fetchBaseProductsAndCategories({ background: true }).catch(() => { });
+                fetchBaseProductsAndCategories({ background: true, currentCustomerId: customerId }).catch(() => { });
                 return;
             }
 
             setLoadingProducts(true);
-            fetchBaseProductsAndCategories().catch(() => { });
+            fetchBaseProductsAndCategories({ currentCustomerId: customerId }).catch(() => { });
         };
 
         initBaseCatalog();
@@ -338,7 +350,7 @@ export const ProductProvider = ({ children }) => {
         return () => {
             cancelled = true;
         };
-    }, [applyBaseCatalog, fetchBaseProductsAndCategories]);
+    }, [customerId, applyBaseCatalog, fetchBaseProductsAndCategories]);
 
     useEffect(() => {
         if (loadingProducts) return undefined;
@@ -383,7 +395,7 @@ export const ProductProvider = ({ children }) => {
     useEffect(() => {
         const reconcileOnFocus = () => {
             if (document.visibilityState !== 'visible' || !isMountedRef.current) return;
-            fetchBaseProductsAndCategories({ background: true }).catch(() => { });
+            fetchBaseProductsAndCategories({ background: true, currentCustomerId: customerId }).catch(() => { });
             fetchSpecialPrices(customerId, { background: true }).catch(() => { });
         };
 
@@ -517,7 +529,7 @@ export const ProductProvider = ({ children }) => {
 
     const refetch = useCallback(() => {
         setError(null);
-        fetchBaseProductsAndCategories({ background: false }).catch(() => { });
+        fetchBaseProductsAndCategories({ background: false, currentCustomerId: customerId }).catch(() => { });
         fetchSpecialPrices(customerId, { background: false }).catch(() => { });
     }, [fetchBaseProductsAndCategories, fetchSpecialPrices, customerId]);
 

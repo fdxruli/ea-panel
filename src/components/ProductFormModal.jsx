@@ -1,22 +1,33 @@
-/* src/components/ProductFormModal.jsx (ACTUALIZADO CON PESTAÑA DE RECETA) */
-import React, { useEffect, useState, memo, useMemo, useCallback } from "react";
+/* src/components/ProductFormModal.jsx (ACTUALIZADO CON PESTAÑAS DE RECETA Y AUDIENCIA) */
+import React, { useEffect, useState, memo, useMemo, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useAlert } from "../context/AlertContext";
 import DOMPurify from 'dompurify';
 import imageCompression from "browser-image-compression";
-import styles from "../pages/Products.module.css"; // Sigue usando el CSS de Products
-import LoadingSpinner from "./LoadingSpinner"; // Usaremos un spinner
+import styles from "../pages/Products.module.css";
+import LoadingSpinner from "./LoadingSpinner";
+import { useCustomersBasicCache } from "../hooks/useCustomersBasicCache";
+import { Globe, Sparkles, Search, X, UserCheck, Users, Lock } from "lucide-react";
 
 // --- Iconos para la Receta ---
-const AddIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const DeleteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-// ---
+const AddIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+const DeleteIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  </svg>
+);
 
 const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: initialProduct }) => {
     const { showAlert } = useAlert();
 
     // --- Pestaña activa ---
-    const [activeTab, setActiveTab] = useState('info'); // 'info' o 'recipe'
+    const [activeTab, setActiveTab] = useState('info'); // 'info' | 'recipe' | 'audience'
 
     // --- Estado del formulario principal ---
     const [formData, setFormData] = useState({ name: "", description: "", price: "", cost: "0", category_id: "", image_url: "" });
@@ -25,11 +36,20 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
-    // --- NUEVO ESTADO PARA RECETAS ---
-    const [trackStock, setTrackStock] = useState(false); // El toggle principal
-    const [recipeItems, setRecipeItems] = useState([]); // Los ingredientes de la receta
-    const [allIngredients, setAllIngredients] = useState([]); // Lista de ingredientes de la BD
+    // --- ESTADO PARA RECETAS ---
+    const [trackStock, setTrackStock] = useState(false);
+    const [recipeItems, setRecipeItems] = useState([]);
+    const [allIngredients, setAllIngredients] = useState([]);
     const [loadingRecipe, setLoadingRecipe] = useState(false);
+
+    // --- ESTADO PARA AUDIENCIA Y VISIBILIDAD ---
+    const { data: customersData, isLoading: loadingCustomers } = useCustomersBasicCache();
+    const allCustomers = useMemo(() => customersData || [], [customersData]);
+    const [audienceType, setAudienceType] = useState('public'); // 'public' | 'special'
+    const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
+    const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+    const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+    const customerSearchContainerRef = useRef(null);
 
     // Cargar todos los ingredientes disponibles para el dropdown
     const fetchAllIngredients = async () => {
@@ -44,7 +64,6 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     // Cargar la receta existente de un producto cuando se abre el modal
     const fetchExistingRecipe = async (productId) => {
       setLoadingRecipe(true);
-      // Hacemos un JOIN para obtener el nombre, costo y unidad del ingrediente
       const { data, error } = await supabase
         .from('product_recipes')
         .select(`
@@ -62,9 +81,9 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           ingredient_id: item.ingredient_id,
           quantity_used: item.quantity_used,
           deduct_stock_automatically: item.deduct_stock_automatically,
-          name: item.ingredients.name,
-          base_unit: item.ingredients.base_unit,
-          cost_per_unit: item.ingredients.average_cost
+          name: item.ingredients?.name || 'Ingrediente',
+          base_unit: item.ingredients?.base_unit || 'pza',
+          cost_per_unit: item.ingredients?.average_cost || 0
         }));
         setRecipeItems(formattedRecipe);
       }
@@ -74,10 +93,8 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     // --- Lógica de Costo y Ganancia ---
     const calculatedCost = useMemo(() => {
       if (!trackStock) {
-        // Si no se rastrea, el costo es el manual
         return parseFloat(formData.cost) || 0;
       }
-      // Si se rastrea, se calcula de la receta
       return recipeItems.reduce((sum, item) => {
         return sum + (item.cost_per_unit * item.quantity_used);
       }, 0);
@@ -101,12 +118,22 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 setPreviewImage(productData.image_url);
 
                 // 2. Poblar formulario de Receta
-                setTrackStock(initialProduct.track_stock || false);
+                setTrackStock(Boolean(initialProduct.track_stock));
                 if (initialProduct.track_stock) {
                   fetchExistingRecipe(initialProduct.id);
                 } else {
-                  setRecipeItems([]); // Limpiar receta si no se rastrea
+                  setRecipeItems([]);
                 }
+
+                // 3. Poblar formulario de Audiencia
+                const hasSpecial = Boolean(
+                  initialProduct.target_customer_ids &&
+                  initialProduct.target_customer_ids.length > 0
+                );
+                setAudienceType(hasSpecial ? 'special' : 'public');
+                setSelectedCustomerIds(hasSpecial ? [...initialProduct.target_customer_ids] : []);
+                setCustomerSearchQuery('');
+                setIsCustomerDropdownOpen(false);
             } else {
                 // Resetear todo para un producto nuevo
                 setFormData({ name: "", description: "", price: "", cost: "0", category_id: "", image_url: "" });
@@ -114,16 +141,65 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 setPreviewImage(null);
                 setTrackStock(false);
                 setRecipeItems([]);
+                setAudienceType('public');
+                setSelectedCustomerIds([]);
+                setCustomerSearchQuery('');
+                setIsCustomerDropdownOpen(false);
             }
-            setActiveTab('info'); // Siempre empezar en la pestaña de info
+            setActiveTab('info');
             setUploadProgress(0);
         }
     }, [initialProduct, isOpen]);
 
+    // Cerrar dropdown de clientes al hacer clic fuera
+    useEffect(() => {
+      const handleClickOutside = (e) => {
+        if (customerSearchContainerRef.current && !customerSearchContainerRef.current.contains(e.target)) {
+          setIsCustomerDropdownOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // --- Handlers de Audiencia ---
+    const filteredCustomers = useMemo(() => {
+      if (!customerSearchQuery || customerSearchQuery.trim().length === 0) return [];
+      const query = customerSearchQuery.trim().toLowerCase();
+      return allCustomers
+        .filter((c) => {
+          if (selectedCustomerIds.includes(c.id)) return false;
+          const matchName = c.name && c.name.toLowerCase().includes(query);
+          const matchPhone = c.phone && c.phone.includes(query);
+          return matchName || matchPhone;
+        })
+        .slice(0, 10);
+    }, [allCustomers, customerSearchQuery, selectedCustomerIds]);
+
+    const selectedCustomersList = useMemo(() => {
+      const customerMap = new Map(allCustomers.map(c => [c.id, c]));
+      return selectedCustomerIds.map(id => {
+        const found = customerMap.get(id);
+        return found || { id, name: 'Cliente (' + id.slice(0, 8) + '...)', phone: '' };
+      });
+    }, [selectedCustomerIds, allCustomers]);
+
+    const handleAddCustomer = (customer) => {
+      if (!selectedCustomerIds.includes(customer.id)) {
+        setSelectedCustomerIds(prev => [...prev, customer.id]);
+      }
+      setCustomerSearchQuery('');
+      setIsCustomerDropdownOpen(false);
+    };
+
+    const handleRemoveCustomer = (customerId) => {
+      setSelectedCustomerIds(prev => prev.filter(id => id !== customerId));
+    };
+
     // --- Handlers del Formulario de Receta ---
     const handleAddIngredient = (ingredientId) => {
       if (!ingredientId || recipeItems.some(item => item.ingredient_id === ingredientId)) {
-        return; // No añadir si está vacío o ya existe
+        return;
       }
       const ing = allIngredients.find(i => i.id === ingredientId);
       if (ing) {
@@ -134,8 +210,8 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
             name: ing.name,
             base_unit: ing.base_unit,
             cost_per_unit: ing.average_cost,
-            quantity_used: 1, // Cantidad por defecto
-            deduct_stock_automatically: ing.track_inventory // Por defecto, si el ingrediente se rastrea, se descuenta
+            quantity_used: 1,
+            deduct_stock_automatically: ing.track_inventory
           }
         ]);
       }
@@ -154,7 +230,6 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
       setRecipeItems(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Ingredientes disponibles (que no están ya en la receta)
     const availableIngredients = useMemo(() => {
       const usedIds = new Set(recipeItems.map(item => item.ingredient_id));
       return allIngredients.filter(ing => !usedIds.has(ing.id));
@@ -167,7 +242,6 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     };
 
     const handleFileChange = async (e) => {
-      // (Lógica de compresión de imagen sin cambios)
       const file = e.target.files[0];
       if (!file) return;
       if (!file.type.startsWith('image/')) {
@@ -196,7 +270,6 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     };
 
     const uploadImageWithRetry = async (file, maxRetries = 3) => {
-      // (Lógica de subida de imagen sin cambios)
       const fileExt = 'webp';
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `products/${fileName}`;
@@ -242,6 +315,11 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           const confirm = window.confirm('Has marcado "Rastrear Stock" pero no has añadido ingredientes a la receta. El costo será $0. ¿Continuar?');
           if (!confirm) return;
         }
+        if (audienceType === 'special' && selectedCustomerIds.length === 0) {
+          showAlert('Has marcado "Clientes especiales" pero no has seleccionado ningún cliente. Selecciona al menos uno o elige "Público en general".', 'warning');
+          setActiveTab('audience');
+          return;
+        }
 
         setIsSubmitting(true);
         setUploadProgress(0);
@@ -253,27 +331,27 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 imageUrl = await uploadImageWithRetry(imageFile);
             }
 
-            // 3. Preparar datos del PRODUCTO
+            // 3. Preparar datos del PRODUCTO con Audiencia
             const productData = {
                 ...formData,
-                id: initialProduct?.id, // Asegurarse de incluir el ID si es una edición
+                id: initialProduct?.id,
                 name: DOMPurify.sanitize(formData.name.trim()),
                 description: DOMPurify.sanitize(formData.description.trim()),
                 price: price,
-                cost: calculatedCost, // ¡Usar el costo calculado!
+                cost: calculatedCost,
                 image_url: imageUrl,
-                track_stock: trackStock // ¡Guardar el estado del rastreo!
+                track_stock: trackStock,
+                target_customer_ids: audienceType === 'public' ? null : selectedCustomerIds
             };
 
             // 4. Preparar datos de la RECETA
             const recipeData = trackStock ? recipeItems.map(item => ({
-                // product_id se añadirá en el handler del padre
                 ingredient_id: item.ingredient_id,
                 quantity_used: Number(item.quantity_used) || 0,
                 deduct_stock_automatically: item.deduct_stock_automatically
-            })) : []; // Enviar array vacío si no se rastrea
+            })) : [];
 
-            // 5. Llamar a onSave con ambos paquetes de datos
+            // 5. Llamar a onSave
             await onSave({ productData, recipeData });
 
         } catch (error) {
@@ -308,14 +386,27 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                   >
                     Receta e Inventario
                   </button>
+                  <button
+                    type="button"
+                    className={`${styles.tabButton} ${activeTab === 'audience' ? styles.active : ''}`}
+                    onClick={() => setActiveTab('audience')}
+                  >
+                    Audiencia {audienceType === 'special' ? `(⭐ ${selectedCustomerIds.length})` : '(🌐 Público)'}
+                  </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.productForm}>
 
                     {/* --- CONTENIDO PESTAÑA 1: INFORMACIÓN --- */}
                     <div className={`${styles.tabContent} ${activeTab === 'info' ? styles.active : ''}`}>
-                        <div className={styles.formGroup}><label htmlFor="name">Nombre del Producto *</label><input id="name" name="name" className={styles.formInput} value={formData.name} onChange={handleChange} required maxLength={100} /></div>
-                        <div className={styles.formGroup}><label htmlFor="description">Descripción *</label><textarea id="description" name="description" className={styles.formTextarea} value={formData.description} onChange={handleChange} required maxLength={500} rows={4} /></div>
+                        <div className={styles.formGroup}>
+                          <label htmlFor="name">Nombre del Producto *</label>
+                          <input id="name" name="name" className={styles.formInput} value={formData.name} onChange={handleChange} required maxLength={100} />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label htmlFor="description">Descripción *</label>
+                          <textarea id="description" name="description" className={styles.formTextarea} value={formData.description} onChange={handleChange} required maxLength={500} rows={4} />
+                        </div>
 
                         <div className={styles.formGroup}>
                           <label htmlFor="category_id">Categoría *</label>
@@ -327,13 +418,24 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
 
                         <div className={styles.formGroup}>
                             <label>Imagen Principal</label>
-                            {/* (Lógica de subida de imagen sin cambios) */}
                             <div className={styles.fileInputWrapper}>
                                 <input id="mainImage" name="mainImage" type="file" accept="image/*" onChange={handleFileChange} className={styles.fileInput} disabled={isSubmitting} />
-                                <label htmlFor="mainImage" className={styles.fileInputLabel}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> {imageFile ? 'Cambiar imagen' : 'Seleccionar imagen'}</label>
+                                <label htmlFor="mainImage" className={styles.fileInputLabel}>
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                                  {imageFile ? 'Cambiar imagen' : 'Seleccionar imagen'}
+                                </label>
                             </div>
-                            {previewImage && (<div className={styles.previewContainer}><img src={previewImage} alt="Vista previa" className={styles.imagePreview} /></div>)}
-                            {uploadProgress > 0 && uploadProgress < 100 && (<div className={styles.progressBar}><div className={styles.progressFill} style={{ width: `${uploadProgress}%` }} /><span>{uploadProgress}%</span></div>)}
+                            {previewImage && (
+                              <div className={styles.previewContainer}>
+                                <img src={previewImage} alt="Vista previa" className={styles.imagePreview} />
+                              </div>
+                            )}
+                            {uploadProgress > 0 && uploadProgress < 100 && (
+                              <div className={styles.progressBar}>
+                                <div className={styles.progressFill} style={{ width: `${uploadProgress}%` }} />
+                                <span>{uploadProgress}%</span>
+                              </div>
+                            )}
                         </div>
                     </div>
 
@@ -414,7 +516,128 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                         )}
                     </div>
 
-                    {/* --- PRECIO Y COSTO (MOVIDOS FUERA DE LAS PESTAÑAS) --- */}
+                    {/* --- CONTENIDO PESTAÑA 3: AUDIENCIA Y VISIBILIDAD --- */}
+                    <div className={`${styles.tabContent} ${activeTab === 'audience' ? styles.active : ''}`}>
+                      <div className={styles.audienceTabSection}>
+                        <div className={styles.audienceRadioGrid}>
+                          {/* Opción 1: Público en general */}
+                          <div 
+                            className={`${styles.audienceRadioCard} ${audienceType === 'public' ? styles.audienceRadioCardActive : ''}`}
+                            onClick={() => setAudienceType('public')}
+                          >
+                            <div className={styles.audienceRadioTitle}>
+                              <Globe size={18} />
+                              Público en general
+                            </div>
+                            <p className={styles.audienceRadioDesc}>
+                              Visible y disponible para todos los clientes y visitantes anónimos del catálogo.
+                            </p>
+                          </div>
+
+                          {/* Opción 2: Clientes especiales */}
+                          <div 
+                            className={`${styles.audienceRadioCard} ${audienceType === 'special' ? styles.audienceRadioCardSpecialActive : ''}`}
+                            onClick={() => setAudienceType('special')}
+                          >
+                            <div className={styles.audienceRadioTitle}>
+                              <Sparkles size={18} />
+                              Clientes especiales
+                            </div>
+                            <p className={styles.audienceRadioDesc}>
+                              Solo visible para los clientes específicos seleccionados. Queda 100% oculto para los demás.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Selector de clientes cuando es especial */}
+                        {audienceType === 'special' && (
+                          <div className={styles.audienceSpecialPicker}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '0.9rem', color: '#c4b5fd' }}>
+                                Clientes Asignados ({selectedCustomerIds.length})
+                              </strong>
+                              {selectedCustomerIds.length > 0 && (
+                                <span style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
+                                  <Lock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                  Acceso Exclusivo
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Input de búsqueda predictiva */}
+                            <div className={styles.audienceSearchContainer} ref={customerSearchContainerRef}>
+                              <Search size={16} className={styles.audienceSearchIcon} />
+                              <input
+                                type="text"
+                                placeholder="Buscar cliente por nombre o teléfono..."
+                                value={customerSearchQuery}
+                                onChange={(e) => {
+                                  setCustomerSearchQuery(e.target.value);
+                                  setIsCustomerDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsCustomerDropdownOpen(true)}
+                                className={styles.audienceSearchInput}
+                              />
+
+                              {isCustomerDropdownOpen && customerSearchQuery.trim().length > 0 && (
+                                <div className={styles.audienceDropdown}>
+                                  {filteredCustomers.length > 0 ? (
+                                    filteredCustomers.map((customer) => (
+                                      <div
+                                        key={customer.id}
+                                        className={styles.audienceDropdownRow}
+                                        onClick={() => handleAddCustomer(customer)}
+                                      >
+                                        <div>
+                                          <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{customer.name}</div>
+                                          {customer.phone && (
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{customer.phone}</div>
+                                          )}
+                                        </div>
+                                        <span style={{ color: '#a78bfa', fontWeight: '600', fontSize: '0.8rem' }}>+ Agregar</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div style={{ padding: '0.8rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                      {loadingCustomers ? 'Cargando clientes...' : 'No se encontraron clientes'}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Chips de clientes seleccionados */}
+                            <div className={styles.audienceChipsBox}>
+                              {selectedCustomersList.length > 0 ? (
+                                selectedCustomersList.map((customer) => (
+                                  <div key={customer.id} className={styles.audienceChip}>
+                                    <UserCheck size={13} style={{ color: '#a78bfa' }} />
+                                    <span>{customer.name}</span>
+                                    {customer.phone && (
+                                      <span style={{ fontSize: '0.75rem', color: '#a78bfa' }}>({customer.phone})</span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveCustomer(customer.id)}
+                                      className={styles.audienceChipRemove}
+                                      title="Quitar cliente"
+                                    >
+                                      <X size={13} />
+                                    </button>
+                                  </div>
+                                ))
+                              ) : (
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '0.5rem 0' }}>
+                                  Usa el buscador arriba para seleccionar qué clientes tendrán acceso a este producto.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* --- PRECIO Y COSTO (FUERA DE LAS PESTAÑAS) --- */}
                     <div className={styles.pricingSection}>
                       <div className={styles.formGrid}>
                           <div className={styles.formGroup}>

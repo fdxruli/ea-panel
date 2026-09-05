@@ -209,7 +209,7 @@
     grid-template-rows: auto;
     grid-template-areas: 
         "edit images"
-        "toggle toggle";
+        "audience toggle";
     gap: 0.8rem;
 }
 .cardActions .toggleButton {
@@ -220,6 +220,9 @@
 }
 .cardActions .manageButton {
     grid-area: images;
+}
+.cardActions .audienceButton {
+    grid-area: audience;
 }
 
 .cardActions button {
@@ -1306,3 +1309,245 @@
   font-weight: 600;
   color: var(--text-secondary);
 }
+
+/* ==========================================================================
+   ESTILOS DE AUDIENCIA Y VISIBILIDAD DE PRODUCTOS
+   ========================================================================== */
+
+/* Badge flotante sobre la imagen en tarjetas */
+.cardAudienceBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(8px);
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.audiencePublic {
+  background-color: rgba(15, 23, 42, 0.75);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.audienceSpecial {
+  background-color: rgba(109, 40, 217, 0.85);
+  color: #f5f3ff;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+}
+
+/* Badge para vistas de tabla */
+.tableAudienceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tableAudiencePublic {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.tableAudienceSpecial {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* Botón de acción para audiencia en tarjeta */
+.audienceButton {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.audienceButton:hover {
+  border-color: #8b5cf6;
+  color: #a78bfa;
+  background-color: rgba(139, 92, 246, 0.08);
+}
+
+/* Formulario de producto: Pestaña de Audiencia */
+.audienceTabSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.audienceRadioGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.audienceRadioCard {
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  background-color: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.audienceRadioCard:hover {
+  border-color: var(--color-primary);
+}
+
+.audienceRadioCardActive {
+  border-color: var(--color-primary);
+  background-color: rgba(249, 115, 22, 0.06);
+}
+
+.audienceRadioCardSpecialActive {
+  border-color: #8b5cf6;
+  background-color: rgba(139, 92, 246, 0.08);
+}
+
+.audienceRadioTitle {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.audienceRadioCardActive .audienceRadioTitle svg {
+  color: var(--color-primary);
+}
+
+.audienceRadioCardSpecialActive .audienceRadioTitle svg {
+  color: #a78bfa;
+}
+
+.audienceRadioDesc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.audienceSpecialPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: var(--bg-primary);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 12px;
+}
+
+.audienceSearchContainer {
+  position: relative;
+}
+
+.audienceSearchInput {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.4rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.audienceSearchInput:focus {
+  border-color: #8b5cf6;
+}
+
+.audienceSearchIcon {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.audienceDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.audienceDropdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.15s;
+}
+
+.audienceDropdownRow:hover {
+  background-color: rgba(139, 92, 246, 0.15);
+}
+
+.audienceChipsBox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.audienceChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 20px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.audienceChipRemove {
+  background: transparent;
+  border: none;
+  color: #a78bfa;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.audienceChipRemove:hover {
+  color: #ef4444;
+}
+

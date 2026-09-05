@@ -24,6 +24,7 @@ import ProductDetailDrawer from "../components/ProductDetailDrawer";
 import ProductFormModal from "../components/ProductFormModal";
 import ManageImagesModal from "../components/ManageImagesModal";
 import ManageCategoriesModal from "../components/ManageCategoriesModal";
+import ProductAudienceModal from "../components/ProductAudienceModal";
 
 import { 
   Package, 
@@ -73,6 +74,7 @@ export default function Products() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
   const [menuMatrixFilter, setMenuMatrixFilter] = useState("all");
+  const [audienceFilter, setAudienceFilter] = useState("all"); // 'all' | 'public' | 'special'
   const [sortBy, setSortBy] = useState("sales_desc");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'table'
 
@@ -90,6 +92,8 @@ export default function Products() {
   const [drawerProduct, setDrawerProduct] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [audienceProduct, setAudienceProduct] = useState(null);
+  const [isAudienceModalOpen, setIsAudienceModalOpen] = useState(false);
   const [isFormModalOpen, setFormModalOpen] = useState(false);
   const [isImagesModalOpen, setImagesModalOpen] = useState(false);
   const [isCategoriesModalOpen, setCategoriesModalOpen] = useState(false);
@@ -124,6 +128,7 @@ export default function Products() {
         status: statusFilter,
         stockStatus: stockStatusFilter,
         menuMatrix: menuMatrixFilter,
+        audience: audienceFilter,
         sortBy,
         limit,
         offset
@@ -158,6 +163,7 @@ export default function Products() {
     statusFilter,
     stockStatusFilter,
     menuMatrixFilter,
+    audienceFilter,
     sortBy,
     currentPage,
     limit,
@@ -178,7 +184,7 @@ export default function Products() {
   // Reset a página 1 al cambiar filtros de búsqueda o categoría
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, selectedCategory, statusFilter, stockStatusFilter, menuMatrixFilter, sortBy]);
+  }, [debouncedSearchTerm, selectedCategory, statusFilter, stockStatusFilter, menuMatrixFilter, audienceFilter, sortBy]);
 
   // Suscripción Realtime a tablas clave
   useEffect(() => {
@@ -327,6 +333,25 @@ export default function Products() {
     setSelectedProduct(prod);
     setImagesModalOpen(true);
   }, []);
+
+  const openAudienceModal = useCallback((prod) => {
+    setAudienceProduct(prod);
+    setIsAudienceModalOpen(true);
+  }, []);
+
+  const handleAudienceUpdated = useCallback((savedData) => {
+    invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+    invalidate(/^admin:products:dir:/);
+    loadDirectory(true);
+    if (drawerProduct && drawerProduct.id === savedData?.productId) {
+      setDrawerProduct(prev => prev ? {
+        ...prev,
+        target_customer_ids: savedData.targetCustomerIds,
+        target_customers_count: savedData.targetCustomerIds?.length || 0,
+        is_exclusive: (savedData.targetCustomerIds?.length || 0) > 0
+      } : null);
+    }
+  }, [invalidate, loadDirectory, drawerProduct]);
 
   const openDrawer = useCallback((prod) => {
     setDrawerProduct(prod);
@@ -506,6 +531,18 @@ export default function Products() {
               <option value="untracked">⚪ Sin Receta</option>
             </select>
 
+            {/* Audiencia / Visibilidad */}
+            <select
+              value={audienceFilter}
+              onChange={(e) => setAudienceFilter(e.target.value)}
+              className={styles.selectFilter}
+              aria-label="Filtrar por audiencia"
+            >
+              <option value="all">👥 Toda la audiencia</option>
+              <option value="public">🌐 Público General</option>
+              <option value="special">🔒 Clientes Especiales</option>
+            </select>
+
             {/* Ordenamiento */}
             <select
               value={sortBy}
@@ -604,6 +641,7 @@ export default function Products() {
               onToggle={toggleActive}
               onEdit={openFormModal}
               onManageImages={openImagesModal}
+              onManageAudience={openAudienceModal}
               onSelect={openDrawer}
             />
           ))}
@@ -615,6 +653,7 @@ export default function Products() {
           onSelect={openDrawer}
           onEdit={openFormModal}
           onManageImages={openImagesModal}
+          onManageAudience={openAudienceModal}
           onToggle={toggleActive}
         />
       )}
@@ -657,8 +696,20 @@ export default function Products() {
         }}
         onEdit={openFormModal}
         onManageImages={openImagesModal}
+        onManageAudience={openAudienceModal}
         onToggleActive={toggleActive}
         canEdit={canEdit}
+      />
+
+      {/* MODAL RÁPIDO DE AUDIENCIA Y CLIENTES */}
+      <ProductAudienceModal
+        isOpen={isAudienceModalOpen}
+        onClose={() => {
+          setIsAudienceModalOpen(false);
+          setAudienceProduct(null);
+        }}
+        product={audienceProduct}
+        onAudienceUpdated={handleAudienceUpdated}
       />
 
       {/* MODALES TRADICIONALES: EDICIÓN, IMÁGENES Y CATEGORÍAS */}

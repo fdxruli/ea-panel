@@ -17,7 +17,8 @@ import {
   Clock, 
   Edit3, 
   Image as ImageIcon,
-  Power
+  Power,
+  Globe
 } from 'lucide-react';
 import ImageWithFallback from './ImageWithFallback';
 
@@ -63,6 +64,7 @@ export default memo(function ProductDetailDrawer({
   onClose, 
   onEdit, 
   onManageImages, 
+  onManageAudience,
   onToggleActive,
   canEdit = true
 }) {
@@ -130,6 +132,15 @@ export default memo(function ProductDetailDrawer({
               <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
                 {product.category_name || 'Sin categoría'}
               </span>
+              {product.is_exclusive ? (
+                <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Users size={11} /> Clientes Especiales ({analyticsData?.assigned_customers?.length || product.target_customers_count || 0})
+                </span>
+              ) : (
+                <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Globe size={11} /> Público General
+                </span>
+              )}
               {initialProduct?.menu_matrix_class && renderMatrixBadge(initialProduct.menu_matrix_class)}
               {initialProduct?.stock_status && renderStockBadge(initialProduct.stock_status, initialProduct.max_preparable)}
             </div>
@@ -216,6 +227,70 @@ export default memo(function ProductDetailDrawer({
                         {marginPercent}%
                       </strong>
                     </div>
+                  </div>
+
+                  {/* Audiencia y Control de Acceso Card */}
+                  <div className={styles.financialCard} style={{ marginTop: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {product.is_exclusive ? <Users size={16} color="#8b5cf6" /> : <Globe size={16} color="#10b981" />}
+                        Audiencia y Visibilidad
+                      </div>
+                      {canEdit && (
+                        <button
+                          onClick={() => onManageAudience && onManageAudience(product)}
+                          style={{
+                            background: 'rgba(139, 92, 246, 0.12)',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            color: '#8b5cf6',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Configurar
+                        </button>
+                      )}
+                    </div>
+                    {product.is_exclusive ? (
+                      <div>
+                        <p style={{ fontSize: '13px', color: '#c4b5fd', margin: '0 0 8px 0' }}>
+                          🔒 <strong>Acceso Exclusivo:</strong> Este producto solo es visible en el menú digital para los clientes asignados.
+                        </p>
+                        {analyticsData?.assigned_customers && analyticsData.assigned_customers.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                            {analyticsData.assigned_customers.map((c) => (
+                              <span
+                                key={c.id}
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '16px',
+                                  fontSize: '12px',
+                                  background: 'rgba(139, 92, 246, 0.15)',
+                                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                                  color: 'var(--text-primary)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                👤 {c.name} {c.phone ? `(${c.phone})` : ''}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <small style={{ color: 'var(--text-secondary)' }}>
+                            No hay clientes asignados actualmente. El producto estará oculto hasta que selecciones clientes.
+                          </small>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        🌐 <strong>Público en General:</strong> Visible para todos los comensales y visitantes en el menú digital.
+                      </div>
+                    )}
                   </div>
 
                   {/* High Level Sales Metrics */}
@@ -416,6 +491,12 @@ export default memo(function ProductDetailDrawer({
               onClick={() => onManageImages(product)}
             >
               <ImageIcon size={16} /> Galería
+            </button>
+            <button 
+              className={styles.footerButton} 
+              onClick={() => onManageAudience && onManageAudience(product)}
+            >
+              <Users size={16} /> Audiencia
             </button>
             <button 
               className={styles.footerButton} 
