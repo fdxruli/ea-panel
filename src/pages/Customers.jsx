@@ -1,6 +1,7 @@
 /* src/pages/Customers.jsx (Refactorizado con Fase 2) */
 
 import React, { useEffect, useState, useCallback, useMemo, memo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 import styles from "./Customers.module.css";
@@ -13,10 +14,14 @@ import ClientOnly from "../components/ClientOnly";
 // --- (PASO A) AÑADIR IMPORTS ---
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { generateKey } from '../utils/cacheAdminUtils';
-import { fetchCustomerStatsBatch } from '../lib/customerQueries';
-import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
+import { fetchCustomerDirectory, fetchCustomerGlobalKPIs, fetchCustomerFavoriteProducts } from '../lib/customerQueries';
+import { subscribeToTables } from '../lib/sharedAdminRealtime';
+import { exportToCSV } from '../utils/exportUtils';
 // --- FIN PASO A ---
-import { CircleCheck, Gift, Info, Star, Trash2, X } from 'lucide-react';
+import { CircleCheck, Gift, Info, Star, Trash2, X, Users, DollarSign, TrendingUp, AlertTriangle, ArrowUpDown, Crown, ShoppingBag, Clock, LayoutGrid, Table as TableIcon, Download, Phone, MessageCircle, Package, Repeat, Sparkles } from 'lucide-react';
+
+
+
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
 const UserIcon = memo(() => (<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>));
@@ -187,62 +192,375 @@ const OrderHistory = memo(({ customerId, loadCustomerOrders }) => { // <-- Props
 });
 OrderHistory.displayName = 'OrderHistory';
 
-// ==================== COMPONENTE: CUSTOMER CARD (Actualizado) ====================
+// ==================== COMPONENTE: PRODUCTOS FAVORITOS (CRM 360) ====================
+const CustomerFavoriteProducts = memo(({ customerId }) => {
+  const { getCached, setCached } = useCacheAdmin();
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-const CustomerCard = memo(({ customer, onSelect }) => {
-  // Los stats (totalOrders, completedOrders, totalSpent)
-  // ahora vienen pre-calculados en el objeto 'customer'
+  useEffect(() => {
+    let isMounted = true;
+    const loadFavs = async () => {
+      if (!customerId) return;
+      const cacheKey = generateKey('customer_favorites', { customer_id: customerId });
+      const cached = getCached(cacheKey);
+      if (cached && !cached.isExpired) {
+        setFavorites(cached.data || []);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await fetchCustomerFavoriteProducts(customerId, 6);
+        if (isMounted) {
+          setFavorites(data || []);
+          setCached(cacheKey, data || [], 5 * 60 * 1000);
+        }
+      } catch (err) {
+        console.error('[CustomerFavoriteProducts] Error cargando productos favoritos:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    loadFavs();
+    return () => {
+      isMounted = false;
+    };
+  }, [customerId, getCached, setCached]);
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (favorites.length === 0) {
+    return (
+      <div className={styles.emptyFavorites}>
+        <ShoppingBag size={22} className={styles.textMuted} />
+        <p>Aún no hay compras completadas suficientes para calcular productos favoritos.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.favoritesGrid}>
+      {favorites.map((fav, index) => (
+        <div key={fav.product_id || index} className={styles.favoriteCard}>
+          <div className={styles.favoriteRank}>#{index + 1}</div>
+          <div className={styles.favoriteDetails}>
+            <span className={styles.favoriteName}>{fav.product_name}</span>
+            <div className={styles.favoriteStats}>
+              <span className={styles.favoriteQty}>
+                <Package size={13} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
+                {fav.total_qty} {fav.total_qty === 1 ? 'ud.' : 'uds.'}
+              </span>
+              <span className={styles.bulletSeparator}>•</span>
+              <span className={styles.favoriteSpent}>${Number(fav.total_spent || 0).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+});
+CustomerFavoriteProducts.displayName = 'CustomerFavoriteProducts';
+
+const renderSegmentBadge = (segment) => {
+  switch (segment) {
+    case 'VIP':
+      return (
+        <span className={`${styles.segmentBadge} ${styles.badgeVip}`}>
+          <Crown size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> VIP
+        </span>
+      );
+    case 'Frecuente':
+      return (
+        <span className={`${styles.segmentBadge} ${styles.badgeFrecuente}`}>
+          <Repeat size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> Frecuente
+        </span>
+      );
+    case 'En Riesgo':
+      return (
+        <span className={`${styles.segmentBadge} ${styles.badgeEnRiesgo}`}>
+          <AlertTriangle size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> En Riesgo
+        </span>
+      );
+    case 'Nuevo':
+      return (
+        <span className={`${styles.segmentBadge} ${styles.badgeNuevo}`}>
+          <Sparkles size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> Nuevo
+        </span>
+      );
+    default:
+      return (
+        <span className={`${styles.segmentBadge} ${styles.badgeInactivo}`}>
+          <Clock size={12} style={{ verticalAlign: 'middle', marginRight: '3px' }} /> Inactivo
+        </span>
+      );
+  }
+};
+
+// ==================== HELPER DE ACCIONES RÁPIDAS (CRM) ====================
+const getWhatsAppUrl = (phone, name = '') => {
+  if (!phone) return null;
+  const clean = phone.replace(/\D/g, '');
+  if (!clean) return null;
+  const fullPhone = clean.length === 10 ? `52${clean}` : clean;
+  const text = name ? `Hola ${name}, te contactamos de El Amigo:` : 'Hola, te contactamos de El Amigo:';
+  return `https://wa.me/${fullPhone}?text=${encodeURIComponent(text)}`;
+};
+
+const getTelUrl = (phone) => {
+  if (!phone) return null;
+  return `tel:${phone.replace(/\s+/g, '')}`;
+};
+
+const CustomerCard = memo(({ customer, onSelect, onCreateOrder, canCreateOrder }) => {
   const stats = {
     totalOrders: customer.totalOrders || 0,
     completedOrders: customer.completedOrders || 0,
-    totalSpent: customer.totalSpent || 0
+    totalSpent: customer.totalSpent || 0,
+    avgTicket: customer.avgTicket || (customer.completedOrders > 0 ? (customer.totalSpent / customer.completedOrders) : 0)
   };
+
+  const formattedLastOrder = useMemo(() => {
+    if (!customer.last_order_date) return null;
+    try {
+      return new Date(customer.last_order_date).toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return null;
+    }
+  }, [customer.last_order_date]);
+
+  const waUrl = useMemo(() => getWhatsAppUrl(customer.phone, customer.name), [customer.phone, customer.name]);
+  const telUrl = useMemo(() => getTelUrl(customer.phone), [customer.phone]);
 
   return (
     <div className={styles.customerCard} onClick={() => onSelect(customer)}>
-      <div className={styles.cardHeader}>
-        <div className={styles.customerIcon}>
-          <UserIcon />
+      <div className={styles.cardHeaderTop}>
+        <div className={styles.cardHeader} style={{ marginBottom: 0 }}>
+          <div className={styles.customerIcon}>
+            <UserIcon />
+          </div>
+          <div className={styles.customerInfo}>
+            <h3>{customer.name}</h3>
+            <p>{customer.phone}</p>
+          </div>
         </div>
-        <div className={styles.customerInfo}>
-          <h3>{customer.name}</h3>
-          <p>{customer.phone}</p>
-        </div>
+        {renderSegmentBadge(customer.customer_segment)}
       </div>
 
       <div className={styles.cardStats}>
         <div className={styles.statItem}>
-          <span className={styles.statValue}>{stats.totalOrders}</span>
+          <span className={styles.statValue}>{stats.completedOrders}</span>
           <span className={styles.statLabel}>Pedidos</span>
         </div>
         <div className={styles.statItem}>
-          <span className={styles.statValue}>{stats.completedOrders}</span>
-          <span className={styles.statLabel}>Completados</span>
+          <span className={styles.statValue}>${stats.totalSpent.toFixed(2)}</span>
+          <span className={styles.statLabel}>Total LTV</span>
         </div>
         <div className={styles.statItem}>
-          <span className={styles.statValue}>${stats.totalSpent.toFixed(2)}</span>
-          <span className={styles.statLabel}>Total</span>
+          <span className={styles.statValue}>${stats.avgTicket.toFixed(2)}</span>
+          <span className={styles.statLabel}>Promedio</span>
         </div>
       </div>
 
-      {customer.referral_code && (
-        <div className={styles.referralBadge}>
-          <Gift size={15} aria-hidden="true" /> Código: {customer.referral_code}
+      {formattedLastOrder && (
+        <div className={styles.lastOrderDate}>
+          <Clock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Última compra: {formattedLastOrder}
         </div>
       )}
+
+      {customer.referral_code && (
+        <div className={styles.referralBadge}>
+          <Gift size={14} aria-hidden="true" /> Código: {customer.referral_code}
+        </div>
+      )}
+
+      <div className={styles.cardActions} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.cardQuickContact}>
+          {waUrl && (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${styles.actionIconButton} ${styles.actionWhatsApp}`}
+              title="Enviar WhatsApp"
+            >
+              <MessageCircle size={15} />
+            </a>
+          )}
+          {telUrl && (
+            <a
+              href={telUrl}
+              className={`${styles.actionIconButton} ${styles.actionCall}`}
+              title={`Llamar a ${customer.name}`}
+            >
+              <Phone size={15} />
+            </a>
+          )}
+        </div>
+
+        <div className={styles.cardMainActions}>
+          {canCreateOrder && (
+            <button
+              type="button"
+              className={styles.actionNewOrderButton}
+              onClick={(e) => onCreateOrder(customer, e)}
+              title="Crear pedido para este cliente"
+            >
+              <ShoppingBag size={13} /> Pedido
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.viewDetailButton}
+            onClick={() => onSelect(customer)}
+            title="Ver ficha completa"
+          >
+            Ficha
+          </button>
+        </div>
+      </div>
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Comparación actualizada
   return (
     prevProps.customer.id === nextProps.customer.id &&
     prevProps.customer.totalOrders === nextProps.customer.totalOrders &&
-    prevProps.customer.name === nextProps.customer.name
+    prevProps.customer.totalSpent === nextProps.customer.totalSpent &&
+    prevProps.customer.name === nextProps.customer.name &&
+    prevProps.customer.phone === nextProps.customer.phone &&
+    prevProps.customer.customer_segment === nextProps.customer.customer_segment &&
+    prevProps.customer.last_order_date === nextProps.customer.last_order_date &&
+    prevProps.canCreateOrder === nextProps.canCreateOrder
   );
 });
 CustomerCard.displayName = 'CustomerCard';
 
+// ==================== COMPONENTE: CUSTOMER TABLE (CRM) ====================
+
+const CustomerTable = memo(({ customers, onSelect, onSort, currentSort, onCreateOrder, canCreateOrder }) => {
+  return (
+    <div className={styles.tableResponsive}>
+      <table className={styles.customerTable}>
+        <thead>
+          <tr>
+            <th onClick={() => onSort('name_asc')} className={styles.sortableTh}>
+              Cliente {currentSort === 'name_asc' ? '▲' : ''}
+            </th>
+            <th>Segmento</th>
+            <th onClick={() => onSort('orders_desc')} className={`${styles.sortableTh} ${styles.textRight}`}>
+              Pedidos {currentSort === 'orders_desc' ? '▼' : ''}
+            </th>
+            <th onClick={() => onSort('spent_desc')} className={`${styles.sortableTh} ${styles.textRight}`}>
+              Total LTV {currentSort === 'spent_desc' ? '▼' : ''}
+            </th>
+            <th className={styles.textRight}>Ticket Prom.</th>
+            <th onClick={() => onSort('last_order_desc')} className={styles.sortableTh}>
+              Última Compra {currentSort === 'last_order_desc' ? '▼' : ''}
+            </th>
+            <th className={styles.textCenter}>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {customers.map((c) => {
+            const formattedDate = c.last_order_date
+              ? new Date(c.last_order_date).toLocaleDateString('es-MX', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric'
+                })
+              : 'Sin compras';
+
+            const waUrl = getWhatsAppUrl(c.phone, c.name);
+            const telUrl = getTelUrl(c.phone);
+
+            return (
+              <tr key={c.id} className={styles.tableRow} onClick={() => onSelect(c)}>
+                <td>
+                  <div className={styles.tableClientInfo}>
+                    <div className={styles.tableAvatar}>
+                      <UserIcon />
+                    </div>
+                    <div>
+                      <span className={styles.tableClientName}>{c.name}</span>
+                      <span className={styles.tableClientPhone}>{c.phone}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>{renderSegmentBadge(c.customer_segment)}</td>
+                <td className={`${styles.textRight} ${styles.fontBold}`}>
+                  {c.completedOrders}
+                </td>
+                <td className={`${styles.textRight} ${styles.totalSpentCell}`}>
+                  ${c.totalSpent.toFixed(2)}
+                </td>
+                <td className={`${styles.textRight} ${styles.textMuted}`}>
+                  ${(c.avgTicket || 0).toFixed(2)}
+                </td>
+                <td className={styles.textMuted}>
+                  {formattedDate}
+                </td>
+                <td className={styles.tableActionsCell} onClick={(e) => e.stopPropagation()}>
+                  <div className={styles.tableActionGroup}>
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`${styles.tableIconAction} ${styles.actionWhatsApp}`}
+                        title="Enviar WhatsApp"
+                      >
+                        <MessageCircle size={15} />
+                      </a>
+                    )}
+                    {telUrl && (
+                      <a
+                        href={telUrl}
+                        className={`${styles.tableIconAction} ${styles.actionCall}`}
+                        title={`Llamar a ${c.name}`}
+                      >
+                        <Phone size={15} />
+                      </a>
+                    )}
+                    {canCreateOrder && (
+                      <button
+                        type="button"
+                        className={`${styles.tableIconAction} ${styles.actionOrder}`}
+                        onClick={(e) => onCreateOrder(c, e)}
+                        title="Crear pedido para este cliente"
+                      >
+                        <ShoppingBag size={15} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={styles.viewDetailButton}
+                      onClick={() => onSelect(c)}
+                      title="Ver ficha completa del cliente"
+                    >
+                      Ficha
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+CustomerTable.displayName = 'CustomerTable';
+
 // ==================== MODAL DE FORMULARIO DE CLIENTE (Sin cambios) ====================
+
 
 const CustomerFormModal = memo(({ isOpen, onClose, onSave, customer = null }) => {
   // ... (código existente, omitido por brevedad) ...
@@ -533,7 +851,19 @@ export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 400);
 
-  const initialCacheKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: 0 });
+  const [sortBy, setSortBy] = useState("spent_desc");
+  const [selectedSegment, setSelectedSegment] = useState("all");
+
+  const [kpis, setKpis] = useState(null);
+  const [totalFilteredCount, setTotalFilteredCount] = useState(0);
+
+  const initialCacheKey = generateKey('customers_directory', {
+    search: debouncedSearchTerm,
+    sort: sortBy,
+    segment: selectedSegment,
+    page: 0
+  });
+
   const initialCached = getCached(initialCacheKey);
 
   const [customersWithStats, setCustomersWithStats] = useState(() =>
@@ -552,20 +882,106 @@ export default function Customers() {
   const [editingAddress, setEditingAddress] = useState(null);
   const [deletingAddress, setDeletingAddress] = useState(null);
 
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      return localStorage.getItem('admin_customers_view_mode') || 'table';
+    } catch {
+      return 'table';
+    }
+  });
+
+  const handleViewModeChange = useCallback((mode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('admin_customers_view_mode', mode);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleExportCSV = useCallback(() => {
+    if (!customersWithStats || customersWithStats.length === 0) {
+      showAlert('No hay clientes para exportar con el filtro actual.', 'info');
+      return;
+    }
+
+    const exportData = customersWithStats.map(c => ({
+      'ID': c.id,
+      'Nombre': c.name || '',
+      'Teléfono': c.phone || '',
+      'Segmento': c.customer_segment || 'Inactivo',
+      'Pedidos Completados': c.completedOrders,
+      'Total Gastado (MXN)': c.totalSpent,
+      'Ticket Promedio (MXN)': Number((c.avgTicket || 0).toFixed(2)),
+      'Última Compra': c.last_order_date ? new Date(c.last_order_date).toLocaleDateString('es-MX') : 'Sin compras',
+      'Fecha Registro': c.created_at ? new Date(c.created_at).toLocaleDateString('es-MX') : '',
+      'Código Referido': c.referral_code || ''
+    }));
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const segmentLabel = selectedSegment === 'all' ? 'todos' : selectedSegment;
+    exportToCSV(exportData, `reporte_clientes_${segmentLabel}_${dateStr}.csv`);
+    showAlert(`Se exportaron ${exportData.length} clientes a CSV.`, 'success');
+  }, [customersWithStats, selectedSegment, showAlert]);
+
+  const navigate = useNavigate();
   const canView = hasPermission('clientes.view');
   const canEdit = hasPermission('clientes.edit');
+  const canCreateOrder = hasPermission('crear-pedido.view');
 
-  // --- NUEVO: Fetch paginado con caché y búsqueda del lado del servidor ---
+  const handleCreateOrder = useCallback((customer, e) => {
+    if (e) e.stopPropagation();
+    navigate('/admin/crear-pedido', {
+      state: {
+        preselectedCustomer: {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone
+        }
+      }
+    });
+  }, [navigate]);
+
+  // --- Cargar KPIs globales reales del negocio ---
+  const loadKPIs = useCallback(async (force = false) => {
+    const kpiCacheKey = 'customers:global_kpis';
+    if (!force) {
+      const cached = getCached(kpiCacheKey);
+      if (cached && !cached.isExpired) {
+        setKpis(cached.data);
+        return;
+      }
+    }
+    try {
+      const data = await fetchCustomerGlobalKPIs();
+      setKpis(data);
+      setCached(kpiCacheKey, data, 5 * 60 * 1000);
+    } catch (error) {
+      console.error('Error cargando KPIs:', error);
+    }
+  }, [getCached, setCached]);
+
+  useEffect(() => {
+    loadKPIs();
+  }, [loadKPIs]);
+
+  // --- Fetch paginado con ordenamiento y segmentación en servidor ---
   const fetchCustomers = useCallback(async (isLoadMore = false, forceRefresh = false) => {
     if (!canView) return;
 
     const currentPage = isLoadMore ? page : 0;
-    const cacheKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: currentPage });
+    const cacheKey = generateKey('customers_directory', {
+      search: debouncedSearchTerm,
+      sort: sortBy,
+      segment: selectedSegment,
+      page: currentPage
+    });
 
     if (!isLoadMore && !forceRefresh) {
       const cached = getCached(cacheKey);
       if (cached && !cached.isExpired) {
         setCustomersWithStats(cached.data?.customers || []);
+        setTotalFilteredCount(cached.data?.totalCount || 0);
         setHasMore(cached.data?.hasMore ?? false);
         setLoading(false);
         setPage(1);
@@ -578,104 +994,55 @@ export default function Customers() {
     }
 
     try {
-        let query = supabase
-            .from('customers')
-            .select('id, name, phone, referral_code, referral_count, created_at')
-            .order('created_at', { ascending: false });
+      const { customers: enriched, totalCount } = await fetchCustomerDirectory({
+        search: debouncedSearchTerm,
+        sortBy,
+        segment: selectedSegment,
+        limit: PAGE_SIZE,
+        offset: currentPage * PAGE_SIZE
+      });
 
-        if (debouncedSearchTerm) {
-            query = query.or(`name.ilike.%${debouncedSearchTerm}%,phone.ilike.%${debouncedSearchTerm}%`);
-        }
+      const moreAvailable = (currentPage * PAGE_SIZE + enriched.length) < totalCount;
 
-        const from = currentPage * PAGE_SIZE;
-        const to = from + PAGE_SIZE - 1;
-
-        const { data, error } = await query.range(from, to);
-        if (error) throw error;
-
-        if (data) {
-            const customerIds = data.map(c => c.id);
-            let statsMap = new Map();
-            if (customerIds.length > 0) {
-                const statsData = await fetchCustomerStatsBatch(customerIds);
-                if (Array.isArray(statsData)) {
-                    statsData.forEach(s => {
-                        if (s && s.customer_id) statsMap.set(s.customer_id, s);
-                    });
-                }
-            }
-
-            const enriched = data.map(customer => {
-                const stats = statsMap.get(customer.id);
-                return {
-                    ...customer,
-                    totalOrders: Number(stats?.total_orders || 0),
-                    completedOrders: Number(stats?.completed_orders || 0),
-                    totalSpent: Number(stats?.total_spent || 0)
-                };
-            });
-
-            const moreAvailable = data.length === PAGE_SIZE;
-
-            if (isLoadMore) {
-                setCustomersWithStats(prev => [...prev, ...enriched]);
-                setPage(currentPage + 1);
-            } else {
-                setCustomersWithStats(enriched);
-                setPage(1);
-                setCached(cacheKey, { customers: enriched, hasMore: moreAvailable }, 5 * 60 * 1000);
-            }
-            setHasMore(moreAvailable);
-        }
+      if (isLoadMore) {
+        setCustomersWithStats(prev => [...prev, ...enriched]);
+        setPage(currentPage + 1);
+      } else {
+        setCustomersWithStats(enriched);
+        setTotalFilteredCount(totalCount);
+        setPage(1);
+        setCached(cacheKey, { customers: enriched, totalCount, hasMore: moreAvailable }, 5 * 60 * 1000);
+      }
+      setHasMore(moreAvailable);
     } catch (error) {
-        console.error('Error fetching customers:', error);
-        showAlert(`Error: ${error.message}`);
+      console.error('Error fetching customers:', error);
+      showAlert(`Error: ${error.message}`);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-  }, [debouncedSearchTerm, page, canView, showAlert, getCached, setCached, customersWithStats.length]);
+  }, [debouncedSearchTerm, sortBy, selectedSegment, page, canView, showAlert, getCached, setCached, customersWithStats.length]);
 
   useEffect(() => {
     fetchCustomers(false);
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, sortBy, selectedSegment, fetchCustomers]);
 
-  // --- (PASO J) Actualizar Realtime mediante Canal Compartido ---
+  // --- Actualizar Realtime mediante Canal Compartido ---
   useEffect(() => {
     if (!canView) return;
 
-    const unsubscribe = subscribeToTableChanges('customers', (payload) => {
-      console.log('[Customers] Cambio detectado (Shared Realtime):', payload.eventType);
-
-      if (payload.eventType === 'INSERT') {
-        // Al insertar, invalidar caché y recargar
-        invalidate(new RegExp('^customers_with_stats'));
-        fetchCustomers(false, true);
-      } else if (payload.eventType === 'UPDATE') {
-        setCustomersWithStats(prev => {
-          const updated = prev.map(c =>
-            c.id === payload.new.id
-              ? { ...c, ...payload.new }
-              : c
-          );
-          const currentKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: 0 });
-          setCached(currentKey, { customers: updated, hasMore }, 5 * 60 * 1000);
-          return updated;
-        });
-      } else if (payload.eventType === 'DELETE') {
-        setCustomersWithStats(prev => {
-          const filtered = prev.filter(c => c.id !== payload.old.id);
-          const currentKey = generateKey('customers_with_stats', { search: debouncedSearchTerm, page: 0 });
-          setCached(currentKey, { customers: filtered, hasMore }, 5 * 60 * 1000);
-          return filtered;
-        });
-      }
+    const unsubscribe = subscribeToTables(['customers', 'orders'], () => {
+      invalidate(new RegExp('^customers_directory'));
+      invalidate('customers:global_kpis');
+      fetchCustomers(false, true);
+      loadKPIs(true);
     });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [canView, fetchCustomers, invalidate, setCached, debouncedSearchTerm, hasMore]);
-  // --- FIN PASO J ---
+  }, [canView, fetchCustomers, loadKPIs, invalidate]);
+
+
 
   const filteredCustomers = customersWithStats; // Ya están filtrados por el servidor
 
@@ -834,15 +1201,6 @@ export default function Customers() {
     }
   }, [selectedCustomer, canEdit, showAlert, invalidate]);
 
-  const globalStats = useMemo(() => {
-    const totalCustomers = customersWithStats.length;
-    const withOrders = customersWithStats.filter(c => c.totalOrders > 0).length;
-    const avgOrdersPerCustomer = totalCustomers > 0
-      ? (customersWithStats.reduce((sum, c) => sum + c.totalOrders, 0) / totalCustomers).toFixed(1)
-      : 0;
-    return { totalCustomers, withOrders, avgOrdersPerCustomer };
-  }, [customersWithStats]);
-
   // --- (PASO M) Actualizar Loading ---
   if (loading && customersWithStats.length === 0) return <LoadingSpinner />;
   // --- FIN PASO M ---
@@ -859,10 +1217,9 @@ export default function Customers() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1>Clientes</h1>
+          <h1>Directorio de Clientes</h1>
           <p className={styles.subtitle}>
-            {globalStats.totalCustomers} clientes • {globalStats.withOrders} con pedidos •
-            Promedio {globalStats.avgOrdersPerCustomer} pedidos/cliente
+            Administración profesional, análisis de consumo y fidelización (CRM)
           </p>
         </div>
         {canEdit && (
@@ -878,33 +1235,200 @@ export default function Customers() {
         )}
       </div>
 
-      <div className={styles.searchBar}>
-        <input
-          type="text"
-          placeholder="Buscar por nombre o teléfono..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className={styles.searchInput}
-        />
+      {/* KPI CARDS */}
+      <div className={styles.kpisContainer}>
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconBlue}`}>
+            <Users size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Total Clientes</span>
+            <span className={styles.kpiValue}>{kpis ? kpis.total_customers : '-'}</span>
+            <span className={styles.kpiSubtitle}>
+              {kpis ? `${kpis.active_customers} con compras` : 'Cargando...'}
+            </span>
+          </div>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconGreen}`}>
+            <DollarSign size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Facturación LTV</span>
+            <span className={styles.kpiValue}>
+              {kpis ? `$${Number(kpis.total_revenue || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+            </span>
+            <span className={styles.kpiSubtitle}>Histórico acumulado</span>
+          </div>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconGold}`}>
+            <TrendingUp size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Ticket Promedio</span>
+            <span className={styles.kpiValue}>
+              {kpis ? `$${Number(kpis.global_avg_ticket || 0).toFixed(2)}` : '-'}
+            </span>
+            <span className={styles.kpiSubtitle}>Por compra completada</span>
+          </div>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconOrange}`}>
+            <AlertTriangle size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>En Riesgo</span>
+            <span className={styles.kpiValue}>{kpis ? kpis.at_risk_count : '-'}</span>
+            <span className={styles.kpiSubtitle}>&gt;45 días sin pedir</span>
+          </div>
+        </div>
       </div>
 
-      <div className={styles.customersGrid}>
-        {filteredCustomers.length === 0 ? (
-          <div className={styles.emptyState}><p>No se encontraron clientes.</p></div>
-        ) : (
-          filteredCustomers.map(customer => (
+      {/* CONTROLS: SEARCH, SORTING & SEGMENT PILLS */}
+      <div className={styles.controlsBar}>
+        <div className={styles.searchAndSortRow}>
+          <div className={styles.searchWrapper}>
+            <input
+              type="text"
+              placeholder="Buscar por nombre o teléfono..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.searchInput}
+            />
+          </div>
+
+          <div className={styles.sortWrapper}>
+            <span className={styles.sortLabel}>
+              <ArrowUpDown size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+              Ordenar por:
+            </span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className={styles.sortSelect}
+              aria-label="Ordenar clientes por"
+            >
+              <option value="spent_desc">Mayor Consumo (LTV)</option>
+              <option value="orders_desc">Más Pedidos Completados</option>
+              <option value="last_order_desc">Compra Más Reciente</option>
+              <option value="last_order_asc">Mayor Tiempo sin Comprar</option>
+              <option value="created_desc">Registro Más Reciente</option>
+              <option value="name_asc">Nombre (A - Z)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* SEGMENT PILLS */}
+        <div className={styles.segmentPills}>
+          <button
+            className={`${styles.segmentPill} ${selectedSegment === 'all' ? styles.segmentPillActive : ''}`}
+            onClick={() => setSelectedSegment('all')}
+          >
+            Todos <span className={styles.pillBadge}>{kpis?.total_customers ?? '-'}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${selectedSegment === 'vip' ? styles.segmentPillActive : ''}`}
+            onClick={() => setSelectedSegment('vip')}
+          >
+            <Crown size={14} /> VIP <span className={styles.pillBadge}>{kpis?.vip_count ?? '-'}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${selectedSegment === 'frecuente' ? styles.segmentPillActive : ''}`}
+            onClick={() => setSelectedSegment('frecuente')}
+          >
+            <Repeat size={14} /> Frecuentes <span className={styles.pillBadge}>{kpis?.frequent_count ?? '-'}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${selectedSegment === 'en_riesgo' ? styles.segmentPillActive : ''}`}
+            onClick={() => setSelectedSegment('en_riesgo')}
+          >
+            <AlertTriangle size={14} /> En Riesgo <span className={styles.pillBadge}>{kpis?.at_risk_count ?? '-'}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${selectedSegment === 'nuevo' ? styles.segmentPillActive : ''}`}
+            onClick={() => setSelectedSegment('nuevo')}
+          >
+            <Sparkles size={14} /> Nuevos <span className={styles.pillBadge}>{kpis?.new_count ?? '-'}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${selectedSegment === 'inactivo' ? styles.segmentPillActive : ''}`}
+            onClick={() => setSelectedSegment('inactivo')}
+          >
+            <Clock size={14} /> Inactivos <span className={styles.pillBadge}>{kpis?.inactive_count ?? '-'}</span>
+          </button>
+        </div>
+      </div>
+
+
+      <div className={styles.resultsSummary}>
+        <span>
+          Mostrando <strong>{filteredCustomers.length}</strong> de <strong>{totalFilteredCount}</strong> clientes
+        </span>
+        <div className={styles.summaryActions}>
+          <button
+            type="button"
+            className={styles.exportButton}
+            onClick={handleExportCSV}
+            title="Exportar clientes a archivo CSV"
+          >
+            <Download size={15} /> Exportar CSV
+          </button>
+          <div className={styles.viewToggle} role="group" aria-label="Modo de visualización">
+            <button
+              type="button"
+              className={`${styles.viewToggleButton} ${viewMode === 'table' ? styles.viewToggleButtonActive : ''}`}
+              onClick={() => handleViewModeChange('table')}
+              title="Vista de Tabla CRM"
+              aria-label="Vista de Tabla"
+            >
+              <TableIcon size={16} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewToggleButton} ${viewMode === 'grid' ? styles.viewToggleButtonActive : ''}`}
+              onClick={() => handleViewModeChange('grid')}
+              title="Vista de Tarjetas"
+              aria-label="Vista de Tarjetas"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {filteredCustomers.length === 0 ? (
+        <div className={styles.emptyState}><p>No se encontraron clientes.</p></div>
+      ) : viewMode === 'table' ? (
+        <CustomerTable
+          customers={filteredCustomers}
+          onSelect={handleSelectCustomer}
+          onSort={setSortBy}
+          currentSort={sortBy}
+          onCreateOrder={handleCreateOrder}
+          canCreateOrder={canCreateOrder}
+        />
+      ) : (
+        <div className={styles.customersGrid}>
+          {filteredCustomers.map(customer => (
             <CustomerCard
               key={customer.id}
               customer={customer}
               onSelect={handleSelectCustomer}
+              onCreateOrder={handleCreateOrder}
+              canCreateOrder={canCreateOrder}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
 
       {hasMore && (
         <div className={styles.loadMoreContainer} style={{ textAlign: 'center', margin: '20px 0' }}>
-          <button 
+          <button
             className={styles.primaryButton}
             onClick={() => fetchCustomers(true)}
             disabled={loading}
@@ -928,17 +1452,113 @@ export default function Customers() {
                   <p>{selectedCustomer.phone}</p>
                 </div>
               </div>
-              {canEdit && (
-                <button
-                  className={styles.editButtonTop}
-                  onClick={() => handleEditCustomer(selectedCustomer)}
-                >
-                  <EditIcon /> Editar
-                </button>
-              )}
+              <div className={styles.modalHeaderActions}>
+                {getWhatsAppUrl(selectedCustomer.phone, selectedCustomer.name) && (
+                  <a
+                    href={getWhatsAppUrl(selectedCustomer.phone, selectedCustomer.name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${styles.actionIconButton} ${styles.actionWhatsApp}`}
+                    title="Enviar WhatsApp"
+                  >
+                    <MessageCircle size={16} />
+                  </a>
+                )}
+                {getTelUrl(selectedCustomer.phone) && (
+                  <a
+                    href={getTelUrl(selectedCustomer.phone)}
+                    className={`${styles.actionIconButton} ${styles.actionCall}`}
+                    title={`Llamar a ${selectedCustomer.name}`}
+                  >
+                    <Phone size={16} />
+                  </a>
+                )}
+                {canCreateOrder && (
+                  <button
+                    type="button"
+                    className={styles.actionNewOrderButton}
+                    onClick={(e) => handleCreateOrder(selectedCustomer, e)}
+                    title="Crear un pedido para este cliente"
+                  >
+                    <ShoppingBag size={14} /> Nuevo Pedido
+                  </button>
+                )}
+                {canEdit && (
+                  <button
+                    className={styles.editButtonTop}
+                    onClick={() => handleEditCustomer(selectedCustomer)}
+                  >
+                    <EditIcon /> Editar
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className={styles.modalBody}>
+              {/* RESUMEN EJECUTIVO CRM 360 */}
+              <div className={styles.metrics360Container}>
+                <div className={styles.metric360Item}>
+                  <span className={styles.metric360Label}>Segmento</span>
+                  <div className={styles.metric360BadgeWrap}>
+                    {renderSegmentBadge(selectedCustomer.customer_segment)}
+                  </div>
+                </div>
+                <div className={styles.metric360Item}>
+                  <span className={styles.metric360Label}>Facturación LTV</span>
+                  <span className={`${styles.metric360Value} ${styles.metricHighlight}`}>
+                    ${Number(selectedCustomer.totalSpent || 0).toFixed(2)}
+                  </span>
+                  <span className={styles.metric360Sub}>Total acumulado</span>
+                </div>
+                <div className={styles.metric360Item}>
+                  <span className={styles.metric360Label}>Pedidos</span>
+                  <span className={styles.metric360Value}>
+                    {selectedCustomer.completedOrders || 0}
+                  </span>
+                  <span className={styles.metric360Sub}>de {selectedCustomer.totalOrders || 0} totales</span>
+                </div>
+                <div className={styles.metric360Item}>
+                  <span className={styles.metric360Label}>Ticket Promedio</span>
+                  <span className={styles.metric360Value}>
+                    ${Number(selectedCustomer.avgTicket || (selectedCustomer.completedOrders > 0 ? (selectedCustomer.totalSpent / selectedCustomer.completedOrders) : 0)).toFixed(2)}
+                  </span>
+                  <span className={styles.metric360Sub}>Por compra completada</span>
+                </div>
+                {selectedCustomer.last_order_date && (
+                  <div className={styles.metric360Item}>
+                    <span className={styles.metric360Label}>Última Compra</span>
+                    <span className={styles.metric360Date}>
+                      {new Date(selectedCustomer.last_order_date).toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </span>
+                    <span className={styles.metric360Sub}>Fecha de orden</span>
+                  </div>
+                )}
+                {selectedCustomer.referral_code && (
+                  <div className={styles.metric360Item}>
+                    <span className={styles.metric360Label}>Referidos</span>
+                    <span className={styles.metric360Value}>
+                      <Gift size={13} style={{ verticalAlign: 'middle', marginRight: '3px', color: '#f59e0b' }} />
+                      {selectedCustomer.referral_code}
+                    </span>
+                    <span className={styles.metric360Sub}>
+                      {selectedCustomer.referral_count || 0} invitados
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* PRODUCTOS FAVORITOS */}
+              <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <h3><Star size={18} style={{ color: '#f59e0b', marginRight: '6px' }} /> Productos Más Comprados</h3>
+                </div>
+                <CustomerFavoriteProducts customerId={selectedCustomer.id} />
+              </div>
+
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <h3><MapPinIcon /> Direcciones</h3>
