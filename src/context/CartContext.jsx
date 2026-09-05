@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useProducts } from './ProductContext';
+import { normalizeCartItems, addCartItem, updateCartQuantity, reconcileCartItems } from '../lib/cartState';
 
 const CartContext = createContext();
 
@@ -13,7 +14,7 @@ export const CartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState(() => {
         try {
             const storedCartItems = window.localStorage.getItem(CART_STORAGE_KEY);
-            return storedCartItems ? JSON.parse(storedCartItems) : [];
+            return storedCartItems ? normalizeCartItems(JSON.parse(storedCartItems)) : [];
         } catch (error) {
             console.error("Error al cargar el carrito desde localStorage:", error);
             return [];
@@ -27,7 +28,7 @@ export const CartProvider = ({ children }) => {
     const [cartNotification, setCartNotification] = useState(''); // Para modales de alerta (items eliminados)
     const [toast, setToast] = useState({ message: '', key: 0 });  // Para mensajes discretos (precios actualizados)
 
-    const { products: liveProducts, loading: productsLoading } = useProducts();
+    const { products: liveProducts, loading: productsLoading, error: productsError, catalogReady } = useProducts();
 
     const showToast = useCallback((message) => {
         setToast({ message, key: Date.now() });
@@ -50,49 +51,20 @@ export const CartProvider = ({ children }) => {
     useEffect(() => {
         const currentCart = cartItemsRef.current;
 
-        // Usamos la referencia silenciosa en lugar del estado reactivo
-        if (productsLoading || currentCart.length === 0) return;
+        const { items, removedNames, pricesChanged } = reconcileCartItems(currentCart, liveProducts, {
+            loading: productsLoading,
+            error: productsError,
+            catalogReady,
+        });
 
-        const liveProductsMap = new Map(liveProducts.map(p => [p.id, p]));
+        if (items !== currentCart) {
+            setCartItems(items);
 
-        let hasChanges = false;
-        let pricesChanged = false;
-        let itemsRemoved = false;
-        const removedNames = [];
-        const validatedItems = [];
-
-        // Evaluamos en O(N) la referencia actual, no el estado renderizado
-        for (let i = 0; i < currentCart.length; i++) {
-            const item = currentCart[i];
-            const liveProduct = liveProductsMap.get(item.id);
-
-            if (!liveProduct || liveProduct.is_out_of_stock) {
-                itemsRemoved = true;
-                hasChanges = true;
-                removedNames.push(item.name);
-                continue;
-            }
-
-            const livePrice = Number(liveProduct.price);
-            const itemPrice = Number(item.price);
-
-            if (Math.abs(livePrice - itemPrice) > 0.01) {
-                pricesChanged = true;
-                hasChanges = true;
-                validatedItems.push({ ...item, price: livePrice });
-            } else {
-                validatedItems.push(item);
-            }
-        }
-
-        if (hasChanges) {
-            setCartItems(validatedItems);
-
-            if (itemsRemoved) {
+            if (removedNames.length) {
                 const names = removedNames.join(', ');
                 const plural = removedNames.length > 1;
                 setCartNotification(
-                    `Se ${plural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por encontrarse agotado(s).`
+                    `Se ${plural ? 'han eliminado' : 'ha eliminado'} "${names}" de tu carrito por no estar disponible(s).`
                 );
             }
 
@@ -100,7 +72,7 @@ export const CartProvider = ({ children }) => {
                 showToast("Algunos precios en tu carrito se han actualizado a su valor actual.");
             }
         }
-    }, [liveProducts, productsLoading, showToast]);
+    }, [liveProducts, productsLoading, productsError, catalogReady, showToast]);
 
     // 3. Cálculos de Totales y Descuentos (Sin cambios mayores)
     const calculateDiscount = useCallback((currentSubtotal, items, discountDetails) => {
@@ -183,13 +155,7 @@ export const CartProvider = ({ children }) => {
     const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
 
     const addToCart = useCallback((product, quantityToAdd = 1) => {
-        setCartItems(prevItems => {
-            const existingItem = prevItems.find(item => item.id === product.id);
-            if (existingItem) {
-                return prevItems.map(item => item.id === product.id ? { ...item, quantity: Number(item.quantity || 0) + quantityToAdd } : item);
-            }
-            return [...prevItems, { ...product, quantity: quantityToAdd }];
-        });
+        setCartItems(prevItems => addCartItem(prevItems, product, quantityToAdd));
     }, []);
 
     const removeFromCart = useCallback((productId) => {
@@ -197,23 +163,22 @@ export const CartProvider = ({ children }) => {
     }, []);
 
     const updateQuantity = useCallback((productId, quantity) => {
-        const numQuantity = Number(quantity);
-        if (isNaN(numQuantity) || numQuantity < 1) {
-            removeFromCart(productId);
-            return;
-        }
-        setCartItems(prevItems => prevItems.map(item => item.id === productId ? { ...item, quantity: numQuantity } : item));
-    }, [removeFromCart]);
+        setCartItems(prevItems => updateCartQuantity(prevItems, productId, quantity));
+    }, []);
 
     const clearCart = useCallback(() => {
         setCartItems([]);
         setDiscount(null);
-        window.localStorage.removeItem(CART_STORAGE_KEY);
+        try {
+            window.localStorage.removeItem(CART_STORAGE_KEY);
+        } catch (error) {
+            console.error('Error al limpiar el carrito guardado:', error);
+        }
     }, []);
 
     const replaceCart = useCallback((newItems) => {
         clearCart();
-        setCartItems(newItems);
+        setCartItems(normalizeCartItems(newItems));
     }, [clearCart]);
 
     const clearCartNotification = useCallback(() => setCartNotification(''), []);

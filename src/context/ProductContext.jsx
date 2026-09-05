@@ -64,6 +64,8 @@ export const ProductProvider = ({ children }) => {
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [loadingPrices, setLoadingPrices] = useState(false);
     const [error, setError] = useState(null);
+    // Una caché vacía o un error de red no confirman la disponibilidad del catálogo.
+    const [validatedCatalogScope, setValidatedCatalogScope] = useState(undefined);
 
     const { showAlert } = useAlert();
     const { customer } = useUserData();
@@ -189,6 +191,7 @@ export const ProductProvider = ({ children }) => {
 
             if (isMountedRef.current) {
                 applyBaseCatalog(nextCatalog);
+                setValidatedCatalogScope(currentCustomerId || null);
                 setError(null);
             }
 
@@ -537,9 +540,10 @@ export const ProductProvider = ({ children }) => {
         products: productsWithAppliedPrices,
         categories: visibleCategories,
         loading: loadingProducts || loadingPrices,
+        catalogReady: validatedCatalogScope === (customerId || null),
         error,
         refetch,
-    }), [error, loadingPrices, loadingProducts, productsWithAppliedPrices, refetch, visibleCategories]);
+    }), [customerId, error, loadingPrices, loadingProducts, productsWithAppliedPrices, refetch, validatedCatalogScope, visibleCategories]);
 
     return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
 };
