@@ -1,480 +1,704 @@
-/* src/pages/Products.jsx (Refactorizado con hooks básicos + stats y COMPONENTES EXTRAÍDOS) */
+/* src/pages/Products.jsx (Modernizado con Fases 1, 2, 3 y 4) */
 
-import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from "react";
-import { supabase } from "../lib/supabaseClient"; // Mantenido para RPC y realtime
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { supabase } from "../lib/supabaseClient";
 import LoadingSpinner from "../components/LoadingSpinner";
 import styles from "./Products.module.css";
 import { useAlert } from "../context/AlertContext";
+import { useAdminAuth } from "../context/AdminAuthContext";
+import { useCacheAdmin } from "../context/CacheAdminContext";
+import { useCategoriesCache } from "../hooks/useCategoriesCache";
+import { 
+  fetchAdminProductsDirectory, 
+  fetchAdminProductsKPIs, 
+  getProductsDirectoryCacheKey, 
+  ADMIN_PRODUCTS_KPIS_CACHE_KEY 
+} from "../lib/productAdminQueries";
+import { exportProductsCatalogToCSV } from "../utils/productExportUtils";
+import { subscribeToTableChanges } from "../lib/sharedAdminRealtime";
+import { broadcastStoreChange } from "../lib/broadcastRealtime";
+
+import ProductCard from "../components/ProductCard";
+import ProductTableView from "../components/ProductTableView";
+import ProductDetailDrawer from "../components/ProductDetailDrawer";
+import ProductFormModal from "../components/ProductFormModal";
 import ManageImagesModal from "../components/ManageImagesModal";
 import ManageCategoriesModal from "../components/ManageCategoriesModal";
-import DOMPurify from 'dompurify';
-import { useAdminAuth } from "../context/AdminAuthContext";
-import imageCompression from "browser-image-compression";
-import ImageWithFallback from '../components/ImageWithFallback';
 
-// --- (PASO A) NUEVAS IMPORTACIONES ---
-import { useCategoriesCache } from '../hooks/useCategoriesCache';
-import { useCacheAdmin } from '../context/CacheAdminContext';
-import {
-    ADMIN_PRODUCTS_BASIC_CACHE_KEY,
-    useAdminProductsBasic
-} from '../hooks/useAdminProductsBasic';
-import { fetchProductStatsBatch } from '../lib/productQueries';
-import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
-import { broadcastStoreChange } from '../lib/broadcastRealtime';
+import { 
+  Package, 
+  DollarSign, 
+  TrendingUp, 
+  AlertTriangle, 
+  LayoutGrid, 
+  Table as TableIcon, 
+  Download, 
+  Plus, 
+  ArrowUpDown,
+  Search,
+  Layers,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
 
-// --- (PASO B) IMPORTAR COMPONENTES EXTRAÍDOS ---
-import ProductCard from '../components/ProductCard';
-import ProductFormModal from '../components/ProductFormModal';
-// --- FIN PASO B ---
-
-
-// ==================== CUSTOM HOOKS (Solo useDebounce) ====================
-
-function useDebounce(value, delay = 300) {
-    const [debouncedValue, setDebouncedValue] = useState(value);
-    useEffect(() => {
-        const handler = setTimeout(() => { setDebouncedValue(value); }, delay);
-        return () => { clearTimeout(handler); };
-    }, [value, delay]);
-    return debouncedValue;
+function useDebounce(value, delay = 350) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
 }
 
-// --- (PASO C) ELIMINAR DEFINICIONES LOCALES DE COMPONENTES ---
-// ProductCard, StarIcon, HeartIcon, y ProductFormModal fueron movidos a sus propios archivos.
-// --- FIN PASO C ---
-
-// ==================== COMPONENTE PRINCIPAL ====================
-
 export default function Products() {
-    const { showAlert } = useAlert();
-    const { hasPermission } = useAdminAuth();
+  const { showAlert } = useAlert();
+  const { hasPermission } = useAdminAuth();
+  const { invalidate, setCached, getCached } = useCacheAdmin();
 
-    // --- (PASO F) Importar funciones del caché ---
-    const { invalidate, setCached, getCached } = useCacheAdmin();
+  // Permisos
+  const canView = hasPermission('productos.view');
+  const canEdit = hasPermission('productos.edit');
 
-    // --- (PASO B) Reemplazar estado de Productos ---
-    const {
-        data: basicProductsData,
-        isLoading: loadingBasic,
-        refetch: refetchProducts // <-- Incluido como pediste
-    } = useAdminProductsBasic();
-    // Fix para evitar error en .slice() si basicProductsData es null
-    const basicProducts = useMemo(() => basicProductsData || [], [basicProductsData]);
+  // Categorías
+  const { data: categoriesData, isLoading: loadingCategories } = useCategoriesCache();
+  const categories = useMemo(() => categoriesData || [], [categoriesData]);
+  const categoryMap = useMemo(() => {
+    return categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {});
+  }, [categories]);
 
-    const [productsWithStats, setProductsWithStats] = useState([]);
-    const [loading, setLoading] = useState(false); // Carga de stats
-    // --- FIN PASO B ---
+  // Estados de Filtros y Ordenamiento
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 350);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState("all");
+  const [menuMatrixFilter, setMenuMatrixFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("sales_desc");
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'table'
 
-    // Categorías (del paso anterior)
-    const {
-        data: categoriesData,
-        isLoading: loadingCategories
-    } = useCategoriesCache();
-    const categories = useMemo(() => categoriesData || [], [categoriesData]);
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 48;
 
-    // Estado local (sin cambios)
-    const [isFormModalOpen, setFormModalOpen] = useState(false);
-    const [isImagesModalOpen, setImagesModalOpen] = useState(false);
-    const [isCategoriesModalOpen, setCategoriesModalOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState(null);
+  // Datos principales
+  const [products, setProducts] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [kpis, setKpis] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState("all");
-    const [statusFilter, setStatusFilter] = useState("all");
+  // Modales y Drawer
+  const [drawerProduct, setDrawerProduct] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isFormModalOpen, setFormModalOpen] = useState(false);
+  const [isImagesModalOpen, setImagesModalOpen] = useState(false);
+  const [isCategoriesModalOpen, setCategoriesModalOpen] = useState(false);
 
-    const debouncedSearchTerm = useDebounce(searchTerm, 400);
-
-    // --- (PASO D) Función Optimizada para Cargar Stats en Batch con Caché ---
-    const enrichProductsWithStats = useCallback(async (productsList) => {
-        if (!productsList || productsList.length === 0) return [];
-
-        const cachedStatsEntry = getCached('product_stats_map');
-        const existingStatsMap = (cachedStatsEntry && !cachedStatsEntry.isExpired)
-            ? (cachedStatsEntry.data || {})
-            : {};
-
-        // Verificar si todos los productos visibles ya tienen stats en caché
-        const missingProductIds = productsList
-            .filter(p => !existingStatsMap[p.id])
-            .map(p => p.id);
-
-        if (missingProductIds.length === 0 && Object.keys(existingStatsMap).length > 0) {
-            // Todos los productos visibles ya están en caché: enriquecer inmediatamente sin llamar a la BD
-            const enriched = productsList.map(product => {
-                const stat = existingStatsMap[product.id];
-                return {
-                    ...product,
-                    total_sold: Number(stat?.total_sold || 0),
-                    total_revenue: Number(stat?.total_revenue || 0),
-                    avg_rating: stat?.avg_rating !== null && stat?.avg_rating !== undefined ? Number(stat.avg_rating) : null,
-                    reviews_count: Number(stat?.reviews_count || 0),
-                    favorites_count: Number(stat?.favorites_count || 0)
-                };
-            });
-            setProductsWithStats(enriched);
-            return;
+  // Carga de KPIs
+  const loadKPIs = useCallback(async (force = false) => {
+    try {
+      if (!force) {
+        const cached = getCached(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+        if (cached && !cached.isExpired && cached.data) {
+          setKpis(cached.data);
+          return;
         }
+      }
 
-        // Si faltan stats, solo activar loading si no tenemos nada en pantalla
-        if (productsWithStats.length === 0) {
-            setLoading(true);
-        }
-
-        try {
-            const productIdsToFetch = missingProductIds.length > 0 ? missingProductIds : productsList.map(p => p.id);
-            const statsData = await fetchProductStatsBatch(productIdsToFetch);
-
-            const updatedStatsMap = { ...existingStatsMap };
-            if (Array.isArray(statsData)) {
-                statsData.forEach(stat => {
-                    if (stat && stat.product_id) {
-                        updatedStatsMap[stat.product_id] = stat;
-                    }
-                });
-            }
-
-            setCached('product_stats_map', updatedStatsMap, 10 * 60 * 1000); // 10 min TTL
-
-            const enrichedProducts = productsList.map(product => {
-                const stat = updatedStatsMap[product.id];
-                return {
-                    ...product,
-                    total_sold: Number(stat?.total_sold || 0),
-                    total_revenue: Number(stat?.total_revenue || 0),
-                    avg_rating: stat?.avg_rating !== null && stat?.avg_rating !== undefined ? Number(stat.avg_rating) : null,
-                    reviews_count: Number(stat?.reviews_count || 0),
-                    favorites_count: Number(stat?.favorites_count || 0)
-                };
-            });
-
-            setProductsWithStats(enrichedProducts);
-
-        } catch (error) {
-            console.error('Error enriqueciendo productos con stats en batch:', error);
-            showAlert(`Error al cargar estadísticas: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    }, [showAlert, getCached, setCached, productsWithStats.length]);
-    // --- FIN PASO D ---
-
-    // --- (PASO G) Filtrar productos básicos ANTES de pedir stats ---
-    const filteredBasicProducts = useMemo(() => {
-        if (!basicProducts) return [];
-        return basicProducts.filter(p => {
-            const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
-            const matchesSearch = p.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'all' ||
-                (statusFilter === 'active' ? p.is_active : !p.is_active);
-            return matchesCategory && matchesSearch && matchesStatus;
-        });
-    }, [basicProducts, debouncedSearchTerm, selectedCategory, statusFilter]);
-    // --- FIN PASO G ---
-
-    // --- (PASO E) NUEVO useEffect para Cargar Stats ---
-    const prevIdsRef = useRef('');
-
-    useEffect(() => {
-        if (!filteredBasicProducts || filteredBasicProducts.length === 0) {
-            setProductsWithStats([]);
-            prevIdsRef.current = '';
-            return;
-        }
-
-        // Tomamos los primeros 50 que coincidan con el filtro
-        const visibleProducts = filteredBasicProducts.slice(0, 50);
-        const currentIds = visibleProducts.map(p => p.id).join(',');
-
-        if (prevIdsRef.current !== currentIds) {
-            // Los resultados del filtro cambiaron, pedir stats
-            prevIdsRef.current = currentIds;
-            enrichProductsWithStats(visibleProducts);
-        } else {
-            // Los resultados son los mismos (solo cambiaron datos básicos), actualizamos conservando stats
-            setProductsWithStats(prev => {
-                return visibleProducts.map(vp => {
-                    const existing = prev.find(p => p.id === vp.id);
-                    return existing ? { ...existing, ...vp } : vp;
-                });
-            });
-        }
-    }, [filteredBasicProducts, enrichProductsWithStats]);
-    // --- FIN PASO E ---
-
-
-    // --- (PASO F) Realtime Compartido para Actualizar Productos y Categorías ---
-    useEffect(() => {
-        const unsubscribeProducts = subscribeToTableChanges('products', (payload) => {
-            console.log('[Products] Cambio detectado (Shared Realtime):', payload.eventType);
-
-            if (payload.eventType === 'INSERT') {
-                // Invalidar caché para que refetch incluya el nuevo
-                invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-
-            } else if (payload.eventType === 'UPDATE') {
-                // Actualización quirúrgica del caché
-                const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-
-                if (cached && Array.isArray(cached.data)) {
-                    const updatedProducts = cached.data.map(p =>
-                        p.id === payload.new.id
-                            ? { ...p, ...payload.new }
-                            : p
-                    );
-                    setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, updatedProducts);
-                }
-
-                // Si es un producto visible con stats, actualizar también
-                setProductsWithStats(prev => prev.map(p =>
-                    p.id === payload.new.id
-                        ? { ...p, ...payload.new }
-                        : p
-                ));
-
-            } else if (payload.eventType === 'DELETE') {
-                // Remover del caché
-                const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-
-                if (cached && Array.isArray(cached.data)) {
-                    const filteredProducts = cached.data.filter(p => p.id !== payload.old.id);
-                    setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, filteredProducts);
-                }
-
-                // Remover de products con stats
-                setProductsWithStats(prev => prev.filter(p => p.id !== payload.old.id));
-            }
-        });
-
-        const unsubscribeCategories = subscribeToTableChanges('categories', () => {
-            console.log('[Products] Cambio en categorías detectado, invalidando caché.');
-            invalidate('categories');
-        });
-
-        return () => {
-            if (unsubscribeProducts) unsubscribeProducts();
-            if (unsubscribeCategories) unsubscribeCategories();
-        };
-    }, [invalidate, getCached, setCached]);
-    // --- FIN PASO F ---
-
-
-    // --- (PASO J) Actualizar handleSaveProduct ---
-    const handleSaveProduct = useCallback(async ({ productData, recipeData }) => {
-        // 'productData' viene del modal (incluye id, name, price, cost, track_stock, etc.)
-        // 'recipeData' es el array de ingredientes (ej: [{ ingredient_id, quantity_used, ... }])
-
-        // ¡LA LÍNEA "setIsSubmitting(true);" SE ELIMINA DE AQUÍ!
-
-        try {
-            // 1. Limpiar datos del producto antes de guardar
-            const {
-                total_sold, total_revenue, avg_rating, reviews_count,
-                favorites_count, product_images, ...dataToUpsert
-            } = productData;
-
-            // 2. Guardar el producto y su receta de forma atómica en el servidor vía RPC
-            const { error: saveError } = await supabase.rpc('save_product_with_recipe', {
-                p_product: dataToUpsert,
-                p_recipe_items: recipeData || []
-            });
-
-            if (saveError) throw saveError;
-
-            // 5. Éxito
-            showAlert(`Producto ${dataToUpsert.id ? 'actualizado' : 'creado'} con éxito.`, 'success');
-
-            // Invalidar cachés para forzar recarga de datos frescos
-            invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-            invalidate(new RegExp('^product_stats')); // Invalidar todos los stats de productos
-
-            // Emitir broadcast a la app del cliente
-            broadcastStoreChange('catalog_updated', { entity: 'products', action: dataToUpsert.id ? 'update' : 'create' });
-
-            setFormModalOpen(false);
-            setSelectedProduct(null);
-
-        } catch (error) {
-            console.error('Error al guardar el producto y su receta:', error);
-            showAlert(`Error: ${error.message}`, 'error');
-            throw error;
-        }
-
-    }, [showAlert, invalidate, setFormModalOpen, setSelectedProduct]);
-    // --- FIN PASO J ---
-
-    // --- (PASO K) Actualizar toggleActive ---
-    const toggleActive = useCallback(async (id, isActive) => {
-        try {
-            const { error } = await supabase
-                .from("products")
-                .update({ is_active: !isActive })
-                .eq("id", id);
-
-            if (error) throw error;
-
-            // Actualización optimista en caché
-            const cached = getCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-            if (cached) {
-                const updated = cached.data.map(p =>
-                    p.id === id ? { ...p, is_active: !isActive } : p
-                );
-                setCached(ADMIN_PRODUCTS_BASIC_CACHE_KEY, updated);
-            }
-
-            // También actualizar en productsWithStats
-            setProductsWithStats(prev => prev.map(p =>
-                p.id === id ? { ...p, is_active: !isActive } : p
-            ));
-
-            // Emitir broadcast
-            broadcastStoreChange('catalog_updated', { entity: 'products', action: 'toggle_active', id });
-
-        } catch (error) {
-            console.error('Toggle error:', error);
-            showAlert(`Error: ${error.message}`);
-        }
-    }, [showAlert, getCached, setCached]); // <-- Dependencias actualizadas
-    // --- FIN PASO K ---
-
-    const openFormModal = useCallback((product = null) => {
-        setSelectedProduct(product);
-        setFormModalOpen(true);
-    }, []);
-
-    const openImagesModal = useCallback((product) => {
-        setSelectedProduct(product);
-        setImagesModalOpen(true);
-    }, []);
-
-
-    const categoryMap = useMemo(() =>
-        categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {})
-        , [categories]);
-
-    // --- (PASO H) Actualizar Condición de Loading ---
-    if ((loadingBasic && basicProducts.length === 0) || (loadingCategories && categories.length === 0) || (loading && productsWithStats.length === 0)) {
-        return <LoadingSpinner />;
+      const freshKpis = await fetchAdminProductsKPIs();
+      setKpis(freshKpis);
+      setCached(ADMIN_PRODUCTS_KPIS_CACHE_KEY, freshKpis, 5 * 60 * 1000); // 5 min TTL
+    } catch (err) {
+      console.error("[Products] Error cargando KPIs globales:", err);
     }
-    // --- FIN PASO H ---
+  }, [getCached, setCached]);
 
+  // Carga del Directorio
+  const loadDirectory = useCallback(async (force = false) => {
+    setLoading(true);
+    try {
+      const offset = (currentPage - 1) * limit;
+      const queryParams = {
+        search: debouncedSearchTerm,
+        categoryId: selectedCategory,
+        status: statusFilter,
+        stockStatus: stockStatusFilter,
+        menuMatrix: menuMatrixFilter,
+        sortBy,
+        limit,
+        offset
+      };
+
+      const cacheKey = getProductsDirectoryCacheKey(queryParams);
+
+      if (!force) {
+        const cached = getCached(cacheKey);
+        if (cached && !cached.isExpired && cached.data) {
+          setProducts(cached.data.products || []);
+          setTotalCount(cached.data.totalCount || 0);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { products: freshProducts, totalCount: freshTotal } = await fetchAdminProductsDirectory(queryParams);
+
+      setProducts(freshProducts);
+      setTotalCount(freshTotal);
+      setCached(cacheKey, { products: freshProducts, totalCount: freshTotal }, 3 * 60 * 1000); // 3 min TTL
+    } catch (err) {
+      console.error("[Products] Error cargando catálogo de productos:", err);
+      showAlert(`Error al cargar productos: ${err.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    debouncedSearchTerm,
+    selectedCategory,
+    statusFilter,
+    stockStatusFilter,
+    menuMatrixFilter,
+    sortBy,
+    currentPage,
+    limit,
+    getCached,
+    setCached,
+    showAlert
+  ]);
+
+  // Carga inicial y cambios en filtros
+  useEffect(() => {
+    loadKPIs();
+  }, [loadKPIs]);
+
+  useEffect(() => {
+    loadDirectory();
+  }, [loadDirectory]);
+
+  // Reset a página 1 al cambiar filtros de búsqueda o categoría
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, selectedCategory, statusFilter, stockStatusFilter, menuMatrixFilter, sortBy]);
+
+  // Suscripción Realtime a tablas clave
+  useEffect(() => {
+    const invalidateAndReload = () => {
+      invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+      invalidate(/^admin:products:dir:/);
+      loadKPIs(true);
+      loadDirectory(true);
+    };
+
+    const unsubProducts = subscribeToTableChanges("products", () => {
+      console.log("[Products Realtime] Cambio en products detectado.");
+      invalidateAndReload();
+    });
+
+    const unsubRecipes = subscribeToTableChanges("product_recipes", () => {
+      console.log("[Products Realtime] Cambio en recetas detectado.");
+      invalidateAndReload();
+    });
+
+    const unsubIngredients = subscribeToTableChanges("ingredients", () => {
+      console.log("[Products Realtime] Cambio en inventario de ingredientes.");
+      invalidateAndReload();
+    });
+
+    const unsubCategories = subscribeToTableChanges("categories", () => {
+      console.log("[Products Realtime] Cambio en categorías.");
+      invalidate("categories");
+      invalidateAndReload();
+    });
+
+    const unsubOrders = subscribeToTableChanges("orders", (payload) => {
+      if (payload.new?.status === 'completado' || payload.old?.status === 'completado') {
+        invalidateAndReload();
+      }
+    });
+
+    return () => {
+      if (unsubProducts) unsubProducts();
+      if (unsubRecipes) unsubRecipes();
+      if (unsubIngredients) unsubIngredients();
+      if (unsubCategories) unsubCategories();
+      if (unsubOrders) unsubOrders();
+    };
+  }, [invalidate, loadKPIs, loadDirectory]);
+
+  // Acción: Activar / Desactivar Producto
+  const toggleActive = useCallback(async (id, isActive) => {
+    try {
+      const nextActive = !isActive;
+
+      // Actualización optimista local
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: nextActive } : p));
+      if (drawerProduct?.id === id) {
+        setDrawerProduct(prev => prev ? { ...prev, is_active: nextActive } : null);
+      }
+
+      const { error } = await supabase
+        .from("products")
+        .update({ is_active: nextActive })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      showAlert(`Producto ${nextActive ? "activado" : "desactivado"} correctamente.`, "success");
+
+      // Invalidar cachés
+      invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+      invalidate(/^admin:products:dir:/);
+
+      broadcastStoreChange("catalog_updated", { entity: "products", action: "toggle_active", id });
+    } catch (error) {
+      console.error("[Products] Error en toggleActive:", error);
+      showAlert(`Error: ${error.message}`, "error");
+      loadDirectory(true);
+    }
+  }, [showAlert, invalidate, drawerProduct?.id, loadDirectory]);
+
+  // Acción: Guardar Producto y Receta (atómico vía RPC)
+  const handleSaveProduct = useCallback(async ({ productData, recipeData }) => {
+    try {
+      const {
+        total_sold, total_revenue, avg_rating, reviews_count,
+        favorites_count, image_count, margin_amount, margin_percent,
+        effective_cost, max_preparable, menu_matrix_class, stock_status,
+        product_images, ...dataToUpsert
+      } = productData;
+
+      const { error } = await supabase.rpc("save_product_with_recipe", {
+        p_product: dataToUpsert,
+        p_recipe_items: recipeData || []
+      });
+
+      if (error) throw error;
+
+      showAlert(`Producto ${dataToUpsert.id ? "actualizado" : "creado"} con éxito.`, "success");
+
+      // Invalidar cachés
+      invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+      invalidate(/^admin:products:dir:/);
+      invalidate(/^admin:product:detail:/);
+
+      broadcastStoreChange("catalog_updated", { 
+        entity: "products", 
+        action: dataToUpsert.id ? "update" : "create" 
+      });
+
+      setFormModalOpen(false);
+      setSelectedProduct(null);
+
+      // Si el Drawer estaba abierto para este producto, refrescarlo
+      if (drawerProduct?.id === dataToUpsert.id) {
+        setDrawerProduct(prev => ({ ...prev, ...dataToUpsert }));
+      }
+
+      loadKPIs(true);
+      loadDirectory(true);
+    } catch (error) {
+      console.error("[Products] Error guardando producto y receta:", error);
+      showAlert(`Error: ${error.message}`, "error");
+      throw error;
+    }
+  }, [showAlert, invalidate, drawerProduct?.id, loadKPIs, loadDirectory]);
+
+  // Exportar Catálogo a CSV
+  const handleExportCSV = useCallback(() => {
+    try {
+      if (!products || products.length === 0) {
+        showAlert("No hay productos disponibles para exportar.", "warning");
+        return;
+      }
+      exportProductsCatalogToCSV(products);
+      showAlert("Catálogo de productos exportado a CSV.", "success");
+    } catch (error) {
+      showAlert(`Error al exportar: ${error.message}`, "error");
+    }
+  }, [products, showAlert]);
+
+  // Handlers para abrir modales
+  const openFormModal = useCallback((prod = null) => {
+    setSelectedProduct(prod);
+    setFormModalOpen(true);
+  }, []);
+
+  const openImagesModal = useCallback((prod) => {
+    setSelectedProduct(prod);
+    setImagesModalOpen(true);
+  }, []);
+
+  const openDrawer = useCallback((prod) => {
+    setDrawerProduct(prod);
+    setIsDrawerOpen(true);
+  }, []);
+
+  if (!canView) {
     return (
-        <div className={styles.container}>
-            <div className={styles.header}>
-                <h1>Catálogo de Productos</h1>
-                <p className={styles.subtitle}>
-                    {/* (PASO I) Subtítulo actualizado */}
-                    {basicProducts.length} productos activos
-                </p>
-                <div className={styles.headerActions}>
-                    {hasPermission('productos.edit') && (
-                        <>
-                            <button
-                                onClick={() => setCategoriesModalOpen(true)}
-                                className={styles.manageButton}
-                            >
-                                Administrar Categorías
-                            </button>
-                            <button
-                                onClick={() => openFormModal(null)}
-                                className={styles.addButton}
-                            >
-                                + Añadir Producto
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Filtros */}
-            <div className={styles.filters}>
-                <input
-                    type="text"
-                    placeholder="Buscar producto..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={styles.searchInput}
-                />
-                <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className={styles.categorySelect}
-                >
-                    <option value="all">Todas las categorías</option>
-                    {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                </select>
-                <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className={styles.statusSelect}
-                >
-                    <option value="all">Todos los estados</option>
-                    <option value="active">Activos</option>
-                    <option value="inactive">Inactivos</option>
-                </select>
-            </div>
-
-            {/* Grid de productos */}
-            <div className={styles.productGrid}>
-                {productsWithStats.map(p => (
-                    <ProductCard
-                        key={p.id}
-                        product={p}
-                        categoryName={categoryMap[p.category_id] || 'N/A'}
-                        onToggle={toggleActive}
-                        onEdit={openFormModal}
-                        onManageImages={openImagesModal}
-                    />
-                ))}
-            </div>
-
-            {/* Mensaje vacío (Actualizado) */}
-            {!loadingBasic && !loadingCategories && !loading && productsWithStats.length === 0 && (
-                <p className={styles.emptyMessage}>
-                    No se encontraron productos con los filtros actuales.
-                </p>
-            )}
-
-            {/* (PASO I) Paginación eliminada */}
-
-            {/* Modales */}
-            <ProductFormModal
-                isOpen={isFormModalOpen}
-                onClose={() => {
-                    setFormModalOpen(false);
-                    setSelectedProduct(null);
-                }}
-                onSave={handleSaveProduct}
-                categories={categories}
-                product={selectedProduct}
-            />
-
-            {selectedProduct && (
-                <ManageImagesModal
-                    product={selectedProduct}
-                    isOpen={isImagesModalOpen}
-                    onClose={() => {
-                        setImagesModalOpen(false);
-                        setSelectedProduct(null);
-                    }}
-                    onImagesUpdate={() => {
-                        // Invalidar caché básico, los stats se recargarán
-                        invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-                    }}
-                />
-            )}
-
-            <ManageCategoriesModal
-                isOpen={isCategoriesModalOpen}
-                onClose={() => setCategoriesModalOpen(false)}
-                onCategoriesUpdate={() => {
-                    // El modal ya invalida 'categories'
-                    // Invalidamos la lista básica admin por si una categoría cambió de nombre
-                    invalidate(ADMIN_PRODUCTS_BASIC_CACHE_KEY);
-                }}
-            />
+      <div className={styles.container}>
+        <div style={{ textAlign: "center", padding: "60px 20px" }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: "16px" }}>
+            No tienes permisos suficientes para ver el catálogo de productos.
+          </p>
         </div>
+      </div>
     );
+  }
+
+  const totalPages = Math.ceil(totalCount / limit) || 1;
+
+  return (
+    <div className={styles.container}>
+      {/* HEADER PRINCIPAL */}
+      <div className={styles.header}>
+        <div>
+          <h1>Catálogo de Productos</h1>
+          <p className={styles.subtitle}>
+            Administración profesional de menú, costeo de recetas y rendimiento comercial
+          </p>
+        </div>
+
+        <div className={styles.headerActions}>
+          <button 
+            onClick={handleExportCSV}
+            className={styles.exportButton}
+            title="Descargar catálogo con costos y márgenes en Excel"
+          >
+            <Download size={16} /> Exportar CSV
+          </button>
+
+          {canEdit && (
+            <>
+              <button
+                onClick={() => setCategoriesModalOpen(true)}
+                className={styles.manageButton}
+              >
+                <Layers size={16} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                Categorías
+              </button>
+
+              <button
+                onClick={() => openFormModal(null)}
+                className={styles.addButton}
+              >
+                <Plus size={16} /> Nuevo Producto
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* KPI CARDS (MÉTRICAS EJECUTIVAS EN TIEMPO REAL) */}
+      <div className={styles.kpisContainer}>
+        {/* Total Productos */}
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconBlue}`}>
+            <Package size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Total Productos</span>
+            <span className={styles.kpiValue}>{kpis ? kpis.total_products : "-"}</span>
+            <span className={styles.kpiSubtitle}>
+              {kpis ? `${kpis.active_products} activos • ${kpis.inactive_products} inactivos` : "Cargando..."}
+            </span>
+          </div>
+        </div>
+
+        {/* Facturación Catálogo */}
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconGreen}`}>
+            <DollarSign size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Facturación Catálogo</span>
+            <span className={styles.kpiValue}>
+              {kpis ? `$${Number(kpis.total_catalog_revenue || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
+            </span>
+            <span className={styles.kpiSubtitle}>
+              {kpis ? `${kpis.total_units_sold} unidades vendidas` : "Calculando..."}
+            </span>
+          </div>
+        </div>
+
+        {/* Margen Promedio */}
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconGold}`}>
+            <TrendingUp size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Margen Promedio</span>
+            <span className={styles.kpiValue}>{kpis ? `${kpis.avg_profit_margin}%` : "-"}</span>
+            <span className={styles.kpiSubtitle}>
+              {kpis?.top_seller?.name ? `Top: ${kpis.top_seller.name}` : "Rentabilidad del menú"}
+            </span>
+          </div>
+        </div>
+
+        {/* Alertas de Stock */}
+        <div className={styles.kpiCard}>
+          <div className={`${styles.kpiIcon} ${styles.kpiIconOrange}`}>
+            <AlertTriangle size={22} />
+          </div>
+          <div className={styles.kpiInfo}>
+            <span className={styles.kpiTitle}>Alertas de Stock</span>
+            <span className={styles.kpiValue}>
+              {kpis ? kpis.out_of_stock_count + kpis.low_stock_count : "-"}
+            </span>
+            <span className={styles.kpiSubtitle}>
+              {kpis ? `${kpis.out_of_stock_count} agotados • ${kpis.low_stock_count} stock bajo` : "Verificando..."}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* BARRA DE CONTROLES: BÚSQUEDA, FILTROS, ORDEN Y VISTA */}
+      <div className={styles.controlsBar}>
+        <div className={styles.searchAndSortRow}>
+          {/* Búsqueda */}
+          <div className={styles.searchWrapper}>
+            <input
+              type="text"
+              placeholder="Buscar por nombre, descripción o categoría..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.searchInput}
+            />
+          </div>
+
+          {/* Filtros Dropdowns y Toggle */}
+          <div className={styles.filterGroup}>
+            {/* Categoría */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className={styles.selectFilter}
+              aria-label="Filtrar por categoría"
+            >
+              <option value="all">Todas las categorías</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+
+            {/* Estado */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={styles.selectFilter}
+              aria-label="Filtrar por estado"
+            >
+              <option value="all">Todos los estados</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+
+            {/* Disponibilidad de Stock */}
+            <select
+              value={stockStatusFilter}
+              onChange={(e) => setStockStatusFilter(e.target.value)}
+              className={styles.selectFilter}
+              aria-label="Filtrar por inventario"
+            >
+              <option value="all">Todo el inventario</option>
+              <option value="in_stock">🟢 En Stock</option>
+              <option value="low_stock">⚠️ Stock Bajo</option>
+              <option value="out_of_stock">🚫 Agotados</option>
+              <option value="untracked">⚪ Sin Receta</option>
+            </select>
+
+            {/* Ordenamiento */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className={styles.sortSelect}
+              aria-label="Ordenar catálogo por"
+            >
+              <option value="sales_desc">Más Vendidos</option>
+              <option value="revenue_desc">Mayor Facturación ($)</option>
+              <option value="margin_desc">Mayor Margen (%)</option>
+              <option value="margin_asc">Menor Margen (%)</option>
+              <option value="price_desc">Mayor Precio</option>
+              <option value="price_asc">Menor Precio</option>
+              <option value="stock_asc">Menor Stock (Porciones)</option>
+              <option value="name_asc">Nombre (A - Z)</option>
+              <option value="created_desc">Más Recientes</option>
+            </select>
+
+            {/* Toggle de Vista: Grid vs Table */}
+            <div className={styles.viewToggleGroup}>
+              <button
+                className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+                onClick={() => setViewMode("grid")}
+                title="Vista de Cuadrícula"
+                aria-label="Vista de cuadrícula"
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                className={`${styles.viewToggleBtn} ${viewMode === "table" ? styles.viewToggleBtnActive : ""}`}
+                onClick={() => setViewMode("table")}
+                title="Vista de Tabla Densa"
+                aria-label="Vista de tabla"
+              >
+                <TableIcon size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* PILLS DE MATRIZ DE MENÚ (INGENIERÍA DE MENÚ) */}
+        <div className={styles.segmentPills}>
+          <button
+            className={`${styles.segmentPill} ${menuMatrixFilter === "all" ? styles.segmentPillActive : ""}`}
+            onClick={() => setMenuMatrixFilter("all")}
+          >
+            Todos <span className={styles.pillBadge}>{kpis ? kpis.total_products : products.length}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${menuMatrixFilter === "star" ? styles.segmentPillActive : ""}`}
+            onClick={() => setMenuMatrixFilter("star")}
+          >
+            ⭐ Estrellas <span className={styles.pillBadge}>{kpis ? kpis.star_count : 0}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${menuMatrixFilter === "workhorse" ? styles.segmentPillActive : ""}`}
+            onClick={() => setMenuMatrixFilter("workhorse")}
+          >
+            🐎 Caballos de Batalla <span className={styles.pillBadge}>{kpis ? kpis.workhorse_count : 0}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${menuMatrixFilter === "puzzle" ? styles.segmentPillActive : ""}`}
+            onClick={() => setMenuMatrixFilter("puzzle")}
+          >
+            🧩 Oportunidad <span className={styles.pillBadge}>{kpis ? kpis.puzzle_count : 0}</span>
+          </button>
+          <button
+            className={`${styles.segmentPill} ${menuMatrixFilter === "dog" ? styles.segmentPillActive : ""}`}
+            onClick={() => setMenuMatrixFilter("dog")}
+          >
+            ⚠️ Por Revisar <span className={styles.pillBadge}>{kpis ? kpis.dog_count : 0}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* CONTENIDO PRINCIPAL (GRID O TABLA) */}
+      {loading ? (
+        <div style={{ padding: "80px 20px" }}>
+          <LoadingSpinner />
+        </div>
+      ) : products.length === 0 ? (
+        <div className={styles.emptyState} style={{ padding: "60px 20px", textAlign: "center" }}>
+          <Package size={48} style={{ color: "var(--text-secondary)", marginBottom: "12px" }} />
+          <h3 style={{ margin: "0 0 6px 0", color: "var(--text-primary)" }}>No se encontraron productos</h3>
+          <p style={{ color: "var(--text-secondary)", margin: 0 }}>
+            Intenta cambiar los filtros o el término de búsqueda actual.
+          </p>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className={styles.productGrid}>
+          {products.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              categoryName={categoryMap[p.category_id] || p.category_name || "General"}
+              onToggle={toggleActive}
+              onEdit={openFormModal}
+              onManageImages={openImagesModal}
+              onSelect={openDrawer}
+            />
+          ))}
+        </div>
+      ) : (
+        <ProductTableView
+          products={products}
+          categoryMap={categoryMap}
+          onSelect={openDrawer}
+          onEdit={openFormModal}
+          onManageImages={openImagesModal}
+          onToggle={toggleActive}
+        />
+      )}
+
+      {/* PAGINACIÓN */}
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1 || loading}
+          >
+            <ChevronLeft size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+            Anterior
+          </button>
+
+          <span className={styles.pageInfo}>
+            Página {currentPage} de {totalPages} ({totalCount} productos)
+          </span>
+
+          <button
+            className={styles.pageBtn}
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages || loading}
+          >
+            Siguiente
+            <ChevronRight size={16} style={{ verticalAlign: 'middle', marginLeft: '4px' }} />
+          </button>
+        </div>
+      )}
+
+      {/* DRAWER ANALÍTICO 360° */}
+      <ProductDetailDrawer
+        isOpen={isDrawerOpen}
+        productId={drawerProduct?.id}
+        initialProduct={drawerProduct}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          setDrawerProduct(null);
+        }}
+        onEdit={openFormModal}
+        onManageImages={openImagesModal}
+        onToggleActive={toggleActive}
+        canEdit={canEdit}
+      />
+
+      {/* MODALES TRADICIONALES: EDICIÓN, IMÁGENES Y CATEGORÍAS */}
+      <ProductFormModal
+        isOpen={isFormModalOpen}
+        onClose={() => {
+          setFormModalOpen(false);
+          setSelectedProduct(null);
+        }}
+        onSave={handleSaveProduct}
+        categories={categories}
+        product={selectedProduct}
+      />
+
+      {selectedProduct && (
+        <ManageImagesModal
+          product={selectedProduct}
+          isOpen={isImagesModalOpen}
+          onClose={() => {
+            setImagesModalOpen(false);
+            setSelectedProduct(null);
+          }}
+          onImagesUpdate={() => {
+            invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+            invalidate(/^admin:products:dir:/);
+            loadDirectory(true);
+          }}
+        />
+      )}
+
+      <ManageCategoriesModal
+        isOpen={isCategoriesModalOpen}
+        onClose={() => setCategoriesModalOpen(false)}
+        onCategoriesUpdate={() => {
+          invalidate("categories");
+          invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
+          invalidate(/^admin:products:dir:/);
+          loadDirectory(true);
+        }}
+      />
+    </div>
+  );
 }
