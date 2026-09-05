@@ -3,7 +3,7 @@ import React, { memo } from 'react';
 import styles from '../pages/Products.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import ImageWithFallback from './ImageWithFallback';
-import { Eye, Edit3, Camera, Power, TrendingUp } from 'lucide-react';
+import { Eye, Edit3, Camera, Power, TrendingUp, Users, Globe } from 'lucide-react';
 
 const renderMatrixBadge = (matrixClass) => {
   switch (matrixClass) {
@@ -37,6 +37,7 @@ export default memo(function ProductTableView({
   onSelect,
   onEdit,
   onManageImages,
+  onManageAudience,
   onToggle
 }) {
   const { hasPermission } = useAdminAuth();
@@ -54,6 +55,7 @@ export default memo(function ProductTableView({
             <th className={styles.textCenter}>Inventario</th>
             <th className={styles.textRight}>Ventas</th>
             <th className={styles.textCenter}>Matriz</th>
+            <th className={styles.textCenter}>Audiencia</th>
             <th className={styles.textCenter}>Estado</th>
             <th className={styles.textCenter}>Acciones</th>
           </tr>
@@ -141,6 +143,28 @@ export default memo(function ProductTableView({
                   {renderMatrixBadge(p.menu_matrix_class)}
                 </td>
 
+                {/* Audiencia */}
+                <td className={styles.textCenter} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className={`${styles.tableAudienceBadge} ${p.is_exclusive ? styles.tableAudienceSpecial : styles.tableAudiencePublic}`}
+                    onClick={() => onManageAudience && onManageAudience(p)}
+                    title={p.is_exclusive ? `Exclusivo para ${p.target_customers_count || 0} cliente(s) - Clic para gestionar` : "Público general - Clic para restringir acceso"}
+                    style={{ cursor: canEdit ? 'pointer' : 'default', border: 'none' }}
+                  >
+                    {p.is_exclusive ? (
+                      <>
+                        <Users size={12} style={{ marginRight: 3 }} />
+                        {p.target_customers_count ? `${p.target_customers_count} clientes` : 'Especial'}
+                      </>
+                    ) : (
+                      <>
+                        <Globe size={12} style={{ marginRight: 3 }} />
+                        Público
+                      </>
+                    )}
+                  </button>
+                </td>
+
                 {/* Estado Activo/Inactivo */}
                 <td className={styles.textCenter}>
                   {canEdit ? (
@@ -187,6 +211,13 @@ export default memo(function ProductTableView({
                           title="Gestionar fotos"
                         >
                           <Camera size={15} />
+                        </button>
+                        <button
+                          className={styles.iconActionBtn}
+                          onClick={() => onManageAudience && onManageAudience(p)}
+                          title="Gestionar clientes y audiencia"
+                        >
+                          <Users size={15} />
                         </button>
                       </>
                     )}

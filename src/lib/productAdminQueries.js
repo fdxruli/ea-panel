@@ -24,11 +24,12 @@ export const getProductsDirectoryCacheKey = (params = {}) => {
     stockStatus = 'all',
     menuMatrix = 'all',
     sortBy = 'sales_desc',
+    audience = 'all',
     limit = 50,
     offset = 0
   } = params;
 
-  return `admin:products:dir:${search.trim().toLowerCase()}:${categoryId}:${status}:${stockStatus}:${menuMatrix}:${sortBy}:${limit}:${offset}`;
+  return `admin:products:dir:${search.trim().toLowerCase()}:${categoryId}:${status}:${stockStatus}:${menuMatrix}:${sortBy}:${audience}:${limit}:${offset}`;
 };
 
 /**
@@ -48,6 +49,7 @@ export const getProductDetailCacheKey = (productId) => `admin:product:detail:${p
  * @param {string} [options.stockStatus='all'] - 'all' | 'in_stock' | 'low_stock' | 'out_of_stock' | 'untracked'
  * @param {string} [options.menuMatrix='all'] - 'all' | 'star' | 'workhorse' | 'puzzle' | 'dog'
  * @param {string} [options.sortBy='sales_desc'] - 'sales_desc' | 'revenue_desc' | 'margin_desc' | 'price_desc' | 'price_asc' | 'stock_asc' | 'name_asc'
+ * @param {string} [options.audience='all'] - 'all' | 'public' | 'special'
  * @param {number} [options.limit=50]
  * @param {number} [options.offset=0]
  * @returns {Promise<{products: Array, totalCount: number}>}
@@ -59,6 +61,7 @@ export const fetchAdminProductsDirectory = async ({
   stockStatus = 'all',
   menuMatrix = 'all',
   sortBy = 'sales_desc',
+  audience = 'all',
   limit = 50,
   offset = 0
 } = {}) => {
@@ -73,7 +76,8 @@ export const fetchAdminProductsDirectory = async ({
     p_menu_matrix: menuMatrix || 'all',
     p_sort_by: sortBy || 'sales_desc',
     p_limit: limit,
-    p_offset: offset
+    p_offset: offset,
+    p_audience: audience || 'all'
   });
 
   if (error) {
@@ -95,12 +99,37 @@ export const fetchAdminProductsDirectory = async ({
     favorites_count: Number(p.favorites_count || 0),
     image_count: Number(p.image_count || 1),
     max_preparable: p.max_preparable !== null && p.max_preparable !== undefined ? Number(p.max_preparable) : null,
+    target_customer_ids: p.target_customer_ids || null,
+    target_customers_count: Number(p.target_customers_count || 0),
+    is_exclusive: Boolean(p.is_exclusive),
     total_count: Number(p.total_count || 0)
   }));
 
   const totalCount = products.length > 0 ? products[0].total_count : 0;
 
   return { products, totalCount };
+};
+
+/**
+ * Actualiza de forma atómica y rápida la audiencia de clientes para un producto.
+ * @param {string} productId 
+ * @param {string[]|null} targetCustomerIds 
+ * @returns {Promise<boolean>}
+ */
+export const updateProductAudience = async (productId, targetCustomerIds = null) => {
+  if (!productId) throw new Error('Product ID is required');
+
+  const { data, error } = await supabase.rpc('update_product_audience', {
+    p_product_id: productId,
+    p_target_customer_ids: targetCustomerIds && targetCustomerIds.length > 0 ? targetCustomerIds : null
+  });
+
+  if (error) {
+    console.error('[productAdminQueries] Error en updateProductAudience:', error);
+    throw error;
+  }
+
+  return data;
 };
 
 /**
@@ -183,6 +212,7 @@ export const fetchAdminProductDetailAnalytics = async (productId) => {
       revenue_30d: Number(data.sales_summary_30d?.revenue_30d || 0),
       orders_count_30d: Number(data.sales_summary_30d?.orders_count_30d || 0)
     },
-    reviews: data.reviews || []
+    reviews: data.reviews || [],
+    assigned_customers: data.assigned_customers || []
   };
 };

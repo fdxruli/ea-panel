@@ -20,6 +20,7 @@ const areSameProduct = (prevProduct, nextProduct) => {
     prevProduct.original_price === nextProduct.original_price &&
     prevProduct.image_url === nextProduct.image_url &&
     prevProduct.is_out_of_stock === nextProduct.is_out_of_stock &&
+    prevProduct.is_exclusive === nextProduct.is_exclusive &&
     prevProduct.slug === nextProduct.slug &&
     prevProduct.updated_at === nextProduct.updated_at &&
     prevProduct.product_images === nextProduct.product_images;

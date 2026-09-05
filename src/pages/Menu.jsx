@@ -98,6 +98,21 @@ const renderClientOverlay = (p) => {
     return <span className={styles.outOfStockBadge}>Agotado</span>;
   }
   const hasSpecialPrice = p.original_price && p.original_price !== p.price;
+  const isExclusive = Boolean(p?.is_exclusive);
+
+  if (isExclusive && hasSpecialPrice) {
+    return (
+      <div style={{ position: 'absolute', top: '0.85rem', left: '0.85rem', zIndex: 2, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span className={styles.exclusiveBadge} style={{ position: 'static' }}>⭐ Exclusivo</span>
+        <span className={styles.offerBadge} style={{ position: 'static' }}>Oferta</span>
+      </div>
+    );
+  }
+
+  if (isExclusive) {
+    return <span className={styles.exclusiveBadge}>⭐ Exclusivo</span>;
+  }
+
   return hasSpecialPrice ? <span className={styles.offerBadge}>Oferta</span> : null;
 };
 
