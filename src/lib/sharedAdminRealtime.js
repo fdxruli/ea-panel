@@ -24,6 +24,7 @@ const ADMIN_TABLES = [
   'discounts',
   'special_prices',
   'ingredients',
+  'product_recipes',
   'business_hours',
   'business_exceptions',
   'admins',
