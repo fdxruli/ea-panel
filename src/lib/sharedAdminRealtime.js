@@ -1,20 +1,19 @@
 /**
- * Canal Realtime compartido para todas las páginas del admin.
- * Evita suscripciones duplicadas cuando múltiples componentes/páginas
- * escuchan los mismos cambios en las tablas.
- * 
+ * Canales Realtime compartidos por tabla para el admin.
+ *
+ * Cada tabla obtiene un único canal mientras tenga listeners activos.
+ * Esto evita que una página que solo necesita, por ejemplo, `orders`,
+ * mantenga suscripciones CDC para todas las tablas administrativas.
+ *
  * @module sharedAdminRealtime
  */
 
 import { supabase } from './supabaseClient';
 
-// Estado compartido del canal
-let sharedChannel = null;
-let listenerCount = 0;
-const changeListeners = new Map(); // tableName -> Set de callbacks
+// tableName -> { channel, listeners }
+const tableChannels = new Map();
 
-// Tablas administrativas soportadas
-const ADMIN_TABLES = [
+const ADMIN_TABLES = new Set([
   'orders',
   'order_items',
   'products',
@@ -32,140 +31,129 @@ const ADMIN_TABLES = [
   'referral_levels',
   'settings',
   'customer_addresses'
-];
+]);
 
-/**
- * Inicializa el canal compartido si no existe.
- * @private
- */
-const ensureChannel = () => {
-  if (!sharedChannel) {
-    sharedChannel = supabase.channel('shared-admin-changes');
-    
-    // Suscribirse a cambios en todas las tablas del panel
-    ADMIN_TABLES.forEach(tableName => {
-      sharedChannel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: tableName },
-        (payload) => {
-          // Notificar a todos los listeners de esta tabla
-          const listeners = changeListeners.get(tableName);
-          if (listeners) {
-            listeners.forEach(callback => {
-              try {
-                callback(payload);
-              } catch (error) {
-                console.error(`[Realtime] Error en listener de ${tableName}:`, error);
-              }
-            });
+const createTableChannel = (tableName) => {
+  const channel = supabase.channel(`shared-admin-${tableName}`);
+
+  channel
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: tableName },
+      (payload) => {
+        const entry = tableChannels.get(tableName);
+        if (!entry) return;
+
+        entry.listeners.forEach((callback) => {
+          try {
+            callback(payload);
+          } catch (error) {
+            console.error(`[Realtime] Error en listener de ${tableName}:`, error);
           }
-        }
-      );
-    });
-
-    sharedChannel.subscribe((status) => {
+        });
+      }
+    )
+    .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        console.log('[Realtime] Canal compartido inicializado correctamente con tablas:', ADMIN_TABLES.join(', '));
+        console.log(`[Realtime] Canal compartido activo: ${tableName}`);
       } else if (status === 'CHANNEL_ERROR') {
-        console.error('[Realtime] Error en el canal compartido');
+        console.error(`[Realtime] Error en canal compartido: ${tableName}`);
       }
     });
-  }
+
+  return channel;
 };
 
 /**
  * Suscribe un callback a cambios en una tabla específica.
- * 
- * @param {string} tableName - Nombre de la tabla ('orders', 'products', etc.)
- * @param {function} callback - Función a llamar cuando haya cambios
- * @returns {function} Función para desuscribirse
- * 
- * @example
- * const unsubscribe = subscribeToTableChanges('orders', (payload) => {
- *   console.log('Pedido cambiado:', payload);
- * });
- * 
- * // Después, para desuscribirse:
- * unsubscribe();
+ *
+ * @param {string} tableName
+ * @param {function} callback
+ * @returns {function} Función idempotente para desuscribirse.
  */
 export const subscribeToTableChanges = (tableName, callback) => {
-  ensureChannel();
-  
-  if (!changeListeners.has(tableName)) {
-    changeListeners.set(tableName, new Set());
+  if (!ADMIN_TABLES.has(tableName)) {
+    console.warn(`[Realtime] Tabla no permitida: ${tableName}`);
+    return () => {};
   }
-  
-  changeListeners.get(tableName).add(callback);
-  listenerCount++;
-  
-  // Función para desuscribirse
+
+  if (typeof callback !== 'function') {
+    console.warn(`[Realtime] Callback inválido para ${tableName}`);
+    return () => {};
+  }
+
+  let entry = tableChannels.get(tableName);
+
+  if (!entry) {
+    entry = {
+      channel: createTableChannel(tableName),
+      listeners: new Set(),
+    };
+    tableChannels.set(tableName, entry);
+  }
+
+  entry.listeners.add(callback);
+
+  let active = true;
+
   return () => {
-    const listeners = changeListeners.get(tableName);
-    if (listeners) {
-      listeners.delete(callback);
-      
-      if (listeners.size === 0) {
-        changeListeners.delete(tableName);
-      }
-    }
-    
-    listenerCount--;
-    
-    // Limpiar canal si no hay listeners
-    if (listenerCount === 0 && sharedChannel) {
-      supabase.removeChannel(sharedChannel);
-      sharedChannel = null;
-      console.log('[Realtime] Canal compartido cerrado (sin listeners)');
+    if (!active) return;
+    active = false;
+
+    const current = tableChannels.get(tableName);
+    if (!current) return;
+
+    current.listeners.delete(callback);
+
+    if (current.listeners.size === 0) {
+      tableChannels.delete(tableName);
+      supabase.removeChannel(current.channel);
+      console.log(`[Realtime] Canal compartido cerrado: ${tableName}`);
     }
   };
 };
 
 /**
- * Suscribe un callback a cambios en múltiples tablas.
- * 
- * @param {string[]} tableNames - Array de nombres de tablas
- * @param {function} callback - Función a llamar cuando haya cambios
- * @returns {function} Función para desuscribirse
- * 
- * @example
- * const unsubscribe = subscribeToTables(['orders', 'order_items'], (payload) => {
- *   console.log('Cambio detectado:', payload.table, payload.eventType);
- * });
+ * Suscribe el mismo callback a múltiples tablas.
+ *
+ * @param {string[]} tableNames
+ * @param {function} callback
+ * @returns {function} Función idempotente para desuscribirse de todas.
  */
 export const subscribeToTables = (tableNames, callback) => {
-  const unsubscribers = [];
-  
-  tableNames.forEach(tableName => {
-    const unsubscribe = subscribeToTableChanges(tableName, callback);
-    unsubscribers.push(unsubscribe);
-  });
-  
-  // Función para desuscribirse de todas las tablas
+  const unsubscribers = tableNames.map((tableName) =>
+    subscribeToTableChanges(tableName, callback)
+  );
+
+  let active = true;
+
   return () => {
-    unsubscribers.forEach(unsubscribe => unsubscribe());
+    if (!active) return;
+    active = false;
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
   };
 };
 
 /**
- * Obtiene el estado actual del canal compartido.
- * @returns {{ isConnected: boolean, listenerCount: number, subscribedTables: string[] }}
+ * Obtiene el estado actual de los canales compartidos.
  */
 export const getRealtimeStatus = () => ({
-  isConnected: sharedChannel !== null,
-  listenerCount,
-  subscribedTables: Array.from(changeListeners.keys())
+  isConnected: tableChannels.size > 0,
+  listenerCount: Array.from(tableChannels.values()).reduce(
+    (total, entry) => total + entry.listeners.size,
+    0
+  ),
+  subscribedTables: Array.from(tableChannels.keys()),
 });
 
 /**
- * Fuerza el cierre del canal compartido.
- * Útil para cleanup en logout o cuando se sabe que no se usará más.
+ * Fuerza el cierre de todos los canales compartidos.
  */
 export const disconnectSharedRealtime = () => {
-  if (sharedChannel) {
-    supabase.removeChannel(sharedChannel);
-    sharedChannel = null;
-    changeListeners.clear();
-    listenerCount = 0;
-    console.log('[Realtime] Canal compartido desconectado forzosamente');
-  }
+  tableChannels.forEach(({ channel }) => {
+    supabase.removeChannel(channel);
+  });
+
+  tableChannels.clear();
+  console.log('[Realtime] Canales compartidos desconectados forzosamente');
 };
