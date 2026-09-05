@@ -8,7 +8,7 @@
     "build": "node scripts/validate-product-routes.js && node scripts/generate-sitemap.js && vite build && node scripts/prerender-public-routes.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "node --test --test-concurrency=1 tests/adminDraftStorage.test.js tests/adminDraftIdentity.test.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
     "test:routing": "node scripts/validate-product-routes.js",
     "prerender:public": "node scripts/prerender-public-routes.js",
     "preview": "vite preview"

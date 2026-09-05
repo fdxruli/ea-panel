@@ -4,7 +4,6 @@ const CACHE_TABLE_NAME = 'api_caches';
 
 // Configuración de LRU cache
 const LRU_MAX_SIZE = 100; // Máximo 100 entradas en memoria
-const LRU_TTL_MS = 30 * 60 * 1000; // 30 minutos de vida máxima en caché
 
 /**
  * Implementación simple de LRU (Least Recently Used) cache.
@@ -24,7 +23,7 @@ class LRUCache {
         }
 
         // Verificar si está expirado
-        if (item.expiresAt && Date.now() > item.expiresAt) {
+        if (item.expiresAt != null && Date.now() > item.expiresAt) {
             this.cache.delete(key);
             return null;
         }
@@ -36,7 +35,7 @@ class LRUCache {
         return item;
     }
 
-    set(key, value, ttl = LRU_TTL_MS) {
+    set(key, value, expiresAt = null) {
         // Si ya existe, eliminarlo primero para actualizar posición
         if (this.cache.has(key)) {
             this.cache.delete(key);
@@ -50,7 +49,6 @@ class LRUCache {
             console.log(`[LRUCache] Evicting "${firstKey}" (max size: ${this.maxSize})`);
         }
 
-        const expiresAt = ttl ? Date.now() + ttl : null;
         this.cache.set(key, { value, expiresAt, timestamp: Date.now() });
     }
 
@@ -66,7 +64,7 @@ class LRUCache {
         const item = this.cache.get(key);
         if (!item) return false;
 
-        if (item.expiresAt && Date.now() > item.expiresAt) {
+        if (item.expiresAt != null && Date.now() > item.expiresAt) {
             this.cache.delete(key);
             return false;
         }
@@ -86,7 +84,7 @@ class LRUCache {
         let cleaned = 0;
 
         for (const [key, item] of this.cache.entries()) {
-            if (item.expiresAt && now > item.expiresAt) {
+            if (item.expiresAt != null && now > item.expiresAt) {
                 this.cache.delete(key);
                 cleaned++;
             }
@@ -181,7 +179,7 @@ export const setAsyncCache = async (cacheConfig, data) => {
     const record = buildCacheRecord({ key, scope, ttl }, data);
 
     // Guardar en LRU cache (memoria)
-    memoryCache.set(key, record.data, ttl);
+    memoryCache.set(key, record.data, record.expiresAt);
 
     try {
         // Eliminar transacción manual innecesaria - Dexie la crea automáticamente
@@ -207,8 +205,8 @@ export const getAsyncCache = async (key) => {
             const record = await db.api_caches.get(key);
 
             if (record) {
-                // Guardar en LRU cache para próximas consultas
-                memoryCache.set(key, record.data, record.ttl);
+                // La lectura no renueva la vigencia del dato persistido.
+                memoryCache.set(key, record.data, record.expiresAt);
                 return {
                     data: record.data,
                     isStale: isExpired(record.expiresAt)

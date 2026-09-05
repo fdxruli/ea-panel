@@ -12,13 +12,25 @@ const initDB = () => {
         dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
             request.onerror = () => reject(request.error);
-            request.onsuccess = () => resolve(request.result);
+            request.onsuccess = () => {
+                const db = request.result;
+                db.onversionchange = () => {
+                    db.close();
+                    dbPromise = null;
+                };
+                db.onclose = () => { dbPromise = null; };
+                resolve(db);
+            };
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
                     db.createObjectStore(STORE_NAME);
                 }
             };
+        }).catch(error => {
+            // Permitir recuperarse si el navegador vuelve a habilitar IndexedDB.
+            dbPromise = null;
+            throw error;
         });
     }
     return dbPromise;
@@ -39,10 +51,13 @@ export const isExpired = (timestamp, ttl) => {
 export const getAllStorageItems = async () => {
     try {
         const db = await initDB();
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             const tx = db.transaction(STORE_NAME, 'readonly');
             const store = tx.objectStore(STORE_NAME);
             const entries = {};
+            tx.oncomplete = () => resolve(entries);
+            tx.onabort = () => reject(tx.error || new Error('Transacción de caché cancelada'));
+            tx.onerror = () => reject(tx.error);
             const request = store.openCursor();
 
             request.onsuccess = (event) => {
@@ -50,8 +65,6 @@ export const getAllStorageItems = async () => {
                 if (cursor) {
                     entries[cursor.key] = cursor.value;
                     cursor.continue();
-                } else {
-                    resolve(entries);
                 }
             };
             request.onerror = () => reject(request.error);
@@ -69,11 +82,14 @@ export const setStorageItem = async (key, data) => {
     if (!data) return;
     try {
         const db = await initDB();
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
             const request = store.put(data, key);
-            request.onsuccess = () => resolve();
+            // El éxito de una petición no garantiza que se confirme la transacción.
+            tx.oncomplete = () => resolve();
+            tx.onabort = () => reject(tx.error || new Error('Transacción de caché cancelada'));
+            tx.onerror = () => reject(tx.error);
             request.onerror = () => reject(request.error);
         });
     } catch (error) {
@@ -87,11 +103,14 @@ export const setStorageItem = async (key, data) => {
 export const removeStorageItem = async (key) => {
     try {
         const db = await initDB();
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
             const request = store.delete(key);
-            request.onsuccess = () => resolve();
+            // El éxito de una petición no garantiza que se confirme la transacción.
+            tx.oncomplete = () => resolve();
+            tx.onabort = () => reject(tx.error || new Error('Transacción de caché cancelada'));
+            tx.onerror = () => reject(tx.error);
             request.onerror = () => reject(request.error);
         });
     } catch (error) {
@@ -105,11 +124,14 @@ export const removeStorageItem = async (key) => {
 export const clearStorage = async () => {
     try {
         const db = await initDB();
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
             const tx = db.transaction(STORE_NAME, 'readwrite');
             const store = tx.objectStore(STORE_NAME);
             const request = store.clear();
-            request.onsuccess = () => resolve();
+            // El éxito de una petición no garantiza que se confirme la transacción.
+            tx.oncomplete = () => resolve();
+            tx.onabort = () => reject(tx.error || new Error('Transacción de caché cancelada'));
+            tx.onerror = () => reject(tx.error);
             request.onerror = () => reject(request.error);
         });
     } catch (error) {
