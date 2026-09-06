@@ -240,8 +240,56 @@ const runFetchAttempt = async (input, init, { timeoutMs, externalSignal }) => {
   }
 };
 
-const throwWithRequestMeta = (error, requestMeta) => {
-  throw attachRequestMeta(error, requestMeta);
+const getHeaderValue = (headers, name) => {
+  if (!headers) return null;
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) return headers.get(name);
+  if (Array.isArray(headers)) {
+    const match = headers.find(([k]) => k.toLowerCase() === name.toLowerCase());
+    return match ? match[1] : null;
+  }
+  if (typeof headers === 'object') {
+    const key = Object.keys(headers).find((k) => k.toLowerCase() === name.toLowerCase());
+    return key ? headers[key] : null;
+  }
+  return null;
+};
+
+const setHeaderValue = (headers, name, value) => {
+  if (!headers) return;
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    headers.set(name, value);
+  } else if (Array.isArray(headers)) {
+    const match = headers.find(([k]) => k.toLowerCase() === name.toLowerCase());
+    if (match) {
+      match[1] = value;
+    } else {
+      headers.push([name, value]);
+    }
+  } else if (typeof headers === 'object') {
+    Object.keys(headers).forEach((k) => {
+      if (k.toLowerCase() === name.toLowerCase()) {
+        delete headers[k];
+      }
+    });
+    headers[name] = value;
+  }
+};
+
+const purgeSupabaseAuthLocalStorage = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // Ignorar si localStorage no está disponible
+    }
+  }
 };
 
 export async function fetchWithTimeout(input, init = {}, options = {}) {
@@ -260,6 +308,44 @@ export async function fetchWithTimeout(input, init = {}, options = {}) {
   for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
     try {
       const response = await runFetchAttempt(input, init, { timeoutMs, externalSignal });
+
+      // Autorecuperación transparente de token JWT expirado (401 en PostgREST)
+      if (response.status === 401) {
+        const inputUrl = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+        if (inputUrl.includes('/rest/v1/')) {
+          try {
+            const cloned = response.clone();
+            const body = await cloned.json().catch(() => null);
+            const msg = (body?.message || '').toLowerCase();
+            const code = body?.code || '';
+            const isJwtExpired =
+              code === 'PGRST301' ||
+              msg.includes('jwt expired') ||
+              msg.includes('invalid claim') ||
+              msg.includes('token is expired') ||
+              msg.includes('jwt');
+
+            if (isJwtExpired) {
+              console.warn('[fetchWithTimeout] Detectado JWT expirado en Supabase (401). Purgando sesión huérfana y reintentando con anon key...');
+              purgeSupabaseAuthLocalStorage();
+
+              const headersObj = init.headers || (typeof Request !== 'undefined' && input instanceof Request ? input.headers : null);
+              const apiKey = getHeaderValue(headersObj, 'apikey');
+              if (apiKey) {
+                const nextInit = { ...init };
+                if (!nextInit.headers) {
+                  nextInit.headers = {};
+                }
+                setHeaderValue(nextInit.headers, 'Authorization', `Bearer ${apiKey}`);
+                const retriedResponse = await runFetchAttempt(input, nextInit, { timeoutMs, externalSignal });
+                return attachRequestMeta(retriedResponse, createRequestMeta(attempt, totalAttempts, null));
+              }
+            }
+          } catch (recErr) {
+            console.warn('[fetchWithTimeout] Falló recuperación de 401:', recErr);
+          }
+        }
+      }
 
       return attachRequestMeta(response, createRequestMeta(attempt, totalAttempts, null));
     } catch (error) {

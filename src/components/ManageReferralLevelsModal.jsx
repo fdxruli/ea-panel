@@ -15,6 +15,7 @@ import { useCacheAdmin } from '../context/CacheAdminContext';
 const LevelRewards = ({ levelId }) => {
   const { showAlert } = useAlert();
   const [rewards, setRewards] = useState([]);
+  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [rewardCode, setRewardCode] = useState('');
   const [loadingRewards, setLoadingRewards] = useState(false);
@@ -35,17 +36,20 @@ const LevelRewards = ({ levelId }) => {
   }, [levelId, fetchRewards]);
 
   const handleAddReward = async () => {
-    if (!description.trim()) {
-      showAlert('La descripción es obligatoria.');
+    if (!title.trim() && !description.trim()) {
+      showAlert('El nombre o la descripción de la opción son obligatorios.');
       return;
     }
+    const sanitizedTitle = DOMPurify.sanitize(title.trim() || description.trim());
+    const sanitizedDesc = DOMPurify.sanitize(description.trim() || title.trim());
     const sanitizedCode = rewardCode.trim() ? DOMPurify.sanitize(rewardCode.toUpperCase()) : null;
 
     const { error } = await supabase
       .from('rewards')
       .insert({
         level_id: levelId,
-        description: DOMPurify.sanitize(description),
+        title: sanitizedTitle,
+        description: sanitizedDesc,
         reward_code: sanitizedCode,
       });
     if (error) {
@@ -53,6 +57,7 @@ const LevelRewards = ({ levelId }) => {
       return;
     }
     showAlert('Recompensa añadida con éxito.', 'success');
+    setTitle('');
     setDescription('');
     setRewardCode('');
     fetchRewards();
@@ -75,32 +80,50 @@ const LevelRewards = ({ levelId }) => {
   return (
     <div className={styles.rewardsSection}>
       <h4>Recompensas de este nivel</h4>
+      <p style={{ margin: '0 0 0.8rem 0', fontSize: '0.82rem', color: 'var(--text-secondary, #6b7280)', lineHeight: '1.35' }}>
+        💡 Si agregas 2 o más recompensas, el cliente podrá elegir <strong>1 sola opción</strong> entre las disponibles.
+      </p>
       <div className={styles.addRewardForm}>
         <input
           type="text"
-          placeholder="Descripción (ej: 10% Descuento)"
+          placeholder="Nombre de la opción (ej: Papas Fritas 200g)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Descripción (ej: Crujientes papas fritas corte delgado gratis)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <input
           type="text"
-          placeholder="Código Promoción (Opcional)"
+          placeholder="Código Promoción / Cupón (ej: REWARD-PAPAS)"
           value={rewardCode}
           onChange={(e) => setRewardCode(e.target.value)}
         />
         <button onClick={handleAddReward}>
-          Añadir recompensa
+          Añadir opción de recompensa
         </button>
       </div>
       {loadingRewards ? (
         <LoadingSpinner />
       ) : (
         rewards.length === 0 ? <p>No hay recompensas para este nivel.</p> : (
-          <ul>
+          <ul className={styles.rewardsList}>
             {rewards.map((reward) => (
-              <li key={reward.id}>
-                {reward.description} {reward.reward_code ? `| ${reward.reward_code}` : ''}
-                <button onClick={() => handleDeleteReward(reward.id)} style={{ marginLeft: 8 }}>
+              <li key={reward.id} className={styles.rewardItemCard}>
+                <div className={styles.rewardItemInfo}>
+                  <strong className={styles.rewardItemTitle}>🎁 {reward.title || reward.description}</strong>
+                  {reward.description && reward.title && reward.description !== reward.title && (
+                    <p className={styles.rewardItemDesc}>{reward.description}</p>
+                  )}
+                  <div className={styles.rewardItemCode}>
+                    <span>Cupón: </span>
+                    <code>{reward.reward_code || 'Sin código'}</code>
+                  </div>
+                </div>
+                <button onClick={() => handleDeleteReward(reward.id)} className={styles.deleteRewardBtn}>
                   Eliminar
                 </button>
               </li>

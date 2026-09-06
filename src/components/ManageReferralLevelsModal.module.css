@@ -163,35 +163,77 @@
   background: var(--color-primary-dark);
 }
 
-.rewardsSection ul {
-  padding-left: 20px;
+.rewardsList {
+  list-style: none;
+  padding: 0;
   margin: 0;
-}
-.rewardsSection li {
-  margin-bottom: 6px;
-  font-size: 15px;
-  color: var(--color-primary);
-  list-style: disc inside;
-}
-.rewardsSection b {
-  color: var(--color-highlight);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* == Eliminar recompensa == */
-.rewardsSection button {
-  margin-left: 8px;
-  background: var(--bg-secondary,);
-  color: var(--color-highlight);
-  border: 1px solid var(--border-highlight);
+.rewardItemCard {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.rewardItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.rewardItemTitle {
+  font-size: 14px;
+  color: var(--text-primary, #111827);
+}
+
+.rewardItemDesc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.3;
+}
+
+.rewardItemCode {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rewardItemCode code {
+  background: var(--bg-secondary, #f3f4f6);
+  padding: 2px 6px;
   border-radius: 4px;
-  padding: 3px 9px;
+  font-size: 11px;
+  color: var(--color-primary, #1346af);
+  font-weight: 600;
+}
+
+.deleteRewardBtn {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 5px 10px;
   font-weight: 600;
   cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s, color 0.2s;
+  font-size: 12px;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
-.rewardsSection button:hover {
-  background: var(--color-highlight);
+
+.deleteRewardBtn:hover {
+  background: #dc2626;
   color: #fff;
 }
 /* == Spinner/Cargando == */

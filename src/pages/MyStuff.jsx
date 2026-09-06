@@ -113,16 +113,30 @@ const RewardsSection = ({ customerId }) => {
 
     }, [customerId, fetchProgress]);
 
-    const handleClaimCode = async (reward) => {
-        const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
-            p_customer_id: customerId,
-            p_reward_id: reward.id
-        });
-        if (error) {
-            showAlert('Hubo un error al generar tu código. Es posible que ya lo hayas reclamado.');
-        } else {
-            showAlert(`¡Código personal generado! Cópialo y úsalo en tu carrito.`);
-            fetchProgress();
+    const [rewardToConfirm, setRewardToConfirm] = useState(null);
+
+    const handleRequestClaim = (reward) => {
+        setRewardToConfirm(reward);
+    };
+
+    const handleConfirmClaim = async () => {
+        if (!rewardToConfirm) return;
+        const reward = rewardToConfirm;
+        setRewardToConfirm(null);
+
+        try {
+            const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
+                p_customer_id: customerId,
+                p_reward_id: reward.id
+            });
+            if (error) {
+                showAlert(error.message || 'Hubo un error al generar tu código. Es posible que ya hayas elegido una recompensa en este nivel.');
+            } else {
+                showAlert(`¡Recompensa elegida con éxito! Código personal generado: ${newCode}. Cópialo y úsalo en tu carrito.`, 'success');
+                fetchProgress();
+            }
+        } catch (err) {
+            showAlert(err.message || 'Error inesperado al reclamar recompensa.');
         }
     };
 
@@ -130,6 +144,25 @@ const RewardsSection = ({ customerId }) => {
         navigator.clipboard.writeText(code);
         showAlert(`¡Código "${code}" copiado!`);
     };
+
+    // Agrupación de recompensas desbloqueadas por nivel
+    const unlockedByLevel = useMemo(() => {
+        if (!progress?.unlocked_rewards || !Array.isArray(progress.unlocked_rewards)) return [];
+        const map = new Map();
+        for (const r of progress.unlocked_rewards) {
+            const lvlId = r.level_id || 'general';
+            if (!map.has(lvlId)) {
+                map.set(lvlId, {
+                    level_id: lvlId,
+                    level_name: r.level_name || 'Nivel Desbloqueado',
+                    min_referrals: r.min_referrals ?? 0,
+                    rewards: []
+                });
+            }
+            map.get(lvlId).rewards.push(r);
+        }
+        return Array.from(map.values()).sort((a, b) => a.min_referrals - b.min_referrals);
+    }, [progress?.unlocked_rewards]);
 
     if (loading) return <LoadingSpinner />;
     if (!progress) return <p>No se pudo cargar tu progreso de recompensas.</p>;
@@ -175,50 +208,156 @@ const RewardsSection = ({ customerId }) => {
                             <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>▼</span>
                         </div>
                         <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
-                            <ul>
-                                {progress.unlocked_rewards?.length > 0
-                                    ? progress.unlocked_rewards.map(reward => {
-                                        const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
-                                        return (
-                                            <li key={reward.id}>
-                                                <div className={styles.unlockedReward}>
-                                                    <span>🎁 {reward.description}</span>
-                                                    {claim ? (
-                                                        <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
-                                                            Copiar: <strong>{claim.generated_code}</strong>
-                                                        </button>
-                                                    ) : (
-                                                        reward.reward_code && (
-                                                            <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
-                                                                Reclama tu código único
-                                                            </button>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </li>
+                            {unlockedByLevel.length > 0 ? (
+                                <div className={styles.levelGroupsContainer}>
+                                    {unlockedByLevel.map((lvlGroup) => {
+                                        // Buscar si el cliente ya eligió una recompensa en este nivel
+                                        const claimedInLevel = progress.claimed_rewards?.find(
+                                            (c) => c.level_id === lvlGroup.level_id || lvlGroup.rewards.some(r => r.id === c.reward_id)
                                         );
-                                    })
-                                    : <li>Cuando hayas alcanzado la meta aqui apareceran tus recompensa</li>
-                                }
-                            </ul>
+
+                                        return (
+                                            <div key={lvlGroup.level_id} className={styles.levelRewardGroup}>
+                                                <div className={styles.levelRewardHeader}>
+                                                    <div className={styles.levelRewardTitle}>
+                                                        <span className={styles.levelRewardIcon}>🏆</span>
+                                                        <h5>{lvlGroup.level_name}</h5>
+                                                        <span className={styles.levelReferralsCount}>
+                                                            ({lvlGroup.min_referrals} {lvlGroup.min_referrals === 1 ? 'referido' : 'referidos'})
+                                                        </span>
+                                                    </div>
+                                                    <span className={`${styles.levelStatusBadge} ${claimedInLevel ? styles.badgeClaimed : styles.badgePending}`}>
+                                                        {claimedInLevel ? 'Recompensa Elegida' : 'Elige 1 Opción'}
+                                                    </span>
+                                                </div>
+
+                                                <p className={styles.levelRewardInstruction}>
+                                                    {claimedInLevel
+                                                        ? 'Ya seleccionaste tu recompensa para este nivel:'
+                                                        : '¡Felicidades! Tienes las siguientes opciones disponibles. Elige la que más te guste:'}
+                                                </p>
+
+                                                <div className={styles.rewardsGrid}>
+                                                    {lvlGroup.rewards.map((reward) => {
+                                                        const isClaimedReward = claimedInLevel && claimedInLevel.reward_id === reward.id;
+                                                        const isOtherOptionLocked = claimedInLevel && !isClaimedReward;
+                                                        const displayTitle = reward.title || reward.description;
+                                                        const displayDesc = reward.description && reward.title && reward.description !== reward.title ? reward.description : null;
+
+                                                        return (
+                                                            <div
+                                                                key={reward.id}
+                                                                className={`${styles.rewardOptionCard} ${
+                                                                    isClaimedReward
+                                                                        ? styles.rewardOptionSelected
+                                                                        : isOtherOptionLocked
+                                                                        ? styles.rewardOptionLocked
+                                                                        : styles.rewardOptionAvailable
+                                                                }`}
+                                                            >
+                                                                <div className={styles.rewardOptionHeader}>
+                                                                    <div className={styles.rewardOptionTitleGroup}>
+                                                                        <strong className={styles.rewardOptionTitle}>🎁 {displayTitle}</strong>
+                                                                        {displayDesc && (
+                                                                            <p className={styles.rewardOptionDescription}>{displayDesc}</p>
+                                                                        )}
+                                                                    </div>
+                                                                    {isClaimedReward && (
+                                                                        <span className={styles.choiceBadgeSelected}>Elegida</span>
+                                                                    )}
+                                                                    {isOtherOptionLocked && (
+                                                                        <span className={styles.choiceBadgeLocked}>No elegida</span>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className={styles.rewardOptionAction}>
+                                                                    {isClaimedReward ? (
+                                                                        <button
+                                                                            onClick={() => handleCopyCode(claimedInLevel.generated_code)}
+                                                                            className={styles.copyCodeButton}
+                                                                            title="Copiar cupón personal al portapapeles"
+                                                                        >
+                                                                            Copiar Cupón: <strong>{claimedInLevel.generated_code}</strong>
+                                                                        </button>
+                                                                    ) : isOtherOptionLocked ? (
+                                                                        <span className={styles.lockedNote}>
+                                                                            🔒 Opción no elegida (1 por nivel)
+                                                                        </span>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={() => handleRequestClaim(reward)}
+                                                                            className={styles.claimChoiceButton}
+                                                                        >
+                                                                            Elegir esta recompensa
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <p className={styles.emptyRewardsNotice}>Cuando hayas alcanzado la meta aquí aparecerán tus recompensas para elegir.</p>
+                            )}
                         </div>
                     </div>
 
                     {next_level?.name && (
-                        <div>
-                            <h4>Próximas Recompensas</h4>
-                            <ul className={styles.upcomingRewards}>
-                                {progress.upcoming_rewards?.length > 0
-                                    ? progress.upcoming_rewards.map(r => (
-                                        <li key={r.id}>✨ {r.description}</li>
-                                    ))
-                                    : <li>Próximamente...</li>
-                                }
-                            </ul>
+                        <div className={styles.upcomingSection}>
+                            <div className={styles.upcomingHeader}>
+                                <h4>Próximas Recompensas (Nivel Bloqueado)</h4>
+                                <span className={styles.upcomingLockBadge}>🔒 Requiere {next_level.min_referrals} {next_level.min_referrals === 1 ? 'referido' : 'referidos'}</span>
+                            </div>
+                            <p className={styles.upcomingInstruction}>
+                                Al alcanzar <strong>{next_level.name}</strong> ({next_level.min_referrals} {next_level.min_referrals === 1 ? 'referido' : 'referidos'}), podrás elegir 1 de las siguientes opciones:
+                            </p>
+                            <div className={styles.upcomingRewardsGrid}>
+                                {progress.upcoming_rewards?.length > 0 ? (
+                                    progress.upcoming_rewards.map(r => {
+                                        const upTitle = r.title || r.description;
+                                        const upDesc = r.description && r.title && r.description !== r.title ? r.description : null;
+                                        return (
+                                            <div key={r.id} className={styles.upcomingRewardCard}>
+                                                <div className={styles.upcomingRewardTop}>
+                                                    <strong className={styles.upcomingRewardTitle}>🔒 {upTitle}</strong>
+                                                    <span className={styles.upcomingLockedChip}>Bloqueado</span>
+                                                </div>
+                                                {upDesc && (
+                                                    <p className={styles.upcomingRewardDesc}>{upDesc}</p>
+                                                )}
+                                                <div className={styles.upcomingRewardFooter}>
+                                                    <small className={styles.upcomingLockedText}>
+                                                        Se desbloqueará al llegar a {next_level.min_referrals} {next_level.min_referrals === 1 ? 'referido' : 'referidos'}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <p className={styles.upcomingEmpty}>Próximamente...</p>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={!!rewardToConfirm}
+                onClose={() => setRewardToConfirm(null)}
+                onConfirm={handleConfirmClaim}
+                title="¿Elegir esta recompensa?"
+            >
+                ¿Deseas elegir <strong>"{rewardToConfirm?.title || rewardToConfirm?.description}"</strong> como tu recompensa de este nivel?
+                <br /><br />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #888)' }}>
+                    Recuerda que solo podrás elegir 1 recompensa por nivel. Al confirmarla se generará tu cupón exclusivo y las demás opciones quedarán bloqueadas.
+                </span>
+            </ConfirmModal>
         </div>
     );
 };

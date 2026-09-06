@@ -132,8 +132,8 @@ export const AdminAuthProvider = ({ children }) => {
                 msg.includes('invalid claim');
 
             if (isAuthError) {
-                // Token expirado o inválido: cerrar sesión automáticamente
-                supabase.auth.signOut().catch(() => {});
+                // Token expirado o inválido: cerrar sesión localmente de inmediato sin esperar al servidor
+                supabase.auth.signOut({ scope: 'local' }).catch(() => {});
                 setAuthState({ status: 'UNAUTHENTICATED', userId: null, adminData: null, error: null });
                 return;
             }

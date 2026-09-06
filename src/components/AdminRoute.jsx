@@ -39,9 +39,9 @@ const AdminRoute = () => {
               onClick={async () => {
                 try {
                   const { supabase } = await import('../lib/supabaseClient');
-                  await supabase.auth.signOut();
+                  await supabase.auth.signOut({ scope: 'local' });
                 } catch (error) {
-                  console.warn('[AdminRoute] No se pudo cerrar la sesión remota.', error);
+                  console.warn('[AdminRoute] No se pudo cerrar la sesión local.', error);
                 }
                 localStorage.clear();
                 window.location.href = '/login';
