@@ -7,6 +7,7 @@ import { useAlert } from '../context/AlertContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
 import ImageWithFallback from '../components/ImageWithFallback';
 import { NETWORK_STATUS } from '../lib/networkState';
+import { useSettings } from '../context/SettingsContext';
 
 // Nota: Ya NO importamos CheckoutModal aquí
 // import CheckoutModal from '../components/CheckoutModal';
@@ -39,6 +40,22 @@ export default function Cart({ networkState }) {
 
     // ❌ Ya no necesitamos estado local para el modal
     // const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
+
+    const { getSetting } = useSettings();
+    const welcomeReward = getSetting('welcome_reward');
+
+    const welcomeCode = React.useMemo(() => {
+        if (customer?.has_made_first_purchase) {
+            localStorage.removeItem('ACTIVE_WELCOME_DISCOUNT');
+            return null;
+        }
+        const stored = localStorage.getItem('ACTIVE_WELCOME_DISCOUNT');
+        if (stored) return stored;
+        if (customer?.referrer_id && !customer?.has_made_first_purchase && (welcomeReward?.enabled ?? true)) {
+            return welcomeReward?.discount_code || 'AMIGONUEVO';
+        }
+        return null;
+    }, [customer?.has_made_first_purchase, customer?.referrer_id, welcomeReward]);
 
     const [discountCode, setDiscountCode] = useState('');
     const [discountMessage, setDiscountMessage] = useState('');
@@ -92,6 +109,24 @@ export default function Cart({ networkState }) {
             return;
         }
         const result = await applyDiscount(discountCode, customer.id);
+        setDiscountMessage(result.message);
+        if (result.success || result.message !== 'Debes iniciar sesión para usar un código.') {
+            setTimeout(() => setDiscountMessage(''), 3000);
+        }
+    };
+
+    const handleApplyWelcomeCode = async (codeToApply) => {
+        if (!codeToApply) return;
+        setDiscountCode(codeToApply);
+        if (userLoading) {
+            setDiscountMessage('Cargando información...');
+            return;
+        }
+        if (!customer?.id) {
+            setDiscountMessage('Debes iniciar sesión para usar un código.');
+            return;
+        }
+        const result = await applyDiscount(codeToApply, customer.id);
         setDiscountMessage(result.message);
         if (result.success || result.message !== 'Debes iniciar sesión para usar un código.') {
             setTimeout(() => setDiscountMessage(''), 3000);
@@ -177,6 +212,21 @@ export default function Cart({ networkState }) {
                         </div>
 
                         <div className={styles.cartFooter}>
+                            {welcomeCode && !discount && (
+                                <div className={styles.welcomeDiscountBanner}>
+                                    <div className={styles.welcomeDiscountText}>
+                                        🍗 Cupón de bienvenida disponible: <strong>{welcomeCode}</strong>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={styles.applyWelcomeButton}
+                                        onClick={() => handleApplyWelcomeCode(welcomeCode)}
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+                            )}
+
                              <div className={styles.discountAccordion}>
                                 {!discount && (
                                     <button onClick={() => setDiscountVisible(!isDiscountVisible)} className={styles.discountToggleButton}>

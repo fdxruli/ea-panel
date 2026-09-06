@@ -55,6 +55,12 @@ export default function AlertModal() {
         }
     }, [alert]);
 
+    const [copied, setCopied] = React.useState(false);
+
+    React.useEffect(() => {
+        setCopied(false);
+    }, [alert?.key]);
+
     if (!alert) return null;
 
     const handleConfirm = () => {
@@ -62,6 +68,39 @@ export default function AlertModal() {
             alert.onConfirm();
         }
         closeAlert();
+    };
+
+    const handleCopyCode = async () => {
+        if (!alert?.copyCode) return;
+        let success = false;
+        if (navigator?.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(alert.copyCode);
+                success = true;
+            } catch (err) {
+                console.warn('navigator.clipboard falló, usando método alternativo:', err);
+            }
+        }
+        if (!success) {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = alert.copyCode;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                success = document.execCommand('copy');
+                textArea.remove();
+            } catch (err) {
+                console.error('Error copiando código al portapapeles:', err);
+            }
+        }
+        if (success) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+        }
     };
 
     return createPortal(
@@ -81,21 +120,36 @@ export default function AlertModal() {
                     <AlertIcon />
 
                     <h2 id="alert-title" className={styles.title}>
-                        Notificación
+                        {alert.title || (alert.type === 'error' ? 'Aviso' : 'Notificación')}
                     </h2>
 
                     <p id="alert-message" className={styles.message}>
                         {alert.message}
                     </p>
 
-                    <button
-                        onClick={handleConfirm}
-                        className={styles.closeButton}
-                        data-alert-focus
-                        autoFocus
-                    >
-                        Entendido
-                    </button>
+                    <div className={styles.buttonGroup}>
+                        {alert.copyCode && (
+                            <button
+                                type="button"
+                                onClick={handleCopyCode}
+                                className={`${styles.copyCodeButton} ${copied ? styles.copied : ''}`}
+                                data-alert-focus
+                                autoFocus
+                            >
+                                {copied ? '¡Código copiado! ✓' : `Copiar código: ${alert.copyCode}`}
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleConfirm}
+                            className={styles.closeButton}
+                            data-alert-focus={!alert.copyCode ? true : undefined}
+                            autoFocus={!alert.copyCode}
+                        >
+                            Entendido
+                        </button>
+                    </div>
                 </div>
             </div>
         </>,

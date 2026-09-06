@@ -1,5 +1,6 @@
 import React, { useEffect, lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { useLocation, Routes, Route } from "react-router-dom";
+import { captureReferralCodeFromUrl } from "./hooks/useReferralCode.js";
 
 // Providers principales del cliente: necesarios para el shell y el catálogo.
 import { CartProvider } from "./context/CartContext.jsx";
@@ -50,9 +51,16 @@ const ClientMenuFallback = () => {
 };
 
 function App() {
+  const location = useLocation();
+
   useEffect(() => {
     cleanupExpiredCache();
   }, []);
+
+  // Capturar código de referido en la carga inicial y en cualquier cambio de ruta
+  useEffect(() => {
+    captureReferralCodeFromUrl();
+  }, [location.search]);
 
   return (
     <>

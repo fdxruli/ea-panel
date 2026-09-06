@@ -99,6 +99,9 @@ export default function PhoneModal() {
     if (result.status === 'not_found') {
       // Cliente NUEVO - puede usar referral code
       setIsNewUser(true);
+      if (referralCode) {
+        setReferralWarning(`¡Invitación activada (${referralCode})! Completa tu nombre para recibir tu beneficio de bienvenida.`);
+      }
       return;
     }
 
@@ -187,8 +190,17 @@ export default function PhoneModal() {
       // Mostrar mensaje de bienvenida si vino con referido
       if (referralCode) {
         const welcomeReward = getSetting('welcome_reward');
-        if (welcomeReward?.enabled) {
-          showAlert(welcomeReward.message.replace('{CODE}', welcomeReward.discount_code));
+        const code = welcomeReward?.discount_code || 'AMIGONUEVO';
+        if (welcomeReward?.enabled !== false) {
+          localStorage.setItem('ACTIVE_WELCOME_DISCOUNT', code);
+          const rawMessage = welcomeReward?.message || '¡Bienvenido(a) a Entre Alas! Usa tu cupón {CODE} para obtener 15% de descuento en tu primer pedido.';
+          showAlert(
+            rawMessage.replace('{CODE}', code),
+            {
+              copyCode: code,
+              title: '¡Bienvenido(a) a Entre Alas! 🍗'
+            }
+          );
         }
       }
       return;
@@ -208,8 +220,17 @@ export default function PhoneModal() {
       // Mostrar mensaje de bienvenida si vino con referido
       if (referralCode) {
         const welcomeReward = getSetting('welcome_reward');
-        if (welcomeReward?.enabled) {
-          showAlert(welcomeReward.message.replace('{CODE}', welcomeReward.discount_code));
+        const code = welcomeReward?.discount_code || 'AMIGONUEVO';
+        if (welcomeReward?.enabled !== false) {
+          localStorage.setItem('ACTIVE_WELCOME_DISCOUNT', code);
+          const rawMessage = welcomeReward?.message || '¡Bienvenido(a) a Entre Alas! Usa tu cupón {CODE} para obtener 15% de descuento en tu primer pedido.';
+          showAlert(
+            rawMessage.replace('{CODE}', code),
+            {
+              copyCode: code,
+              title: '¡Bienvenido(a) a Entre Alas! 🍗'
+            }
+          );
         }
       }
     }
@@ -278,7 +299,7 @@ export default function PhoneModal() {
         <div className={`${styles.expandableArea} ${isNewUser ? styles.expanded : ''}`}>
           <div className={styles.expandableContent}>
             <p className={styles.promptText}>
-              {referralCode && isNewUser ? '¡Vienes con invitación!' : 'Parece que eres nuevo.'} ¿Cómo te llamas?
+              {referralCode && isNewUser ? `¡Vienes con invitación (${referralCode})!` : 'Parece que eres nuevo.'} ¿Cómo te llamas?
             </p>
             <input
               type="text"

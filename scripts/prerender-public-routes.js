@@ -103,14 +103,22 @@ function getOutputPath(routePath) {
 async function prerenderRoute(page, baseUrl, routePath) {
   const targetUrl = `${baseUrl}${routePath}`;
 
-  await page.goto(targetUrl, {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000,
-  });
+  try {
+    await page.goto(targetUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 8000,
+    });
+  } catch (err) {
+    console.warn(`[Prerender] Advertencia en navegación a ${routePath}: ${err.message}`);
+  }
 
-  await page.waitForFunction(() => window.__SEO_READY__ === true, {
-    timeout: 60000,
-  });
+  try {
+    await page.waitForFunction(() => window.__SEO_READY__ === true, {
+      timeout: 3000,
+    });
+  } catch {
+    // Si no emite seo-ready a tiempo, continuar con el HTML disponible
+  }
 
   const html = await page.content();
   const outputPath = getOutputPath(routePath);
@@ -120,38 +128,45 @@ async function prerenderRoute(page, baseUrl, routePath) {
 }
 
 async function prerenderPublicRoutes() {
-  if (process.env.VERCEL === '1') {
-    console.log('Entorno Vercel detectado. Se omite el prerender publico.');
+  if (process.env.VERCEL === '1' || process.env.SKIP_PRERENDER === '1') {
+    console.log('Entorno Vercel o SKIP_PRERENDER detectado. Se omite el prerender publico.');
     return;
   }
 
   console.log('Iniciando prerender de rutas publicas...');
 
-  const [{ default: puppeteer }, { fetchPublicSeoRoutes }] = await Promise.all([
-    import('puppeteer'),
-    import('./seo-routes.js'),
-  ]);
-  const { allRoutes } = await fetchPublicSeoRoutes();
-  const { server, baseUrl } = await startStaticServer();
-  
-  const tempUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ea-prerender-'));
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    userDataDir: tempUserDataDir,
-    timeout: 30000,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--disable-background-networking',
-      '--disable-extensions',
-      '--disable-sync',
-    ],
-  });
+  let server;
+  let browser;
+  let tempUserDataDir;
 
   try {
+    const [{ default: puppeteer }, { fetchPublicSeoRoutes }] = await Promise.all([
+      import('puppeteer'),
+      import('./seo-routes.js'),
+    ]);
+    const { allRoutes } = await fetchPublicSeoRoutes();
+    const serverInfo = await startStaticServer();
+    server = serverInfo.server;
+    const baseUrl = serverInfo.baseUrl;
+    
+    tempUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), `ea-prerender-${Date.now()}-`));
+    browser = await puppeteer.launch({
+      headless: true,
+      userDataDir: tempUserDataDir,
+      timeout: 10000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--disable-background-networking',
+        '--disable-extensions',
+        '--disable-sync',
+        '--remote-debugging-port=0',
+      ],
+    });
+
     const page = await browser.newPage();
     await page.setCacheEnabled(false);
     await page.evaluateOnNewDocument(() => {
@@ -163,22 +178,37 @@ async function prerenderPublicRoutes() {
 
     for (const route of allRoutes) {
       console.log(`Prerenderizando ${route.path}...`);
-      await prerenderRoute(page, baseUrl, route.path);
+      try {
+        await prerenderRoute(page, baseUrl, route.path);
+      } catch (routeError) {
+        console.warn(`Aviso: No se pudo prerenderizar ${route.path}: ${routeError.message}`);
+      }
     }
+
+    console.log('Prerender completado.');
   } finally {
-    await browser.close().catch(() => {});
-    server.close();
-    try {
-      fs.rmSync(tempUserDataDir, { recursive: true, force: true });
-    } catch {
-      // El directorio temporal ya puede haber sido eliminado por el sistema.
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+    if (server) {
+      await new Promise((resolve) => server.close(resolve)).catch(() => {});
+    }
+    if (tempUserDataDir) {
+      try {
+        fs.rmSync(tempUserDataDir, { recursive: true, force: true });
+      } catch {
+        // El directorio temporal ya puede haber sido eliminado por el sistema.
+      }
     }
   }
-
-  console.log('Prerender completado.');
 }
 
-prerenderPublicRoutes().catch((error) => {
-  console.warn('Advertencia durante el prerender local (el build de la app continua):', error.message);
-});
+prerenderPublicRoutes()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.warn('Advertencia durante el prerender local (el build de la app continua):', error.message);
+    process.exit(0);
+  });
 

@@ -105,7 +105,7 @@ export const CartProvider = ({ children }) => {
 
     const total = subtotal - discountAmount;
 
-    // 4. Funciones del carrito (Sin cambios)
+    // 4. Funciones del carrito
     const applyDiscount = useCallback(async (code, customerId) => {
         if (!customerId) return { success: false, message: 'Debes iniciar sesión para usar un código.' };
         const upperCaseCode = code.toUpperCase();
@@ -121,9 +121,12 @@ export const CartProvider = ({ children }) => {
                 return { success: false, message: 'Este código de recompensa es personal y no te pertenece.' };
             }
             if (discountData.requires_referred_status) {
-                const { data: customerData } = await supabase.from('customers').select('referrer_id').eq('id', customerId).single();
-                if (!customerData.referrer_id) {
+                const { data: customerData } = await supabase.from('customers').select('referrer_id, has_made_first_purchase').eq('id', customerId).single();
+                if (!customerData?.referrer_id) {
                     return { success: false, message: 'Este código es exclusivo para clientes invitados.' };
+                }
+                if (customerData?.has_made_first_purchase) {
+                    return { success: false, message: 'Este código de bienvenida solo es válido en tu primer pedido.' };
                 }
             }
             if (discountData.is_single_use) {
