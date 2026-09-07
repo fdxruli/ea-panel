@@ -4,9 +4,9 @@
 
 **COMPLETE WITH RISKS**
 
-La identidad customer-facing quedó migrada a un modelo Auth-first en la rama `phase-4-customer-auth-frontend`. `main` no fue modificado.
+La identidad customer-facing queda migrada a un modelo Auth-first en la rama `phase-4-customer-auth-frontend`. La integración final debe ocurrir sobre el `main` que ya contiene FASE 2A, 3 y 3A.
 
-El límite pendiente es de validación externa: el E2E real de SMS/OTP requiere un proveedor SMS configurado y un número de prueba utilizable. La base actualmente tiene 56 customers legacy y 0 `auth_user_id`, por lo que no se simuló un PASS de multiusuario real contra datos Auth existentes.
+El límite pendiente es de validación externa: el E2E real de SMS/OTP requiere un proveedor SMS configurado y un número de prueba utilizable. La base actualmente tiene 56 customers legacy y 0 `auth_user_id`, por lo que no se simula un PASS de multiusuario real contra datos Auth existentes.
 
 ## 1. Arquitectura anterior
 
@@ -38,7 +38,7 @@ CustomerContext
 UserDataContext / dominio
 ```
 
-`localStorage.customer_phone`, `customer_data` y `customer_canonical_id` ya no se leen ni se escriben como fuente de autenticación. En logout se eliminan para evitar reutilización accidental.
+`localStorage.customer_phone`, `customer_data` y `customer_canonical_id` ya no se leen como fuente de autenticación. En logout se eliminan para evitar reutilización accidental.
 
 ## 3. CustomerContext
 
@@ -75,19 +75,19 @@ Las respuestas de orders se validan para confirmar que todas pertenecen al `cust
 
 | Archivo | Identidad actual | Auth | Cache | RPC / acceso legacy | Acción |
 |---|---|---|---|---|---|
-| `src/context/CustomerContext.jsx` | Auth + customer canónico | Auth-first | Legacy no leído/escrito | RPC Auth-safe | Migrado |
+| `src/context/CustomerContext.jsx` | Auth + customer canónico | Auth-first | Legacy limpiado, no usado como identidad | RPC Auth-safe | Migrado |
 | `src/context/UserDataContext.jsx` | `customerId` derivado de Auth | Indirecta vía contexto | `customerId` | Tabla con RLS | Migrado |
-| `src/layouts/ClientLayout.jsx` | `phone`/customer desde contexto | Auth-derived | UI | RLS/RPC existentes | Auditado; no requiere identidad legacy tras cambio de contexto |
+| `src/layouts/ClientLayout.jsx` | `phone`/customer desde contexto | Auth-derived | UI | RLS/RPC existentes | Auditado |
 | `src/components/UserMenu.jsx` | `customer` + Auth flags | Auth | No autentica por cache | `signOut()` | Migrado |
 | `src/components/PhoneModal.jsx` | Auth phone OTP | Supabase Auth | No OTP storage | `signInWithOtp`, `verifyOtp`, link/register | Migrado |
 | `src/pages/MyProfile.jsx` | `customer.id` como dominio | Route guard + Auth | No phone storage | tablas bajo RLS | Migrado |
 | `src/pages/MyOrders.jsx` | contexto customer | Route guard + Auth | UserData | orders bajo RLS | Validado por guard/contexto |
 | `src/pages/MyStuff.jsx` | `customerId` desde Auth | Auth | Contexto | Auth-safe rewards RPCs | Migrado |
-| `src/pages/Cart.jsx` | `customerId` sólo como dominio | Auth | carrito local | order service | Migrado a service Auth-safe |
-| `src/pages/CreateOrder.jsx` | admin | Admin Auth | admin draft/cache | Admin legacy RPCs | Auditado; fuera del customer auth boundary |
-| `src/pages/OrderDetailPage.jsx` | contexto customer | Route guard + Auth | UserData | orders bajo RLS | Validado por guard/contexto |
+| `src/pages/Cart.jsx` | `customerId` sólo como dominio | Auth | carrito local | order service | Migrado |
+| `src/pages/CreateOrder.jsx` | admin | Admin Auth | admin draft/cache | Admin legacy RPCs | Fuera del customer auth boundary |
+| `src/pages/OrderDetailPage.jsx` | contexto customer | Route guard + Auth | UserData | orders bajo RLS | Validado |
 | `src/services/orderService.js` | `customerId` sólo para distinguir guest | Auth-safe customer path | N/A | `create_my_order_with_stock_check`, `record_my_discount_usage_and_deactivate` | Migrado |
-| `src/lib/customerAuth.js` | Auth | Supabase Auth | N/A | centraliza OTP/link/resolve/logout | Nuevo |
+| `src/lib/customerAuth.js` | Auth | Supabase Auth | N/A | centraliza OTP/link/resolve/logout + API Phase 3 compatible | Reconciliado |
 
 ## 6. RPC
 
@@ -136,7 +136,7 @@ canonical customer.id
 all customer-specific cache
 ```
 
-`UserDataContext` no usa phone para rehidratar customer. Las caches se invalidan cuando no existe una identidad Auth+linked válida. Las respuestas antiguas llevan `requestIdRef` y no pueden reemplazar una identidad nueva.
+`UserDataContext` no usa phone para rehidratar customer. Las caches se invalidan cuando no existe una identidad Auth+linked válida. Las respuestas antiguas llevan request-id guards y no pueden reemplazar una identidad nueva.
 
 ## 9. Logout
 
@@ -223,13 +223,11 @@ Una prueba A/B completa con dos customers Auth vinculados no puede declararse PA
 
 Los nombres legacy quedan sólo para compatibilidad fuera del customer auth boundary o para admin/guest workflows explícitos.
 
-Las claves de identidad legacy permanecen definidas únicamente para limpieza y compatibilidad histórica, pero ya no son una fuente de autenticación ni se escriben desde `CustomerContext`.
+Las claves de identidad legacy permanecen definidas únicamente para limpieza histórica, pero ya no son una fuente de autenticación.
 
 ## 16. Supabase advisors / riesgos
 
-El advisor de seguridad sigue mostrando warnings preexistentes y algunos relacionados con las funciones SECURITY DEFINER expuestas por el modelo actual. Entre ellos están funciones Auth-safe como `complete_my_customer_registration()` y `create_my_order_with_stock_check()`, además de funciones administrativas legacy. Esto no implica automáticamente una vulnerabilidad; requiere mantener grants mínimos y validar cada función por diseño.
-
-La migración conserva los warnings preexistentes de `get_active_menu_products()` y otros RPCs de la plataforma para no mezclar un hardening global con FASE 4.
+El advisor de seguridad sigue mostrando warnings preexistentes y algunos relacionados con funciones SECURITY DEFINER expuestas por el modelo actual. Esto no implica automáticamente una vulnerabilidad; requiere mantener grants mínimos y validar cada función por diseño.
 
 ## 17. Tests / CI
 
@@ -240,17 +238,19 @@ Se añadieron:
 
 El workflow ejecuta `npm ci`, `npm test`, `npm run lint` y `npm run build`.
 
-## 18. Riesgos pendientes
+## 18. Migraciones
+
+Las migraciones originalmente fechadas antes de FASE 3/3A fueron renombradas para representar el orden lógico reproducible:
+
+- `20260907023000_phase_4_customer_auth_frontend.sql`
+- `20260907023100_phase_4_public_special_prices.sql`
+
+No se re-aplicó SQL a producción sólo para llenar el ledger: el runtime ya contenía las funciones equivalentes y la prioridad fue no introducir una segunda aplicación ciega.
+
+## 19. Riesgos pendientes
 
 1. Proveedor SMS / número de prueba no verificado para E2E real.
 2. Ningún customer está todavía vinculado en la base auditada; el comportamiento A/B final debe probarse con dos cuentas Auth reales.
 3. Existen warnings SECURITY DEFINER preexistentes en la base fuera del alcance estricto de FASE 4.
 4. Guest/admin workflows siguen usando superficies legacy explícitas; no deben reutilizarse como customer authorization boundary.
-
-## 19. Próxima fase
-
-**FASE 5 — CUSTOMER LOYALTY**
-
-Esta fase debe trabajar sobre el `customer.id` ya resuelto por Auth y no volver a introducir `customer_id` como mecanismo de autorización.
-
-No se implementan aquí niveles, puntos, badges, gamificación ni recompensas nuevas.
+5. El ledger histórico de Supabase no contiene las migraciones originales de FASE 4 aunque el runtime ya contiene el comportamiento equivalente; la nueva nomenclatura de GitHub hace reproducible el orden futuro, pero la reconciliación histórica del ledger sigue siendo una diferencia documentada.
