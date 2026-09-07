@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseClient.js';
 
 const E164_PHONE = /^\+[1-9]\d{7,14}$/;
 
