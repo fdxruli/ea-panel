@@ -182,3 +182,29 @@ export const fetchCustomerFavoriteProducts = async (customerId, limit = 5) => {
   }
   return data || [];
 };
+
+/**
+ * Obtiene la categoría de fidelidad calculada para un cliente.
+ *
+ * La clasificación vive en Supabase para que Admin y frontend compartan
+ * exactamente la misma regla de negocio.
+ *
+ * Categorías actuales:
+ * - Inicial
+ * - Frecuente
+ * - VIP
+ */
+export const fetchCustomerLoyaltyCategory = async (customerId) => {
+  if (!customerId) return null;
+
+  const { data, error } = await supabase.rpc('get_customer_loyalty_profile', {
+    p_customer_id: customerId
+  });
+
+  if (error) {
+    console.error('[customerQueries] Error obteniendo categoría de fidelidad:', error);
+    throw error;
+  }
+
+  return data?.[0]?.category || null;
+};
