@@ -1,23 +1,101 @@
 import { supabase } from './supabaseClient';
-import { normalizeE164Phone } from './customerAuthUtils';
+
+const E164_PHONE = /^\+[1-9]\d{7,14}$/;
 
 export const AUTH_ERROR_CODES = Object.freeze({
-  AUTH: 'AUTH_ERROR', OTP: 'OTP_ERROR', CUSTOMER_NOT_LINKED: 'CUSTOMER_NOT_LINKED', CUSTOMER_NOT_FOUND: 'CUSTOMER_NOT_FOUND', SESSION_EXPIRED: 'SESSION_EXPIRED',
+  AUTH: 'AUTH_ERROR',
+  OTP: 'OTP_ERROR',
+  CUSTOMER_NOT_LINKED: 'CUSTOMER_NOT_LINKED',
+  CUSTOMER_NOT_FOUND: 'CUSTOMER_NOT_FOUND',
+  SESSION_EXPIRED: 'SESSION_EXPIRED',
 });
 
-export { normalizeE164Phone };
+export const normalizeCustomerAuthPhone = (phone) => {
+  const value = String(phone ?? '').trim();
+  if (!E164_PHONE.test(value)) {
+    throw new Error('El teléfono debe estar en formato E.164 (ej. +529631234567).');
+  }
+  return value;
+};
+
+export const normalizeE164Phone = (countryCode = '+52', nationalNumber = '') => {
+  const digits = String(nationalNumber || '').replace(/\D/g, '');
+  if (digits.length !== 10) return null;
+  const code = String(countryCode || '+52').replace(/\D/g, '');
+  return code ? `+${code}${digits}` : null;
+};
+
+export const createCustomerAuth = (client = supabase) => ({
+  async requestOtp(phone, { channel = 'sms', captchaToken } = {}) {
+    const normalizedPhone = normalizeCustomerAuthPhone(phone);
+    const options = {};
+    if (captchaToken) options.captchaToken = captchaToken;
+    if (channel && channel !== 'sms') options.channel = channel;
+    const { error } = await client.auth.signInWithOtp({
+      phone: normalizedPhone,
+      ...(Object.keys(options).length ? { options } : {}),
+    });
+    if (error) throw error;
+    return { phone: normalizedPhone, channel };
+  },
+
+  async verifyOtpAndLink(phone, token) {
+    const normalizedPhone = normalizeCustomerAuthPhone(phone);
+    const {
+      data: { session },
+      error: verifyError,
+    } = await client.auth.verifyOtp({
+      phone: normalizedPhone,
+      token: String(token ?? '').trim(),
+      type: 'sms',
+    });
+    if (verifyError) throw verifyError;
+    if (!session) throw new Error('OTP verificado sin sesión autenticada.');
+    const { data: customerId, error: linkError } = await client.rpc('link_my_customer');
+    if (linkError) throw linkError;
+    if (!customerId) throw new Error('La sesión de Auth no quedó vinculada a un customer existente.');
+    return { session, customerId };
+  },
+
+  async getMyCustomerId() {
+    const { data, error } = await client.rpc('get_my_customer_id');
+    if (error) throw error;
+    return data ?? null;
+  },
+
+  async getSession() {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    return data.session ?? null;
+  },
+
+  async signOut() {
+    const { error } = await client.auth.signOut();
+    if (error) throw error;
+  },
+});
+
+export const customerAuth = createCustomerAuth();
 
 export const requestPhoneOtp = async (phone) => {
-  const { error } = await supabase.auth.signInWithOtp({ phone });
-  if (error) return { ok: false, code: AUTH_ERROR_CODES.OTP, error };
-  return { ok: true };
+  try {
+    await createCustomerAuth().requestOtp(phone);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, code: AUTH_ERROR_CODES.OTP, error };
+  }
 };
 
 export const verifyPhoneOtp = async (phone, token) => {
-  const { data, error } = await supabase.auth.verifyOtp({ phone, token, type: 'sms' });
-  if (error) return { ok: false, code: AUTH_ERROR_CODES.OTP, error };
-  if (!data?.session || !data?.user) return { ok: false, code: AUTH_ERROR_CODES.AUTH, error: new Error('No se pudo establecer la sesión.') };
-  return { ok: true, session: data.session, user: data.user };
+  try {
+    const normalizedPhone = normalizeCustomerAuthPhone(phone);
+    const { data, error } = await supabase.auth.verifyOtp({ phone: normalizedPhone, token: String(token ?? '').trim(), type: 'sms' });
+    if (error) return { ok: false, code: AUTH_ERROR_CODES.OTP, error };
+    if (!data?.session || !data?.user) return { ok: false, code: AUTH_ERROR_CODES.AUTH, error: new Error('No se pudo establecer la sesión.') };
+    return { ok: true, session: data.session, user: data.user };
+  } catch (error) {
+    return { ok: false, code: AUTH_ERROR_CODES.OTP, error };
+  }
 };
 
 export const getAuthState = async () => {
@@ -43,7 +121,10 @@ export const linkMyCustomer = async () => {
 };
 
 export const completeMyCustomerRegistration = async (name, referrerCode = null) => {
-  const { data: customerId, error } = await supabase.rpc('complete_my_customer_registration', { p_name: name, p_referrer_code: referrerCode || null });
+  const { data: customerId, error } = await supabase.rpc('complete_my_customer_registration', {
+    p_name: name,
+    p_referrer_code: referrerCode || null,
+  });
   if (error) return { ok: false, code: AUTH_ERROR_CODES.CUSTOMER_NOT_FOUND, error };
   return { ok: true, customerId };
 };
