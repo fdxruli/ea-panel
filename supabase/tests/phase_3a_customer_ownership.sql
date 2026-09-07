@@ -69,7 +69,7 @@ select ok(
 );
 
 select ok(
-  not has_function_privilege('anon','public.get_my_customer_stats()','execute'),
+  not has_function_privilege('anon','public.get_my_customer_basic_stats()','execute'),
   'anon cannot call the new customer stats route'
 );
 
