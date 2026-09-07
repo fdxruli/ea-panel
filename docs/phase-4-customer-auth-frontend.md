@@ -254,3 +254,7 @@ No se re-aplicó SQL a producción sólo para llenar el ledger: el runtime ya co
 3. Existen warnings SECURITY DEFINER preexistentes en la base fuera del alcance estricto de FASE 4.
 4. Guest/admin workflows siguen usando superficies legacy explícitas; no deben reutilizarse como customer authorization boundary.
 5. El ledger histórico de Supabase no contiene las migraciones originales de FASE 4 aunque el runtime ya contiene el comportamiento equivalente; la nueva nomenclatura de GitHub hace reproducible el orden futuro, pero la reconciliación histórica del ledger sigue siendo una diferencia documentada.
+
+## 20. Sync final pre-merge
+
+La rama fue sincronizada mediante un merge de dos padres con `main` tras FASE 3A. Este commit de sincronización no aplica SQL a producción.
