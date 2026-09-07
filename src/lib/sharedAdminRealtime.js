@@ -29,6 +29,8 @@ const ADMIN_TABLES = new Set([
   'admins',
   'terms_and_conditions',
   'referral_levels',
+  'rewards',
+  'customer_reward_claims',
   'settings',
   'customer_addresses'
 ]);

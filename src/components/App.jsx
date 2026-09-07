@@ -34,6 +34,7 @@ import Referrals from "./pages/Referrals.jsx";
 import { SettingsProvider } from "./context/SettingsContext.jsx";
 import { cleanupExpiredCache } from "./utils/cache.js";
 import ReloadPrompt from "./components/ReloadPrompt.jsx";
+import { captureReferralCodeFromUrl } from "./hooks/useReferralCode.js";
 
 const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
   const { hasPermission, loading } = useAdminAuth();
@@ -57,6 +58,7 @@ const PermissionWrapper = ({ permissionKey, element, isIndex = false }) => {
 function App() {
   useEffect(() => {
     cleanupExpiredCache();
+    captureReferralCodeFromUrl();
   }, []);
 
   return (

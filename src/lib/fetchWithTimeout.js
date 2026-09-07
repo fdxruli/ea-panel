@@ -1,4 +1,4 @@
-import { NETWORK_TIMEOUT_MS } from './networkState';
+import { NETWORK_TIMEOUT_MS } from './networkState.js';
 
 const RETRY_DELAYS_MS = [500, 1500, 3000];
 
@@ -248,7 +248,7 @@ export async function fetchWithTimeout(input, init = {}, options = {}) {
   const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
     ? options.timeoutMs
     : NETWORK_TIMEOUT_MS;
-  const maxRetries = clampMaxRetries(options.maxRetries);
+  const maxRetries = clampMaxRetries(Number.isFinite(options.maxRetries) ? options.maxRetries : 1);
   const totalAttempts = maxRetries + 1;
   const externalSignal = getExternalSignal(input, init);
 
@@ -271,7 +271,7 @@ export async function fetchWithTimeout(input, init = {}, options = {}) {
 
       const retryDelayMs = RETRY_DELAYS_MS[attempt - 1] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1];
 
-      if (import.meta.env.DEV) {
+      if (typeof import.meta !== 'undefined' && import.meta?.env?.DEV) {
         console.debug(`Retry ${attempt}/${maxRetries} after ${retryDelayMs}ms`);
       }
 

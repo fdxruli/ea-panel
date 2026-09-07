@@ -109,6 +109,52 @@
   outline-offset: 3px;
 }
 
+/* --- BOTÓN DE COPIAR CÓDIGO (NUEVO) --- */
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.copyCodeButton {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.85rem 1.2rem;
+  background: var(--bg-primary);
+  color: var(--color-primary);
+  border: 2px dashed var(--color-primary);
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.08);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .copyCodeButton:hover {
+    background: rgba(211, 47, 47, 0.06);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(211, 47, 47, 0.15);
+  }
+}
+
+.copyCodeButton:active {
+  transform: translateY(1px);
+}
+
+.copyCodeButton.copied {
+  background: rgba(46, 125, 50, 0.12);
+  border-color: #2e7d32;
+  color: #2e7d32;
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
+}
+
 /* --- MEDIA QUERIES (ESCALADO PARA TABLET/DESKTOP) --- */
 @media (min-width: 768px) {
   .modalContent {

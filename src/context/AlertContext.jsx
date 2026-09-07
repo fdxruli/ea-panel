@@ -7,19 +7,36 @@ export const useAlert = () => useContext(AlertContext);
 export const AlertProvider = ({ children }) => {
     const [alert, setAlert] = useState(null);
 
-    const showAlert = useCallback((message, type = 'info', onConfirm = null) => {
+    const showAlert = useCallback((message, type = 'info', onConfirm = null, options = {}) => {
         setAlert((prev) => {
             if (prev && prev.type === 'error' && type === 'info') {
                 return prev;
             }
-            return { message, type, key: Date.now(), onConfirm };
+
+            let finalType = type;
+            let finalOnConfirm = onConfirm;
+            let finalOptions = options;
+
+            if (typeof type === 'object' && type !== null) {
+                finalOptions = type;
+                finalType = type.type || 'info';
+                finalOnConfirm = type.onConfirm || null;
+            }
+
+            return {
+                message,
+                type: finalType,
+                key: Date.now(),
+                onConfirm: finalOnConfirm,
+                copyCode: finalOptions.copyCode || null,
+                title: finalOptions.title || null
+            };
         });
     }, []);
 
     const closeAlert = useCallback(() => {
         setAlert(null);
     }, []);
-
     // NUEVO: Escuchador global de degradación de IndexedDB
     useEffect(() => {
         const handleIDBDegradation = (event) => {

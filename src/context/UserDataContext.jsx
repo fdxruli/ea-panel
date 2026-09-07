@@ -70,7 +70,7 @@ export const UserDataProvider = ({ children }) => {
     const fetchCustomerAndAddresses = useCallback(async (phoneNumber, expectedCustomerId) => {
         const { data: customerData, error: customerError } = await supabase
             .from('customers')
-            .select('id, name, phone, created_at, referral_code, referrer_id, referral_count')
+            .select('id, name, phone, created_at, referral_code, referrer_id, referral_count, has_made_first_purchase')
             .eq('phone', phoneNumber)
             .maybeSingle();
 

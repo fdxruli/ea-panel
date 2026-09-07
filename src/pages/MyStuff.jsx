@@ -26,7 +26,7 @@ const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" heigh
 const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3" /></svg>;
 
-// --- (Componente ReferralSystem MODIFICADO) ---
+// --- (Componente ReferralSystem) ---
 const ReferralSystem = ({ customer }) => {
     const { showAlert } = useAlert();
     const [isQrModalOpen, setQrModalOpen] = useState(false);
@@ -79,24 +79,56 @@ const RewardsSection = ({ customerId }) => {
 
     const fetchProgress = useCallback(async () => {
         if (!customerId) return;
-        const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
-        if (error) {
-            console.error("Error fetching rewards progress:", error);
-        } else {
-            setProgress(data);
+        try {
+            const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
+            if (error) {
+                console.error("Error fetching rewards progress:", error);
+            } else {
+                setProgress(data);
+            }
+        } catch (err) {
+            console.error("Unexpected error fetching rewards progress:", err);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, [customerId]);
 
     useEffect(() => {
         fetchProgress();
     }, [fetchProgress]);
 
+    // Revalidación por foco, visibilidad o actualización de órdenes
+    useEffect(() => {
+        if (!customerId) return;
+
+        const handleRevalidate = () => {
+            if (document.visibilityState === 'visible') {
+                fetchProgress();
+            }
+        };
+
+        const handleOrderStatus = (e) => {
+            if (e?.detail?.status === 'completado') {
+                fetchProgress();
+            }
+        };
+
+        window.addEventListener('visibilitychange', handleRevalidate);
+        window.addEventListener('focus', handleRevalidate);
+        window.addEventListener('order-status-updated', handleOrderStatus);
+
+        return () => {
+            window.removeEventListener('visibilitychange', handleRevalidate);
+            window.removeEventListener('focus', handleRevalidate);
+            window.removeEventListener('order-status-updated', handleOrderStatus);
+        };
+    }, [customerId, fetchProgress]);
+
     useEffect(() => {
         if (!customerId) return;
 
         const handleChanges = (payload) => {
-            console.log('Cambio detectado, actualizando recompensas...', payload);
+            console.log('Cambio detectado en canal de recompensas:', payload);
             fetchProgress();
         };
 
@@ -114,15 +146,19 @@ const RewardsSection = ({ customerId }) => {
     }, [customerId, fetchProgress]);
 
     const handleClaimCode = async (reward) => {
-        const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
-            p_customer_id: customerId,
-            p_reward_id: reward.id
-        });
-        if (error) {
-            showAlert('Hubo un error al generar tu código. Es posible que ya lo hayas reclamado.');
-        } else {
-            showAlert(`¡Código personal generado! Cópialo y úsalo en tu carrito.`);
-            fetchProgress();
+        try {
+            const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
+                p_customer_id: customerId,
+                p_reward_id: reward.id
+            });
+            if (error) {
+                showAlert(error.message || 'Hubo un error al generar tu código. Es posible que ya lo hayas reclamado.');
+            } else {
+                showAlert(`¡Código personal "${newCode}" generado! Cópialo y úsalo en tu carrito.`, 'success');
+                fetchProgress();
+            }
+        } catch (err) {
+            showAlert(err.message || 'Error inesperado al reclamar recompensa.');
         }
     };
 

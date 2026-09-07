@@ -16,16 +16,29 @@ export const BusinessHoursProvider = ({ children }) => {
         loading: true
     });
 
-    // --- 👇 MEJORA: Envolvemos en useCallback para consistencia y estabilidad ---
-    const checkBusinessHours = useCallback(async () => {
+    // --- 👇 MEJORA: Envolvemos en useCallback para consistencia y estabilidad con retry y fallback ---
+    const checkBusinessHours = useCallback(async (retryCount = 0) => {
         try {
             // Llama a la función de Supabase (aquí es donde se genera el mensaje mejorado)
             const { data, error } = await supabase.rpc('get_business_status');
             if (error) throw error;
 
+            let parsedData = data;
+            if (typeof parsedData === 'string') {
+                try {
+                    parsedData = JSON.parse(parsedData);
+                } catch (e) {
+                    console.warn("No se pudo parsear data de get_business_status:", e);
+                }
+            }
+
+            if (!parsedData || typeof parsedData.is_open === 'undefined') {
+                throw new Error('Respuesta inválida de get_business_status: ' + JSON.stringify(data));
+            }
+
             const newStatus = {
-                isOpen: data.is_open,
-                message: data.message, // Este mensaje viene del backend con la lógica mejorada
+                isOpen: Boolean(parsedData.is_open),
+                message: parsedData.message || (parsedData.is_open ? 'Abierto ahora' : 'Cerrado por el momento'),
                 loading: false,
             };
 
@@ -34,13 +47,29 @@ export const BusinessHoursProvider = ({ children }) => {
 
         } catch (error) {
             console.error("Error fetching business status:", error);
+
+            // Reintento automático rápido (1 vez tras 1.2s) en caso de hipo de red
+            if (retryCount < 1) {
+                setTimeout(() => checkBusinessHours(retryCount + 1), 1200);
+                return;
+            }
+
+            // Fallback: si tenemos un estado previo en caché válido, conservarlo
+            const { data: fallbackCache } = getCache(CACHE_KEYS.BUSINESS_STATUS, CACHE_TTL.BUSINESS_STATUS * 2);
+            if (fallbackCache && fallbackCache.message && fallbackCache.message !== 'No se pudo verificar el horario.') {
+                setBusinessStatus({ ...fallbackCache, loading: false });
+                return;
+            }
+
             setBusinessStatus(prevStatus => ({
                 ...prevStatus,
-                message: 'No se pudo verificar el horario.',
+                message: prevStatus.message && prevStatus.message !== 'Verificando horario...'
+                    ? prevStatus.message
+                    : 'No se pudo verificar el horario.',
                 loading: false,
             }));
         }
-    }, []); // <-- Array vacío para una función estable
+    }, []);
 
     useEffect(() => {
         // 1. Carga inicial desde caché para velocidad

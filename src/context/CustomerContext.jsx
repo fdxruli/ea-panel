@@ -242,10 +242,11 @@ export const CustomerProvider = ({ children }) => {
   }, [reconcileCanonicalCustomer]);
 
   const registerNewCustomer = useCallback(async (customerPhone, name, inviterCode = null) => {
+    const codeToUse = inviterCode || (typeof window !== 'undefined' ? localStorage.getItem('REFERRAL_CODE') : null);
     const newClientReferralCode = await generateUniqueReferralCode(name, customerPhone);
     let referrerId = null;
-    if (inviterCode) {
-      const { data: referrerData } = await supabase.from('customers').select('id').eq('referral_code', inviterCode).maybeSingle();
+    if (codeToUse) {
+      const { data: referrerData } = await supabase.from('customers').select('id').eq('referral_code', codeToUse.trim().toUpperCase()).maybeSingle();
       if (referrerData) referrerId = referrerData.id;
     }
     const { data: newCustomer, error } = await supabase.from('customers').insert({ name, phone: customerPhone, referral_code: newClientReferralCode, referrer_id: referrerId, referral_count: 0, has_made_first_purchase: false }).select().single();

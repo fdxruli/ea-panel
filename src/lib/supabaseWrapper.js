@@ -1,5 +1,5 @@
-import { TimeoutError } from './fetchWithTimeout';
-import { NETWORK_TIMEOUT_MS } from './networkState';
+import { TimeoutError } from './fetchWithTimeout.js';
+import { NETWORK_TIMEOUT_MS } from './networkState.js';
 
 const proxyCache = new WeakMap();
 const throwOnErrorBuilders = new WeakSet();

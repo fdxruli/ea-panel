@@ -78,7 +78,8 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                 .from('discounts')
                 .update({
                     requires_referred_status: true,
-                    is_single_use: true
+                    is_single_use: true,
+                    is_active: reward.enabled
                 })
                 .eq('id', discount.id);
 
@@ -384,12 +385,13 @@ export default function Referrals() {
     }, [customersWithReferrals, searchTerm]);
 
     const stats = useMemo(() => {
-        const totalReferrers = customersWithReferrals.length;
-        const totalReferrals = customersWithReferrals.reduce((sum, c) => sum + c.referral_count, 0);
-        const avgReferralsPerCustomer = totalReferrers > 0
-            ? (totalReferrals / totalReferrers).toFixed(1)
-            : 0;
-        return { totalReferrers, totalReferrals, avgReferralsPerCustomer };
+        const activeReferrers = customersWithReferrals.filter(c => (c.referral_count || 0) > 0).length;
+        const totalReferrals = customersWithReferrals.reduce((sum, c) => sum + (c.referral_count || 0), 0);
+        const totalRegisteredWithCode = customersWithReferrals.length;
+        const avgReferralsPerActive = activeReferrers > 0
+            ? (totalReferrals / activeReferrers).toFixed(1)
+            : '0.0';
+        return { activeReferrers, totalReferrals, totalRegisteredWithCode, avgReferralsPerActive };
     }, [customersWithReferrals]);
 
     const handleEditCustomer = useCallback((customer) => {
@@ -398,9 +400,7 @@ export default function Referrals() {
 
     const handleCloseEditModal = useCallback(() => {
         setEditingCustomer(null);
-        invalidate('referrals:customers_details');
-        fetchData(true);
-    }, [fetchData, invalidate]);
+    }, []);
 
     // --- (PASO E) AJUSTAR LOADING ---
     if ((loading && customersWithReferrals.length === 0) || (loadingLevels && referralLevels.length === 0)) {
@@ -425,8 +425,7 @@ export default function Referrals() {
                 <div>
                     <h1><TrophyIcon /> Sistema de Referidos</h1>
                     <p className={styles.subtitle}>
-                        {stats.totalReferrers} clientes refiriendo • {stats.totalReferrals} referidos totales •
-                        Promedio {stats.avgReferralsPerCustomer} referidos/cliente
+                        {stats.activeReferrers} clientes refiriendo activamente • {stats.totalReferrals} referidos exitosos • {stats.totalRegisteredWithCode} clientes con código • Promedio {stats.avgReferralsPerActive} referidos/activo
                     </p>
                 </div>
                 {canEdit && (
@@ -539,6 +538,10 @@ export default function Referrals() {
                     isOpen={!!editingCustomer}
                     onClose={handleCloseEditModal}
                     customer={editingCustomer}
+                    onUpdate={() => {
+                        invalidate('referrals:customers_details');
+                        fetchData(true);
+                    }}
                 />
             )}
         </div>
