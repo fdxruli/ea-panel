@@ -8,7 +8,6 @@ import AddressModal from '../components/AddressModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { useAlert } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
-import AuthPrompt from '../components/AuthPrompt';
 import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
 import { useSettings } from '../context/SettingsContext';
@@ -19,7 +18,7 @@ import LoyaltyBadge from '../components/LoyaltyBadge';
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
-    const { phone, setPhoneModalOpen, clearPhone, setCheckoutModalOpen } = useCustomer();
+    const { phone, clearPhone, setCheckoutModalOpen } = useCustomer();
     const { customer, addresses, loading: userLoading, error, refetch, logout } = useUserData();
     const { theme, changeTheme } = useTheme();
     const { settings, loading: settingsLoading } = useSettings();
@@ -161,7 +160,7 @@ export default function MyProfile() {
                                     <label htmlFor="name">Nombre</label>
                                     <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
                                 </div>
-                                <div className="inputGroup">
+                                <div className={styles.inputGroup}>
                                     <label htmlFor="phone">Número de WhatsApp</label>
                                     <input id="phone" type="tel" value={editForm.phone} readOnly disabled />
                                     <small>Para cambiar de número, debes cerrar sesión.</small>
