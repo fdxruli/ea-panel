@@ -172,3 +172,42 @@ as $$ select * from public.create_order_with_stock_check(public.require_my_custo
 -- It must be replaced by the existing production implementation plus this guard
 -- in the next generated migration if the repository branch does not already carry
 -- the Phase 3A order implementation.
+
+create or replace function public.create_order_with_stock_check(p_customer_id uuid,p_total_amount numeric,p_scheduled_for timestamptz,p_cart_items public.cart_item[],p_notes varchar default null)
+returns table(order_id uuid,order_code varchar,order_status public.order_status)
+language plpgsql security definer set search_path=public,pg_temp
+as $$
+declare v_customer_id uuid:=p_customer_id; v_new_order_id uuid; v_new_order_code varchar; v_order_status public.order_status; cart_item public.cart_item; req_ingredient record;
+begin
+ if (select auth.uid()) is not null and not public.is_admin() then
+   v_customer_id:=public.require_my_customer_id();
+   if p_customer_id is distinct from v_customer_id then raise exception 'Customer ownership mismatch'; end if;
+ end if;
+ if array_length(p_cart_items,1) is null then raise exception 'El carrito est vacío'; end if;
+ for req_ingredient in with cart_expanded as(select ci.product_id,ci.quantity from unnest(p_cart_items) ci), needed_per_ingredient as(select rec.ingredient_id,sum(ci.quantity*rec.quantity_used) total_deduction from cart_expanded ci join public.products prod on ci.product_id=prod.id join public.product_recipes rec on ci.product_id=rec.product_id group by rec.ingredient_id) select npi.ingredient_id,npi.total_deduction,ing.current_stock,ing.name ingredient_name,ing.min_stock from needed_per_ingredient npi join public.ingredients ing on npi.ingredient_id=ing.id order by ing.id for update of ing loop
+  if req_ingredient.current_stock<req_ingredient.total_deduction then raise exception 'Stock insuficiente para "%". Se necesitan % piezas en total para cubrir tu pedido, pero solo quedan % piezas.',req_ingredient.ingredient_name,req_ingredient.total_deduction,req_ingredient.current_stock; end if;
+ end loop;
+ insert into public.orders(customer_id,total_amount,scheduled_for,status,notes) values(v_customer_id,p_total_amount,p_scheduled_for,'pending',p_notes) returning id into v_new_order_id;
+ select code,status into v_new_order_code,v_order_status from public.orders where id=v_new_order_id;
+ for cart_item in select * from unnest(p_cart_items) loop insert into public.order_items(order_id,product_id,quantity,price,cost) values(v_new_order_id,cart_item.product_id,cart_item.quantity,cart_item.price,cart_item.cost); end loop;
+ with cart_expanded as(select ci.product_id,ci.quantity from unnest(p_cart_items) ci), needed_per_ingredient as(select rec.ingredient_id,sum(ci.quantity*rec.quantity_used) total_deduction from cart_expanded ci join public.products prod on ci.product_id=prod.id join public.product_recipes rec on ci.product_id=rec.product_id where rec.deduct_stock_automatically=true group by rec.ingredient_id) update public.ingredients set current_stock=current_stock-npi.total_deduction from needed_per_ingredient npi where public.ingredients.id=npi.ingredient_id;
+ return query select v_new_order_id,v_new_order_code,v_order_status;
+end;
+$$;
+
+revoke execute on function public.get_my_customer_basic_stats() from public,anon;
+grant execute on function public.get_my_customer_basic_stats() to authenticated;
+revoke execute on function public.get_my_customer_favorite_products(integer) from public,anon;
+grant execute on function public.get_my_customer_favorite_products(integer) to authenticated;
+revoke execute on function public.get_my_customer_rewards_progress() from public,anon;
+grant execute on function public.get_my_customer_rewards_progress() to authenticated;
+revoke execute on function public.generate_my_personal_reward_code(uuid) from public,anon;
+grant execute on function public.generate_my_personal_reward_code(uuid) to authenticated;
+revoke execute on function public.get_my_active_menu_products() from public,anon;
+grant execute on function public.get_my_active_menu_products() to authenticated;
+revoke execute on function public.record_my_discount_usage_and_deactivate(uuid) from public,anon;
+grant execute on function public.record_my_discount_usage_and_deactivate(uuid) to authenticated;
+revoke execute on function public.create_my_order_with_stock_check(numeric,timestamptz,public.cart_item[],varchar) from public,anon;
+grant execute on function public.create_my_order_with_stock_check(numeric,timestamptz,public.cart_item[],varchar) to authenticated;
+revoke execute on function public.get_customer_stats_batch(uuid[]) from anon;
+grant execute on function public.get_customer_stats_batch(uuid[]) to authenticated;
