@@ -6,6 +6,7 @@ dotenv.config();
 
 const SUPABASE_URL = globalThis.process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = globalThis.process.env.VITE_SUPABASE_ANON_KEY;
+const SKIP_DYNAMIC_SITEMAP = globalThis.process.env.SKIP_DYNAMIC_SITEMAP === '1';
 
 let supabaseClient;
 
@@ -19,6 +20,15 @@ function getSupabaseClient() {
   }
 
   return supabaseClient;
+}
+
+function getStaticRoutes() {
+  return staticPublicRoutes.map((route) => ({
+    type: 'static',
+    path: route.path,
+    priority: route.priority,
+    changefreq: route.changefreq,
+  }));
 }
 
 function dedupeProductRoutes(products = []) {
@@ -47,6 +57,17 @@ function dedupeProductRoutes(products = []) {
 }
 
 export async function fetchPublicSeoRoutes() {
+  const staticRoutes = getStaticRoutes();
+
+  if (SKIP_DYNAMIC_SITEMAP) {
+    return {
+      siteUrl,
+      staticRoutes,
+      productRoutes: [],
+      allRoutes: staticRoutes,
+    };
+  }
+
   const supabase = getSupabaseClient();
   const { data: products, error } = await supabase
     .from('products')
@@ -56,13 +77,6 @@ export async function fetchPublicSeoRoutes() {
   if (error) {
     throw new Error(`Error conectando con Supabase: ${error.message}`);
   }
-
-  const staticRoutes = staticPublicRoutes.map((route) => ({
-    type: 'static',
-    path: route.path,
-    priority: route.priority,
-    changefreq: route.changefreq,
-  }));
 
   const productRoutes = dedupeProductRoutes(products || []);
 

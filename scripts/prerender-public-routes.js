@@ -191,7 +191,9 @@ async function prerenderPublicRoutes() {
       await browser.close().catch(() => {});
     }
     if (server) {
-      await new Promise((resolve) => server.close(resolve)).catch(() => {});
+      await new Promise((resolve) => {
+        server.close(() => resolve());
+      }).catch(() => {});
     }
     if (tempUserDataDir) {
       try {
@@ -211,4 +213,3 @@ prerenderPublicRoutes()
     console.warn('Advertencia durante el prerender local (el build de la app continua):', error.message);
     process.exit(0);
   });
-
