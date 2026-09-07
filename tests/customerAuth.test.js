@@ -22,7 +22,6 @@ test('requestOtp delegates to Phone OTP without a customer_id', async () => {
 
   assert.deepEqual(calls, [{
     phone: '+529631234567',
-    channel: 'sms',
   }]);
 });
 
