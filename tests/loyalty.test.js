@@ -7,13 +7,13 @@ const daysAgo = (days) => new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).t
 
 test('VIP by spend at 3000 within 90 days', () => {
     assert.equal(calculateLoyaltyCategory({ totalSpent: 3000, completedOrders: 0, lastOrderDate: daysAgo(90), now: NOW }), LOYALTY_CATEGORIES.VIP);
-    assert.equal(calculateLoyaltyCategory({ totalSpent: 2999.99, completedOrders: 0, lastOrderDate: daysAgo(90), now: NOW }), LOYALTY_CATEGORIES.INICIAL);
+    assert.equal(calculateLoyaltyCategory({ totalSpent: 2999.99, completedOrders: 0, lastOrderDate: daysAgo(90), now: NOW }), LOYALTY_CATEGORIES.FRECUENTE);
     assert.equal(calculateLoyaltyCategory({ totalSpent: 3000.01, completedOrders: 0, lastOrderDate: daysAgo(89), now: NOW }), LOYALTY_CATEGORIES.VIP);
 });
 
 test('VIP by completed orders at 15 within 90 days', () => {
     assert.equal(calculateLoyaltyCategory({ totalSpent: 0, completedOrders: 15, lastOrderDate: daysAgo(90), now: NOW }), LOYALTY_CATEGORIES.VIP);
-    assert.equal(calculateLoyaltyCategory({ totalSpent: 0, completedOrders: 14, lastOrderDate: daysAgo(90), now: NOW }), LOYALTY_CATEGORIES.INICIAL);
+    assert.equal(calculateLoyaltyCategory({ totalSpent: 0, completedOrders: 14, lastOrderDate: daysAgo(90), now: NOW }), LOYALTY_CATEGORIES.FRECUENTE);
 });
 
 test('VIP requires recency', () => {
