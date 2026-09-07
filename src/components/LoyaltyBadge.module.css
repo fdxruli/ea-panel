@@ -1,0 +1,25 @@
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: fit-content;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.vip {
+    border-color: var(--color-primary);
+}
+
+.frecuente {
+    border-color: var(--color-accent);
+}
+
+.inicial {
+    border-color: var(--border-color);
+}

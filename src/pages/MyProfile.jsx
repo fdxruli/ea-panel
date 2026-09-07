@@ -11,6 +11,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
 import { Navigate } from 'react-router-dom';
 import StaticMap from '../components/StaticMap';
+import { useLoyalty } from '../hooks/useLoyalty';
+import LoyaltyBadge from '../components/LoyaltyBadge';
 import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
 
@@ -20,6 +22,7 @@ export default function MyProfile() {
     const { customer, addresses, loading: userLoading, error, refetch } = useUserData();
     const { theme, changeTheme } = useTheme();
     const { settings, loading: settingsLoading } = useSettings();
+    const { status: loyaltyStatus, data: loyalty } = useLoyalty();
     const visibilitySettings = settings.client_visibility || {};
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
     const [isAddressModalOpen, setAddressModalOpen] = useState(false);
@@ -87,6 +90,8 @@ export default function MyProfile() {
         if (visibilitySettings.my_profile_page === false) return <div className={styles.prompt}><h2>Sección no disponible</h2><p>Esta sección está temporalmente desactivada.</p></div>;
 
         return <>
+            {loyaltyStatus === 'ready' && <LoyaltyBadge category={loyalty?.category} />}
+            {loyaltyStatus === 'error' && <div className={styles.prompt} role="status">No pudimos cargar tu categoría en este momento.</div>}
             <div className={styles.settingsGroup}>
                 {visibilitySettings.profile_my_data !== false && <div className={styles.section}>
                     <h2>Información Personal</h2>
