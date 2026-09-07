@@ -1,13 +1,5 @@
 // src/context/UserDataContext.jsx
-import React, {
-    createContext,
-    useState,
-    useContext,
-    useEffect,
-    useCallback,
-    useMemo,
-    useRef,
-} from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 import { useCustomer } from './CustomerContext';
@@ -16,169 +8,101 @@ import { CACHE_KEYS, CACHE_TTL, CACHE_LIMITS } from '../config/cacheConfig';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 
 const UserDataContext = createContext();
-
 export const useUserData = () => useContext(UserDataContext);
 
-const EMPTY_USER_DATA = {
-    customer: null,
-    addresses: [],
-    orders: [],
-};
+const EMPTY_USER_DATA = { customer: null, addresses: [], orders: [] };
 
-const isValidCustomer = (customer, canonicalCustomerId) => (
-    !!customer?.id &&
-    !!canonicalCustomerId &&
-    customer.id === canonicalCustomerId
-);
-
-const areValidOrders = (orders, canonicalCustomerId) => (
-    Array.isArray(orders) &&
-    orders.every(order => order?.customer_id === canonicalCustomerId)
-);
+const isValidCustomer = (customer, canonicalCustomerId) => Boolean(customer?.id && canonicalCustomerId && customer.id === canonicalCustomerId);
+const areValidOrders = (orders, canonicalCustomerId) => Array.isArray(orders) && orders.every(order => order?.customer_id === canonicalCustomerId);
 
 export const UserDataProvider = ({ children }) => {
-    const { phone, customer: canonicalCustomer, isCustomerLoading } = useCustomer();
-    const canonicalCustomerId = canonicalCustomer?.id || null;
+    const { customer: canonicalCustomer, customerId, isCustomerLoading, isAuthenticated, isLinked } = useCustomer();
     const [userData, setUserData] = useState(EMPTY_USER_DATA);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
+    const requestIdRef = useRef(0);
     const customerRef = useRef(null);
     const addressesRef = useRef([]);
     const ordersRef = useRef([]);
-    const requestIdRef = useRef(0);
 
-    const INFO_CACHE_KEY = `${CACHE_KEYS.USER_INFO}-${phone}`;
-    const ORDERS_CACHE_KEY = `${CACHE_KEYS.USER_ORDERS}-${phone}`;
+    const infoCacheKey = `${CACHE_KEYS.USER_INFO}-${customerId || 'anonymous'}`;
+    const ordersCacheKey = `${CACHE_KEYS.USER_ORDERS}-${customerId || 'anonymous'}`;
 
-    const syncUserDataRefs = useCallback((nextUserData) => {
-        customerRef.current = nextUserData.customer;
-        addressesRef.current = nextUserData.addresses;
-        ordersRef.current = nextUserData.orders;
+    const syncRefs = useCallback((next) => {
+        customerRef.current = next.customer;
+        addressesRef.current = next.addresses;
+        ordersRef.current = next.orders;
     }, []);
 
     const resetUserData = useCallback(() => {
-        syncUserDataRefs(EMPTY_USER_DATA);
+        syncRefs(EMPTY_USER_DATA);
         setUserData(EMPTY_USER_DATA);
-    }, [syncUserDataRefs]);
+    }, [syncRefs]);
 
-    const invalidateIdentityCaches = useCallback(() => {
-        localStorage.removeItem(INFO_CACHE_KEY);
-        localStorage.removeItem(ORDERS_CACHE_KEY);
-    }, [INFO_CACHE_KEY, ORDERS_CACHE_KEY]);
+    const invalidateCaches = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        localStorage.removeItem(infoCacheKey);
+        localStorage.removeItem(ordersCacheKey);
+    }, [infoCacheKey, ordersCacheKey]);
 
-    const fetchCustomerAndAddresses = useCallback(async (phoneNumber, expectedCustomerId) => {
-        const { data: customerData, error: customerError } = await supabase
-            .from('customers')
-            .select('id, name, phone, created_at, referral_code, referrer_id, referral_count, has_made_first_purchase')
-            .eq('phone', phoneNumber)
-            .maybeSingle();
-
-        if (customerError) throw customerError;
-        if (!customerData) return { customer: null, addresses: [] };
-        if (expectedCustomerId && customerData.id !== expectedCustomerId) {
-            const identityError = new Error('Canonical customer changed while loading user data.');
-            identityError.code = 'CANONICAL_ID_CHANGED';
-            throw identityError;
-        }
-
-        const { data: addressesData, error: addressesError } = await supabase
-            .from('customer_addresses')
-            .select('*')
-            .eq('customer_id', customerData.id)
-            .order('is_default', { ascending: false });
-
-        if (addressesError) throw addressesError;
-
-        return { customer: customerData, addresses: addressesData || [] };
-    }, []);
-
-    const fetchOrders = useCallback(async (customerId) => {
-        const { data: ordersData, error: ordersError } = await supabase
-            .from('orders')
-            .select('*, order_items(*, products(*))')
-            .eq('customer_id', customerId)
-            .order('created_at', { ascending: false });
-
-        if (ordersError) throw ordersError;
-        return ordersData || [];
-    }, []);
-
-    const fetchAndCacheUserData = useCallback(async (phoneNumber, expectedCustomerId) => {
+    const fetchUserData = useCallback(async (expectedCustomerId) => {
         const requestId = ++requestIdRef.current;
-
-        if (!phoneNumber || !expectedCustomerId) {
+        if (!isAuthenticated || !isLinked || !expectedCustomerId) {
             resetUserData();
-            invalidateIdentityCaches();
-            setLoading(!phoneNumber || !expectedCustomerId ? !isCustomerLoading : true);
+            invalidateCaches();
+            setLoading(Boolean(isCustomerLoading));
             return;
         }
 
         setLoading(true);
         setError(null);
-
         try {
-            const { customer, addresses } = await fetchCustomerAndAddresses(phoneNumber, expectedCustomerId);
-            if (!customer) {
-                resetUserData();
-                invalidateIdentityCaches();
-                setLoading(false);
-                return;
-            }
+            const { data: customerData, error: customerError } = await supabase
+                .from('customers')
+                .select('id, name, phone, created_at, referral_code, referrer_id, referral_count, has_made_first_purchase')
+                .eq('id', expectedCustomerId)
+                .maybeSingle();
+            if (customerError) throw customerError;
+            if (!customerData || customerData.id !== expectedCustomerId) throw Object.assign(new Error('Customer identity mismatch.'), { code: 'CANONICAL_ID_CHANGED' });
 
-            const fetchedOrders = await fetchOrders(customer.id);
-            if (!areValidOrders(fetchedOrders, customer.id)) {
-                throw new Error('Fresh order response contains an invalid customer identity.');
-            }
+            const { data: addressesData, error: addressesError } = await supabase
+                .from('customer_addresses')
+                .select('*')
+                .eq('customer_id', expectedCustomerId)
+                .order('is_default', { ascending: false });
+            if (addressesError) throw addressesError;
 
-            if (requestId !== requestIdRef.current || customer.id !== canonicalCustomerId) return;
+            const { data: ordersData, error: ordersError } = await supabase
+                .from('orders')
+                .select('*, order_items(*, products(*))')
+                .eq('customer_id', expectedCustomerId)
+                .order('created_at', { ascending: false });
+            if (ordersError) throw ordersError;
+            const safeOrders = ordersData || [];
+            if (!areValidOrders(safeOrders, expectedCustomerId)) throw new Error('Fresh order response contains an invalid customer identity.');
+            if (requestId !== requestIdRef.current || expectedCustomerId !== customerId) return;
 
-            const userInfo = { customer, addresses };
-            const limitedOrdersForCache = fetchedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS);
-            const nextUserData = { customer, addresses, orders: fetchedOrders };
-
-            syncUserDataRefs(nextUserData);
-            setUserData(nextUserData);
-            setCache(INFO_CACHE_KEY, userInfo, CACHE_TTL.USER_DATA);
-            setCache(ORDERS_CACHE_KEY, limitedOrdersForCache, CACHE_TTL.USER_ORDERS);
+            const next = { customer: customerData, addresses: addressesData || [], orders: safeOrders };
+            syncRefs(next);
+            setUserData(next);
+            setCache(infoCacheKey, { customer: customerData, addresses: addressesData || [] }, CACHE_TTL.USER_DATA);
+            setCache(ordersCacheKey, safeOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
         } catch (err) {
             if (requestId !== requestIdRef.current) return;
-            console.error('Error fetching user data:', err);
-
-            const isNetworkError = err instanceof TypeError ||
-                /failed to fetch|networkerror|network request failed|load failed|fetch|timeout/i.test(err.message || '');
-
+            const message = String(err?.message || '');
+            const isNetworkError = err instanceof TypeError || /failed to fetch|networkerror|network request failed|load failed|fetch|timeout/i.test(message);
+            console.error('[UserDataContext] Error fetching user data:', err);
             if (!isNetworkError) {
-                setError(err.message);
+                setError(err?.code === 'P0001' ? 'No se pudo validar tu sesión.' : message);
                 resetUserData();
-                invalidateIdentityCaches();
-            } else {
-                // Do not resurrect an unverified cache after an identity mismatch.
-                // Offline fallback is only safe while the currently published identity
-                // is already canonical and was previously validated.
-                if (!isValidCustomer(customerRef.current, canonicalCustomerId)) {
-                    resetUserData();
-                }
-                setError(null);
+                invalidateCaches();
+            } else if (!isValidCustomer(customerRef.current, customerId)) {
+                resetUserData();
             }
         } finally {
             if (requestId === requestIdRef.current) setLoading(false);
         }
-    }, [
-        canonicalCustomerId,
-        fetchCustomerAndAddresses,
-        fetchOrders,
-        INFO_CACHE_KEY,
-        ORDERS_CACHE_KEY,
-        invalidateIdentityCaches,
-        isCustomerLoading,
-        resetUserData,
-        syncUserDataRefs,
-    ]);
-
-    useEffect(() => {
-        syncUserDataRefs(userData);
-    }, [userData, syncUserDataRefs]);
+    }, [customerId, infoCacheKey, invalidateCaches, isAuthenticated, isCustomerLoading, isLinked, ordersCacheKey, resetUserData, syncRefs]);
 
     useEffect(() => {
         if (isCustomerLoading) {
@@ -186,216 +110,107 @@ export const UserDataProvider = ({ children }) => {
             resetUserData();
             return undefined;
         }
-
-        if (!phone || !canonicalCustomerId) {
+        if (!isAuthenticated || !isLinked || !customerId) {
             ++requestIdRef.current;
             resetUserData();
+            invalidateCaches();
             setLoading(false);
             return undefined;
         }
 
-        let cancelled = false;
-        const currentRequestId = ++requestIdRef.current;
+        const { data: cachedInfo, isStale: infoStale } = getCache(infoCacheKey, CACHE_TTL.USER_DATA);
+        const { data: cachedOrders, isStale: ordersStale } = getCache(ordersCacheKey, CACHE_TTL.USER_ORDERS);
+        const infoValid = isValidCustomer(cachedInfo?.customer, customerId) && !infoStale;
+        const ordersValid = infoValid && areValidOrders(cachedOrders, customerId) && !ordersStale;
 
-        const { data: cachedInfo, isStale: isInfoStale } = getCache(INFO_CACHE_KEY, CACHE_TTL.USER_DATA);
-        const { data: cachedOrders, isStale: isOrdersStale } = getCache(ORDERS_CACHE_KEY, CACHE_TTL.USER_ORDERS);
-        const cacheIdentityValid = isValidCustomer(cachedInfo?.customer, canonicalCustomerId);
-        const cacheOrdersIdentityValid = areValidOrders(cachedOrders, canonicalCustomerId);
-        const infoCacheValid = cacheIdentityValid && !isInfoStale;
-        const ordersCacheValid = infoCacheValid && cacheOrdersIdentityValid && !isOrdersStale;
-
-        // Legacy caches use the v1 namespace and are therefore never read here.
-        // A v2 cache with B is also rejected as a complete snapshot; B is never
-        // rewritten to A.
-        if (!cacheIdentityValid || isInfoStale) {
-            localStorage.removeItem(INFO_CACHE_KEY);
-            localStorage.removeItem(ORDERS_CACHE_KEY);
-        }
-
-        if (cacheIdentityValid && !isInfoStale) {
-            const nextUserData = {
+        if (infoValid) {
+            const cachedUserData = {
                 customer: cachedInfo.customer,
                 addresses: Array.isArray(cachedInfo.addresses) ? cachedInfo.addresses : [],
-                orders: ordersCacheValid ? cachedOrders : [],
+                orders: ordersValid ? cachedOrders : [],
             };
-            syncUserDataRefs(nextUserData);
-            setUserData(nextUserData);
+            syncRefs(cachedUserData);
+            setUserData(cachedUserData);
         } else {
             resetUserData();
         }
 
-        if (!infoCacheValid || !ordersCacheValid) {
-            fetchAndCacheUserData(phone, canonicalCustomerId);
-        } else if (!cancelled) {
-            setLoading(false);
-        }
+        if (!infoValid || !ordersValid) fetchUserData(customerId);
+        else setLoading(false);
 
         return () => {
-            cancelled = true;
-            if (requestIdRef.current === currentRequestId) requestIdRef.current += 1;
+            requestIdRef.current += 1;
         };
-    }, [
-        phone,
-        canonicalCustomerId,
-        isCustomerLoading,
-        fetchAndCacheUserData,
-        INFO_CACHE_KEY,
-        ORDERS_CACHE_KEY,
-        resetUserData,
-        syncUserDataRefs,
-    ]);
+    }, [customerId, fetchUserData, infoCacheKey, invalidateCaches, isAuthenticated, isCustomerLoading, isLinked, ordersCacheKey, resetUserData, syncRefs]);
 
     useEffect(() => {
-        const customerId = canonicalCustomerId;
-        if (!customerId || isCustomerLoading) return undefined;
-
-        const handleOrderOrAddressChange = () => {
-            fetchAndCacheUserData(phone, customerId);
-        };
-
-        const handleCustomerUpdate = (payload) => {
+        if (!customerId || isCustomerLoading || !isAuthenticated || !isLinked) return undefined;
+        const refresh = () => fetchUserData(customerId);
+        const updateCustomer = (payload) => {
             if (payload.new?.id !== customerId) return;
-            const currentCustomer = customerRef.current;
-            if (!currentCustomer) return;
-
-            const newCustomerData = { ...currentCustomer, ...payload.new };
-            if (!isValidCustomer(newCustomerData, customerId)) return;
-
-            const nextUserData = {
-                customer: newCustomerData,
-                addresses: addressesRef.current,
-                orders: ordersRef.current,
-            };
-            syncUserDataRefs(nextUserData);
-            setUserData(nextUserData);
-            setCache(INFO_CACHE_KEY, {
-                customer: newCustomerData,
-                addresses: addressesRef.current,
-            }, CACHE_TTL.USER_DATA);
-            localStorage.removeItem(ORDERS_CACHE_KEY);
+            const nextCustomer = { ...customerRef.current, ...payload.new };
+            if (!isValidCustomer(nextCustomer, customerId)) return;
+            const next = { customer: nextCustomer, addresses: addressesRef.current, orders: ordersRef.current };
+            syncRefs(next);
+            setUserData(next);
+            setCache(infoCacheKey, { customer: nextCustomer, addresses: addressesRef.current }, CACHE_TTL.USER_DATA);
         };
-
-        const handleOrderUpdate = (payload) => {
+        const updateOrder = (payload) => {
             if (payload.new?.customer_id !== customerId) return;
-            const currentOrders = ordersRef.current;
-            if (!currentOrders.some(order => order.id === payload.new.id)) return;
-
-            const updatedOrders = currentOrders.map(order =>
-                order.id === payload.new.id ? { ...order, ...payload.new } : order
-            );
-            if (!areValidOrders(updatedOrders, customerId)) return;
-
-            ordersRef.current = updatedOrders;
-            setUserData(prev => ({ ...prev, orders: updatedOrders }));
-            setCache(ORDERS_CACHE_KEY, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
-
-            window.setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('order-status-updated', {
-                    detail: {
-                        orderCode: payload.new.order_code,
-                        status: payload.new.status,
-                    },
-                }));
-            }, 0);
+            const updated = ordersRef.current.some(order => order.id === payload.new.id)
+                ? ordersRef.current.map(order => order.id === payload.new.id ? { ...order, ...payload.new } : order)
+                : ordersRef.current;
+            if (!areValidOrders(updated, customerId)) return;
+            syncRefs({ customer: customerRef.current, addresses: addressesRef.current, orders: updated });
+            setUserData(prev => ({ ...prev, orders: updated }));
+            setCache(ordersCacheKey, updated.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
+            window.setTimeout(() => window.dispatchEvent(new CustomEvent('order-status-updated', { detail: { orderCode: payload.new.order_code, status: payload.new.status } })), 0);
         };
 
         const channel = supabase.channel(`public:user-data:${customerId}`);
+        channel
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `customer_id=eq.${customerId}` }, refresh)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `customer_id=eq.${customerId}` }, updateOrder)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_addresses', filter: `customer_id=eq.${customerId}` }, refresh)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, updateCustomer)
+            .subscribe();
+        return () => supabase.removeChannel(channel);
+    }, [customerId, fetchUserData, infoCacheKey, isAuthenticated, isCustomerLoading, isLinked, ordersCacheKey, syncRefs]);
 
-        channel.on('postgres_changes', {
-            event: 'INSERT', schema: 'public', table: 'orders', filter: `customer_id=eq.${customerId}`,
-        }, handleOrderOrAddressChange);
-        channel.on('postgres_changes', {
-            event: 'UPDATE', schema: 'public', table: 'orders', filter: `customer_id=eq.${customerId}`,
-        }, handleOrderUpdate);
-        channel.on('postgres_changes', {
-            event: '*', schema: 'public', table: 'customer_addresses', filter: `customer_id=eq.${customerId}`,
-        }, handleOrderOrAddressChange);
-        channel.on('postgres_changes', {
-            event: 'UPDATE', schema: 'public', table: 'customers', filter: `id=eq.${customerId}`,
-        }, handleCustomerUpdate);
-
-        channel.subscribe();
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [
-        canonicalCustomerId,
-        fetchAndCacheUserData,
-        INFO_CACHE_KEY,
-        isCustomerLoading,
-        ORDERS_CACHE_KEY,
-        phone,
-        syncUserDataRefs,
-    ]);
-
-    // Escuchar broadcast de órdenes para actualización inmediata de clientes
     useEffect(() => {
         const handleBroadcastOrder = (data) => {
-            if (!data?.orderCode) return;
-            const currentOrders = ordersRef.current || [];
-            const existing = currentOrders.find(o => o.order_code === data.orderCode);
-            if (existing) {
-                const updatedOrders = currentOrders.map(order =>
-                    order.order_code === data.orderCode ? { ...order, ...data } : order
-                );
-                ordersRef.current = updatedOrders;
-                setUserData(prev => ({ ...prev, orders: updatedOrders }));
-                setCache(ORDERS_CACHE_KEY, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
-
-                window.dispatchEvent(new CustomEvent('order-status-updated', {
-                    detail: {
-                        orderCode: data.orderCode,
-                        status: data.status,
-                    },
-                }));
+            if (!data?.orderCode || !customerId) return;
+            const updated = ordersRef.current.map(order => order.order_code === data.orderCode ? { ...order, ...data } : order);
+            if (updated.some((order, index) => order !== ordersRef.current[index])) {
+                syncRefs({ customer: customerRef.current, addresses: addressesRef.current, orders: updated });
+                setUserData(prev => ({ ...prev, orders: updated }));
+                setCache(ordersCacheKey, updated.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
             }
         };
-
         const unsubscribe = subscribeToStoreBroadcast('order_changed', handleBroadcastOrder);
-        return () => {
-            if (unsubscribe) unsubscribe();
-        };
-    }, [ORDERS_CACHE_KEY]);
+        return () => unsubscribe?.();
+    }, [customerId, ordersCacheKey, syncRefs]);
 
     useEffect(() => {
-        const reconcileOnFocus = () => {
-            if (document.visibilityState !== 'visible' || !phone || !canonicalCustomerId || isCustomerLoading) return;
-            // CustomerContext performs the canonical phone -> UUID reconciliation.
-            // Re-running this effect when its canonical ID changes causes the cache
-            // namespace to be evaluated again before any identity is published.
-            fetchAndCacheUserData(phone, canonicalCustomerId);
+        const reconcile = () => {
+            if (document.visibilityState === 'visible' && isAuthenticated && isLinked && customerId) fetchUserData(customerId);
         };
-
-        document.addEventListener('visibilitychange', reconcileOnFocus);
-        window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
+        document.addEventListener('visibilitychange', reconcile);
+        window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcile);
         return () => {
-            document.removeEventListener('visibilitychange', reconcileOnFocus);
-            window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
+            document.removeEventListener('visibilitychange', reconcile);
+            window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcile);
         };
-    }, [canonicalCustomerId, fetchAndCacheUserData, isCustomerLoading, phone]);
+    }, [customerId, fetchUserData, isAuthenticated, isLinked]);
 
     const logout = useCallback(() => {
         ++requestIdRef.current;
-        invalidateIdentityCaches();
         resetUserData();
-    }, [invalidateIdentityCaches, resetUserData]);
+        invalidateCaches();
+    }, [invalidateCaches, resetUserData]);
 
-    const refetch = useCallback(
-        () => fetchAndCacheUserData(phone, canonicalCustomerId),
-        [canonicalCustomerId, fetchAndCacheUserData, phone]
-    );
+    const refetch = useCallback(() => fetchUserData(customerId), [customerId, fetchUserData]);
 
-    const value = useMemo(() => ({
-        ...userData,
-        loading,
-        error,
-        refetch,
-        logout,
-    }), [error, loading, logout, refetch, userData]);
-
-    return (
-        <UserDataContext.Provider value={value}>
-            {children}
-        </UserDataContext.Provider>
-    );
+    const value = useMemo(() => ({ ...userData, loading, error, refetch, logout }), [error, loading, logout, refetch, userData]);
+    return <UserDataContext.Provider value={value}>{children}</UserDataContext.Provider>;
 };
