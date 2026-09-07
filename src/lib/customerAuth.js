@@ -14,10 +14,13 @@ export const createCustomerAuth = (client = supabase) => ({
   async requestOtp(phone, { channel = 'sms', captchaToken } = {}) {
     const normalizedPhone = normalizeCustomerAuthPhone(phone);
 
+    const options = {};
+    if (captchaToken) options.captchaToken = captchaToken;
+    if (channel && channel !== 'sms') options.channel = channel;
+
     const { error } = await client.auth.signInWithOtp({
       phone: normalizedPhone,
-      ...(captchaToken ? { options: { captchaToken } } : {}),
-      ...(channel ? { channel } : {}),
+      ...(Object.keys(options).length ? { options } : {}),
     });
 
     if (error) throw error;
