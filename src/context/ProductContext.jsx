@@ -63,8 +63,17 @@ export const ProductProvider = ({ children }) => {
         const cacheKey = buildSpecialPricesCacheKey(customerId);
         if (!background) setLoadingPrices(true);
         try {
-            const rpcName = isAuthenticated && isLinked ? 'get_my_special_prices' : 'get_public_special_prices';
-            const { data, error: priceError } = await supabase.rpc(rpcName);
+            let data;
+            let priceError;
+            if (isAuthenticated && isLinked) {
+                const result = await supabase.rpc('get_my_special_prices');
+                data = result.data;
+                priceError = result.error;
+            } else {
+                const result = await supabase.rpc('get_public_special_prices');
+                data = result.data;
+                priceError = result.error;
+            }
             if (priceError) throw priceError;
             if (sequence !== priceSequenceRef.current || !mountedRef.current) return null;
             const prices = Array.isArray(data) ? data : [];
