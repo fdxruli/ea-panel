@@ -9,6 +9,9 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://xvstqhvooabljhhfmuas.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2c3RxaHZvb2FibGpoZ2ZtdWFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg0NzM3MTYsImV4cCI6MjA3NDA0OTcxNn0.Chn3b255Bm7FpHj5Vld7G5aoui4lj1wT4HPoF6u5kVQ
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
