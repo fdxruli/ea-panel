@@ -64,7 +64,9 @@ export function useLoyalty() {
                 return;
             }
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-                void load(userId);
+                setTimeout(() => {
+                    if (mounted) void load(userId);
+                }, 0);
             }
         });
 
