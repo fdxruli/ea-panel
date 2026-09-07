@@ -8,7 +8,6 @@
     gap: 2rem;
 }
 
-/* Solo en pantallas más grandes centramos y limitamos el ancho */
 @media (min-width: 768px) {
     .container {
         max-width: 700px;
@@ -17,7 +16,6 @@
     }
 }
 
-/* Agrupación visual (reemplazo de tarjetas) */
 .settingsGroup {
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
@@ -45,7 +43,6 @@
     color: var(--text-primary);
 }
 
-/* Formularios estructurados */
 .form {
     display: flex;
     flex-direction: column;
@@ -94,9 +91,8 @@
     font-size: 0.8rem;
 }
 
-/* Botones de acción general */
 .actionButton {
-    width: 100%; /* En móvil, los botones principales ocupan el 100% para mejor área de toque */
+    width: 100%;
     padding: 0.9rem;
     background-color: var(--color-primary);
     color: var(--text-light);
@@ -109,13 +105,12 @@
 
 @media (min-width: 768px) {
     .actionButton {
-        width: auto; /* En escritorio, regresan a su tamaño natural */
+        width: auto;
         padding: 0.8rem 1.5rem;
         align-self: flex-start;
     }
 }
 
-/* Sección de Direcciones */
 .addressSection {
     display: flex;
     flex-direction: column;
@@ -138,17 +133,15 @@
     cursor: pointer;
 }
 
-/* Grid Mobile-First: 1 columna por defecto */
 .addressGrid {
     display: grid;
-    grid-template-columns: 1fr; 
+    grid-template-columns: 1fr;
     gap: 1rem;
 }
 
-/* Tablet y Desktop: Se expande a 2 columnas */
 @media (min-width: 768px) {
     .addressGrid {
-        grid-template-columns: repeat(2, 1fr); 
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -191,7 +184,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 60%; /* Evita que textos largos rompan el flex y empujen el badge */
+    max-width: 60%;
 }
 
 .defaultBadge {
@@ -214,7 +207,6 @@
     overflow: hidden;
 }
 
-/* Botones dentro de la tarjeta de dirección */
 .addressActions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -225,7 +217,7 @@
 }
 
 .addressActions button {
-    padding: 0.8rem 0.5rem; /* Botones más altos en móvil para la regla del pulgar */
+    padding: 0.8rem 0.5rem;
     border-radius: 6px;
     font-weight: 500;
     font-size: 0.9rem;
@@ -235,7 +227,7 @@
 
 @media (min-width: 768px) {
     .addressActions button {
-        padding: 0.6rem; /* En escritorio no necesitan ser tan altos */
+        padding: 0.6rem;
     }
 }
 
@@ -263,7 +255,6 @@
     color: var(--color-accent);
 }
 
-/* Mensajes de estado (Prompt / Vacío) */
 .prompt, .emptyState {
     text-align: center;
     padding: 2rem 1rem;
@@ -278,7 +269,15 @@
     }
 }
 
-/* Botón de Cerrar Sesión */
+.loyaltyError {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+    font-size: 0.9rem;
+}
+
 .logoutSection {
     margin-top: 1rem;
     padding-top: 2rem;
@@ -287,7 +286,7 @@
 }
 
 .logoutButton {
-    width: 100%; /* Ocupa todo el ancho en móvil */
+    width: 100%;
     background: transparent;
     color: var(--color-error);
     border: 1px solid var(--color-error);
