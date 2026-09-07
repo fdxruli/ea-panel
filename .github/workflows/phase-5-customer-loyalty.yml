@@ -9,6 +9,8 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      SKIP_DYNAMIC_SITEMAP: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
