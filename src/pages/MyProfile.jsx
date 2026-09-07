@@ -91,7 +91,7 @@ export default function MyProfile() {
 
         return <>
             {loyaltyStatus === 'ready' && <LoyaltyBadge category={loyalty?.category} />}
-            {loyaltyStatus === 'error' && <div className={styles.loyaltyError} role="status">No pudimos cargar tu categoría en este momento.</div>}
+            {loyaltyStatus === 'error' && <div className={styles.prompt} role="status">No pudimos cargar tu categoría en este momento.</div>}
             <div className={styles.settingsGroup}>
                 {visibilitySettings.profile_my_data !== false && <div className={styles.section}>
                     <h2>Información Personal</h2>
