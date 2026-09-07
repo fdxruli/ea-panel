@@ -50,13 +50,13 @@ test('Order service uses Auth-safe RPC for authenticated customers', async () =>
 });
 
 test('Special-price RPC does not expose target_customer_ids', async () => {
-  const source = await read('supabase/migrations/20260906204500_phase_4_customer_auth_frontend.sql');
+  const source = await read('supabase/migrations/20260907023000_phase_4_customer_auth_frontend.sql');
   const personalFn = source.split('create function public.get_my_special_prices()')[1] || '';
   assert.doesNotMatch(personalFn, /returns table\([\s\S]*target_customer_ids uuid\[\]/i);
 });
 
 test('Public pricing path is separate from customer-targeted pricing', async () => {
-  const source = await read('supabase/migrations/20260906205000_phase_4_public_special_prices.sql');
+  const source = await read('supabase/migrations/20260907023100_phase_4_public_special_prices.sql');
   assert.match(source, /get_public_special_prices/);
   assert.match(source, /security invoker/i);
   assert.match(source, /special_prices_public_read/);
