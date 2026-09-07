@@ -11,13 +11,8 @@ import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 const ProductContext = createContext();
 const CLIENT_CACHE_SCOPE = 'client';
 const EMPTY_CATALOG = { products: [], categories: [] };
-
 const buildSpecialPricesCacheKey = (customerId) => `${CACHE_KEYS.SPECIAL_PRICES}-${customerId || 'global'}`;
-const normalizeCatalog = (value) => ({
-    products: Array.isArray(value?.products) ? value.products : [],
-    categories: Array.isArray(value?.categories) ? value.categories : [],
-});
-
+const normalizeCatalog = (value) => ({ products: Array.isArray(value?.products) ? value.products : [], categories: Array.isArray(value?.categories) ? value.categories : [] });
 export const useProducts = () => useContext(ProductContext);
 
 export const ProductProvider = ({ children }) => {
@@ -34,10 +29,7 @@ export const ProductProvider = ({ children }) => {
     const priceSequenceRef = useRef(0);
     const priceTimerRef = useRef(null);
 
-    useEffect(() => {
-        mountedRef.current = true;
-        return () => { mountedRef.current = false; };
-    }, []);
+    useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
     const fetchCatalog = useCallback(async ({ background = false } = {}) => {
         const sequence = ++baseSequenceRef.current;
@@ -51,9 +43,7 @@ export const ProductProvider = ({ children }) => {
             if (categoriesError) throw categoriesError;
             if (sequence !== baseSequenceRef.current || !mountedRef.current) return null;
             const catalog = normalizeCatalog({ products: productsData || [], categories: categoriesData || [] });
-            setBaseCatalog(catalog);
-            setValidatedCatalogScope(customerId || null);
-            setError(null);
+            setBaseCatalog(catalog); setValidatedCatalogScope(customerId || null); setError(null);
             const scope = customerId || 'public';
             await Promise.all([
                 setAsyncCache({ key: `${CACHE_KEYS.PRODUCTS}-${scope}`, scope: CLIENT_CACHE_SCOPE, ttl: CACHE_TTL.PRODUCTS }, catalog),
@@ -73,14 +63,12 @@ export const ProductProvider = ({ children }) => {
         const cacheKey = buildSpecialPricesCacheKey(customerId);
         if (!background) setLoadingPrices(true);
         try {
-            // Customer pricing is resolved exclusively by the Auth-safe RPC.
-            // No customer_id is supplied, so the backend derives ownership from auth.uid().
-            const { data, error: priceError } = await supabase.rpc('get_my_special_prices');
+            const rpcName = isAuthenticated && isLinked ? 'get_my_special_prices' : 'get_public_special_prices';
+            const { data, error: priceError } = await supabase.rpc(rpcName);
             if (priceError) throw priceError;
             if (sequence !== priceSequenceRef.current || !mountedRef.current) return null;
             const prices = Array.isArray(data) ? data : [];
-            setSpecialPrices(prices);
-            setError(null);
+            setSpecialPrices(prices); setError(null);
             await setAsyncCache({ key: cacheKey, scope: CLIENT_CACHE_SCOPE, ttl: CACHE_TTL.PRODUCT_EXTRAS }, prices);
             return prices;
         } catch (err) {
@@ -89,23 +77,17 @@ export const ProductProvider = ({ children }) => {
         } finally {
             if (sequence === priceSequenceRef.current && mountedRef.current) setLoadingPrices(false);
         }
-    }, [customerId]);
+    }, [customerId, isAuthenticated, isLinked]);
 
     useEffect(() => {
         if (isCustomerLoading) return undefined;
         let cancelled = false;
-        const scope = customerId || 'public';
-        const key = `${CACHE_KEYS.PRODUCTS}-${scope}`;
+        const key = `${CACHE_KEYS.PRODUCTS}-${customerId || 'public'}`;
         const init = async () => {
             const { data: cached } = await getAsyncCache(key);
             if (cancelled || !mountedRef.current) return;
-            if (cached !== null) {
-                setBaseCatalog(normalizeCatalog(cached));
-                setLoadingProducts(false);
-                fetchCatalog({ background: true }).catch(() => {});
-            } else {
-                fetchCatalog().catch(() => {});
-            }
+            if (cached !== null) { setBaseCatalog(normalizeCatalog(cached)); setLoadingProducts(false); fetchCatalog({ background: true }).catch(() => {}); }
+            else fetchCatalog().catch(() => {});
         };
         init();
         return () => { cancelled = true; };
@@ -118,32 +100,20 @@ export const ProductProvider = ({ children }) => {
         const init = async () => {
             const { data: cached } = await getAsyncCache(key);
             if (cancelled || !mountedRef.current) return;
-            if (cached !== null) {
-                setSpecialPrices(Array.isArray(cached) ? cached : []);
-                setLoadingPrices(false);
-                fetchSpecialPrices({ background: true }).catch(() => {});
-            } else {
-                fetchSpecialPrices().catch(() => {});
-            }
+            if (cached !== null) { setSpecialPrices(Array.isArray(cached) ? cached : []); setLoadingPrices(false); fetchSpecialPrices({ background: true }).catch(() => {}); }
+            else fetchSpecialPrices().catch(() => {});
         };
         init();
         return () => { cancelled = true; };
     }, [customerId, fetchSpecialPrices, isCustomerLoading]);
 
     useEffect(() => {
-        const onFocus = () => {
+        const reconcile = () => {
             if (document.visibilityState !== 'visible' || isCustomerLoading) return;
-            fetchCatalog({ background: true }).catch(() => {});
-            fetchSpecialPrices({ background: true }).catch(() => {});
+            fetchCatalog({ background: true }).catch(() => {}); fetchSpecialPrices({ background: true }).catch(() => {});
         };
-        document.addEventListener('visibilitychange', onFocus);
-        window.addEventListener('online', onFocus);
-        window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, onFocus);
-        return () => {
-            document.removeEventListener('visibilitychange', onFocus);
-            window.removeEventListener('online', onFocus);
-            window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, onFocus);
-        };
+        document.addEventListener('visibilitychange', reconcile); window.addEventListener('online', reconcile); window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcile);
+        return () => { document.removeEventListener('visibilitychange', reconcile); window.removeEventListener('online', reconcile); window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcile); };
     }, [fetchCatalog, fetchSpecialPrices, isCustomerLoading]);
 
     useEffect(() => {
@@ -160,53 +130,23 @@ export const ProductProvider = ({ children }) => {
         const unsubCatalog = subscribeToStoreBroadcast('catalog_updated', () => fetchCatalog({ background: true }));
         const unsubInventory = subscribeToStoreBroadcast('inventory_updated', () => fetchCatalog({ background: true }));
         const unsubPrices = subscribeToStoreBroadcast('special_prices_updated', () => fetchSpecialPrices({ background: true }));
-        return () => {
-            if (priceTimerRef.current) clearTimeout(priceTimerRef.current);
-            unsubCatalog?.(); unsubInventory?.(); unsubPrices?.();
-            supabase.removeChannel(channel);
-        };
+        return () => { if (priceTimerRef.current) clearTimeout(priceTimerRef.current); unsubCatalog?.(); unsubInventory?.(); unsubPrices?.(); supabase.removeChannel(channel); };
     }, [customerId, fetchCatalog, fetchSpecialPrices]);
 
     const products = useMemo(() => {
         const categoryMap = new Map(baseCatalog.categories.map((category) => [category.id, category.name]));
-        const productPrices = new Map();
-        const categoryPrices = new Map();
-        if (isAuthenticated && isLinked) {
-            for (const sp of specialPrices) {
-                if (sp.product_id) productPrices.set(sp.product_id, sp);
-                if (sp.category_id) categoryPrices.set(sp.category_id, sp);
-            }
-        }
+        const productPrices = new Map(); const categoryPrices = new Map();
+        if (isAuthenticated && isLinked) for (const sp of specialPrices) { if (sp.product_id) productPrices.set(sp.product_id, sp); if (sp.category_id) categoryPrices.set(sp.category_id, sp); }
         return baseCatalog.products.map((product) => {
             const special = productPrices.get(product.id) || categoryPrices.get(product.category_id);
             const next = { ...product, slug: createSlug(product.name) };
             if (special) { next.original_price = product.price; next.price = Number(special.override_price); }
             return next;
-        }).sort((a, b) => {
-            const ca = categoryMap.get(a.category_id) || 'Z';
-            const cb = categoryMap.get(b.category_id) || 'Z';
-            if (ca === 'Alitas' && cb !== 'Alitas') return -1;
-            if (ca !== 'Alitas' && cb === 'Alitas') return 1;
-            const cc = ca.localeCompare(cb);
-            return cc || a.name.localeCompare(b.name);
-        });
+        }).sort((a, b) => { const ca = categoryMap.get(a.category_id) || 'Z'; const cb = categoryMap.get(b.category_id) || 'Z'; const cc = ca.localeCompare(cb); return cc || a.name.localeCompare(b.name); });
     }, [baseCatalog, isAuthenticated, isLinked, specialPrices]);
 
-    const categories = useMemo(() => {
-        const used = new Set(products.map((product) => product.category_id));
-        return baseCatalog.categories.filter((category) => used.has(category.id));
-    }, [baseCatalog.categories, products]);
-
+    const categories = useMemo(() => { const used = new Set(products.map((product) => product.category_id)); return baseCatalog.categories.filter((category) => used.has(category.id)); }, [baseCatalog.categories, products]);
     const refetch = useCallback(() => Promise.all([fetchCatalog(), fetchSpecialPrices()]), [fetchCatalog, fetchSpecialPrices]);
-
-    const value = useMemo(() => ({
-        products,
-        categories,
-        loading: loadingProducts || loadingPrices,
-        catalogReady: validatedCatalogScope === (customerId || null),
-        error,
-        refetch,
-    }), [categories, customerId, error, loadingPrices, loadingProducts, products, refetch, validatedCatalogScope]);
-
+    const value = useMemo(() => ({ products, categories, loading: loadingProducts || loadingPrices, catalogReady: validatedCatalogScope === (customerId || null), error, refetch }), [categories, customerId, error, loadingPrices, loadingProducts, products, refetch, validatedCatalogScope]);
     return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
 };
