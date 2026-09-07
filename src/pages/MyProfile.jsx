@@ -13,12 +13,9 @@ import DOMPurify from 'dompurify';
 import SEO from '../components/SEO';
 import { useSettings } from '../context/SettingsContext';
 import { Navigate } from 'react-router-dom';
-
-// --- 👇 OPTIMIZACIÓN: Cambiamos los imports del mapa ---
-import StaticMap from '../components/StaticMap'; // <-- AÑADIDO
-// import ClientOnly from '../components/ClientOnly'; // <-- ELIMINADO
-// import DynamicMapPicker from '../components/DynamicMapPicker'; // <-- ELIMINADO
-// --- FIN OPTIMIZACIÓN ---
+import StaticMap from '../components/StaticMap';
+import { useLoyalty } from '../hooks/useLoyalty';
+import LoyaltyBadge from '../components/LoyaltyBadge';
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
@@ -26,6 +23,7 @@ export default function MyProfile() {
     const { customer, addresses, loading: userLoading, error, refetch, logout } = useUserData();
     const { theme, changeTheme } = useTheme();
     const { settings, loading: settingsLoading } = useSettings();
+    const { status: loyaltyStatus, data: loyalty } = useLoyalty();
     const visibilitySettings = settings.client_visibility || {};
 
     const [editForm, setEditForm] = useState({ name: '', phone: '' });
@@ -42,7 +40,6 @@ export default function MyProfile() {
         }
     }, [customer]);
 
-    // --- (Toda la lógica de handlers como handleSetDefaultAddress, handleInfoSubmit, etc., permanece sin cambios) ---
     const handleSetDefaultAddress = async (addressId) => {
         await supabase.from('customer_addresses').update({ is_default: false }).eq('customer_id', customer.id);
         const { error } = await supabase.from('customer_addresses').update({ is_default: true }).eq('id', addressId);
@@ -71,7 +68,6 @@ export default function MyProfile() {
             }
         }
     };
-
 
     const handleDeleteAddress = async () => {
         if (!addressToDelete) return;
@@ -120,18 +116,10 @@ export default function MyProfile() {
     };
 
     const confirmLogout = () => {
-        // 1. Limpiamos datos del usuario (caché de UserDataContext)
         logout();
-
-        // 2. Limpiamos el teléfono (CustomerContext)
         clearPhone();
-
-        // 3. Cerramos el modal
         setLogoutModalOpen(false);
-
-        // 4. ✅ CRÍTICO: Recargamos la página para desmontar TODOS los contextos
-        // Esto asegura que no queden datos residuales en memoria
-        window.location.replace('/'); // Redirige al inicio y fuerza recarga completa
+        window.location.replace('/');
     };
 
     const renderContent = () => {
@@ -159,9 +147,11 @@ export default function MyProfile() {
             );
         }
 
-
         return (
             <>
+                {loyaltyStatus === 'ready' && <LoyaltyBadge category={loyalty?.category} />}
+                {loyaltyStatus === 'error' && <div className={styles.loyaltyError} role="status">No pudimos cargar tu categoría en este momento.</div>}
+
                 <div className={styles.settingsGroup}>
                     {visibilitySettings.profile_my_data !== false && (
                         <div className={styles.section}>
@@ -171,7 +161,7 @@ export default function MyProfile() {
                                     <label htmlFor="name">Nombre</label>
                                     <input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required />
                                 </div>
-                                <div className={styles.inputGroup}>
+                                <div className="inputGroup">
                                     <label htmlFor="phone">Número de WhatsApp</label>
                                     <input id="phone" type="tel" value={editForm.phone} readOnly disabled />
                                     <small>Para cambiar de número, debes cerrar sesión.</small>
@@ -202,7 +192,6 @@ export default function MyProfile() {
                         </div>
 
                         {addresses.length > 0 ? (
-                            /* ELIMINADO EL CARRUSEL, AHORA ES UNA LISTA (GRID) */
                             <div className={styles.addressGrid}>
                                 {addresses.map((addr) => (
                                     <div key={addr.id} className={`${styles.addressItem} ${addr.is_default ? styles.defaultAddress : ''}`}>
