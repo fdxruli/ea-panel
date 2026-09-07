@@ -1,8 +1,11 @@
 /**
- * Pure customer order service. Auth/RLS is the ownership boundary.
+ * Customer order service. Auth/RLS is the ownership boundary for customer orders.
+ * Guest checkout remains on the legacy RPC only when GUEST_CUSTOMER_ID is explicitly used.
  */
+import { GUEST_CUSTOMER_ID } from '../config/constantes';
+
 export const createOrder = async (supabase, params) => {
-  const { totalAmount, scheduledFor, cartItems, notes } = params;
+  const { customerId, totalAmount, scheduledFor, cartItems, notes } = params;
   const p_cart_items = cartItems.map((item) => ({
     product_id: item.id,
     quantity: item.quantity,
@@ -10,13 +13,12 @@ export const createOrder = async (supabase, params) => {
     cost: item.cost || 0,
   }));
 
-  const { data, error } = await supabase.rpc('create_my_order_with_stock_check', {
-    p_total_amount: totalAmount,
-    p_scheduled_for: scheduledFor,
-    p_cart_items,
-    p_notes: notes || null,
-  });
+  const rpcName = customerId === GUEST_CUSTOMER_ID ? 'create_order_with_stock_check' : 'create_my_order_with_stock_check';
+  const rpcParams = customerId === GUEST_CUSTOMER_ID
+    ? { p_customer_id: customerId, p_total_amount: totalAmount, p_scheduled_for: scheduledFor, p_cart_items, p_notes: notes || null }
+    : { p_total_amount: totalAmount, p_scheduled_for: scheduledFor, p_cart_items, p_notes: notes || null };
 
+  const { data, error } = await supabase.rpc(rpcName, rpcParams);
   if (error) return { ok: false, order: null, error };
   if (!data?.[0]) return { ok: false, order: null, error: new Error('No se pudo crear el pedido en este momento.') };
   return { ok: true, order: data[0], error: null };
@@ -24,9 +26,7 @@ export const createOrder = async (supabase, params) => {
 
 export const deactivateSingleUseDiscount = async (supabase, params) => {
   const { discountId } = params;
-  const { error } = await supabase.rpc('record_my_discount_usage_and_deactivate', {
-    p_discount_id: discountId,
-  });
+  const { error } = await supabase.rpc('record_my_discount_usage_and_deactivate', { p_discount_id: discountId });
   if (error) {
     console.warn('Warning deactivating discount (non-fatal):', error);
     return { ok: false, error };
