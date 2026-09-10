@@ -766,6 +766,129 @@ END;
 $function$;
 
 
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
+CREATE OR REPLACE FUNCTION public.get_default_admin_permissions()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    RETURN '{
+        "dashboard": {"view": true, "edit": true, "delete": true},
+        "pedidos": {"view": true, "edit": true, "delete": true},
+        "crear-pedido": {"view": true, "edit": true, "delete": true},
+        "productos": {"view": true, "edit": true, "delete": true},
+        "clientes": {"view": true, "edit": true, "delete": true},
+        "horarios": {"view": true, "edit": true, "delete": true},
+        "descuentos": {"view": true, "edit": true, "delete": true},
+        "terminos": {"view": true, "edit": true, "delete": true},
+        "registrar-admin": {"view": true, "edit": true, "delete": true},
+        "special-prices": {"view": true, "edit": true, "delete": true}
+    }';
+END;
+$function$;
+
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
+CREATE OR REPLACE FUNCTION public.get_default_staff_permissions()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    RETURN '{
+        "dashboard": {"view": true},
+        "pedidos": {"view": true, "edit": true},
+        "crear-pedido": {"view": false},
+        "productos": {"view": true},
+        "clientes": {"view": true},
+        "horarios": {"view": false},
+        "descuentos": {"view": false},
+        "terminos": {"view": false},
+        "registrar-admin": {"view": false},
+        "special-prices": {"view": false}
+    }';
+END;
+$function$;
+
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
+CREATE OR REPLACE FUNCTION public.handle_new_admin()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+begin
+  -- Inserta una nueva fila en tu tabla 'admins'
+  insert into public.admins (id, name, email)
+  -- 'new' se refiere al nuevo registro que activó el trigger (el nuevo usuario)
+  values (new.id, new.raw_user_meta_data->>'name', new.email);
+  return new;
+end;
+$function$;
+
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
+CREATE OR REPLACE FUNCTION public.is_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+AS $function$
+  SELECT EXISTS (SELECT 1 FROM admins WHERE id = (select auth.uid()));
+$function$;
+
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
+CREATE OR REPLACE FUNCTION public.create_admin_for_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+  user_role public.admin_role;
+  user_permissions jsonb;
+BEGIN
+  -- Extraer rol, con valor por defecto 'staff'
+  user_role := COALESCE(
+    (NEW.raw_user_meta_data ->> 'role')::public.admin_role,
+    'staff'::public.admin_role
+  );
+
+  -- Extraer permisos
+  user_permissions := (NEW.raw_user_meta_data -> 'permissions')::jsonb;
+
+  -- Si no hay permisos, asignar por defecto según el rol
+  IF user_permissions IS NULL THEN
+    IF user_role = 'admin' THEN
+      user_permissions := get_default_admin_permissions();
+    ELSE
+      user_permissions := get_default_staff_permissions();
+    END IF;
+  END IF;
+
+  -- Insertar en la tabla admins
+  INSERT INTO public.admins (id, name, email, role, permissions)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data ->> 'name', 'Sin nombre'),
+    NEW.email,
+    user_role,
+    user_permissions
+  );
+
+  RETURN NEW;
+END;
+$function$;
+
+
 -- 4. TRIGGERS
 -- TRIGGERS CANDIDATOS BASELINE
 
