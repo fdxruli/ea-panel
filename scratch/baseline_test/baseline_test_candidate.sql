@@ -334,6 +334,10 @@ CREATE TABLE public.settings (
 -- FUNCIONES CANDIDATAS BASELINE
 
 -- Function: generate_order_code
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.generate_order_code()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -372,6 +376,10 @@ $function$;
 
 
 -- Function: handle_first_purchase_referral
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -401,6 +409,10 @@ $function$;
 
 
 -- Function: refresh_dashboard_stats
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.refresh_dashboard_stats()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -416,6 +428,10 @@ $function$;
 
 
 -- Function: return_stock_on_cancellation
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.return_stock_on_cancellation()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -463,6 +479,10 @@ $function$;
 
 
 -- Function: send_order_notification_on_status_change
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.send_order_notification_on_status_change()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -487,6 +507,10 @@ $function$;
 
 
 -- Function: update_ingredient_stock_on_purchase
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.update_ingredient_stock_on_purchase()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -548,6 +572,10 @@ $function$;
 
 
 -- Function: update_updated_at_column
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -561,6 +589,10 @@ $function$;
 
 
 -- Function: validate_discount_target
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.validate_discount_target()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -587,6 +619,10 @@ $function$;
 
 
 -- Function: increment_referral_count
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.increment_referral_count(p_referrer_id uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -607,6 +643,10 @@ END;
 $function$;
 
 -- Function: adjust_ingredient_stock
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.adjust_ingredient_stock(p_ingredient_id uuid, p_adjustment_amount numeric, p_reason text)
  RETURNS void
  LANGUAGE plpgsql
@@ -620,6 +660,10 @@ END;
 $function$;
 
 -- Function: create_order_with_stock_check
+
+-- BASELINE HISTORICAL OBJECT
+-- confidence: HIGH
+-- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.create_order_with_stock_check(
     p_customer_id uuid,
     p_total_amount numeric,
