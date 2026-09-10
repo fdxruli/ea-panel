@@ -1067,3 +1067,18 @@ begin
 end;
 $$;
 
+
+-- Function: get_customer_basic_stats (Reconstructed for Phase 4)
+CREATE OR REPLACE FUNCTION public.get_customer_basic_stats(p_customer_id uuid)
+ RETURNS TABLE(total_orders bigint, completed_orders bigint, total_spent numeric)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+BEGIN
+ return query 
+ select 
+  (select count(*)::bigint from public.orders o where o.customer_id = p_customer_id),
+  (select count(*)::bigint from public.orders o where o.customer_id = p_customer_id and o.status = 'completado'),
+  (select coalesce(sum(o.total_amount), 0) from public.orders o where o.customer_id = p_customer_id and o.status = 'completado');
+END;
+$$;
