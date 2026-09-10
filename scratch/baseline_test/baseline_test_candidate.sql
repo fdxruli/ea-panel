@@ -1,40 +1,9 @@
-
--- 1. TYPES
--- Tipos Enums base
-CREATE TYPE public.order_status AS ENUM (
-    'pendiente',
-    'confirmado',
-    'en_preparacion',
-    'listo_para_entregar',
-    'completado',
-    'cancelado'
-);
-
-CREATE TYPE public.discount_type AS ENUM (
-    'general',
-    'product',
-    'category'
-);
-
-CREATE TYPE public.admin_role AS ENUM (
-    'superadmin',
-    'admin',
-    'staff'
-);
-
--- Tipo Compuesto base
-CREATE TYPE public.cart_item AS (
-  product_id uuid,
-  quantity integer,
-  price numeric,
-  cost numeric
-);
-
-
--- 2. TABLES & CONSTRAINTS
 -- BASELINE CANDIDATE SQL
 -- GENERATED FORENSICALLY
 
+CREATE TYPE public.admin_role AS ENUM ('admin', 'staff');
+CREATE TYPE public.discount_type AS ENUM ('global', 'category', 'product');
+CREATE TYPE public.order_status AS ENUM ('pendiente', 'en_proceso', 'completado', 'cancelado', 'en_envio');
 
 CREATE TABLE public.referral_levels (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -330,7 +299,37 @@ CREATE TABLE public.settings (
 );
 
 
--- 3. FUNCTIONS
+-- Tipos Enums base
+CREATE TYPE public.order_status AS ENUM (
+    'pendiente',
+    'confirmado',
+    'en_preparacion',
+    'listo_para_entregar',
+    'completado',
+    'cancelado'
+);
+
+CREATE TYPE public.discount_type AS ENUM (
+    'general',
+    'product',
+    'category'
+);
+
+CREATE TYPE public.admin_role AS ENUM (
+    'superadmin',
+    'admin',
+    'staff'
+);
+
+-- Tipo Compuesto base
+CREATE TYPE public.cart_item AS (
+  product_id uuid,
+  quantity integer,
+  price numeric,
+  cost numeric
+);
+
+
 -- FUNCIONES CANDIDATAS BASELINE
 
 -- Function: generate_order_code
@@ -375,37 +374,12 @@ END;
 $function$;
 
 
--- Function: handle_first_purchase_referral
+
 
 -- BASELINE HISTORICAL OBJECT
 -- confidence: HIGH
 -- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_referrer_id uuid;
-BEGIN
-  IF (TG_OP = 'INSERT' AND NEW.status = 'completado') OR
-     (TG_OP = 'UPDATE' AND NEW.status = 'completado' AND (OLD.status IS DISTINCT FROM NEW.status)) THEN
 
-    UPDATE public.customers
-    SET has_made_first_purchase = TRUE
-    WHERE id = NEW.customer_id
-      AND has_made_first_purchase = FALSE
-    RETURNING referrer_id INTO v_referrer_id;
-
-    IF FOUND AND v_referrer_id IS NOT NULL THEN
-      PERFORM public.increment_referral_count(v_referrer_id);
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$function$;
 
 
 -- Function: refresh_dashboard_stats
@@ -618,29 +592,12 @@ $function$;
 
 
 
--- Function: increment_referral_count
+
 
 -- BASELINE HISTORICAL OBJECT
 -- confidence: HIGH
 -- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.increment_referral_count(p_referrer_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  RAISE NOTICE '[increment_referral_count] Intentando incrementar contador para ID: %', p_referrer_id;
-  UPDATE public.customers
-  SET referral_count = referral_count + 1
-  WHERE id = p_referrer_id;
 
-  IF FOUND THEN
-    RAISE NOTICE '[increment_referral_count] Contador incrementado exitosamente para ID: %', p_referrer_id;
-  ELSE
-    RAISE NOTICE '[increment_referral_count] ADVERTENCIA: No se encontró cliente con ID % para incrementar contador.', p_referrer_id;
-  END IF;
-END;
-$function$;
 
 -- Function: adjust_ingredient_stock
 
@@ -889,42 +846,245 @@ END;
 $function$;
 
 
--- 4. TRIGGERS
--- TRIGGERS CANDIDATOS BASELINE
 
--- Tabla: orders
-CREATE TRIGGER trigger_orders_updated_at 
-BEFORE UPDATE ON public.orders 
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- ==========================================
+-- SUBSISTEMA REFERRAL (BASELINE HISTÓRICO)
+-- ==========================================
 
-CREATE TRIGGER trigger_generate_order_code 
-BEFORE INSERT ON public.orders 
-FOR EACH ROW EXECUTE FUNCTION generate_order_code();
+-- 1. get_customers_with_referrals
+CREATE OR REPLACE FUNCTION public.get_customers_with_referrals()
+ RETURNS TABLE(id uuid, customer_name character varying, phone character varying, referral_code character varying, referral_count integer, level_name character varying, referred_customers jsonb)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    WITH customer_referrals AS (
+        SELECT 
+            c.id,
+            c.name AS customer_name,
+            c.phone,
+            c.referral_code,
+            c.referral_count,
+            c.referrer_id,
+            COALESCE(
+                json_agg(
+                    json_build_object('name', r.name, 'phone', r.phone)
+                    ORDER BY r.created_at DESC
+                ) FILTER (WHERE r.id IS NOT NULL),
+                '[]'::json
+            ) AS referred_customers
+        FROM customers c
+        LEFT JOIN customers r ON r.referrer_id = c.id
+        WHERE c.referral_code IS NOT NULL
+        GROUP BY c.id, c.name, c.phone, c.referral_code, c.referral_count, c.referrer_id
+    ),
+    customer_levels AS (
+        SELECT 
+            cr.*,
+            COALESCE(
+                (
+                    SELECT rl.name 
+                    FROM referral_levels rl 
+                    WHERE cr.referral_count >= rl.min_referrals 
+                    ORDER BY rl.min_referrals DESC 
+                    LIMIT 1
+                ),
+                'Novato'
+            ) AS level_name
+        FROM customer_referrals cr
+    )
+    SELECT 
+        cl.id,
+        cl.customer_name,
+        cl.phone,
+        cl.referral_code,
+        cl.referral_count,
+        cl.level_name,
+        cl.referred_customers::jsonb
+    FROM customer_levels cl
+    ORDER BY cl.referral_count DESC, cl.customer_name;
+END;
+$$;
 
-CREATE TRIGGER refresh_stats_trigger 
-AFTER INSERT OR DELETE OR UPDATE ON public.orders 
-FOR EACH STATEMENT EXECUTE FUNCTION refresh_dashboard_stats();
+-- 2. get_detailed_referral_info
+CREATE OR REPLACE FUNCTION public.get_detailed_referral_info()
+ RETURNS TABLE(customer_id uuid, customer_name character varying, referral_code character varying, referral_count integer, level_name character varying, referred_customers jsonb)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        c.id as customer_id,
+        c.name as customer_name,
+        c.referral_code,
+        c.referral_count,
+        (SELECT l.name FROM public.referral_levels l WHERE c.referral_count >= l.min_referrals ORDER BY l.min_referrals DESC LIMIT 1) as level_name,
+        (SELECT jsonb_agg(jsonb_build_object('name', rc.name, 'phone', rc.phone, 'registered_at', rc.created_at))
+         FROM public.customers rc WHERE rc.referrer_id = c.id) as referred_customers
+    FROM
+        public.customers c
+    ORDER BY
+        c.referral_count DESC;
+END;
+$$;
 
-CREATE TRIGGER on_order_status_change 
-AFTER UPDATE ON public.orders 
-FOR EACH ROW EXECUTE FUNCTION send_order_notification_on_status_change();
+-- 3. delete_referral_level
+CREATE OR REPLACE FUNCTION public.delete_referral_level(level_id_to_delete uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+BEGIN
+    DELETE FROM public.rewards WHERE level_id = level_id_to_delete;
+    DELETE FROM public.referral_levels WHERE id = level_id_to_delete;
+END;
+$$;
 
-CREATE TRIGGER handle_stock_return_on_cancel 
-AFTER UPDATE ON public.orders 
-FOR EACH ROW EXECUTE FUNCTION return_stock_on_cancellation();
+-- 4. increment_referral_count
+CREATE OR REPLACE FUNCTION public.increment_referral_count(p_referrer_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE public.customers
+  SET referral_count = referral_count + 1
+  WHERE id = p_referrer_id;
+END;
+$$;
 
-CREATE TRIGGER trigger_first_purchase_referral 
-AFTER INSERT OR UPDATE ON public.orders 
-FOR EACH ROW EXECUTE FUNCTION handle_first_purchase_referral();
+-- 5. handle_first_purchase_referral
+CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+DECLARE
+  v_referrer_id uuid;
+BEGIN
+  IF (TG_OP = 'INSERT' AND NEW.status = 'completado') OR
+     (TG_OP = 'UPDATE' AND NEW.status = 'completado' AND (OLD.status IS DISTINCT FROM NEW.status)) THEN
+    UPDATE public.customers
+    SET has_made_first_purchase = TRUE
+    WHERE id = NEW.customer_id
+      AND has_made_first_purchase = FALSE
+    RETURNING referrer_id INTO v_referrer_id;
+    IF FOUND AND v_referrer_id IS NOT NULL THEN
+      PERFORM public.increment_referral_count(v_referrer_id);
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
 
--- Tabla: discounts
-CREATE TRIGGER trigger_validate_discount_target 
-BEFORE INSERT OR UPDATE ON public.discounts 
-FOR EACH ROW EXECUTE FUNCTION validate_discount_target();
+-- 6. handle_first_purchase_referral_on_update
+CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral_on_update()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+DECLARE
+  referred_customer_record RECORD;
+  completed_order_count INTEGER;
+BEGIN
+  IF NEW.status = 'completado' AND OLD.status <> 'completado' THEN
+    SELECT id, referrer_id, has_made_first_purchase
+    INTO referred_customer_record
+    FROM public.customers
+    WHERE id = NEW.customer_id;
+    IF NOT FOUND THEN
+      RETURN NEW;
+    END IF;
+    IF referred_customer_record.has_made_first_purchase = FALSE THEN
+      SELECT COUNT(*)
+      INTO completed_order_count
+      FROM public.orders
+      WHERE customer_id = referred_customer_record.id AND status = 'completado';
+      IF completed_order_count = 1 THEN
+          UPDATE public.customers
+          SET has_made_first_purchase = TRUE
+          WHERE id = referred_customer_record.id;
+          IF referred_customer_record.referrer_id IS NOT NULL THEN
+              PERFORM increment_referral_count(referred_customer_record.referrer_id);
+          END IF;
+      ELSE
+          IF completed_order_count > 1 THEN
+             UPDATE public.customers
+             SET has_made_first_purchase = TRUE
+             WHERE id = referred_customer_record.id;
+          END IF;
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
 
--- Tabla: ingredient_purchases
-CREATE TRIGGER on_ingredient_purchase_inserted 
-AFTER INSERT ON public.ingredient_purchases 
-FOR EACH ROW EXECUTE FUNCTION update_ingredient_stock_on_purchase();
+-- 7. generate_personal_reward_code (Restored to baseline without Auth checks)
+CREATE OR REPLACE FUNCTION public.generate_personal_reward_code(p_customer_id uuid, p_reward_id uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+declare
+  reward_info record;
+  original_discount record;
+  new_code text;
+  base_code text;
+  customer_name_part text;
+  v_referral_count integer;
+begin
+  if exists(select 1 from public.customer_reward_claims where customer_id=p_customer_id and reward_id=p_reward_id) then
+    raise exception 'El cliente ya ha reclamado esta recompensa.';
+  end if;
+  select r.description,r.reward_code,r.level_id,l.min_referrals into reward_info from public.rewards r join public.referral_levels l on r.level_id=l.id where r.id=p_reward_id;
+  if not found then raise exception 'La recompensa especificada no fue encontrada.'; end if;
+  if exists(select 1 from public.customer_reward_claims crc join public.rewards r on r.id=crc.reward_id where crc.customer_id=p_customer_id and r.level_id=reward_info.level_id) then
+    raise exception 'Ya has elegido una recompensa para este nivel. Solo se permite una por nivel.';
+  end if;
+  select coalesce(referral_count,0),substring(upper(coalesce(name,'CLIE')) from 1 for 4) into v_referral_count,customer_name_part from public.customers where id=p_customer_id;
+  if not found then raise exception 'Cliente no encontrado.'; end if;
+  if v_referral_count<reward_info.min_referrals then raise exception 'Referidos insuficientes para reclamar esta recompensa.'; end if;
+  select type,value,target_id into original_discount from public.discounts where code=reward_info.reward_code;
+  if not found then raise exception 'El código de descuento base no fue encontrado.'; end if;
+  base_code:='EA-'||customer_name_part||'-'||reward_info.reward_code;
+  new_code:=base_code;
+  while exists(select 1 from public.discounts where code=new_code) loop
+    new_code:=base_code||'-'||lpad((random()*100)::int::text,2,'0');
+  end loop;
+  insert into public.discounts(code,type,value,target_id,is_active,is_single_use,specific_customer_id) values(new_code,original_discount.type,original_discount.value,original_discount.target_id,true,true,p_customer_id);
+  insert into public.customer_reward_claims(customer_id,reward_id,generated_code) values(p_customer_id,p_reward_id,new_code);
+  return new_code;
+end;
+$$;
 
+-- 8. get_customer_rewards_progress (Restored to baseline without Auth checks and without rewards.title)
+CREATE OR REPLACE FUNCTION public.get_customer_rewards_progress(p_customer_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $$
+declare
+  referral_c integer;
+  current_l record;
+  next_l record;
+  unlocked_r jsonb;
+  upcoming_r jsonb;
+  claimed_r jsonb;
+begin
+  select coalesce(referral_count,0) into referral_c from public.customers where id=p_customer_id;
+  select * into current_l from public.referral_levels where min_referrals<=referral_c order by min_referrals desc limit 1;
+  select * into next_l from public.referral_levels where min_referrals>referral_c order by min_referrals asc limit 1;
+  
+  select jsonb_agg(jsonb_build_object('id',r.id,'level_id',r.level_id,'level_name',l.name,'min_referrals',l.min_referrals,'description',r.description,'type',r.type) order by l.min_referrals asc,r.created_at asc) into unlocked_r from public.rewards r join public.referral_levels l on r.level_id=l.id where l.min_referrals<=referral_c;
+  
+  select jsonb_agg(jsonb_build_object('id',r.id,'level_id',r.level_id,'level_name',next_l.name,'min_referrals',next_l.min_referrals,'description',r.description,'type',r.type) order by r.created_at asc) into upcoming_r from public.rewards r where next_l.id is not null and r.level_id=next_l.id;
+  
+  select jsonb_agg(jsonb_build_object('reward_id',crc.reward_id,'level_id',r.level_id,'generated_code',crc.generated_code,'claimed_at',crc.claimed_at)) into claimed_r from public.customer_reward_claims crc join public.rewards r on r.id=crc.reward_id where crc.customer_id=p_customer_id;
+  
+  return jsonb_build_object('referral_count',referral_c,'current_level',to_jsonb(current_l),'next_level',to_jsonb(next_l),'unlocked_rewards',coalesce(unlocked_r,'[]'::jsonb),'upcoming_rewards',coalesce(upcoming_r,'[]'::jsonb),'claimed_rewards',coalesce(claimed_r,'[]'::jsonb));
+end;
+$$;
 
