@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.generate_order_code()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 DECLARE
     year_month TEXT;
     random_suffix TEXT;
@@ -35,7 +35,7 @@ BEGIN
     NEW.order_code := new_code;
     RETURN NEW;
 END;
-$function$
+$function$;
 
 
 -- Function: handle_first_purchase_referral
@@ -44,7 +44,7 @@ CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 DECLARE
   v_referrer_id uuid;
 BEGIN
@@ -64,7 +64,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$function$
+$function$;
 
 
 -- Function: refresh_dashboard_stats
@@ -73,13 +73,13 @@ CREATE OR REPLACE FUNCTION public.refresh_dashboard_stats()
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 BEGIN
     -- CORRECCIÓN: Remover CONCURRENTLY porque la vista tiene solo 1 fila
     REFRESH MATERIALIZED VIEW dashboard_stats;
     RETURN NULL;
 END;
-$function$
+$function$;
 
 
 -- Function: return_stock_on_cancellation
@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION public.return_stock_on_cancellation()
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 DECLARE
     item RECORD;
     recipe_ingredient RECORD;
@@ -126,7 +126,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$function$
+$function$;
 
 
 -- Function: send_order_notification_on_status_change
@@ -135,7 +135,7 @@ CREATE OR REPLACE FUNCTION public.send_order_notification_on_status_change()
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public', 'pg_temp'
-AS $function$
+AS $function$;
 BEGIN
   PERFORM
     -- 👇 CORRECCIÓN: Usar net.http_post
@@ -150,7 +150,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$function$
+$function$;
 
 
 -- Function: update_ingredient_stock_on_purchase
@@ -159,7 +159,7 @@ CREATE OR REPLACE FUNCTION public.update_ingredient_stock_on_purchase()
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 DECLARE
     purchase_unit_factor NUMERIC;
     total_base_units NUMERIC;
@@ -211,7 +211,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$function$
+$function$;
 
 
 -- Function: update_updated_at_column
@@ -219,12 +219,12 @@ CREATE OR REPLACE FUNCTION public.update_updated_at_column()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$function$
+$function$;
 
 
 -- Function: validate_discount_target
@@ -232,7 +232,7 @@ CREATE OR REPLACE FUNCTION public.validate_discount_target()
  RETURNS trigger
  LANGUAGE plpgsql
  SET search_path TO 'public'
-AS $function$
+AS $function$;
 BEGIN
     IF NEW.type = 'global' AND NEW.target_id IS NOT NULL THEN
         RAISE EXCEPTION 'Los descuentos globales no pueden tener target_id';
@@ -249,7 +249,7 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$function$
+$function$;
 
 
 
@@ -258,7 +258,7 @@ CREATE OR REPLACE FUNCTION public.increment_referral_count(p_referrer_id uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $function$
+AS $function$;
 BEGIN
   RAISE NOTICE '[increment_referral_count] Intentando incrementar contador para ID: %', p_referrer_id;
   UPDATE public.customers
@@ -278,7 +278,7 @@ CREATE OR REPLACE FUNCTION public.adjust_ingredient_stock(p_ingredient_id uuid, 
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $function$
+AS $function$;
 BEGIN
     UPDATE public.ingredients
     SET current_stock = current_stock + p_adjustment_amount
@@ -297,7 +297,7 @@ CREATE OR REPLACE FUNCTION public.create_order_with_stock_check(
 RETURNS TABLE(order_id uuid, order_code character varying, order_status order_status)
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $function$
+AS $function$;
 DECLARE
     v_new_order_id uuid;
     v_new_order_code character varying;
