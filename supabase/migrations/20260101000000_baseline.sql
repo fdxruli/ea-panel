@@ -235,6 +235,7 @@ CREATE TABLE public.special_prices (
   end_date date NOT NULL,
   reason text,
   created_at timestamp with time zone DEFAULT now(),
+  target_customer_ids uuid[],
   CONSTRAINT special_prices_pkey PRIMARY KEY (id),
   CONSTRAINT special_prices_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id),
   CONSTRAINT special_prices_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id)
