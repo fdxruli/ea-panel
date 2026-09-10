@@ -9,7 +9,7 @@ El pipeline consta actualmente de una fase de **Validación** (Pull Requests) y 
 ### Qué ocurre en Pull Request (PR)
 Cuando se crea o actualiza un PR hacia la rama `main` que modifica archivos en `supabase/migrations/`:
 1. GitHub Actions arranca un runner con `ubuntu-latest`.
-2. Se instala la versión oficial y más reciente de Supabase CLI (`supabase/setup-cli`).
+2. Se instala la versión fijada de Supabase CLI (`supabase/setup-cli`).
 3. Se ejecuta `supabase start`. Esto levanta una base de datos local y aplica todas las migraciones desde cero, validando su sintaxis, orden y consistencia.
 4. Si las migraciones fallan, el pipeline se rompe e impide el merge (si el branch protection está activado).
 
@@ -20,21 +20,35 @@ En la segunda fase del proyecto, se añadirá un workflow adicional en `main`:
 3. Se aplicarán las migraciones pendientes en el proyecto productivo usando los secretos configurados, mediante `supabase db push`.
 4. Existirán controles de seguridad para no alterar la estructura interna de Supabase si hay discrepancias.
 
-## 2. Secretos requeridos en GitHub
+## 2. Versión de Supabase CLI utilizada por CI
+
+Actualmente el pipeline está fijado a la versión de Supabase CLI **`1.223.10`**.
+Esta versión se mantiene fija deliberadamente para tener builds reproducibles y evitar que un cambio mayor en las herramientas rompa el pipeline sin previo aviso. La actualización de la versión del CLI deberá hacerse mediante una modificación controlada del workflow de CI.
+
+## 3. Secretos requeridos en GitHub
 Para la etapa de validación no se requiere conectar al proyecto de producción (se prueba en local). Sin embargo, para el futuro despliegue se deberán configurar los siguientes **GitHub Actions Secrets** (nunca incluirlos en el código ni variables locales):
 - `SUPABASE_ACCESS_TOKEN`: Token personal de la cuenta con acceso al proyecto en Supabase.
 - `SUPABASE_PROJECT_ID`: El ref del proyecto de producción (`xvstqhvooabljhhfmuas`).
 - `SUPABASE_DB_PASSWORD`: (Dependiendo de la configuración de red y si se hace push a una DB remota directa, aunque CLI 1.x con auth OAuth a veces solo requiere el Access Token. Consultar la doc actual antes de crear el deploy).
 
-## 3. Prácticas Seguras (Qué NO debe hacerse)
+## 4. Prácticas Seguras (Qué NO debe hacerse)
 - **Desde Windows**: NO ejecutar comandos destructivos como `supabase db reset --linked`. NO intentar hacer deploys manuales, la idea es que GH Actions centralice esto.
 - **Historial `schema_migrations`**: Se detectó que el historial de producción tiene inconsistencias en la columna `statements`. **NUNCA** ejecutar `supabase migration repair` o intentar arreglar esta tabla con scripts manuales. El CLI de Supabase se basará únicamente en las versiones locales frente a remotas de manera oficial.
 
-## 4. Flujo de Trabajo (Workflow)
+## 5. Flujo de Trabajo (Workflow)
 
 ### Cómo crear una nueva migración
-1. En tu rama de trabajo, genera la migración (ej: usando Studio, guardando el SQL, y creando el archivo en `supabase/migrations/YYYYMMDDHHMMSS_name.sql`).
-2. Confirma el archivo localmente (`git add` y `git commit`).
+1. En tu rama de trabajo, genera la migración usando el CLI oficial: `supabase migration new <nombre_descriptivo>`. Esto creará automáticamente el archivo con el timestamp correcto en `supabase/migrations/`.
+2. Añade el código SQL correspondiente a la nueva migración.
+3. Confirma el archivo localmente (`git add` y `git commit`).
+
+### Ciclo de Vida de la Migración
+El flujo esperado para cualquier cambio en la base de datos es:
+1. Crear migration local (`supabase migration new`)
+2. Crear un Pull Request (PR)
+3. Ejecución automática de GitHub Actions
+4. Validación exitosa en base de datos de prueba del runner
+5. Merge a `main`
 
 ### Cómo validar una migración
 1. Haz un `git push` de tu rama y abre un Pull Request contra `main`.

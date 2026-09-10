@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/**'
+      - '.github/workflows/supabase-migrations-check.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +25,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: '1.223.10' # Fixed version to ensure reproducible builds
 
       - name: Verify CLI Version
         run: supabase -v
@@ -35,3 +36,4 @@ jobs:
 
       - name: Verify Migration Status Locally
         run: supabase migration list
+
