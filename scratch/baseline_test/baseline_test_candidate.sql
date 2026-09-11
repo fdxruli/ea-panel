@@ -1336,3 +1336,32 @@ BEGIN
   WHERE customer_id = p_customer_id AND id = p_discount_id;
 END;
 $function$;
+-- Reconstructed historical dummy for public.get_product_stats_single()
+CREATE OR REPLACE FUNCTION public.get_product_stats_single()
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    RAISE NOTICE 'Dummy function to satisfy migration 20260903080747';
+    RETURN '{}'::json;
+END;
+$function$;
+
+-- Reconstructed historical function for public.get_product_stats_single(uuid)
+CREATE OR REPLACE FUNCTION public.get_product_stats_single(p_product_id uuid)
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  RETURN json_build_object(
+    'product_id', p_product_id,
+    'total_sold', 0,
+    'total_revenue', 0,
+    'avg_rating', null,
+    'reviews_count', 0,
+    'favorites_count', 0
+  );
+END;
+$function$;
