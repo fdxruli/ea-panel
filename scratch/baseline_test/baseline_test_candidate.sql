@@ -1289,3 +1289,27 @@ BEGIN
     );
 END;
 $function$;
+
+-- Reconstructed historical function for public.update_customer_referral_count()
+CREATE OR REPLACE FUNCTION public.update_customer_referral_count()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    RAISE NOTICE 'Dummy function to satisfy migration 20260903080747';
+END;
+$function$;
+
+-- Reconstructed historical function for public.update_customer_referral_count(uuid, integer)
+CREATE OR REPLACE FUNCTION public.update_customer_referral_count(p_customer_id uuid, p_new_count integer)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  UPDATE public.customers
+  SET referral_count = p_new_count
+  WHERE id = p_customer_id;
+END;
+$function$;
