@@ -1099,7 +1099,8 @@ DECLARE
     v_is_open_now BOOLEAN := FALSE;
     v_closing_time_today TIME;
     v_status_message TEXT := '';
-	    v_today_exception RECORD;
+
+    v_today_exception RECORD;
     v_today_regular RECORD;
     v_yesterday_regular RECORD;
 
@@ -1139,7 +1140,7 @@ BEGIN
     ELSE
         SELECT * INTO v_today_regular
         FROM public.business_hours
-        WHERE day_of_week := v_current_dow;
+        WHERE day_of_week = v_current_dow;
         SELECT * INTO v_yesterday_regular
         FROM public.business_hours
         WHERE day_of_week = (v_current_dow + 6) % 7;
@@ -1209,18 +1210,18 @@ BEGIN
                     v_day_name :=
                         CASE v_check_dow
                             WHEN 0 THEN 'Domingo'
-                            WHEN 1 THEN "Lunes'
+                            WHEN 1 THEN 'Lunes'
                             WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'MiÃ©rcoles'
+                            WHEN 3 THEN 'Miercoles'
                             WHEN 4 THEN 'Jueves'
                             WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'SÃ¡bado'
+                            WHEN 6 THEN 'Sabado'
                         END;
                     v_status_message :=
                         'Abrimos '
                         || CASE
-                            WHEN v_days_diff = 1 THEN 'maÃ±ana'
-                            WHEN v_days_diff = 2 THEN 'pasado maqÃ±ana'
+                            WHEN v_days_diff = 1 THEN 'manana'
+                            WHEN v_days_diff = 2 THEN 'pasado manana'
                             ELSE 'el ' || v_day_name
                            END
                         || ' a las '
@@ -1239,10 +1240,52 @@ BEGIN
                AND NOT v_future_regular.is_closed THEN
                 IF i = 0
                    AND v_current_time >= v_future_regular.close_time
-                   AND v_future_regular.open_time < v_future_\™YÝ[\‹˜ÛÜÙWÝ[YHS‚ˆÓÓ•S•QNÂˆSÒQˆHHˆS‘—ØÝ\œ™[Ý[YH—Ù]\™WÜ™YÝ[\‹›Ü[—Ý[YHS‚ˆ—ÜÝ]\×ÛY\ÜØYÙHBˆ	ÐÙ\œ˜YÈZÜ˜HXœš[[ÜÈÞHH\È	Âˆ×ØÚ\Š—Ù]\™WÜ™YÝ[\‹›Ü[—Ý[YK	ÒLŽ“RHSIÊNÂˆ‘UT“ˆœÛÛ—ØZ[ÛØš™XÝ
-ˆ	Ú\×ÛÜ[‰ËSÑKˆ	ÛY\ÜØYÙIË—ÜÝ]\×ÛY\ÜØYÙBˆ
-NÂˆSÒQˆHˆS‚ˆ—Ù^\×ÙY™ˆHNÂˆ—Ù^WÛ˜[YHBˆÐTÑH—ØÚXÚ×ÙÝÂˆÒSˆSˆ	ÑÛZ[™ÛÉÂˆÒSˆHSˆ	Ó[™\ÉÂˆÒSˆˆSˆ	ÓX\\ÉÂˆÒSˆÈSˆ	ÓZpê\˜ÛÛ\ÉÂˆÒSˆSˆ	ÒY]™\ÉÂˆÒSˆHSˆ	ÕšY\›™\ÉÂˆÒSˆˆSˆ	ÔðèX˜YÉÂˆS‘Âˆ—ÜÝ]\×ÛY\ÜØYÙHBˆ	ÐÙ\œ˜YËˆXœš[[ÜÈ	ÂˆÐTÑBˆÒSˆ—Ù^\×ÙY™ˆHHSˆ	ÛXpìX[˜IÂˆÒSˆ—Ù^\×ÙY™ˆHˆSˆ	Ü\ØYÈXpìX[˜IÂˆSÑH	Ù[	È—Ù^WÛ˜[YBˆS‘ˆ	ÈH\È	Âˆ×ØÚ\Š—Ù]\™WÜ™YÝ[\‹›Ü[—Ý[YK	ÒLŽ“RHSIÊNÂˆ‘UT“ˆœÛÛ—ØZ[ÛØš™XÝ
-ˆ	Ú\×ÛÜ[‰ËSÑKˆ	ÛY\ÜØYÙIË—ÜÝ]\×ÛY\ÜØYÙBˆ
-NÂˆS‘QŽÂˆS‘QŽÂˆS‘QŽÂˆS‘ÓÔÂ‚ˆ‘UT“ˆœÛÛ—ØZ[ÛØš™XÝ
-ˆ	Ú\×ÛÜ[‰ËSÑKˆ	ÛY\ÜØYÙIË	Ñ[™YÛØÚ[È\Ý0èHÙ\œ˜YÈ[\Ü˜[Y[KˆÛÛœÝ[H°ìÞ[[ÜÈÜ˜\š[ÜË‰Âˆ
-NÂ‘S‘Â‰[˜Ý[Û‰Â
+                   AND v_future_regular.open_time < v_future_regular.close_time THEN
+                    CONTINUE;
+                ELSIF i = 0
+                   AND v_current_time < v_future_regular.open_time THEN
+                    v_status_message :=
+                        'Cerrado ahora | Abrimos hoy a las '
+                        || to_char(v_future_regular.open_time, 'HH12:MI AM');
+                    RETURN json_build_object(
+                        'is_open', FALSE,
+                        'message', v_status_message
+                    );
+                ELSIF i > 0 THEN
+                    v_days_diff := i;
+                    v_day_name :=
+                        CASE v_check_dow
+                            WHEN 0 THEN 'Domingo'
+                            WHEN 1 THEN 'Lunes'
+                            WHEN 2 THEN 'Martes'
+                            WHEN 3 THEN 'Miercoles'
+                            WHEN 4 THEN 'Jueves'
+                            WHEN 5 THEN 'Viernes'
+                            WHEN 6 THEN 'Sabado'
+                        END;
+                    v_status_message :=
+                        'Cerrado. Abrimos '
+                        || CASE
+                            WHEN v_days_diff = 1 THEN 'manana'
+                            WHEN v_days_diff = 2 THEN 'pasado manana'
+                            ELSE 'el ' || v_day_name
+                           END
+                        || ' a las '
+                        || to_char(v_future_regular.open_time, 'HH12:MI AM');
+                    RETURN json_build_object(
+                        'is_open', FALSE,
+                        'message', v_status_message
+                    );
+                END IF;
+            END IF;
+        END IF;
+    END LOOP;
+
+    RETURN json_build_object(
+        'is_open',
+        FALSE,
+        'message',
+        'El negocio esta cerrado temporalmente. Consulta proximos horarios.'
+    );
+END;
+$function$;
