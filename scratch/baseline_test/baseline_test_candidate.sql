@@ -1083,6 +1083,7 @@ BEGIN
 END;
 $$;
 
+
 -- Reconstructed historical function for public.get_business_status()
 CREATE OR REPLACE FUNCTION public.get_business_status()
  RETURNS json
@@ -1244,17 +1245,17 @@ BEGIN
                             WHEN 0 THEN 'Domingo'
                             WHEN 1 THEN 'Lunes'
                             WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'MiÈrcoles'
+                            WHEN 3 THEN 'Mi√©rcoles'
                             WHEN 4 THEN 'Jueves'
                             WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'S·bado'
+                            WHEN 6 THEN 'S√°bado'
                         END;
 
                     v_status_message :=
                         'Abrimos '
                         || CASE
-                            WHEN v_days_diff = 1 THEN 'maÒana'
-                            WHEN v_days_diff = 2 THEN 'pasado maÒana'
+                            WHEN v_days_diff = 1 THEN 'ma√±ana'
+                            WHEN v_days_diff = 2 THEN 'pasado ma√±ana'
                             ELSE 'el ' || v_day_name
                            END
                         || ' a las '
@@ -1303,17 +1304,17 @@ BEGIN
                             WHEN 0 THEN 'Domingo'
                             WHEN 1 THEN 'Lunes'
                             WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'MiÈrcoles'
+                            WHEN 3 THEN 'Mi√©rcoles'
                             WHEN 4 THEN 'Jueves'
                             WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'S·bado'
+                            WHEN 6 THEN 'S√°bado'
                         END;
 
                     v_status_message :=
                         'Cerrado. Abrimos '
                         || CASE
-                            WHEN v_days_diff = 1 THEN 'maÒana'
-                            WHEN v_days_diff = 2 THEN 'pasado maÒana'
+                            WHEN v_days_diff = 1 THEN 'ma√±ana'
+                            WHEN v_days_diff = 2 THEN 'pasado ma√±ana'
                             ELSE 'el ' || v_day_name
                            END
                         || ' a las '
@@ -1332,7 +1333,7 @@ BEGIN
         'is_open',
         FALSE,
         'message',
-        'El negocio est· cerrado temporalmente. Consulta prÛximos horarios.'
+        'El negocio est√° cerrado temporalmente. Consulta pr√≥ximos horarios.'
     );
 END;
 $function$;
