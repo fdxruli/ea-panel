@@ -1,0 +1,35 @@
+name: Test Baseline Candidate
+
+on:
+  push:
+    branches:
+      - chore/supabase-github-actions-migrations
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-candidate:
+    name: Test Baseline Candidate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: '2.117.0'
+
+      - name: Replace Baseline
+        run: |
+          cp scratch/baseline_test/baseline_test_candidate.sql supabase/migrations/20260101000000_baseline.sql
+          echo "Replaced baseline with candidate for testing"
+
+      - name: Start Supabase Local Instance
+        run: supabase start
+        
+      - name: Verify Migration Status Locally
+        run: supabase migration list

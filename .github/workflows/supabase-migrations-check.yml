@@ -1,0 +1,40 @@
+name: Supabase Migrations Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/supabase-migrations-check.yml'
+      - 'supabase/config.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate-migrations:
+    name: Validate Supabase Migrations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: '2.117.0'
+
+      - name: Verify CLI Version
+        run: supabase -v
+
+      - name: Start Supabase Local Instance
+        run: supabase start
+        # 'supabase start' validates that migrations apply cleanly to a fresh database
+
+      - name: Verify Migration Status Locally
+        run: supabase migration list
+
