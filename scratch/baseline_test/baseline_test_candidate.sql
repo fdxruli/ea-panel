@@ -1095,7 +1095,6 @@ DECLARE
     v_current_date DATE := v_current_timestamp::DATE;
     v_current_time TIME := v_current_timestamp::TIME;
     v_current_dow INT := EXTRACT(DOW FROM v_current_date);
-
     v_is_open_now BOOLEAN := FALSE;
     v_closing_time_today TIME;
     v_status_message TEXT := '';
@@ -1119,61 +1118,82 @@ BEGIN
     LIMIT 1;
 
     IF v_today_exception IS NOT NULL THEN
+
         IF NOT v_today_exception.is_closed THEN
+
             IF v_today_exception.open_time < v_today_exception.close_time THEN
                 v_is_open_now := v_current_time BETWEEN v_today_exception.open_time AND v_today_exception.close_time;
             ELSE
                 v_is_open_now := v_current_time >= v_today_exception.open_time
                     OR v_current_time <= v_today_exception.close_time;
             END IF;
+
             IF v_is_open_now THEN
                 v_closing_time_today := v_today_exception.close_time;
                 v_status_message :=
                     'Horario especial: Abierto hasta las '
                     || to_char(v_closing_time_today, 'HH12:MI AM');
+
                 RETURN json_build_object(
                     'is_open', TRUE,
                     'message', v_status_message
                 );
             END IF;
         END IF;
+
     ELSE
+
         SELECT * INTO v_today_regular
         FROM public.business_hours
         WHERE day_of_week = v_current_dow;
+
         SELECT * INTO v_yesterday_regular
         FROM public.business_hours
         WHERE day_of_week = (v_current_dow + 6) % 7;
+
         IF v_today_regular IS NOT NULL
            AND NOT v_today_regular.is_closed THEN
+
             IF v_today_regular.open_time < v_today_regular.close_time THEN
+
                 IF v_current_time BETWEEN
                     v_today_regular.open_time
                     AND v_today_regular.close_time THEN
+
                     v_is_open_now := TRUE;
                     v_closing_time_today := v_today_regular.close_time;
                 END IF;
+
             ELSE
+
                 IF v_current_time >= v_today_regular.open_time THEN
                     v_is_open_now := TRUE;
                     v_closing_time_today := v_today_regular.close_time;
                 END IF;
+
             END IF;
         END IF;
+
         IF NOT v_is_open_now
            AND v_yesterday_regular IS NOT NULL
            AND NOT v_yesterday_regular.is_closed THEN
+
             IF v_yesterday_regular.open_time > v_yesterday_regular.close_time THEN
+
                 IF v_current_time <= v_yesterday_regular.close_time THEN
                     v_is_open_now := TRUE;
                     v_closing_time_today := v_yesterday_regular.close_time;
                 END IF;
+
             END IF;
         END IF;
+
         IF v_is_open_now THEN
+
             v_status_message :=
                 'Abierto ahora | Cierra a las '
                 || to_char(v_closing_time_today, 'HH12:MI AM');
+
             RETURN json_build_object(
                 'is_open', TRUE,
                 'message', v_status_message
@@ -1182,96 +1202,123 @@ BEGIN
     END IF;
 
     FOR i IN 0..14 LOOP
+
         v_check_date := v_current_date + i;
         v_check_dow := EXTRACT(DOW FROM v_check_date);
+
         SELECT * INTO v_future_exception
         FROM public.business_exceptions
         WHERE v_check_date BETWEEN start_date
               AND COALESCE(end_date, start_date)
         ORDER BY (COALESCE(end_date, start_date) - start_date) ASC
         LIMIT 1;
+
         IF v_future_exception IS NOT NULL THEN
+
             IF NOT v_future_exception.is_closed THEN
+
                 IF i = 0
                    AND v_current_time >= v_future_exception.close_time THEN
+
                     CONTINUE;
+
                 ELSIF i = 0
                    AND v_current_time < v_future_exception.open_time THEN
+
                     v_status_message :=
                         'Abrimos hoy a las '
                         || to_char(v_future_exception.open_time, 'HH12:MI AM')
                         || ' (Horario Especial)';
+
                     RETURN json_build_object(
                         'is_open', FALSE,
                         'message', v_status_message
                     );
+
                 ELSIF i > 0 THEN
+
                     v_days_diff := i;
+
                     v_day_name :=
                         CASE v_check_dow
                             WHEN 0 THEN 'Domingo'
                             WHEN 1 THEN 'Lunes'
                             WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'Miercoles'
+                            WHEN 3 THEN 'Miércoles'
                             WHEN 4 THEN 'Jueves'
                             WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'Sabado'
+                            WHEN 6 THEN 'Sábado'
                         END;
+
                     v_status_message :=
                         'Abrimos '
                         || CASE
-                            WHEN v_days_diff = 1 THEN 'manana'
-                            WHEN v_days_diff = 2 THEN 'pasado manana'
+                            WHEN v_days_diff = 1 THEN 'mañana'
+                            WHEN v_days_diff = 2 THEN 'pasado mañana'
                             ELSE 'el ' || v_day_name
                            END
                         || ' a las '
                         || to_char(v_future_exception.open_time, 'HH12:MI AM');
+
                     RETURN json_build_object(
                         'is_open', FALSE,
                         'message', v_status_message
                     );
                 END IF;
             END IF;
+
         ELSE
+
             SELECT * INTO v_future_regular
             FROM public.business_hours
             WHERE day_of_week = v_check_dow;
+
             IF v_future_regular IS NOT NULL
                AND NOT v_future_regular.is_closed THEN
+
                 IF i = 0
                    AND v_current_time >= v_future_regular.close_time
                    AND v_future_regular.open_time < v_future_regular.close_time THEN
+
                     CONTINUE;
+
                 ELSIF i = 0
                    AND v_current_time < v_future_regular.open_time THEN
+
                     v_status_message :=
                         'Cerrado ahora | Abrimos hoy a las '
                         || to_char(v_future_regular.open_time, 'HH12:MI AM');
+
                     RETURN json_build_object(
                         'is_open', FALSE,
                         'message', v_status_message
                     );
+
                 ELSIF i > 0 THEN
+
                     v_days_diff := i;
+
                     v_day_name :=
                         CASE v_check_dow
                             WHEN 0 THEN 'Domingo'
                             WHEN 1 THEN 'Lunes'
                             WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'Miercoles'
+                            WHEN 3 THEN 'Miércoles'
                             WHEN 4 THEN 'Jueves'
                             WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'Sabado'
+                            WHEN 6 THEN 'Sábado'
                         END;
+
                     v_status_message :=
                         'Cerrado. Abrimos '
                         || CASE
-                            WHEN v_days_diff = 1 THEN 'manana'
-                            WHEN v_days_diff = 2 THEN 'pasado manana'
+                            WHEN v_days_diff = 1 THEN 'mañana'
+                            WHEN v_days_diff = 2 THEN 'pasado mañana'
                             ELSE 'el ' || v_day_name
                            END
                         || ' a las '
                         || to_char(v_future_regular.open_time, 'HH12:MI AM');
+
                     RETURN json_build_object(
                         'is_open', FALSE,
                         'message', v_status_message
@@ -1285,83 +1332,7 @@ BEGIN
         'is_open',
         FALSE,
         'message',
-        'El negocio esta cerrado temporalmente. Consulta proximos horarios.'
+        'El negocio está cerrado temporalmente. Consulta próximos horarios.'
     );
-END;
-$function$;
-
--- Reconstructed historical function for public.update_customer_referral_count()
-CREATE OR REPLACE FUNCTION public.update_customer_referral_count()
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-    RAISE NOTICE 'Dummy function to satisfy migration 20260903080747';
-END;
-$function$;
-
--- Reconstructed historical function for public.update_customer_referral_count(uuid, integer)
-CREATE OR REPLACE FUNCTION public.update_customer_referral_count(p_customer_id uuid, p_new_count integer)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  UPDATE public.customers
-  SET referral_count = p_new_count
-  WHERE id = p_customer_id;
-END;
-$function$;
--- Reconstructed historical dummy for public.record_discount_usage_and_deactivate()
-CREATE OR REPLACE FUNCTION public.record_discount_usage_and_deactivate()
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-    RAISE NOTICE 'Dummy function to satisfy migration 20260903080747';
-END;
-$function$;
-
--- Reconstructed historical function for public.record_discount_usage_and_deactivate(uuid, uuid)
-CREATE OR REPLACE FUNCTION public.record_discount_usage_and_deactivate(p_customer_id uuid, p_discount_id uuid)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  UPDATE public.customer_discounts
-  SET is_active = false
-  WHERE customer_id = p_customer_id AND id = p_discount_id;
-END;
-$function$;
--- Reconstructed historical dummy for public.get_product_stats_single()
-CREATE OR REPLACE FUNCTION public.get_product_stats_single()
- RETURNS json
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-    RAISE NOTICE 'Dummy function to satisfy migration 20260903080747';
-    RETURN '{}'::json;
-END;
-$function$;
-
--- Reconstructed historical function for public.get_product_stats_single(uuid)
-CREATE OR REPLACE FUNCTION public.get_product_stats_single(p_product_id uuid)
- RETURNS json
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-BEGIN
-  RETURN json_build_object(
-    'product_id', p_product_id,
-    'total_sold', 0,
-    'total_revenue', 0,
-    'avg_rating', null,
-    'reviews_count', 0,
-    'favorites_count', 0
-  );
 END;
 $function$;
