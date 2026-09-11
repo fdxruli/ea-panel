@@ -1313,3 +1313,26 @@ BEGIN
   WHERE id = p_customer_id;
 END;
 $function$;
+-- Reconstructed historical dummy for public.record_discount_usage_and_deactivate()
+CREATE OR REPLACE FUNCTION public.record_discount_usage_and_deactivate()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    RAISE NOTICE 'Dummy function to satisfy migration 20260903080747';
+END;
+$function$;
+
+-- Reconstructed historical function for public.record_discount_usage_and_deactivate(uuid, uuid)
+CREATE OR REPLACE FUNCTION public.record_discount_usage_and_deactivate(p_customer_id uuid, p_discount_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  UPDATE public.customer_discounts
+  SET is_active = false
+  WHERE customer_id = p_customer_id AND id = p_discount_id;
+END;
+$function$;
