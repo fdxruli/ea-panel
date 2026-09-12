@@ -1,0 +1,87 @@
+name: Test Reconciliation Candidate
+
+on:
+  push:
+    branches:
+      - ci/test-reconciliation-candidate
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fire-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase
+        uses: supabase/setup-cli@v1
+        with:
+          version: 'latest'
+
+      - name: Check Candidate Hash
+        run: |
+          CANDIDATE_HASH=$(sha256sum scratch/reconciliation/candidate.sql | awk '{print $1}' | tr '[:lower:]' '[:upper:]')
+          echo "Candidate Hash: $CANDIDATE_HASH"
+          echo "Candidate lines: $(wc -l < scratch/reconciliation/candidate.sql)"
+          echo "Candidate UTF-8 validation: $(iconv -f UTF-8 -t UTF-8 scratch/reconciliation/candidate.sql >/dev/null && echo "PASS" || echo "FAIL")"
+
+      - name: Prepare Isolation (Only Baseline)
+        run: |
+          mkdir -p /tmp/later_migrations
+          mv supabase/migrations/* /tmp/later_migrations/
+          cp scratch/reconciliation/candidate.sql supabase/migrations/20260101000000_baseline.sql
+
+      - name: Start Supabase (applies Candidate only)
+        run: supabase start
+
+      - name: Validate Baseline
+        run: |
+          export PGPASSWORD=postgres
+          export PSQL="psql -h localhost -p 54322 -U postgres -d postgres -t -A"
+          
+          TABLES_COUNT=$($PSQL -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
+          echo "Tables count: $TABLES_COUNT"
+          if [ "$TABLES_COUNT" -ne 26 ]; then
+            echo "ERROR: Expected 26 tables, found $TABLES_COUNT"
+            exit 1
+          fi
+
+          ENUMS_COUNT=$($PSQL -c "SELECT count(distinct t.typname) FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public';")
+          echo "Enums count: $ENUMS_COUNT"
+          if [ "$ENUMS_COUNT" -ne 3 ]; then
+            echo "ERROR: Expected 3 enums, found $ENUMS_COUNT"
+            exit 1
+          fi
+
+          FUTURE_COLS=$($PSQL -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name IN ('auth_user_id', 'caja_id');")
+          if [ "$FUTURE_COLS" -gt 0 ]; then
+             echo "ERROR: Found future columns prematurely!"
+             $PSQL -c "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='public' AND column_name IN ('auth_user_id', 'caja_id');"
+             exit 1
+          fi
+
+      - name: Apply Subsequent Migrations
+        run: |
+          cp /tmp/later_migrations/* supabase/migrations/
+          # supabase migration up will apply the newly found pending migrations sequentially
+          supabase migration up --local
+
+      - name: Final Validation (If Passed)
+        if: success()
+        run: |
+          echo "ALL MIGRATIONS PASSED"
+          export PGPASSWORD=postgres
+          supabase db dump --local > final_local_schema.sql
+          
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs
+          path: |
+            final_local_schema.sql
+            supabase/migrations/20260101000000_baseline.sql
