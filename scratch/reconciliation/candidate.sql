@@ -309,7 +309,7 @@ CREATE TYPE public.cart_item AS (
   cost numeric
 );
 
-$views
+
 
 -- =====================
 
@@ -343,7 +343,7 @@ CREATE OR REPLACE VIEW public.order_profits AS
 
 -- CUTOFF FUNCTIONS
 -- =====================
-$functions
+
 CREATE OR REPLACE FUNCTION public.adjust_ingredient_stock(p_ingredient_id uuid, p_adjustment_amount numeric, p_reason text)
  RETURNS void
  LANGUAGE plpgsql
