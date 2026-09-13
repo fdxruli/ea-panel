@@ -1059,7 +1059,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.get_product_stats_single(p_product_id uuid)
  RETURNS TABLE(product_id uuid, total_sold bigint, total_revenue numeric, avg_rating numeric, reviews_count bigint, favorites_count bigint)
  LANGUAGE plpgsql
-AS $$$
+AS $function$
 BEGIN
   RETURN QUERY
   SELECT
@@ -1081,13 +1081,13 @@ BEGIN
     (SELECT COUNT(*)::BIGINT FROM product_reviews pr WHERE pr.product_id = p_product_id) as reviews_count,
     (SELECT COUNT(*)::BIGINT FROM customer_favorites cf WHERE cf.product_id = p_product_id) as favorites_count;
 END;
-$$$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$$
+AS $function$
 DECLARE
   v_referrer_id uuid;
 BEGIN
@@ -1107,13 +1107,13 @@ BEGIN
 
   RETURN NEW;
 END;
-$$$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.record_discount_usage_and_deactivate(p_customer_id uuid, p_discount_id uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$$
+AS $function$
 DECLARE
     discount_info record;
 BEGIN
@@ -1136,13 +1136,13 @@ BEGIN
         WHERE id = p_discount_id;
     END IF;
 END;
-$$$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_customer_basic_stats(p_customer_id uuid)
  RETURNS TABLE(total_orders bigint, completed_orders bigint, total_spent numeric)
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$$
+AS $function$
 BEGIN
  return query 
  select 
@@ -1150,13 +1150,13 @@ BEGIN
   (select count(*)::bigint from public.orders o where o.customer_id = p_customer_id and o.status = 'completado'),
   (select coalesce(sum(o.total_amount), 0) from public.orders o where o.customer_id = p_customer_id and o.status = 'completado');
 END;
-$$$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.get_customer_rewards_progress(p_customer_id uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$$
+AS $function$
 DECLARE
     referral_c integer;
     current_l record;
@@ -1220,13 +1220,13 @@ BEGIN
         'claimed_rewards', COALESCE(claimed_r, '[]'::jsonb)
     );
 END;
-$$$;
+$function$;
 
 CREATE OR REPLACE FUNCTION public.generate_personal_reward_code(p_customer_id uuid, p_reward_id uuid)
  RETURNS text
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$$
+AS $function$
 DECLARE
     reward_info record;
     original_discount record;
@@ -1296,7 +1296,7 @@ BEGIN
 
     RETURN new_code;
 END;
-$$$;
+$function$;
 
 CREATE TRIGGER trigger_first_purchase_referral
  AFTER INSERT OR UPDATE OF status ON public.orders
