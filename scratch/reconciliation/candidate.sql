@@ -348,7 +348,7 @@ CREATE OR REPLACE FUNCTION public.adjust_ingredient_stock(p_ingredient_id uuid, 
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
     -- Actualizar el stock
     UPDATE public.ingredients
@@ -367,7 +367,7 @@ CREATE OR REPLACE FUNCTION public.create_admin_for_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 DECLARE
   user_role public.admin_role;
   user_permissions jsonb;
@@ -409,7 +409,7 @@ CREATE OR REPLACE FUNCTION public.delete_referral_level(level_id_to_delete uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
     -- Primero, elimina las recompensas asociadas a ese nivel
     DELETE FROM public.rewards WHERE level_id = level_id_to_delete;
@@ -422,7 +422,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.generate_order_code()
  RETURNS trigger
  LANGUAGE plpgsql
-AS $$function$
+AS $function$
 DECLARE
     year_month TEXT;
     random_suffix TEXT;
@@ -458,7 +458,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.get_business_status()
  RETURNS json
  LANGUAGE plpgsql
-AS $$function$
+AS $function$
 DECLARE
     v_timezone TEXT := 'America/Mexico_City';
     v_current_timestamp TIMESTAMP := NOW() AT TIME ZONE v_timezone;
@@ -615,7 +615,7 @@ CREATE OR REPLACE FUNCTION public.get_customers_with_referrals()
  RETURNS TABLE(id uuid, customer_name character varying, phone character varying, referral_code character varying, referral_count integer, level_name character varying, referred_customers jsonb)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
     RETURN QUERY
     WITH customer_referrals AS (
@@ -670,7 +670,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.get_default_admin_permissions()
  RETURNS jsonb
  LANGUAGE plpgsql
-AS $$function$
+AS $function$
 BEGIN
     RETURN '{
         "dashboard": {"view": true, "edit": true, "delete": true},
@@ -691,7 +691,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.get_default_staff_permissions()
  RETURNS jsonb
  LANGUAGE plpgsql
-AS $$function$
+AS $function$
 BEGIN
     RETURN '{
         "dashboard": {"view": true},
@@ -713,7 +713,7 @@ CREATE OR REPLACE FUNCTION public.get_detailed_referral_info()
  RETURNS TABLE(customer_id uuid, customer_name character varying, referral_code character varying, referral_count integer, level_name character varying, referred_customers jsonb)
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
     RETURN QUERY
     SELECT
@@ -736,7 +736,7 @@ CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral_on_update()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 DECLARE
   referred_customer_record RECORD;
   completed_order_count INTEGER;
@@ -820,7 +820,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_admin()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 begin
   -- Inserta una nueva fila en tu tabla 'admins'
   insert into public.admins (id, name, email)
@@ -835,7 +835,7 @@ CREATE OR REPLACE FUNCTION public.increment_referral_count(p_referrer_id uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
   RAISE NOTICE '[increment_referral_count] Intentando incrementar contador para ID: %', p_referrer_id;
   UPDATE public.customers
@@ -855,7 +855,7 @@ CREATE OR REPLACE FUNCTION public.refresh_dashboard_stats()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
     -- CORRECCIÃƒâ€œN: Remover CONCURRENTLY porque la vista tiene solo 1 fila
     REFRESH MATERIALIZED VIEW dashboard_stats;
@@ -868,7 +868,7 @@ CREATE OR REPLACE FUNCTION public.return_stock_on_cancellation()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 DECLARE
     item RECORD;
     recipe_ingredient RECORD;
@@ -913,7 +913,7 @@ CREATE OR REPLACE FUNCTION public.send_order_notification_on_status_change()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 BEGIN
   PERFORM
     -- Ã°Å¸â€˜â€¡ CORRECCIÃƒâ€œN: Usar net.http_post
@@ -935,7 +935,7 @@ CREATE OR REPLACE FUNCTION public.update_ingredient_stock_on_purchase()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$function$
+AS $function$
 DECLARE
     purchase_unit_factor NUMERIC;
     total_base_units NUMERIC;
@@ -993,7 +993,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
  RETURNS trigger
  LANGUAGE plpgsql
-AS $$function$
+AS $function$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
@@ -1004,7 +1004,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.validate_discount_target()
  RETURNS trigger
  LANGUAGE plpgsql
-AS $$function$
+AS $function$
 BEGIN
     IF NEW.type = 'global' AND NEW.target_id IS NOT NULL THEN
         RAISE EXCEPTION 'Los descuentos globales no pueden tener target_id';
