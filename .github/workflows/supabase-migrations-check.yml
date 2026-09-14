@@ -36,5 +36,5 @@ jobs:
         # 'supabase start' validates that migrations apply cleanly to a fresh database
 
       - name: Verify Migration Status Locally
-        run: supabase migration list
+        run: supabase migration list --local
 
