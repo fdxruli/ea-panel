@@ -10,6 +10,8 @@ import { useBusinessHours } from "../context/BusinessHoursContext";
 import useNetworkState from "../hooks/useNetworkState";
 import { NETWORK_STATUS } from "../lib/networkState";
 import { supabase } from "../lib/supabaseClient";
+import { useLoyalty } from "../hooks/useLoyalty";
+import { CrownIcon } from "../components/LoyaltyBadge";
 
 // Componentes pesados: solo se descargan cuando el cliente los necesita.
 const Cart = lazy(() => import("../pages/Cart"));
@@ -62,6 +64,7 @@ export default function ClientLayout() {
   } = useCustomer();
 
   const { customer, refetch: refetchUserData } = useUserData();
+  const { isVip } = useLoyalty();
   const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
   const { settings, loading: settingsLoading } = useSettings();
@@ -123,6 +126,7 @@ export default function ClientLayout() {
       label: "Perfil",
       icon: <UserIcon />,
       replace: true,
+      isProfile: true,
     },
     (visibilitySettings.my_stuff_page !== false) && {
       to: "/mi-actividad",
@@ -148,7 +152,7 @@ export default function ClientLayout() {
     [mobileNavItems, splitIndex]
   );
 
-  const renderMobileNavItems = useCallback((items) => items.map(({ to, label, icon, replace = false, end = false }) => (
+  const renderMobileNavItems = useCallback((items) => items.map(({ to, label, icon, isProfile = false, replace = false, end = false }) => (
     <NavLink
       key={to}
       to={to}
@@ -156,10 +160,17 @@ export default function ClientLayout() {
       replace={replace}
       className={({ isActive }) => (isActive ? "bottom-nav-link active" : "bottom-nav-link")}
     >
-      {icon}
+      <span className="bottom-nav-icon-container">
+        {icon}
+        {isProfile && isVip && (
+          <span className="bottom-nav-vip-badge" aria-label="Cliente VIP" title="Cliente VIP">
+            <CrownIcon size={9} />
+          </span>
+        )}
+      </span>
       <span className="bottom-nav-label">{label}</span>
     </NavLink>
-  )), []);
+  )), [isVip]);
 
   const openPhoneModal = useCallback(() => setPhoneModalOpen(true), [setPhoneModalOpen]);
   const closeAddressModal = useCallback(() => setAddressModalOpen(false), []);

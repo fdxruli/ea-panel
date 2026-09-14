@@ -3,6 +3,7 @@
 }
 
 .avatarButton {
+  position: relative;
   /* Añadido un gradiente sutil al fondo del avatar */
   background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 15%, transparent), transparent);
   background-color: var(--bg-secondary);
@@ -25,6 +26,45 @@
   border-color: var(--color-primary);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+/* Distintivo VIP en Desktop: botón ámbar-dorado que armoniza con el rojo */
+.avatarButtonVip {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.08));
+  background-color: var(--bg-secondary);
+  color: #d97706;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(217, 119, 6, 0.15);
+}
+
+[data-theme="dark"] .avatarButtonVip {
+  color: #fbbf24;
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.1));
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.avatarButtonVip:hover, .avatarButtonVip:focus {
+  border-color: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.5), 0 4px 14px rgba(217, 119, 6, 0.28);
+}
+
+.vipCrownBadge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.4);
+  border: 2px solid var(--bg-secondary);
+  pointer-events: none;
 }
 
 .dropdown {
@@ -140,4 +180,41 @@
 
 .logoutButton svg {
     color: var(--color-primary);
+}
+
+.userHeader {
+    padding: 0.6rem 0.8rem 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.4rem;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.userName {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.userVipBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px rgba(217, 119, 6, 0.3);
+    flex-shrink: 0;
 }
