@@ -1095,6 +1095,240 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.get_product_stats()
+ RETURNS TABLE(id uuid, name character varying, description text, price numeric, cost numeric, image_url text, category_id uuid, is_active boolean, created_at timestamp with time zone, total_sold bigint, total_revenue numeric, avg_rating numeric, reviews_count bigint, favorites_count bigint)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+AS $function$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.cost,
+        p.image_url,
+        p.category_id,
+        p.is_active,
+        p.created_at,
+        COALESCE(SUM(oi.quantity), 0)::BIGINT AS total_sold,
+        COALESCE(SUM(oi.quantity * oi.price), 0) AS total_revenue,
+        COALESCE(AVG(pr.rating), 0) AS avg_rating,
+        COALESCE(COUNT(DISTINCT pr.id), 0)::BIGINT AS reviews_count,
+        COALESCE(COUNT(DISTINCT cf.customer_id), 0)::BIGINT AS favorites_count
+    FROM products p
+    LEFT JOIN order_items oi ON p.id = oi.product_id
+    LEFT JOIN orders o ON oi.order_id = o.id AND o.status = 'completado'
+    LEFT JOIN product_reviews pr ON p.id = pr.product_id
+    LEFT JOIN customer_favorites cf ON p.id = cf.product_id
+    GROUP BY p.id, p.name, p.description, p.price, p.cost, 
+             p.image_url, p.category_id, p.is_active, p.created_at
+    ORDER BY p.created_at DESC;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_special_prices_with_details()
+ RETURNS TABLE(id uuid, product_id uuid, category_id uuid, override_price numeric, start_date date, end_date date, reason text, target_customer_ids uuid[], product_name character varying, category_name character varying, is_active boolean)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+AS $function$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sp.id,
+        sp.product_id,
+        sp.category_id,
+        sp.override_price,
+        sp.start_date,
+        sp.end_date,
+        sp.reason,
+        sp.target_customer_ids,
+        p.name AS product_name,
+        c.name AS category_name,
+        CASE 
+            WHEN sp.end_date >= CURRENT_DATE THEN true
+            ELSE false
+        END AS is_active
+    FROM special_prices sp
+    LEFT JOIN products p ON sp.product_id = p.id
+    LEFT JOIN categories c ON sp.category_id = c.id
+    ORDER BY sp.end_date DESC, sp.start_date DESC;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_dashboard_stats_in_range(p_start_date timestamp with time zone, p_end_date timestamp with time zone)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    -- Variables para estadísticas básicas
+    v_total_revenue numeric;
+    v_total_costs numeric;
+    v_total_profit numeric;
+    v_profit_margin numeric;
+    v_total_orders int;
+    v_completed_orders int;
+    v_pending_orders int;
+    v_canceled_orders int;
+    v_avg_order_value numeric;
+    v_total_customers int;
+    v_items_with_cost int;
+    v_items_without_cost int;
+
+    -- Variables tipo JSON
+    v_recent_orders jsonb;
+    v_profitable_products jsonb;
+    v_debug_data jsonb;
+BEGIN
+    -- 1. Creamos la tabla temporal solo durante la ejecución de la función
+    CREATE TEMP TABLE temp_completed_items ON COMMIT DROP AS
+    SELECT 
+        p.name AS product_name,
+        p.id AS product_id,
+        oi.quantity,
+        COALESCE(oi.price, p.price) AS sale_price,
+        COALESCE(oi.cost, p.cost) AS item_cost,
+        (oi.quantity * COALESCE(oi.price, p.price)) AS total_revenue_item,
+        (oi.quantity * COALESCE(oi.cost, p.cost)) AS total_cost_item
+    FROM 
+        public.order_items oi
+    JOIN 
+        public.orders o ON oi.order_id = o.id
+    JOIN 
+        public.products p ON oi.product_id = p.id
+    WHERE 
+        o.status = 'completado'
+        AND o.created_at >= p_start_date
+        AND o.created_at <= p_end_date;
+
+    -- 2. Estadísticas de ingresos y costos
+    SELECT
+        COALESCE(SUM(total_revenue_item), 0),
+        COALESCE(SUM(total_cost_item), 0),
+        COALESCE(SUM(CASE WHEN item_cost > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN item_cost = 0 THEN 1 ELSE 0 END), 0)
+    INTO
+        v_total_revenue,
+        v_total_costs,
+        v_items_with_cost,
+        v_items_without_cost
+    FROM temp_completed_items;
+
+    -- 3. Estadísticas de pedidos (todos los estados)
+    SELECT
+        COUNT(*),
+        COALESCE(SUM(CASE WHEN status = 'completado' THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN status = 'pendiente' THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END), 0)
+    INTO
+        v_total_orders,
+        v_completed_orders,
+        v_pending_orders,
+        v_canceled_orders
+    FROM public.orders
+    WHERE
+        created_at >= p_start_date
+        AND created_at <= p_end_date;
+
+    -- 4. Datos derivados
+    v_total_profit := v_total_revenue - v_total_costs;
+    v_profit_margin := CASE WHEN v_total_revenue > 0 THEN (v_total_profit / v_total_revenue) * 100 ELSE 0 END;
+    v_avg_order_value := CASE WHEN v_completed_orders > 0 THEN v_total_revenue / v_completed_orders ELSE 0 END;
+
+    -- 5. Total de clientes (no filtrado por fecha)
+    SELECT COUNT(*) INTO v_total_customers FROM public.customers;
+
+    -- 6. Productos más rentables (Top 10)
+    SELECT 
+        COALESCE(jsonb_agg(t ORDER BY t.profit DESC), '[]'::jsonb)
+    INTO 
+        v_profitable_products
+    FROM (
+        SELECT
+            product_name AS name,
+            SUM(quantity) AS quantity,
+            AVG(sale_price) AS avgPrice, -- Promedio en caso de variación
+            AVG(item_cost) AS avgCost,
+            SUM(total_revenue_item) AS revenue,
+            SUM(total_cost_item) AS totalCost,
+            SUM(total_revenue_item) - SUM(total_cost_item) AS profit,
+            CASE 
+                WHEN SUM(total_revenue_item) > 0 THEN
+                    ROUND(((SUM(total_revenue_item) - SUM(total_cost_item)) / SUM(total_revenue_item)) * 100)
+                ELSE 0 
+            END AS marginPercent
+        FROM temp_completed_items
+        GROUP BY product_name
+        LIMIT 10
+    ) t;
+
+    -- 7. Pedidos recientes (Top 5)
+    SELECT 
+        COALESCE(jsonb_agg(t ORDER BY t.created_at DESC), '[]'::jsonb)
+    INTO 
+        v_recent_orders
+    FROM (
+        SELECT 
+            o.id,
+            o.total_amount,
+            o.status,
+            o.created_at,
+            jsonb_build_object('name', c.name) AS customers
+        FROM 
+            public.orders o
+        LEFT JOIN 
+            public.customers c ON o.customer_id = c.id
+        WHERE
+            o.created_at >= p_start_date
+            AND o.created_at <= p_end_date
+        ORDER BY o.created_at DESC
+        LIMIT 5
+    ) t;
+
+    -- 8. Debug data
+    v_debug_data := jsonb_build_object(
+        'totalItems', (SELECT COUNT(*) FROM temp_completed_items),
+        'itemsWithCost', v_items_with_cost,
+        'itemsWithoutCost', v_items_without_cost,
+        'completedOrders', v_completed_orders,
+        'productBreakdown', (
+            SELECT jsonb_agg(t ORDER BY t.profit DESC) FROM (
+                SELECT
+                    product_name AS name,
+                    SUM(quantity) AS quantity,
+                    AVG(sale_price) AS avgPrice,
+                    AVG(item_cost) AS avgCost,
+                    SUM(total_revenue_item) AS revenue,
+                    SUM(total_cost_item) AS totalCost,
+                    SUM(total_revenue_item) - SUM(total_cost_item) AS profit
+                FROM temp_completed_items
+                GROUP BY product_name
+                LIMIT 5
+            ) t
+        )
+    );
+
+    -- 9. JSON de salida final
+    RETURN jsonb_build_object(
+        'totalOrders', v_total_orders,
+        'totalRevenue', v_total_revenue,
+        'totalProfit', v_total_profit,
+        'totalCosts', v_total_costs,
+        'pendingOrders', v_pending_orders,
+        'totalCustomers', v_total_customers,
+        'avgOrderValue', v_avg_order_value,
+        'profitMargin', v_profit_margin,
+        'completedOrders', v_completed_orders,
+        'canceledOrders', v_canceled_orders,
+        'recentOrders', v_recent_orders,
+        'profitableProducts', v_profitable_products,
+        'debugData', v_debug_data
+    );
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
  RETURNS trigger
  LANGUAGE plpgsql
