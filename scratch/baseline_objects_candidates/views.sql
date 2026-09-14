@@ -1,0 +1,6 @@
+-- VIEWS CANDIDATAS BASELINE
+-- 
+-- Se analizaron las vistas `order_profits` y `discounts_with_targets`.
+-- Fueron creadas en migraciones de la fase administrativa y de analíticas
+-- No son invocadas por ninguna de las funciones fundacionales del baseline.
+-- Por lo tanto, el baseline estructural estricto no requiere ninguna vista.

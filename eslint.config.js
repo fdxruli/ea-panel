@@ -29,6 +29,7 @@ export default defineConfig([
     '*.min.js',
     'coverage',
     '.vite',
+    'scratch/**',
   ]),
 
   // --- Linter options ---
