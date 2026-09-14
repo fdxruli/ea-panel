@@ -299,8 +299,9 @@ CREATE TABLE public.settings (
 );
 
 
-
--- Tipo Compuesto base
+-- =====================
+-- CUTOFF TYPES
+-- =====================
 CREATE TYPE public.cart_item AS (
   product_id uuid,
   quantity integer,
@@ -309,480 +310,59 @@ CREATE TYPE public.cart_item AS (
 );
 
 
--- FUNCIONES CANDIDATAS BASELINE
 
--- Function: generate_order_code
+-- =====================
 
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.generate_order_code()
- RETURNS trigger
- LANGUAGE plpgsql
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    year_month TEXT;
-    random_suffix TEXT;
-    new_code TEXT;
-    is_unique BOOLEAN := FALSE;
-BEGIN
-    year_month := TO_CHAR(NOW(), 'MMYY'); -- Formato MesAño, ej: '0925'
+-- =====================
+-- CUTOFF VIEWS
+-- =====================
+CREATE MATERIALIZED VIEW public.dashboard_stats AS
+ SELECT count(*) AS total_orders,
+    count(*) FILTER (WHERE (status = 'pendiente'::order_status)) AS pending_orders,
+    sum(total_amount) FILTER (WHERE (status = 'completado'::order_status)) AS total_revenue,
+    ( SELECT count(*) AS count
+           FROM customers) AS total_customers
+   FROM orders;
 
-    -- Bucle que se ejecutará hasta encontrar un código único
-    WHILE NOT is_unique LOOP
-        -- Genera un número aleatorio entre 100 y 999
-        random_suffix := LPAD(FLOOR(RANDOM() * 900 + 100)::INT::TEXT, 3, '0');
-        
-        -- Construye el código potencial
-        new_code := 'EA-' || year_month || '-' || random_suffix;
-        
-        -- Verifica si este código ya existe
-        PERFORM 1 FROM orders WHERE order_code = new_code;
-        
-        -- Si no se encontró, el código es único
-        IF NOT FOUND THEN
-            is_unique := TRUE;
-        END IF;
-    END LOOP;
+CREATE OR REPLACE VIEW public.order_profits AS
+ SELECT o.id AS order_id,
+    o.order_code,
+    o.customer_id,
+    o.status,
+    o.total_amount,
+    o.created_at,
+    sum(((oi.price - p.cost) * oi.quantity::numeric)) AS total_profit_without_discount,
+    sum((oi.price * oi.quantity::numeric)) AS subtotal,
+    COALESCE(o.total_amount, sum((oi.price * oi.quantity::numeric))) AS final_total,
+    (sum((oi.price * oi.quantity::numeric)) - o.total_amount) AS discount_applied,
+    (o.total_amount - sum((p.cost * oi.quantity::numeric))) AS total_profit
+   FROM public.orders o
+   JOIN public.order_items oi ON o.id = oi.order_id
+   JOIN public.products p ON oi.product_id = p.id
+  GROUP BY o.id, o.order_code, o.customer_id, o.status, o.total_amount, o.created_at;
 
-    -- Asigna el código único al nuevo pedido
-    NEW.order_code := new_code;
-    RETURN NEW;
-END;
-$function$;
+-- CUTOFF FUNCTIONS
+-- =====================
 
-
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-
-
-
--- Function: refresh_dashboard_stats
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.refresh_dashboard_stats()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-BEGIN
-    -- CORRECCIÓN: Remover CONCURRENTLY porque la vista tiene solo 1 fila
-    REFRESH MATERIALIZED VIEW dashboard_stats;
-    RETURN NULL;
-END;
-$function$;
-
-
--- Function: return_stock_on_cancellation
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.return_stock_on_cancellation()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    item RECORD;
-    recipe_ingredient RECORD;
-BEGIN
-    -- 1. Comprobar la condición que pediste:
-    -- ¿El nuevo estado es 'cancelado' Y el estado antiguo era 'pendiente'?
-    IF NEW.status = 'cancelado' AND OLD.status = 'pendiente' THEN
-        
-        -- 2. Si se cumple, buscar todos los items de ese pedido
-        FOR item IN 
-            SELECT product_id, quantity 
-            FROM public.order_items 
-            WHERE order_id = OLD.id
-        LOOP
-            -- 3. Para cada item, buscar su receta
-            FOR recipe_ingredient IN
-                SELECT 
-                    rec.ingredient_id, 
-                    rec.quantity_used
-                FROM public.product_recipes AS rec
-                JOIN public.ingredients AS ing ON rec.ingredient_id = ing.id
-                JOIN public.products AS prod ON rec.product_id = prod.id
-                WHERE rec.product_id = item.product_id
-                  AND prod.track_stock = true -- Solo de productos que rastrean stock
-                  AND ing.track_inventory = true -- Y de ingredientes que rastrean stock
-                  AND rec.deduct_stock_automatically = true -- Y de ingredientes que se descuentan
-            LOOP
-                -- 4. Devolver el stock al inventario
-                UPDATE public.ingredients
-                SET current_stock = current_stock + (item.quantity * recipe_ingredient.quantity_used)
-                WHERE id = recipe_ingredient.ingredient_id;
-            END LOOP;
-        END LOOP;
-    END IF;
-
-    RETURN NEW;
-END;
-$function$;
-
-
--- Function: send_order_notification_on_status_change
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.send_order_notification_on_status_change()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
-AS $function$
-BEGIN
-  PERFORM
-    -- 👇 CORRECCIÓN: Usar net.http_post
-    net.http_post(
-      url:='https://xvstqhvooabljhhfmuas.functions.supabase.co/send-order-notification', -- Especificar nombre del parámetro
-      body:=jsonb_build_object( -- Especificar nombre del parámetro
-        'record', to_jsonb(NEW),
-        'old_record', to_jsonb(OLD)
-      ),
-      headers:='{"Content-Type": "application/json"}'::jsonb -- Especificar nombre y tipo del parámetro
-    );
-
-  RETURN NEW;
-END;
-$function$;
-
-
--- Function: update_ingredient_stock_on_purchase
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.update_ingredient_stock_on_purchase()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-    purchase_unit_factor NUMERIC;
-    total_base_units NUMERIC;
-    cost_per_unit NUMERIC;
-    current_avg_cost NUMERIC;
-    current_total_stock NUMERIC;
-    new_avg_cost NUMERIC;
-    new_total_stock NUMERIC;
-BEGIN
-    -- 1. Obtener el factor de conversión (ej: "Garrafa" -> 3500)
-    SELECT base_units_per_purchase_unit
-    INTO purchase_unit_factor
-    FROM public.ingredient_purchase_units
-    WHERE id = NEW.purchase_unit_id;
-
-    -- 2. Calcular los totales para este lote de compra
-    total_base_units := NEW.quantity_purchased * purchase_unit_factor;
-    cost_per_unit := NEW.total_cost / total_base_units;
-
-    -- 3. Actualizar la fila de 'ingredient_purchases' (para tu historial)
-    UPDATE public.ingredient_purchases
-    SET 
-        total_base_units_added = total_base_units,
-        cost_per_base_unit = cost_per_unit
-    WHERE id = NEW.id;
-
-    -- 4. Obtener el stock y costo actuales del ingrediente principal (con bloqueo)
-    SELECT average_cost, current_stock
-    INTO current_avg_cost, current_total_stock
-    FROM public.ingredients
-    WHERE id = NEW.ingredient_id
-    FOR UPDATE; -- Bloquea esta fila para evitar "carreras"
-
-    -- 5. Calcular el nuevo promedio ponderado y el stock total
-    new_total_stock := current_total_stock + total_base_units;
-    
-    IF new_total_stock > 0 THEN
-        new_avg_cost := ((current_avg_cost * current_total_stock) + NEW.total_cost) / new_total_stock;
-    ELSE
-        new_avg_cost := 0; -- Evitar división por cero si el stock es 0
-    END IF;
-
-    -- 6. Actualizar la tabla 'ingredients' (el cerebro)
-    UPDATE public.ingredients
-    SET 
-        current_stock = new_total_stock,
-        average_cost = new_avg_cost
-    WHERE id = NEW.ingredient_id;
-
-    RETURN NEW;
-END;
-$function$;
-
-
--- Function: update_updated_at_column
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
- RETURNS trigger
- LANGUAGE plpgsql
- SET search_path TO 'public'
-AS $function$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$function$;
-
-
--- Function: validate_discount_target
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.validate_discount_target()
- RETURNS trigger
- LANGUAGE plpgsql
- SET search_path TO 'public'
-AS $function$
-BEGIN
-    IF NEW.type = 'global' AND NEW.target_id IS NOT NULL THEN
-        RAISE EXCEPTION 'Los descuentos globales no pueden tener target_id';
-    END IF;
-    IF NEW.type = 'category' AND NEW.target_id IS NOT NULL THEN
-        IF NOT EXISTS (SELECT 1 FROM categories WHERE id = NEW.target_id) THEN
-            RAISE EXCEPTION 'target_id debe corresponder a una categoría válida';
-        END IF;
-    END IF;
-    IF NEW.type = 'product' AND NEW.target_id IS NOT NULL THEN
-        IF NOT EXISTS (SELECT 1 FROM products WHERE id = NEW.target_id) THEN
-            RAISE EXCEPTION 'target_id debe corresponder a un producto válido';
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$function$;
-
-
-
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-
-
--- Function: adjust_ingredient_stock
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
 CREATE OR REPLACE FUNCTION public.adjust_ingredient_stock(p_ingredient_id uuid, p_adjustment_amount numeric, p_reason text)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
 BEGIN
+    -- Actualizar el stock
     UPDATE public.ingredients
     SET current_stock = current_stock + p_adjustment_amount
     WHERE id = p_ingredient_id;
+
+    -- (Opcional, pero recomendado) Registrar el ajuste en un historial
+    -- Si no tienes una tabla de 'stock_adjustments', puedes ignorar esta parte.
+    -- INSERT INTO public.stock_adjustments (ingredient_id, amount, reason)
+    -- VALUES (p_ingredient_id, p_adjustment_amount, p_reason);
 END;
-$function$;
+$function$
+;
 
--- Function: create_order_with_stock_check
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from historical git / remote inspection
-CREATE OR REPLACE FUNCTION public.create_order_with_stock_check(
-    p_customer_id uuid,
-    p_total_amount numeric,
-    p_scheduled_for timestamp with time zone,
-    p_cart_items cart_item[],
-    p_notes character varying DEFAULT NULL::character varying
-)
-RETURNS TABLE(order_id uuid, order_code character varying, order_status order_status)
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $function$
-DECLARE
-    v_new_order_id uuid;
-    v_new_order_code character varying;
-    v_order_status public.order_status;
-    cart_item public.cart_item;
-    req_ingredient RECORD;
-BEGIN
-    -- 1. VERIFICACIÓN Y BLOQUEO DE STOCK CONSOLIDADO
-    FOR req_ingredient IN
-        WITH cart_expanded AS (
-            SELECT 
-                ci.product_id,
-                ci.quantity
-            FROM unnest(p_cart_items) AS ci
-        ),
-        needed_per_ingredient AS (
-            SELECT 
-                rec.ingredient_id,
-                SUM(ce.quantity * rec.quantity_used) AS total_needed_for_order
-            FROM cart_expanded ce
-            JOIN public.products prod ON ce.product_id = prod.id
-            JOIN public.product_recipes rec ON ce.product_id = rec.product_id
-            JOIN public.ingredients ing ON rec.ingredient_id = ing.id
-            WHERE prod.track_stock = true
-              AND ing.track_inventory = true
-              AND rec.deduct_stock_automatically = true
-            GROUP BY rec.ingredient_id
-        )
-        SELECT 
-            n.ingredient_id,
-            n.total_needed_for_order,
-            ing.name AS ingredient_name,
-            ing.base_unit,
-            ing.current_stock
-        FROM needed_per_ingredient n
-        JOIN public.ingredients ing ON n.ingredient_id = ing.id
-        ORDER BY ing.id ASC
-        FOR UPDATE OF ing
-    LOOP
-        IF req_ingredient.current_stock < req_ingredient.total_needed_for_order THEN
-            RAISE EXCEPTION 'Stock insuficiente para "%". Se necesitan % % en total para cubrir tu pedido, pero solo quedan % %.', 
-                req_ingredient.ingredient_name,
-                req_ingredient.total_needed_for_order,
-                COALESCE(req_ingredient.base_unit, 'unidades'),
-                req_ingredient.current_stock,
-                COALESCE(req_ingredient.base_unit, 'unidades');
-        END IF;
-    END LOOP;
-
-    -- 2. INSERTAR EL PEDIDO
-    INSERT INTO public.orders (customer_id, total_amount, status, scheduled_for, notes)
-    VALUES (p_customer_id, p_total_amount, 'pendiente', p_scheduled_for, p_notes)
-    RETURNING public.orders.id, public.orders.status INTO v_new_order_id, v_order_status;
-
-    -- Obtener el código de orden generado por el trigger
-    SELECT public.orders.order_code INTO v_new_order_code 
-    FROM public.orders 
-    WHERE public.orders.id = v_new_order_id;
-
-    -- 3. INSERTAR LOS ITEMS DEL PEDIDO
-    FOR cart_item IN SELECT * FROM unnest(p_cart_items)
-    LOOP
-        INSERT INTO public.order_items (order_id, product_id, quantity, price, cost)
-        VALUES (v_new_order_id, cart_item.product_id, cart_item.quantity, cart_item.price, cart_item.cost);
-    END LOOP;
-
-    -- 4. DESCONTAR EL STOCK EN BLOQUE POR INGREDIENTE CONSOLIDADO
-    UPDATE public.ingredients ing
-    SET current_stock = ing.current_stock - agg.total_deduction
-    FROM (
-        SELECT 
-            rec.ingredient_id,
-            SUM(ci.quantity * rec.quantity_used) AS total_deduction
-        FROM unnest(p_cart_items) ci
-        JOIN public.products prod ON ci.product_id = prod.id
-        JOIN public.product_recipes rec ON ci.product_id = rec.product_id
-        JOIN public.ingredients i ON rec.ingredient_id = i.id
-        WHERE prod.track_stock = true
-          AND i.track_inventory = true
-          AND rec.deduct_stock_automatically = true
-        GROUP BY rec.ingredient_id
-    ) agg
-    WHERE ing.id = agg.ingredient_id;
-
-    -- 5. RETORNO DE INFORMACIÓN AL CLIENTE
-    RETURN QUERY 
-        SELECT v_new_order_id, v_new_order_code, v_order_status;
-END;
-$function$;
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
-CREATE OR REPLACE FUNCTION public.get_default_admin_permissions()
- RETURNS jsonb
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-    RETURN '{
-        "dashboard": {"view": true, "edit": true, "delete": true},
-        "pedidos": {"view": true, "edit": true, "delete": true},
-        "crear-pedido": {"view": true, "edit": true, "delete": true},
-        "productos": {"view": true, "edit": true, "delete": true},
-        "clientes": {"view": true, "edit": true, "delete": true},
-        "horarios": {"view": true, "edit": true, "delete": true},
-        "descuentos": {"view": true, "edit": true, "delete": true},
-        "terminos": {"view": true, "edit": true, "delete": true},
-        "registrar-admin": {"view": true, "edit": true, "delete": true},
-        "special-prices": {"view": true, "edit": true, "delete": true}
-    }';
-END;
-$function$;
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
-CREATE OR REPLACE FUNCTION public.get_default_staff_permissions()
- RETURNS jsonb
- LANGUAGE plpgsql
-AS $function$
-BEGIN
-    RETURN '{
-        "dashboard": {"view": true},
-        "pedidos": {"view": true, "edit": true},
-        "crear-pedido": {"view": false},
-        "productos": {"view": true},
-        "clientes": {"view": true},
-        "horarios": {"view": false},
-        "descuentos": {"view": false},
-        "terminos": {"view": false},
-        "registrar-admin": {"view": false},
-        "special-prices": {"view": false}
-    }';
-END;
-$function$;
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
-CREATE OR REPLACE FUNCTION public.handle_new_admin()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$
-begin
-  -- Inserta una nueva fila en tu tabla 'admins'
-  insert into public.admins (id, name, email)
-  -- 'new' se refiere al nuevo registro que activó el trigger (el nuevo usuario)
-  values (new.id, new.raw_user_meta_data->>'name', new.email);
-  return new;
-end;
-$function$;
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
-CREATE OR REPLACE FUNCTION public.is_admin()
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
-AS $function$
-  SELECT EXISTS (SELECT 1 FROM admins WHERE id = (select auth.uid()));
-$function$;
-
-
--- BASELINE HISTORICAL OBJECT
--- confidence: HIGH
--- evidence: Recovered from remote schema, search_path removed since it is altered in 20260903080747
 CREATE OR REPLACE FUNCTION public.create_admin_for_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -801,7 +381,7 @@ BEGIN
   -- Extraer permisos
   user_permissions := (NEW.raw_user_meta_data -> 'permissions')::jsonb;
 
-  -- Si no hay permisos, asignar por defecto según el rol
+  -- Si no hay permisos, asignar por defecto segÃƒÂºn el rol
   IF user_permissions IS NULL THEN
     IF user_role = 'admin' THEN
       user_permissions := get_default_admin_permissions();
@@ -822,20 +402,220 @@ BEGIN
 
   RETURN NEW;
 END;
-$function$;
+$function$
+;
 
+CREATE OR REPLACE FUNCTION public.delete_referral_level(level_id_to_delete uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    -- Primero, elimina las recompensas asociadas a ese nivel
+    DELETE FROM public.rewards WHERE level_id = level_id_to_delete;
+    -- Luego, elimina el nivel
+    DELETE FROM public.referral_levels WHERE id = level_id_to_delete;
+END;
+$function$
+;
 
+CREATE OR REPLACE FUNCTION public.generate_order_code()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    year_month TEXT;
+    random_suffix TEXT;
+    new_code TEXT;
+    is_unique BOOLEAN := FALSE;
+BEGIN
+    year_month := TO_CHAR(NOW(), 'MMYY'); -- Formato MesAÃƒÂ±o, ej: '0925'
 
--- ==========================================
--- SUBSISTEMA REFERRAL (BASELINE HISTÓRICO)
--- ==========================================
+    -- Bucle que se ejecutarÃƒÂ¡ hasta encontrar un cÃƒÂ³digo ÃƒÂºnico
+    WHILE NOT is_unique LOOP
+        -- Genera un nÃƒÂºmero aleatorio entre 100 y 999
+        random_suffix := LPAD(FLOOR(RANDOM() * 900 + 100)::INT::TEXT, 3, '0');
+        
+        -- Construye el cÃƒÂ³digo potencial
+        new_code := 'EA-' || year_month || '-' || random_suffix;
+        
+        -- Verifica si este cÃƒÂ³digo ya existe
+        PERFORM 1 FROM orders WHERE order_code = new_code;
+        
+        -- Si no se encontrÃƒÂ³, el cÃƒÂ³digo es ÃƒÂºnico
+        IF NOT FOUND THEN
+            is_unique := TRUE;
+        END IF;
+    END LOOP;
 
--- 1. get_customers_with_referrals
+    -- Asigna el cÃƒÂ³digo ÃƒÂºnico al nuevo pedido
+    NEW.order_code := new_code;
+    RETURN NEW;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_business_status()
+ RETURNS json
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_timezone TEXT := 'America/Mexico_City';
+    v_current_timestamp TIMESTAMP := NOW() AT TIME ZONE v_timezone;
+    v_current_date DATE := v_current_timestamp::DATE;
+    v_current_time TIME := v_current_timestamp::TIME;
+    v_current_dow INT := EXTRACT(DOW FROM v_current_date);
+    
+    -- Variables de estado actual
+    v_is_open_now BOOLEAN := FALSE;
+    v_closing_time_today TIME;
+    v_status_message TEXT := '';
+    
+    -- Variables para consultas
+    v_today_exception RECORD;
+    v_today_regular RECORD;
+    v_yesterday_regular RECORD;
+    
+    -- Variables para proyecciÃƒÂ³n futura
+    v_check_date DATE;
+    v_check_dow INT;
+    v_future_exception RECORD;
+    v_future_regular RECORD;
+    v_days_diff INT;
+    v_day_name TEXT;
+BEGIN
+
+    -- =====================================================
+    -- FASE 1: Ã‚Â¿ESTAMOS ABIERTOS EN ESTE EXACTO MOMENTO?
+    -- =====================================================
+    
+    -- 1.1 Buscar excepciÃƒÂ³n para HOY. 
+    -- ORDER BY asegura determinismo: la excepciÃƒÂ³n mÃƒÂ¡s corta (mÃƒÂ¡s especÃƒÂ­fica) gana.
+    SELECT * INTO v_today_exception
+    FROM public.business_exceptions
+    WHERE v_current_date BETWEEN start_date AND COALESCE(end_date, start_date)
+    ORDER BY (COALESCE(end_date, start_date) - start_date) ASC 
+    LIMIT 1;
+
+    IF v_today_exception IS NOT NULL THEN
+        -- Reglas de la excepciÃƒÂ³n dictan el dÃƒÂ­a
+        IF NOT v_today_exception.is_closed THEN
+            -- ExcepciÃƒÂ³n marca abierto. Manejamos cruce de medianoche en el horario especial.
+            IF v_today_exception.open_time < v_today_exception.close_time THEN
+                v_is_open_now := v_current_time BETWEEN v_today_exception.open_time AND v_today_exception.close_time;
+            ELSE
+                v_is_open_now := v_current_time >= v_today_exception.open_time OR v_current_time <= v_today_exception.close_time;
+            END IF;
+            IF v_is_open_now THEN
+                v_closing_time_today := v_today_exception.close_time;
+                v_status_message := 'Horario especial: Abierto hasta las ' || to_char(v_closing_time_today, 'HH12:MI AM');
+                RETURN json_build_object('is_open', TRUE, 'message', v_status_message);
+            END IF;
+        END IF;
+    ELSE
+        -- 1.2 No hay excepciÃƒÂ³n. Evaluamos el horario regular de HOY y AYER (por turnos nocturnos)
+        SELECT * INTO v_today_regular FROM public.business_hours WHERE day_of_week = v_current_dow;
+        SELECT * INTO v_yesterday_regular FROM public.business_hours WHERE day_of_week = (v_current_dow + 6) % 7;
+
+        -- Ã‚Â¿Estamos dentro del turno de HOY?
+        IF v_today_regular IS NOT NULL AND NOT v_today_regular.is_closed THEN
+            IF v_today_regular.open_time < v_today_regular.close_time THEN
+                -- Horario normal (ej. 09:00 a 18:00)
+                IF v_current_time BETWEEN v_today_regular.open_time AND v_today_regular.close_time THEN
+                    v_is_open_now := TRUE;
+                    v_closing_time_today := v_today_regular.close_time;
+                END IF;
+            ELSE
+                -- Horario cruza medianoche (ej. 20:00 a 03:00). Si es mayor a open_time, estamos en el inicio del turno.
+                IF v_current_time >= v_today_regular.open_time THEN
+                    v_is_open_now := TRUE;
+                    v_closing_time_today := v_today_regular.close_time;
+                END IF;
+            END IF;
+        END IF;
+
+        -- Ã‚Â¿Estamos dentro del turno de AYER que cruzÃƒÂ³ la medianoche hacia hoy?
+        IF NOT v_is_open_now AND v_yesterday_regular IS NOT NULL AND NOT v_yesterday_regular.is_closed THEN
+            IF v_yesterday_regular.open_time > v_yesterday_regular.close_time THEN
+                -- El turno de ayer terminaba hoy en la madrugada
+                IF v_current_time <= v_yesterday_regular.close_time THEN
+                    v_is_open_now := TRUE;
+                    v_closing_time_today := v_yesterday_regular.close_time;
+                END IF;
+            END IF;
+        END IF;
+
+        IF v_is_open_now THEN
+            v_status_message := 'Abierto ahora | Cierra a las ' || to_char(v_closing_time_today, 'HH12:MI AM');
+            RETURN json_build_object('is_open', TRUE, 'message', v_status_message);
+        END IF;
+    END IF;
+
+    -- =====================================================
+    -- FASE 2: ESTÃƒÂ CERRADO. PROYECTAR EL PRÃƒâ€œXIMO DÃƒÂA ABIERTO.
+    -- Buscamos hasta 14 dÃƒÂ­as en el futuro para cruzar excepciones y regulares.
+    -- =====================================================
+    
+    FOR i IN 0..14 LOOP
+        v_check_date := v_current_date + i;
+        v_check_dow := EXTRACT(DOW FROM v_check_date);
+        
+        -- Buscar excepciÃƒÂ³n para el dÃƒÂ­a proyectado
+        SELECT * INTO v_future_exception
+        FROM public.business_exceptions
+        WHERE v_check_date BETWEEN start_date AND COALESCE(end_date, start_date)
+        ORDER BY (COALESCE(end_date, start_date) - start_date) ASC 
+        LIMIT 1;
+
+        IF v_future_exception IS NOT NULL THEN
+            IF NOT v_future_exception.is_closed THEN
+                -- Es un dÃƒÂ­a con horario especial abierto.
+                -- Si es hoy (i=0), solo es vÃƒÂ¡lido si la hora de apertura aÃƒÂºn no ha pasado.
+                IF i = 0 AND v_current_time >= v_future_exception.close_time THEN
+                    CONTINUE; -- Ya cerrÃƒÂ³ por hoy, pasar al siguiente dÃƒÂ­a
+                ELSIF i = 0 AND v_current_time < v_future_exception.open_time THEN
+                    v_status_message := 'Abrimos hoy a las ' || to_char(v_future_exception.open_time, 'HH12:MI AM') || ' (Horario Especial)';
+                    RETURN json_build_object('is_open', FALSE, 'message', v_status_message);
+                ELSIF i > 0 THEN
+                    -- Es un dÃƒÂ­a futuro
+                    v_days_diff := i;
+                    v_day_name := CASE v_check_dow WHEN 0 THEN 'Domingo' WHEN 1 THEN 'Lunes' WHEN 2 THEN 'Martes' WHEN 3 THEN 'MiÃƒÂ©rcoles' WHEN 4 THEN 'Jueves' WHEN 5 THEN 'Viernes' WHEN 6 THEN 'SÃƒÂ¡bado' END;
+                    v_status_message := 'Abrimos ' || (CASE WHEN v_days_diff = 1 THEN 'maÃƒÂ±ana' WHEN v_days_diff = 2 THEN 'pasado maÃƒÂ±ana' ELSE 'el ' || v_day_name END) || ' a las ' || to_char(v_future_exception.open_time, 'HH12:MI AM');
+                    RETURN json_build_object('is_open', FALSE, 'message', v_status_message);
+                END IF;
+            END IF;
+            -- Si future_exception.is_closed es TRUE, el loop simplemente avanza al siguiente dÃƒÂ­a. Ignoramos el business_hours.
+        ELSE
+            -- No hay excepciÃƒÂ³n para este dÃƒÂ­a proyectado. Consultamos el horario regular.
+            SELECT * INTO v_future_regular FROM public.business_hours WHERE day_of_week = v_check_dow;
+            
+            IF v_future_regular IS NOT NULL AND NOT v_future_regular.is_closed THEN
+                IF i = 0 AND v_current_time >= v_future_regular.close_time AND v_future_regular.open_time < v_future_regular.close_time THEN
+                    CONTINUE; -- Ya cerrÃƒÂ³ por hoy de forma regular.
+                ELSIF i = 0 AND v_current_time < v_future_regular.open_time THEN
+                    v_status_message := 'Cerrado ahora | Abrimos hoy a las ' || to_char(v_future_regular.open_time, 'HH12:MI AM');
+                    RETURN json_build_object('is_open', FALSE, 'message', v_status_message);
+                ELSIF i > 0 THEN
+                    v_days_diff := i;
+                    v_day_name := CASE v_check_dow WHEN 0 THEN 'Domingo' WHEN 1 THEN 'Lunes' WHEN 2 THEN 'Martes' WHEN 3 THEN 'MiÃƒÂ©rcoles' WHEN 4 THEN 'Jueves' WHEN 5 THEN 'Viernes' WHEN 6 THEN 'SÃƒÂ¡bado' END;
+                    v_status_message := 'Cerrado. Abrimos ' || (CASE WHEN v_days_diff = 1 THEN 'maÃƒÂ±ana' WHEN v_days_diff = 2 THEN 'pasado maÃƒÂ±ana' ELSE 'el ' || v_day_name END) || ' a las ' || to_char(v_future_regular.open_time, 'HH12:MI AM');
+                    RETURN json_build_object('is_open', FALSE, 'message', v_status_message);
+                END IF;
+            END IF;
+        END IF;
+    END LOOP;
+
+    -- Si el bucle termina y no encontrÃƒÂ³ apertura en 14 dÃƒÂ­as
+    RETURN json_build_object('is_open', FALSE, 'message', 'El negocio estÃƒÂ¡ cerrado temporalmente. Consulta prÃƒÂ³ximos horarios.');
+END;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.get_customers_with_referrals()
  RETURNS TABLE(id uuid, customer_name character varying, phone character varying, referral_code character varying, referral_count integer, level_name character varying, referred_customers jsonb)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
-AS $$
+AS $function$
 BEGIN
     RETURN QUERY
     WITH customer_referrals AS (
@@ -884,14 +664,56 @@ BEGIN
     FROM customer_levels cl
     ORDER BY cl.referral_count DESC, cl.customer_name;
 END;
-$$;
+$function$
+;
 
--- 2. get_detailed_referral_info
+CREATE OR REPLACE FUNCTION public.get_default_admin_permissions()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    RETURN '{
+        "dashboard": {"view": true, "edit": true, "delete": true},
+        "pedidos": {"view": true, "edit": true, "delete": true},
+        "crear-pedido": {"view": true, "edit": true, "delete": true},
+        "productos": {"view": true, "edit": true, "delete": true},
+        "clientes": {"view": true, "edit": true, "delete": true},
+        "horarios": {"view": true, "edit": true, "delete": true},
+        "descuentos": {"view": true, "edit": true, "delete": true},
+        "terminos": {"view": true, "edit": true, "delete": true},
+        "registrar-admin": {"view": true, "edit": true, "delete": true},
+        "special-prices": {"view": true, "edit": true, "delete": true}
+    }';
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.get_default_staff_permissions()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    RETURN '{
+        "dashboard": {"view": true},
+        "pedidos": {"view": true, "edit": true},
+        "crear-pedido": {"view": false},
+        "productos": {"view": true},
+        "clientes": {"view": true},
+        "horarios": {"view": false},
+        "descuentos": {"view": false},
+        "terminos": {"view": false},
+        "registrar-admin": {"view": false},
+        "special-prices": {"view": false}
+    }';
+END;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.get_detailed_referral_info()
  RETURNS TABLE(customer_id uuid, customer_name character varying, referral_code character varying, referral_count integer, level_name character varying, referred_customers jsonb)
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$
+AS $function$
 BEGIN
     RETURN QUERY
     SELECT
@@ -907,173 +729,666 @@ BEGIN
     ORDER BY
         c.referral_count DESC;
 END;
-$$;
+$function$
+;
 
--- 3. delete_referral_level
-CREATE OR REPLACE FUNCTION public.delete_referral_level(level_id_to_delete uuid)
- RETURNS void
+CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral_on_update()
+ RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$
+AS $function$
+DECLARE
+  referred_customer_record RECORD;
+  completed_order_count INTEGER;
 BEGIN
-    DELETE FROM public.rewards WHERE level_id = level_id_to_delete;
-    DELETE FROM public.referral_levels WHERE id = level_id_to_delete;
-END;
-$$;
+  -- Mensaje para saber que el trigger se ejecutÃƒÂ³
+  RAISE NOTICE '[handle_update] Trigger ejecutado. OLD status: %, NEW status: %', OLD.status, NEW.status;
 
--- 4. increment_referral_count
+  -- Solo actuar si el NUEVO estado es 'completado' Y el estado ANTERIOR NO era 'completado'
+  IF NEW.status = 'completado' AND OLD.status <> 'completado' THEN
+    RAISE NOTICE '[handle_update] CondiciÃƒÂ³n de estado (pendiente -> completado) cumplida para cliente ID: %', NEW.customer_id;
+
+    -- Obtener informaciÃƒÂ³n relevante del cliente
+    SELECT id, referrer_id, has_made_first_purchase
+    INTO referred_customer_record
+    FROM public.customers
+    WHERE id = NEW.customer_id;
+
+    -- Verificar si encontramos al cliente
+    IF NOT FOUND THEN
+      RAISE NOTICE '[handle_update] Cliente ID: % no encontrado en tabla customers.', NEW.customer_id;
+      RETURN NEW; -- Salir si no se encuentra el cliente
+    END IF;
+
+    RAISE NOTICE '[handle_update] Cliente encontrado. has_made_first_purchase: %, referrer_id: %',
+                 referred_customer_record.has_made_first_purchase, referred_customer_record.referrer_id;
+
+    -- Verificar si aÃƒÂºn no ha hecho su primera compra
+    IF referred_customer_record.has_made_first_purchase = FALSE THEN
+      RAISE NOTICE '[handle_update] Cliente (ID: %) aÃƒÂºn no ha hecho su primera compra. Verificando conteo de ÃƒÂ³rdenes...', NEW.customer_id;
+
+      -- Contar cuÃƒÂ¡ntas ÃƒÂ³rdenes COMPLETADAS tiene este cliente AHORA
+      -- AsegÃƒÂºrate que la comparaciÃƒÂ³n de status sea exacta ('completado')
+      SELECT COUNT(*)
+      INTO completed_order_count
+      FROM public.orders
+      WHERE customer_id = referred_customer_record.id AND status = 'completado';
+
+      RAISE NOTICE '[handle_update] Conteo de ÃƒÂ³rdenes completadas para cliente %: %', referred_customer_record.id, completed_order_count;
+
+      -- Si el conteo es exactamente 1 (esta es la primera completada)
+      IF completed_order_count = 1 THEN
+          RAISE NOTICE '[handle_update] Ã‚Â¡Es la primera orden completada para el cliente %!', referred_customer_record.id;
+          -- Marcar al cliente
+          UPDATE public.customers
+          SET has_made_first_purchase = TRUE
+          WHERE id = referred_customer_record.id;
+          RAISE NOTICE '[handle_update] Flag has_made_first_purchase actualizado a TRUE para cliente %', referred_customer_record.id;
+
+          -- Incrementar contador del referente si existe
+          IF referred_customer_record.referrer_id IS NOT NULL THEN
+              RAISE NOTICE '[handle_update] Llamando a increment_referral_count para referente ID: %', referred_customer_record.referrer_id;
+              PERFORM increment_referral_count(referred_customer_record.referrer_id); -- Llamada a la funciÃƒÂ³n de incremento
+          ELSE
+              RAISE NOTICE '[handle_update] Cliente % no tiene referrer_id.', referred_customer_record.id;
+          END IF;
+      ELSE
+          -- Si count es > 1, significa que ya tenÃƒÂ­a ÃƒÂ³rdenes completadas antes (quizÃƒÂ¡s de pruebas)
+          -- O si count es 0 (algo raro pasÃƒÂ³), no hacemos nada.
+          -- Marcaremos igualmente que ya hizo una compra para evitar problemas futuros.
+          IF completed_order_count > 1 THEN
+             RAISE NOTICE '[handle_update] No es la primera orden completada (conteo: %). Actualizando flag pero no incrementando contador.', completed_order_count;
+             UPDATE public.customers
+             SET has_made_first_purchase = TRUE
+             WHERE id = referred_customer_record.id;
+          ELSE
+             RAISE NOTICE '[handle_update] Conteo de ÃƒÂ³rdenes completadas inesperado (%). No se hace nada.', completed_order_count;
+          END IF;
+
+      END IF; -- Fin check primera orden (count = 1)
+    ELSE
+        RAISE NOTICE '[handle_update] Cliente % ya habÃƒÂ­a hecho su primera compra (flag era TRUE).', referred_customer_record.id;
+    END IF; -- Fin check has_made_first_purchase = FALSE
+  END IF; -- Fin check status cambiÃƒÂ³ a 'completado'
+
+  RETURN NEW; -- Necesario para triggers AFTER UPDATE
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.handle_new_admin()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+begin
+  -- Inserta una nueva fila en tu tabla 'admins'
+  insert into public.admins (id, name, email)
+  -- 'new' se refiere al nuevo registro que activÃƒÂ³ el trigger (el nuevo usuario)
+  values (new.id, new.raw_user_meta_data->>'name', new.email);
+  return new;
+end;
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.increment_referral_count(p_referrer_id uuid)
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$
+AS $function$
 BEGIN
+  RAISE NOTICE '[increment_referral_count] Intentando incrementar contador para ID: %', p_referrer_id;
   UPDATE public.customers
   SET referral_count = referral_count + 1
   WHERE id = p_referrer_id;
+
+  IF FOUND THEN
+    RAISE NOTICE '[increment_referral_count] Contador incrementado exitosamente para ID: %', p_referrer_id;
+  ELSE
+    RAISE NOTICE '[increment_referral_count] ADVERTENCIA: No se encontrÃƒÂ³ cliente con ID % para incrementar contador.', p_referrer_id;
+  END IF;
 END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.update_customer_referral_count(p_customer_id uuid, p_new_count integer)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  UPDATE public.customers
+  SET referral_count = p_new_count
+  WHERE id = p_customer_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.refresh_dashboard_stats()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+    -- CORRECCIÃƒâ€œN: Remover CONCURRENTLY porque la vista tiene solo 1 fila
+    REFRESH MATERIALIZED VIEW dashboard_stats;
+    RETURN NULL;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.return_stock_on_cancellation()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    item RECORD;
+    recipe_ingredient RECORD;
+BEGIN
+    -- 1. Comprobar la condiciÃƒÂ³n que pediste:
+    -- Ã‚Â¿El nuevo estado es 'cancelado' Y el estado antiguo era 'pendiente'?
+    IF NEW.status = 'cancelado' AND OLD.status = 'pendiente' THEN
+        
+        -- 2. Si se cumple, buscar todos los items de ese pedido
+        FOR item IN 
+            SELECT product_id, quantity 
+            FROM public.order_items 
+            WHERE order_id = OLD.id
+        LOOP
+            -- 3. Para cada item, buscar su receta
+            FOR recipe_ingredient IN
+                SELECT 
+                    rec.ingredient_id, 
+                    rec.quantity_used
+                FROM public.product_recipes AS rec
+                JOIN public.ingredients AS ing ON rec.ingredient_id = ing.id
+                JOIN public.products AS prod ON rec.product_id = prod.id
+                WHERE rec.product_id = item.product_id
+                  AND prod.track_stock = true -- Solo de productos que rastrean stock
+                  AND ing.track_inventory = true -- Y de ingredientes que rastrean stock
+                  AND rec.deduct_stock_automatically = true -- Y de ingredientes que se descuentan
+            LOOP
+                -- 4. Devolver el stock al inventario
+                UPDATE public.ingredients
+                SET current_stock = current_stock + (item.quantity * recipe_ingredient.quantity_used)
+                WHERE id = recipe_ingredient.ingredient_id;
+            END LOOP;
+        END LOOP;
+    END IF;
+
+    RETURN NEW;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.send_order_notification_on_status_change()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  PERFORM
+    -- Ã°Å¸â€˜â€¡ CORRECCIÃƒâ€œN: Usar net.http_post
+    net.http_post(
+      url:='https://xvstqhvooabljhhfmuas.functions.supabase.co/send-order-notification', -- Especificar nombre del parÃƒÂ¡metro
+      body:=jsonb_build_object( -- Especificar nombre del parÃƒÂ¡metro
+        'record', to_jsonb(NEW),
+        'old_record', to_jsonb(OLD)
+      ),
+      headers:='{"Content-Type": "application/json"}'::jsonb -- Especificar nombre y tipo del parÃƒÂ¡metro
+    );
+
+  RETURN NEW;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.update_ingredient_stock_on_purchase()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    purchase_unit_factor NUMERIC;
+    total_base_units NUMERIC;
+    cost_per_unit NUMERIC;
+    current_avg_cost NUMERIC;
+    current_total_stock NUMERIC;
+    new_avg_cost NUMERIC;
+    new_total_stock NUMERIC;
+BEGIN
+    -- 1. Obtener el factor de conversiÃƒÂ³n (ej: "Garrafa" -> 3500)
+    SELECT base_units_per_purchase_unit
+    INTO purchase_unit_factor
+    FROM public.ingredient_purchase_units
+    WHERE id = NEW.purchase_unit_id;
+
+    -- 2. Calcular los totales para este lote de compra
+    total_base_units := NEW.quantity_purchased * purchase_unit_factor;
+    cost_per_unit := NEW.total_cost / total_base_units;
+
+    -- 3. Actualizar la fila de 'ingredient_purchases' (para tu historial)
+    UPDATE public.ingredient_purchases
+    SET 
+        total_base_units_added = total_base_units,
+        cost_per_base_unit = cost_per_unit
+    WHERE id = NEW.id;
+
+    -- 4. Obtener el stock y costo actuales del ingrediente principal (con bloqueo)
+    SELECT average_cost, current_stock
+    INTO current_avg_cost, current_total_stock
+    FROM public.ingredients
+    WHERE id = NEW.ingredient_id
+    FOR UPDATE; -- Bloquea esta fila para evitar "carreras"
+
+    -- 5. Calcular el nuevo promedio ponderado y el stock total
+    new_total_stock := current_total_stock + total_base_units;
+    
+    IF new_total_stock > 0 THEN
+        new_avg_cost := ((current_avg_cost * current_total_stock) + NEW.total_cost) / new_total_stock;
+    ELSE
+        new_avg_cost := 0; -- Evitar divisiÃƒÂ³n por cero si el stock es 0
+    END IF;
+
+    -- 6. Actualizar la tabla 'ingredients' (el cerebro)
+    UPDATE public.ingredients
+    SET 
+        current_stock = new_total_stock,
+        average_cost = new_avg_cost
+    WHERE id = NEW.ingredient_id;
+
+    RETURN NEW;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$
+;
+
+CREATE OR REPLACE FUNCTION public.validate_discount_target()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    IF NEW.type = 'global' AND NEW.target_id IS NOT NULL THEN
+        RAISE EXCEPTION 'Los descuentos globales no pueden tener target_id';
+    END IF;
+    IF NEW.type = 'category' AND NEW.target_id IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM categories WHERE id = NEW.target_id) THEN
+            RAISE EXCEPTION 'target_id debe corresponder a una categorÃƒÂ­a vÃƒÂ¡lida';
+        END IF;
+    END IF;
+    IF NEW.type = 'product' AND NEW.target_id IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM products WHERE id = NEW.target_id) THEN
+            RAISE EXCEPTION 'target_id debe corresponder a un producto vÃƒÂ¡lido';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$function$
+;
+
+-- =====================
+-- CUTOFF TRIGGERS
+-- =====================
+CREATE TRIGGER trigger_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_generate_order_code BEFORE INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION generate_order_code();
+
+CREATE TRIGGER trigger_validate_discount_target BEFORE INSERT OR UPDATE ON public.discounts FOR EACH ROW EXECUTE FUNCTION validate_discount_target();
+
+CREATE TRIGGER refresh_stats_trigger AFTER INSERT OR DELETE OR UPDATE ON public.orders FOR EACH STATEMENT EXECUTE FUNCTION refresh_dashboard_stats();
+
+CREATE TRIGGER on_order_status_change AFTER UPDATE OF status ON public.orders FOR EACH ROW EXECUTE FUNCTION send_order_notification_on_status_change();
+
+CREATE TRIGGER on_ingredient_purchase_inserted AFTER INSERT ON public.ingredient_purchases FOR EACH ROW EXECUTE FUNCTION update_ingredient_stock_on_purchase();
+
+CREATE TRIGGER handle_stock_return_on_cancel AFTER UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION return_stock_on_cancellation();
+
+
+
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.admins
+    WHERE id = auth.uid()
+  );
 $$;
 
--- 5. handle_first_purchase_referral
+CREATE OR REPLACE FUNCTION public.get_product_stats_single(p_product_id uuid)
+ RETURNS TABLE(product_id uuid, total_sold bigint, total_revenue numeric, avg_rating numeric, reviews_count bigint, favorites_count bigint)
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+  RETURN QUERY
+  SELECT
+    p_product_id as product_id,
+    
+    (SELECT COALESCE(SUM(oi.quantity), 0)::BIGINT
+     FROM order_items oi
+     INNER JOIN orders o ON oi.order_id = o.id
+     WHERE oi.product_id = p_product_id AND o.status = 'completado'
+    ) as total_sold,
+    
+    (SELECT COALESCE(SUM(oi.quantity * oi.price), 0)
+     FROM order_items oi
+     INNER JOIN orders o ON oi.order_id = o.id
+     WHERE oi.product_id = p_product_id AND o.status = 'completado'
+    ) as total_revenue,
+    
+    (SELECT AVG(pr.rating) FROM product_reviews pr WHERE pr.product_id = p_product_id) as avg_rating,
+    (SELECT COUNT(*)::BIGINT FROM product_reviews pr WHERE pr.product_id = p_product_id) as reviews_count,
+    (SELECT COUNT(*)::BIGINT FROM customer_favorites cf WHERE cf.product_id = p_product_id) as favorites_count;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_product_stats()
+ RETURNS TABLE(id uuid, name character varying, description text, price numeric, cost numeric, image_url text, category_id uuid, is_active boolean, created_at timestamp with time zone, total_sold bigint, total_revenue numeric, avg_rating numeric, reviews_count bigint, favorites_count bigint)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+AS $function$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.cost,
+        p.image_url,
+        p.category_id,
+        p.is_active,
+        p.created_at,
+        COALESCE(SUM(oi.quantity), 0)::BIGINT AS total_sold,
+        COALESCE(SUM(oi.quantity * oi.price), 0) AS total_revenue,
+        COALESCE(AVG(pr.rating), 0) AS avg_rating,
+        COALESCE(COUNT(DISTINCT pr.id), 0)::BIGINT AS reviews_count,
+        COALESCE(COUNT(DISTINCT cf.customer_id), 0)::BIGINT AS favorites_count
+    FROM products p
+    LEFT JOIN order_items oi ON p.id = oi.product_id
+    LEFT JOIN orders o ON oi.order_id = o.id AND o.status = 'completado'
+    LEFT JOIN product_reviews pr ON p.id = pr.product_id
+    LEFT JOIN customer_favorites cf ON p.id = cf.product_id
+    GROUP BY p.id, p.name, p.description, p.price, p.cost, 
+             p.image_url, p.category_id, p.is_active, p.created_at
+    ORDER BY p.created_at DESC;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_special_prices_with_details()
+ RETURNS TABLE(id uuid, product_id uuid, category_id uuid, override_price numeric, start_date date, end_date date, reason text, target_customer_ids uuid[], product_name character varying, category_name character varying, is_active boolean)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+AS $function$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sp.id,
+        sp.product_id,
+        sp.category_id,
+        sp.override_price,
+        sp.start_date,
+        sp.end_date,
+        sp.reason,
+        sp.target_customer_ids,
+        p.name AS product_name,
+        c.name AS category_name,
+        CASE 
+            WHEN sp.end_date >= CURRENT_DATE THEN true
+            ELSE false
+        END AS is_active
+    FROM special_prices sp
+    LEFT JOIN products p ON sp.product_id = p.id
+    LEFT JOIN categories c ON sp.category_id = c.id
+    ORDER BY sp.end_date DESC, sp.start_date DESC;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.get_dashboard_stats_in_range(p_start_date timestamp with time zone, p_end_date timestamp with time zone)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    -- Variables para estadísticas básicas
+    v_total_revenue numeric;
+    v_total_costs numeric;
+    v_total_profit numeric;
+    v_profit_margin numeric;
+    v_total_orders int;
+    v_completed_orders int;
+    v_pending_orders int;
+    v_canceled_orders int;
+    v_avg_order_value numeric;
+    v_total_customers int;
+    v_items_with_cost int;
+    v_items_without_cost int;
+
+    -- Variables tipo JSON
+    v_recent_orders jsonb;
+    v_profitable_products jsonb;
+    v_debug_data jsonb;
+BEGIN
+    -- 1. Creamos la tabla temporal solo durante la ejecución de la función
+    CREATE TEMP TABLE temp_completed_items ON COMMIT DROP AS
+    SELECT 
+        p.name AS product_name,
+        p.id AS product_id,
+        oi.quantity,
+        COALESCE(oi.price, p.price) AS sale_price,
+        COALESCE(oi.cost, p.cost) AS item_cost,
+        (oi.quantity * COALESCE(oi.price, p.price)) AS total_revenue_item,
+        (oi.quantity * COALESCE(oi.cost, p.cost)) AS total_cost_item
+    FROM 
+        public.order_items oi
+    JOIN 
+        public.orders o ON oi.order_id = o.id
+    JOIN 
+        public.products p ON oi.product_id = p.id
+    WHERE 
+        o.status = 'completado'
+        AND o.created_at >= p_start_date
+        AND o.created_at <= p_end_date;
+
+    -- 2. Estadísticas de ingresos y costos
+    SELECT
+        COALESCE(SUM(total_revenue_item), 0),
+        COALESCE(SUM(total_cost_item), 0),
+        COALESCE(SUM(CASE WHEN item_cost > 0 THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN item_cost = 0 THEN 1 ELSE 0 END), 0)
+    INTO
+        v_total_revenue,
+        v_total_costs,
+        v_items_with_cost,
+        v_items_without_cost
+    FROM temp_completed_items;
+
+    -- 3. Estadísticas de pedidos (todos los estados)
+    SELECT
+        COUNT(*),
+        COALESCE(SUM(CASE WHEN status = 'completado' THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN status = 'pendiente' THEN 1 ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END), 0)
+    INTO
+        v_total_orders,
+        v_completed_orders,
+        v_pending_orders,
+        v_canceled_orders
+    FROM public.orders
+    WHERE
+        created_at >= p_start_date
+        AND created_at <= p_end_date;
+
+    -- 4. Datos derivados
+    v_total_profit := v_total_revenue - v_total_costs;
+    v_profit_margin := CASE WHEN v_total_revenue > 0 THEN (v_total_profit / v_total_revenue) * 100 ELSE 0 END;
+    v_avg_order_value := CASE WHEN v_completed_orders > 0 THEN v_total_revenue / v_completed_orders ELSE 0 END;
+
+    -- 5. Total de clientes (no filtrado por fecha)
+    SELECT COUNT(*) INTO v_total_customers FROM public.customers;
+
+    -- 6. Productos más rentables (Top 10)
+    SELECT 
+        COALESCE(jsonb_agg(t ORDER BY t.profit DESC), '[]'::jsonb)
+    INTO 
+        v_profitable_products
+    FROM (
+        SELECT
+            product_name AS name,
+            SUM(quantity) AS quantity,
+            AVG(sale_price) AS avgPrice, -- Promedio en caso de variación
+            AVG(item_cost) AS avgCost,
+            SUM(total_revenue_item) AS revenue,
+            SUM(total_cost_item) AS totalCost,
+            SUM(total_revenue_item) - SUM(total_cost_item) AS profit,
+            CASE 
+                WHEN SUM(total_revenue_item) > 0 THEN
+                    ROUND(((SUM(total_revenue_item) - SUM(total_cost_item)) / SUM(total_revenue_item)) * 100)
+                ELSE 0 
+            END AS marginPercent
+        FROM temp_completed_items
+        GROUP BY product_name
+        LIMIT 10
+    ) t;
+
+    -- 7. Pedidos recientes (Top 5)
+    SELECT 
+        COALESCE(jsonb_agg(t ORDER BY t.created_at DESC), '[]'::jsonb)
+    INTO 
+        v_recent_orders
+    FROM (
+        SELECT 
+            o.id,
+            o.total_amount,
+            o.status,
+            o.created_at,
+            jsonb_build_object('name', c.name) AS customers
+        FROM 
+            public.orders o
+        LEFT JOIN 
+            public.customers c ON o.customer_id = c.id
+        WHERE
+            o.created_at >= p_start_date
+            AND o.created_at <= p_end_date
+        ORDER BY o.created_at DESC
+        LIMIT 5
+    ) t;
+
+    -- 8. Debug data
+    v_debug_data := jsonb_build_object(
+        'totalItems', (SELECT COUNT(*) FROM temp_completed_items),
+        'itemsWithCost', v_items_with_cost,
+        'itemsWithoutCost', v_items_without_cost,
+        'completedOrders', v_completed_orders,
+        'productBreakdown', (
+            SELECT jsonb_agg(t ORDER BY t.profit DESC) FROM (
+                SELECT
+                    product_name AS name,
+                    SUM(quantity) AS quantity,
+                    AVG(sale_price) AS avgPrice,
+                    AVG(item_cost) AS avgCost,
+                    SUM(total_revenue_item) AS revenue,
+                    SUM(total_cost_item) AS totalCost,
+                    SUM(total_revenue_item) - SUM(total_cost_item) AS profit
+                FROM temp_completed_items
+                GROUP BY product_name
+                LIMIT 5
+            ) t
+        )
+    );
+
+    -- 9. JSON de salida final
+    RETURN jsonb_build_object(
+        'totalOrders', v_total_orders,
+        'totalRevenue', v_total_revenue,
+        'totalProfit', v_total_profit,
+        'totalCosts', v_total_costs,
+        'pendingOrders', v_pending_orders,
+        'totalCustomers', v_total_customers,
+        'avgOrderValue', v_avg_order_value,
+        'profitMargin', v_profit_margin,
+        'completedOrders', v_completed_orders,
+        'canceledOrders', v_canceled_orders,
+        'recentOrders', v_recent_orders,
+        'profitableProducts', v_profitable_products,
+        'debugData', v_debug_data
+    );
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$
+AS $function$
 DECLARE
   v_referrer_id uuid;
 BEGIN
   IF (TG_OP = 'INSERT' AND NEW.status = 'completado') OR
      (TG_OP = 'UPDATE' AND NEW.status = 'completado' AND (OLD.status IS DISTINCT FROM NEW.status)) THEN
+
     UPDATE public.customers
     SET has_made_first_purchase = TRUE
     WHERE id = NEW.customer_id
       AND has_made_first_purchase = FALSE
     RETURNING referrer_id INTO v_referrer_id;
+
     IF FOUND AND v_referrer_id IS NOT NULL THEN
       PERFORM public.increment_referral_count(v_referrer_id);
     END IF;
   END IF;
+
   RETURN NEW;
 END;
-$$;
+$function$;
 
--- 6. handle_first_purchase_referral_on_update
-CREATE OR REPLACE FUNCTION public.handle_first_purchase_referral_on_update()
- RETURNS trigger
+CREATE OR REPLACE FUNCTION public.record_discount_usage_and_deactivate(p_customer_id uuid, p_discount_id uuid)
+ RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$
+AS $function$
 DECLARE
-  referred_customer_record RECORD;
-  completed_order_count INTEGER;
+    discount_info record;
 BEGIN
-  IF NEW.status = 'completado' AND OLD.status <> 'completado' THEN
-    SELECT id, referrer_id, has_made_first_purchase
-    INTO referred_customer_record
-    FROM public.customers
-    WHERE id = NEW.customer_id;
+    SELECT is_single_use, specific_customer_id, requires_referred_status
+    INTO discount_info
+    FROM public.discounts
+    WHERE id = p_discount_id;
+
     IF NOT FOUND THEN
-      RETURN NEW;
+        RETURN;
     END IF;
-    IF referred_customer_record.has_made_first_purchase = FALSE THEN
-      SELECT COUNT(*)
-      INTO completed_order_count
-      FROM public.orders
-      WHERE customer_id = referred_customer_record.id AND status = 'completado';
-      IF completed_order_count = 1 THEN
-          UPDATE public.customers
-          SET has_made_first_purchase = TRUE
-          WHERE id = referred_customer_record.id;
-          IF referred_customer_record.referrer_id IS NOT NULL THEN
-              PERFORM increment_referral_count(referred_customer_record.referrer_id);
-          END IF;
-      ELSE
-          IF completed_order_count > 1 THEN
-             UPDATE public.customers
-             SET has_made_first_purchase = TRUE
-             WHERE id = referred_customer_record.id;
-          END IF;
-      END IF;
+
+    INSERT INTO public.customer_discount_usage (customer_id, discount_id)
+    VALUES (p_customer_id, p_discount_id)
+    ON CONFLICT DO NOTHING;
+
+    IF discount_info.is_single_use AND discount_info.specific_customer_id IS NOT NULL THEN
+        UPDATE public.discounts
+        SET is_active = FALSE
+        WHERE id = p_discount_id;
     END IF;
-  END IF;
-  RETURN NEW;
 END;
-$$;
+$function$;
 
--- 7. generate_personal_reward_code (Restored to baseline without Auth checks)
-CREATE OR REPLACE FUNCTION public.generate_personal_reward_code(p_customer_id uuid, p_reward_id uuid)
- RETURNS text
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $$
-declare
-  reward_info record;
-  original_discount record;
-  new_code text;
-  base_code text;
-  customer_name_part text;
-  v_referral_count integer;
-begin
-  if exists(select 1 from public.customer_reward_claims where customer_id=p_customer_id and reward_id=p_reward_id) then
-    raise exception 'El cliente ya ha reclamado esta recompensa.';
-  end if;
-  select r.description,r.reward_code,r.level_id,l.min_referrals into reward_info from public.rewards r join public.referral_levels l on r.level_id=l.id where r.id=p_reward_id;
-  if not found then raise exception 'La recompensa especificada no fue encontrada.'; end if;
-  if exists(select 1 from public.customer_reward_claims crc join public.rewards r on r.id=crc.reward_id where crc.customer_id=p_customer_id and r.level_id=reward_info.level_id) then
-    raise exception 'Ya has elegido una recompensa para este nivel. Solo se permite una por nivel.';
-  end if;
-  select coalesce(referral_count,0),substring(upper(coalesce(name,'CLIE')) from 1 for 4) into v_referral_count,customer_name_part from public.customers where id=p_customer_id;
-  if not found then raise exception 'Cliente no encontrado.'; end if;
-  if v_referral_count<reward_info.min_referrals then raise exception 'Referidos insuficientes para reclamar esta recompensa.'; end if;
-  select type,value,target_id into original_discount from public.discounts where code=reward_info.reward_code;
-  if not found then raise exception 'El código de descuento base no fue encontrado.'; end if;
-  base_code:='EA-'||customer_name_part||'-'||reward_info.reward_code;
-  new_code:=base_code;
-  while exists(select 1 from public.discounts where code=new_code) loop
-    new_code:=base_code||'-'||lpad((random()*100)::int::text,2,'0');
-  end loop;
-  insert into public.discounts(code,type,value,target_id,is_active,is_single_use,specific_customer_id) values(new_code,original_discount.type,original_discount.value,original_discount.target_id,true,true,p_customer_id);
-  insert into public.customer_reward_claims(customer_id,reward_id,generated_code) values(p_customer_id,p_reward_id,new_code);
-  return new_code;
-end;
-$$;
-
--- 8. get_customer_rewards_progress (Restored to baseline without Auth checks and without rewards.title)
-CREATE OR REPLACE FUNCTION public.get_customer_rewards_progress(p_customer_id uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $$
-declare
-  referral_c integer;
-  current_l record;
-  next_l record;
-  unlocked_r jsonb;
-  upcoming_r jsonb;
-  claimed_r jsonb;
-begin
-  select coalesce(referral_count,0) into referral_c from public.customers where id=p_customer_id;
-  select * into current_l from public.referral_levels where min_referrals<=referral_c order by min_referrals desc limit 1;
-  select * into next_l from public.referral_levels where min_referrals>referral_c order by min_referrals asc limit 1;
-  
-  select jsonb_agg(jsonb_build_object('id',r.id,'level_id',r.level_id,'level_name',l.name,'min_referrals',l.min_referrals,'description',r.description,'type',r.type) order by l.min_referrals asc,r.created_at asc) into unlocked_r from public.rewards r join public.referral_levels l on r.level_id=l.id where l.min_referrals<=referral_c;
-  
-  select jsonb_agg(jsonb_build_object('id',r.id,'level_id',r.level_id,'level_name',next_l.name,'min_referrals',next_l.min_referrals,'description',r.description,'type',r.type) order by r.created_at asc) into upcoming_r from public.rewards r where next_l.id is not null and r.level_id=next_l.id;
-  
-  select jsonb_agg(jsonb_build_object('reward_id',crc.reward_id,'level_id',r.level_id,'generated_code',crc.generated_code,'claimed_at',crc.claimed_at)) into claimed_r from public.customer_reward_claims crc join public.rewards r on r.id=crc.reward_id where crc.customer_id=p_customer_id;
-  
-  return jsonb_build_object('referral_count',referral_c,'current_level',to_jsonb(current_l),'next_level',to_jsonb(next_l),'unlocked_rewards',coalesce(unlocked_r,'[]'::jsonb),'upcoming_rewards',coalesce(upcoming_r,'[]'::jsonb),'claimed_rewards',coalesce(claimed_r,'[]'::jsonb));
-end;
-$$;
-
-
--- Function: get_customer_basic_stats (Reconstructed for Phase 4)
 CREATE OR REPLACE FUNCTION public.get_customer_basic_stats(p_customer_id uuid)
  RETURNS TABLE(total_orders bigint, completed_orders bigint, total_spent numeric)
  LANGUAGE plpgsql
  SECURITY DEFINER
-AS $$
+AS $function$
 BEGIN
  return query 
  select 
@@ -1081,259 +1396,156 @@ BEGIN
   (select count(*)::bigint from public.orders o where o.customer_id = p_customer_id and o.status = 'completado'),
   (select coalesce(sum(o.total_amount), 0) from public.orders o where o.customer_id = p_customer_id and o.status = 'completado');
 END;
-$$;
+$function$;
 
-
--- Reconstructed historical function for public.get_business_status()
-CREATE OR REPLACE FUNCTION public.get_business_status()
- RETURNS json
+CREATE OR REPLACE FUNCTION public.get_customer_rewards_progress(p_customer_id uuid)
+ RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
 AS $function$
 DECLARE
-    v_timezone TEXT := 'America/Mexico_City';
-    v_current_timestamp TIMESTAMP := NOW() AT TIME ZONE v_timezone;
-    v_current_date DATE := v_current_timestamp::DATE;
-    v_current_time TIME := v_current_timestamp::TIME;
-    v_current_dow INT := EXTRACT(DOW FROM v_current_date);
-    v_is_open_now BOOLEAN := FALSE;
-    v_closing_time_today TIME;
-    v_status_message TEXT := '';
-
-    v_today_exception RECORD;
-    v_today_regular RECORD;
-    v_yesterday_regular RECORD;
-
-    v_check_date DATE;
-    v_check_dow INT;
-    v_future_exception RECORD;
-    v_future_regular RECORD;
-    v_days_diff INT;
-    v_day_name TEXT;
+    referral_c integer;
+    current_l record;
+    next_l record;
+    unlocked_r jsonb;
+    upcoming_r jsonb;
+    claimed_r jsonb;
 BEGIN
+    SELECT COALESCE(referral_count, 0) INTO referral_c FROM public.customers WHERE id = p_customer_id;
+    SELECT * INTO current_l FROM public.referral_levels WHERE min_referrals <= referral_c ORDER BY min_referrals DESC LIMIT 1;
+    SELECT * INTO next_l FROM public.referral_levels WHERE min_referrals > referral_c ORDER BY min_referrals ASC LIMIT 1;
 
-    SELECT * INTO v_today_exception
-    FROM public.business_exceptions
-    WHERE v_current_date BETWEEN start_date AND COALESCE(end_date, start_date)
-    ORDER BY (COALESCE(end_date, start_date) - start_date) ASC
-    LIMIT 1;
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'id', r.id,
+            'level_id', r.level_id,
+            'level_name', l.name,
+            'min_referrals', l.min_referrals,
+            'description', r.description,
+            'reward_code', r.reward_code,
+            'type', r.type
+        ) ORDER BY l.min_referrals ASC, r.created_at ASC
+    ) INTO unlocked_r
+    FROM public.rewards r
+    JOIN public.referral_levels l ON r.level_id = l.id
+    WHERE l.min_referrals <= referral_c;
 
-    IF v_today_exception IS NOT NULL THEN
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'id', r.id,
+            'level_id', r.level_id,
+            'level_name', next_l.name,
+            'min_referrals', next_l.min_referrals,
+            'description', r.description,
+            'reward_code', r.reward_code,
+            'type', r.type
+        ) ORDER BY r.created_at ASC
+    ) INTO upcoming_r
+    FROM public.rewards r
+    WHERE next_l.id IS NOT NULL AND r.level_id = next_l.id;
 
-        IF NOT v_today_exception.is_closed THEN
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'reward_id', crc.reward_id,
+            'level_id', r.level_id,
+            'generated_code', crc.generated_code,
+            'claimed_at', crc.claimed_at
+        )
+    )
+    INTO claimed_r
+    FROM public.customer_reward_claims crc
+    JOIN public.rewards r ON r.id = crc.reward_id
+    WHERE crc.customer_id = p_customer_id;
 
-            IF v_today_exception.open_time < v_today_exception.close_time THEN
-                v_is_open_now := v_current_time BETWEEN v_today_exception.open_time AND v_today_exception.close_time;
-            ELSE
-                v_is_open_now := v_current_time >= v_today_exception.open_time
-                    OR v_current_time <= v_today_exception.close_time;
-            END IF;
-
-            IF v_is_open_now THEN
-                v_closing_time_today := v_today_exception.close_time;
-                v_status_message :=
-                    'Horario especial: Abierto hasta las '
-                    || to_char(v_closing_time_today, 'HH12:MI AM');
-
-                RETURN json_build_object(
-                    'is_open', TRUE,
-                    'message', v_status_message
-                );
-            END IF;
-        END IF;
-
-    ELSE
-
-        SELECT * INTO v_today_regular
-        FROM public.business_hours
-        WHERE day_of_week = v_current_dow;
-
-        SELECT * INTO v_yesterday_regular
-        FROM public.business_hours
-        WHERE day_of_week = (v_current_dow + 6) % 7;
-
-        IF v_today_regular IS NOT NULL
-           AND NOT v_today_regular.is_closed THEN
-
-            IF v_today_regular.open_time < v_today_regular.close_time THEN
-
-                IF v_current_time BETWEEN
-                    v_today_regular.open_time
-                    AND v_today_regular.close_time THEN
-
-                    v_is_open_now := TRUE;
-                    v_closing_time_today := v_today_regular.close_time;
-                END IF;
-
-            ELSE
-
-                IF v_current_time >= v_today_regular.open_time THEN
-                    v_is_open_now := TRUE;
-                    v_closing_time_today := v_today_regular.close_time;
-                END IF;
-
-            END IF;
-        END IF;
-
-        IF NOT v_is_open_now
-           AND v_yesterday_regular IS NOT NULL
-           AND NOT v_yesterday_regular.is_closed THEN
-
-            IF v_yesterday_regular.open_time > v_yesterday_regular.close_time THEN
-
-                IF v_current_time <= v_yesterday_regular.close_time THEN
-                    v_is_open_now := TRUE;
-                    v_closing_time_today := v_yesterday_regular.close_time;
-                END IF;
-
-            END IF;
-        END IF;
-
-        IF v_is_open_now THEN
-
-            v_status_message :=
-                'Abierto ahora | Cierra a las '
-                || to_char(v_closing_time_today, 'HH12:MI AM');
-
-            RETURN json_build_object(
-                'is_open', TRUE,
-                'message', v_status_message
-            );
-        END IF;
-    END IF;
-
-    FOR i IN 0..14 LOOP
-
-        v_check_date := v_current_date + i;
-        v_check_dow := EXTRACT(DOW FROM v_check_date);
-
-        SELECT * INTO v_future_exception
-        FROM public.business_exceptions
-        WHERE v_check_date BETWEEN start_date
-              AND COALESCE(end_date, start_date)
-        ORDER BY (COALESCE(end_date, start_date) - start_date) ASC
-        LIMIT 1;
-
-        IF v_future_exception IS NOT NULL THEN
-
-            IF NOT v_future_exception.is_closed THEN
-
-                IF i = 0
-                   AND v_current_time >= v_future_exception.close_time THEN
-
-                    CONTINUE;
-
-                ELSIF i = 0
-                   AND v_current_time < v_future_exception.open_time THEN
-
-                    v_status_message :=
-                        'Abrimos hoy a las '
-                        || to_char(v_future_exception.open_time, 'HH12:MI AM')
-                        || ' (Horario Especial)';
-
-                    RETURN json_build_object(
-                        'is_open', FALSE,
-                        'message', v_status_message
-                    );
-
-                ELSIF i > 0 THEN
-
-                    v_days_diff := i;
-
-                    v_day_name :=
-                        CASE v_check_dow
-                            WHEN 0 THEN 'Domingo'
-                            WHEN 1 THEN 'Lunes'
-                            WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'Miércoles'
-                            WHEN 4 THEN 'Jueves'
-                            WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'Sábado'
-                        END;
-
-                    v_status_message :=
-                        'Abrimos '
-                        || CASE
-                            WHEN v_days_diff = 1 THEN 'mañana'
-                            WHEN v_days_diff = 2 THEN 'pasado mañana'
-                            ELSE 'el ' || v_day_name
-                           END
-                        || ' a las '
-                        || to_char(v_future_exception.open_time, 'HH12:MI AM');
-
-                    RETURN json_build_object(
-                        'is_open', FALSE,
-                        'message', v_status_message
-                    );
-                END IF;
-            END IF;
-
-        ELSE
-
-            SELECT * INTO v_future_regular
-            FROM public.business_hours
-            WHERE day_of_week = v_check_dow;
-
-            IF v_future_regular IS NOT NULL
-               AND NOT v_future_regular.is_closed THEN
-
-                IF i = 0
-                   AND v_current_time >= v_future_regular.close_time
-                   AND v_future_regular.open_time < v_future_regular.close_time THEN
-
-                    CONTINUE;
-
-                ELSIF i = 0
-                   AND v_current_time < v_future_regular.open_time THEN
-
-                    v_status_message :=
-                        'Cerrado ahora | Abrimos hoy a las '
-                        || to_char(v_future_regular.open_time, 'HH12:MI AM');
-
-                    RETURN json_build_object(
-                        'is_open', FALSE,
-                        'message', v_status_message
-                    );
-
-                ELSIF i > 0 THEN
-
-                    v_days_diff := i;
-
-                    v_day_name :=
-                        CASE v_check_dow
-                            WHEN 0 THEN 'Domingo'
-                            WHEN 1 THEN 'Lunes'
-                            WHEN 2 THEN 'Martes'
-                            WHEN 3 THEN 'Miércoles'
-                            WHEN 4 THEN 'Jueves'
-                            WHEN 5 THEN 'Viernes'
-                            WHEN 6 THEN 'Sábado'
-                        END;
-
-                    v_status_message :=
-                        'Cerrado. Abrimos '
-                        || CASE
-                            WHEN v_days_diff = 1 THEN 'mañana'
-                            WHEN v_days_diff = 2 THEN 'pasado mañana'
-                            ELSE 'el ' || v_day_name
-                           END
-                        || ' a las '
-                        || to_char(v_future_regular.open_time, 'HH12:MI AM');
-
-                    RETURN json_build_object(
-                        'is_open', FALSE,
-                        'message', v_status_message
-                    );
-                END IF;
-            END IF;
-        END IF;
-    END LOOP;
-
-    RETURN json_build_object(
-        'is_open',
-        FALSE,
-        'message',
-        'El negocio está cerrado temporalmente. Consulta próximos horarios.'
+    RETURN jsonb_build_object(
+        'referral_count', referral_c,
+        'current_level', to_jsonb(current_l),
+        'next_level', to_jsonb(next_l),
+        'unlocked_rewards', COALESCE(unlocked_r, '[]'::jsonb),
+        'upcoming_rewards', COALESCE(upcoming_r, '[]'::jsonb),
+        'claimed_rewards', COALESCE(claimed_r, '[]'::jsonb)
     );
 END;
 $function$;
+
+CREATE OR REPLACE FUNCTION public.generate_personal_reward_code(p_customer_id uuid, p_reward_id uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    reward_info record;
+    original_discount record;
+    new_code text;
+    base_code text;
+    customer_name_part text;
+    v_referral_count integer;
+BEGIN
+    IF EXISTS (SELECT 1 FROM public.customer_reward_claims WHERE customer_id = p_customer_id AND reward_id = p_reward_id) THEN
+        RAISE EXCEPTION 'El cliente ya ha reclamado esta recompensa.';
+    END IF;
+
+    SELECT r.description, r.reward_code, r.level_id, l.min_referrals
+    INTO reward_info
+    FROM public.rewards r
+    JOIN public.referral_levels l ON r.level_id = l.id
+    WHERE r.id = p_reward_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'La recompensa especificada no fue encontrada.';
+    END IF;
+
+    IF EXISTS (
+        SELECT 1 
+        FROM public.customer_reward_claims crc
+        JOIN public.rewards r ON r.id = crc.reward_id
+        WHERE crc.customer_id = p_customer_id 
+          AND r.level_id = reward_info.level_id
+    ) THEN
+        RAISE EXCEPTION 'Ya has elegido una recompensa para este nivel. Solo se permite una por nivel.';
+    END IF;
+
+    SELECT COALESCE(referral_count, 0), SUBSTRING(UPPER(COALESCE(name, 'CLIE')) FROM 1 FOR 4)
+    INTO v_referral_count, customer_name_part
+    FROM public.customers
+    WHERE id = p_customer_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Cliente no encontrado.';
+    END IF;
+
+    IF v_referral_count < reward_info.min_referrals THEN
+        RAISE EXCEPTION 'Referidos insuficientes (% de % requeridos) para reclamar esta recompensa.',
+            v_referral_count, reward_info.min_referrals;
+    END IF;
+
+    SELECT type, value, target_id INTO original_discount
+    FROM public.discounts
+    WHERE code = reward_info.reward_code;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'El código de descuento base "%" no fue encontrado.', reward_info.reward_code;
+    END IF;
+
+    base_code := 'EA-' || customer_name_part || '-' || reward_info.reward_code;
+    new_code := base_code;
+
+    WHILE EXISTS (SELECT 1 FROM public.discounts WHERE code = new_code) LOOP
+        new_code := base_code || '-' || LPAD( (RANDOM() * 100)::int::text, 2, '0');
+    END LOOP;
+
+    INSERT INTO public.discounts (code, type, value, target_id, is_active, is_single_use, specific_customer_id)
+    VALUES (new_code, original_discount.type, original_discount.value, original_discount.target_id, true, true, p_customer_id);
+
+    INSERT INTO public.customer_reward_claims (customer_id, reward_id, generated_code)
+    VALUES (p_customer_id, p_reward_id, new_code);
+
+    RETURN new_code;
+END;
+$function$;
+
+CREATE TRIGGER trigger_first_purchase_referral
+ AFTER INSERT OR UPDATE OF status ON public.orders
+ FOR EACH ROW
+ WHEN ((new.status = 'completado'::order_status))
+ EXECUTE FUNCTION public.handle_first_purchase_referral();
