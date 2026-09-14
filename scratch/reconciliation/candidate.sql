@@ -851,6 +851,18 @@ END;
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.update_customer_referral_count(p_customer_id uuid, p_new_count integer)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+BEGIN
+  UPDATE public.customers
+  SET referral_count = p_new_count
+  WHERE id = p_customer_id;
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.refresh_dashboard_stats()
  RETURNS trigger
  LANGUAGE plpgsql
