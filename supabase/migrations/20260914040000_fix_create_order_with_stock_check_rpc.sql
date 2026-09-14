@@ -1,9 +1,9 @@
-import dotenv from 'dotenv';
-dotenv.config();
-import { createClient } from '@supabase/supabase-js';
+-- Migration: Fix create_order_with_stock_check stock check, status enum, and column names
+-- Description: Removes invalid reference to non-existent 'ing.min_stock' (actual column is 'low_stock_threshold').
+--              Restores correct 'order_code' selection (replaces invalid 'code') and 'pendiente' status (replaces invalid 'pending').
+--              Preserves customer ownership verification from Phase 3A while restoring robust stock validation.
 
-const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_SERVICE_ROLE_KEY);
-const sql = `CREATE OR REPLACE FUNCTION public.create_order_with_stock_check(
+CREATE OR REPLACE FUNCTION public.create_order_with_stock_check(
     p_customer_id uuid,
     p_total_amount numeric,
     p_scheduled_for timestamp with time zone,
@@ -23,6 +23,7 @@ DECLARE
     cart_item public.cart_item;
     req_ingredient RECORD;
 BEGIN
+    -- Validación de propiedad de cliente para usuarios autenticados no administradores
     IF (SELECT auth.uid()) IS NOT NULL AND NOT public.is_admin() THEN
         v_customer_id := public.require_my_customer_id();
         IF p_customer_id IS DISTINCT FROM v_customer_id THEN
@@ -34,6 +35,7 @@ BEGIN
         RAISE EXCEPTION 'El carrito está vacío';
     END IF;
 
+    -- 1. VERIFICACIÓN Y BLOQUEO DE STOCK CONSOLIDADO
     FOR req_ingredient IN
         WITH cart_expanded AS (
             SELECT 
@@ -75,20 +77,24 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- 2. INSERTAR EL PEDIDO
     INSERT INTO public.orders (customer_id, total_amount, status, scheduled_for, notes)
     VALUES (v_customer_id, p_total_amount, 'pendiente', p_scheduled_for, p_notes)
     RETURNING public.orders.id, public.orders.status INTO v_new_order_id, v_order_status;
 
+    -- Obtener el código de orden generado por el trigger
     SELECT public.orders.order_code INTO v_new_order_code 
     FROM public.orders 
     WHERE public.orders.id = v_new_order_id;
 
+    -- 3. INSERTAR LOS ITEMS DEL PEDIDO
     FOR cart_item IN SELECT * FROM unnest(p_cart_items)
     LOOP
         INSERT INTO public.order_items (order_id, product_id, quantity, price, cost)
         VALUES (v_new_order_id, cart_item.product_id, cart_item.quantity, cart_item.price, cart_item.cost);
     END LOOP;
 
+    -- 4. DESCONTAR EL STOCK EN BLOQUE POR INGREDIENTE CONSOLIDADO
     UPDATE public.ingredients ing
     SET current_stock = ing.current_stock - agg.total_deduction
     FROM (
@@ -106,11 +112,34 @@ BEGIN
     ) agg
     WHERE ing.id = agg.ingredient_id;
 
+    -- 5. RETORNO DE INFORMACIÓN AL CLIENTE
     RETURN QUERY 
         SELECT v_new_order_id, v_new_order_code, v_order_status;
 END;
-$function$;`;
+$function$;
 
-sb.rpc('execute_sql', { sql })
-  .then(r => console.log('RPC update result:', r))
-  .catch(e => console.error(e));
+REVOKE EXECUTE ON FUNCTION public.create_order_with_stock_check(uuid, numeric, timestamp with time zone, public.cart_item[], character varying) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_order_with_stock_check(uuid, numeric, timestamp with time zone, public.cart_item[], character varying) TO authenticated, anon, service_role;
+
+CREATE OR REPLACE FUNCTION public.create_my_order_with_stock_check(
+    p_total_amount numeric,
+    p_scheduled_for timestamp with time zone,
+    p_cart_items public.cart_item[],
+    p_notes character varying DEFAULT NULL::character varying
+)
+RETURNS TABLE(order_id uuid, order_code character varying, order_status public.order_status)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+    SELECT * FROM public.create_order_with_stock_check(
+        public.require_my_customer_id(),
+        p_total_amount,
+        p_scheduled_for,
+        p_cart_items,
+        p_notes
+    );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_my_order_with_stock_check(numeric, timestamp with time zone, public.cart_item[], character varying) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.create_my_order_with_stock_check(numeric, timestamp with time zone, public.cart_item[], character varying) TO authenticated, service_role;
