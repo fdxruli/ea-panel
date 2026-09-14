@@ -226,6 +226,39 @@
   transition: transform 0.3s ease;
 }
 
+.bottom-nav-icon-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-nav-vip-badge {
+  position: absolute;
+  top: -3px;
+  right: -6px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.45);
+  border: 1.5px solid var(--bg-secondary);
+  pointer-events: none;
+}
+
+.bottom-nav-vip-badge svg {
+  width: 9px !important;
+  height: 9px !important;
+  color: #ffffff;
+  stroke: #ffffff;
+  stroke-width: 1.5px;
+  transform: none !important;
+}
+
 .bottom-nav-link.active {
   color: var(--color-primary);
   background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);

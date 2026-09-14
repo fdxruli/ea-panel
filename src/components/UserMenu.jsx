@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
+import { useLoyalty } from '../hooks/useLoyalty';
+import { CrownIcon } from './LoyaltyBadge';
 import styles from './UserMenu.module.css';
 
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
@@ -15,6 +17,7 @@ export default function UserMenu() {
     const [isOpen, setIsOpen] = useState(false);
     const { phone, setPhoneModalOpen, setCheckoutModalOpen, clearPhone } = useCustomer();
     const { customer, logout } = useUserData();
+    const { isVip } = useLoyalty();
     const menuRef = useRef(null);
     const location = useLocation();
 
@@ -78,6 +81,18 @@ export default function UserMenu() {
 
         return (
             <div className={styles.menuContentWrapper}>
+                <div className={styles.userHeader}>
+                    <div className={styles.userInfo}>
+                        <span className={styles.userName}>{customer.name || 'Mi Perfil'}</span>
+                        {isVip && (
+                            <span className={styles.userVipBadge} title="Cliente VIP" aria-label="Cliente VIP">
+                                <CrownIcon size={11} />
+                                <span>VIP</span>
+                            </span>
+                        )}
+                    </div>
+                </div>
+
                 <nav className={styles.links}>
                     {finalLinks.map(link => (
                         <NavLink key={link.to} to={link.to} replace={link.replace} className={styles.dropdownLink} onClick={() => setIsOpen(false)}>
@@ -99,8 +114,17 @@ export default function UserMenu() {
 
     return (
         <div className={styles.menuContainer} ref={menuRef}>
-            <button onClick={toggleMenu} className={styles.avatarButton}>
+            <button
+                onClick={toggleMenu}
+                className={`${styles.avatarButton} ${isVip ? styles.avatarButtonVip : ''}`}
+                aria-label={isVip ? "Menú de usuario (Cliente VIP)" : "Menú de usuario"}
+            >
                 {userInitial ? <span>{userInitial}</span> : <UserIcon />}
+                {isVip && (
+                    <span className={styles.vipCrownBadge} title="Cliente VIP" aria-label="Cliente VIP">
+                        <CrownIcon size={11} />
+                    </span>
+                )}
             </button>
 
             {isOpen && (

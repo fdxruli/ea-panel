@@ -90,11 +90,12 @@ export default function MyProfile() {
         if (visibilitySettings.my_profile_page === false) return <div className={styles.prompt}><h2>Sección no disponible</h2><p>Esta sección está temporalmente desactivada.</p></div>;
 
         return <>
-            {loyaltyStatus === 'ready' && <LoyaltyBadge category={loyalty?.category} />}
-            {loyaltyStatus === 'error' && <div className={styles.prompt} role="status">No pudimos cargar tu categoría en este momento.</div>}
             <div className={styles.settingsGroup}>
                 {visibilitySettings.profile_my_data !== false && <div className={styles.section}>
-                    <h2>Información Personal</h2>
+                    <div className={styles.sectionHeaderRow}>
+                        <h2>Información Personal</h2>
+                        {loyaltyStatus === 'ready' && <LoyaltyBadge category={loyalty?.category} />}
+                    </div>
                     <form onSubmit={handleInfoSubmit} className={styles.form}>
                         <div className={styles.inputGroup}><label htmlFor="name">Nombre</label><input id="name" type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} required /></div>
                         <div className={styles.inputGroup}><label htmlFor="phone">Número de WhatsApp</label><input id="phone" type="tel" value={editForm.phone} readOnly disabled /><small>Para cambiar de número, debes cerrar sesión y volver a autenticarte.</small></div>

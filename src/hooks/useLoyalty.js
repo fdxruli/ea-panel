@@ -67,5 +67,5 @@ export function useLoyalty() {
         };
     }, [activeCustomerId, load, refresh]);
 
-    return { ...state, refresh };
+    return { ...state, isVip: state.data?.category === 'vip', refresh };
 }
