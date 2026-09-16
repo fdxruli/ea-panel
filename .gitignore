@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 logs
 *.log
 npm-debug.log*
@@ -29,3 +29,7 @@ dist-ssr
 *.sw?
 scripts/test-supabase-conn.js
 .env
+
+# Scratch & temporary files
+scratch/
+supabase/.temp/
