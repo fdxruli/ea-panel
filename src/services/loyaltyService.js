@@ -1,50 +1,43 @@
 import { supabase } from '../lib/supabaseClient';
-import { calculateLoyaltyCategory } from '../lib/loyalty';
+import { LOYALTY_CATEGORIES } from '../lib/loyalty';
 
-export async function getCustomerLoyaltyCategory(customerId) {
-    if (!customerId) {
-        return { data: null, error: null, code: 'unauthenticated' };
-    }
+const DEFAULT_LOYALTY = Object.freeze({
+    category: LOYALTY_CATEGORIES.INICIAL,
+    benefit_label: 'Comienza a disfrutar de nuestras promociones.',
+    condition_label: 'Nivel Inicial.',
+});
 
+export async function getCustomerLoyaltyCategory() {
     try {
-        const { data, error } = await supabase
-            .from('orders')
-            .select('id, total_amount, created_at, status')
-            .eq('customer_id', customerId)
-            .eq('status', 'completado');
+        const { data, error } = await supabase.rpc('get_my_loyalty_category');
 
         if (error) {
-            return { data: null, error, code: 'loyalty_lookup_failed' };
+            console.warn('[loyaltyService] Error recuperando categoría RPC:', error.message);
+            return {
+                data: DEFAULT_LOYALTY,
+                error,
+                code: 'loyalty_rpc_failed',
+            };
         }
 
-        const completed = data || [];
-        const totalSpent = completed.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
-        const completedOrders = completed.length;
-        let lastOrderDate = null;
-        if (completed.length > 0) {
-            const dates = completed.map(o => new Date(o.created_at).getTime()).filter(t => !isNaN(t));
-            if (dates.length > 0) {
-                lastOrderDate = new Date(Math.max(...dates)).toISOString();
-            }
-        }
-
-        const category = calculateLoyaltyCategory({
-            totalSpent,
-            completedOrders,
-            lastOrderDate,
-        });
+        const row = Array.isArray(data) ? data[0] : data;
+        const category = row?.category || LOYALTY_CATEGORIES.INICIAL;
 
         return {
             data: {
                 category,
-                total_spent: totalSpent,
-                completed_orders: completedOrders,
-                last_order_date: lastOrderDate,
+                benefit_label: row?.benefit_label || DEFAULT_LOYALTY.benefit_label,
+                condition_label: row?.condition_label || DEFAULT_LOYALTY.condition_label,
             },
             error: null,
             code: 'ok',
         };
     } catch (err) {
-        return { data: null, error: err, code: 'loyalty_error' };
+        console.warn('[loyaltyService] Error inesperado en lealtad:', err);
+        return {
+            data: DEFAULT_LOYALTY,
+            error: err,
+            code: 'loyalty_error',
+        };
     }
 }

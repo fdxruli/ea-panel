@@ -20,14 +20,41 @@ export const CrownIcon = ({ size = 15, className }) => (
     </svg>
 );
 
-export default function LoyaltyBadge({ category }) {
-    // Solo mostramos distintivo si es VIP
-    if (category !== LOYALTY_CATEGORIES.VIP) return null;
+const BADGE_CONFIG = Object.freeze({
+    [LOYALTY_CATEGORIES.VIP]: {
+        label: 'Cliente VIP',
+        emoji: '👑',
+        styleClass: styles.vipBadge,
+        benefitHint: 'Accedes a beneficios exclusivos.',
+    },
+    [LOYALTY_CATEGORIES.FRECUENTE]: {
+        label: 'Cliente Frecuente',
+        emoji: '⭐',
+        styleClass: styles.frecuenteBadge,
+        benefitHint: 'Obtienes beneficios por tu recurrencia.',
+    },
+    [LOYALTY_CATEGORIES.INICIAL]: {
+        label: 'Cliente Inicial',
+        emoji: '🌱',
+        styleClass: styles.inicialBadge,
+        benefitHint: 'Comienza a disfrutar beneficios.',
+    },
+});
+
+export default function LoyaltyBadge({ category, showHint = false }) {
+    const safeCategory = (category || '').toLowerCase();
+    const config = BADGE_CONFIG[safeCategory] || BADGE_CONFIG[LOYALTY_CATEGORIES.INICIAL];
 
     return (
-        <div className={styles.vipBadge} role="status" aria-label="Cliente VIP">
-            <CrownIcon size={14} />
-            <span>Cliente VIP</span>
+        <div
+            className={`${styles.badge} ${config.styleClass}`}
+            role="status"
+            aria-label={`${config.label}: ${config.benefitHint}`}
+            title={config.benefitHint}
+        >
+            <span className={styles.icon} aria-hidden="true">{config.emoji}</span>
+            <span>{config.label}</span>
+            {showHint && <span className={styles.hint}>— {config.benefitHint}</span>}
         </div>
     );
 }

@@ -8,7 +8,6 @@
     gap: 2rem;
 }
 
-/* Solo en pantallas más grandes centramos y limitamos el ancho */
 @media (min-width: 768px) {
     .container {
         max-width: 700px;
@@ -17,7 +16,7 @@
     }
 }
 
-/* Agrupación visual (reemplazo de tarjetas) */
+/* Agrupación visual */
 .settingsGroup {
     background-color: var(--bg-secondary);
     border-radius: var(--border-radius);
@@ -51,6 +50,7 @@
     justify-content: space-between;
     gap: 0.75rem;
     margin-bottom: 1.2rem;
+    flex-wrap: wrap;
 }
 
 .sectionHeaderRow h2 {
@@ -108,7 +108,7 @@
 
 /* Botones de acción general */
 .actionButton {
-    width: 100%; /* En móvil, los botones principales ocupan el 100% para mejor área de toque */
+    width: 100%;
     padding: 0.9rem;
     background-color: var(--color-primary);
     color: var(--text-light);
@@ -117,14 +117,132 @@
     font-weight: 600;
     cursor: pointer;
     text-align: center;
+    transition: opacity 0.2s ease;
+}
+
+.actionButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 @media (min-width: 768px) {
     .actionButton {
-        width: auto; /* En escritorio, regresan a su tamaño natural */
+        width: auto;
         padding: 0.8rem 1.5rem;
         align-self: flex-start;
     }
+}
+
+.formActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.cancelButton {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.8rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Bloque Lealtad en Perfil */
+.loyaltyCard {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .loyaltyCard {
+        padding: 1.5rem 2rem;
+    }
+}
+
+.loyaltyHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.loyaltyHeader h2 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.loyaltyBenefit {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Sección de Referidos Limpia (sin datos de dinero) */
+.referralSection {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+    .referralSection {
+        padding: 1.5rem 2rem;
+    }
+}
+
+.referralSection h2 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.referralDesc {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.referralBox {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.referralInput {
+    flex: 1;
+    font-family: monospace;
+    font-size: 0.95rem;
+    padding: 0.7rem 0.9rem;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+}
+
+.copyButton {
+    background-color: var(--color-primary);
+    color: var(--text-light);
+    border: none;
+    padding: 0.7rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 /* Sección de Direcciones */
@@ -150,14 +268,12 @@
     cursor: pointer;
 }
 
-/* Grid Mobile-First: 1 columna por defecto */
 .addressGrid {
     display: grid;
     grid-template-columns: 1fr; 
     gap: 1rem;
 }
 
-/* Tablet y Desktop: Se expande a 2 columnas */
 @media (min-width: 768px) {
     .addressGrid {
         grid-template-columns: repeat(2, 1fr); 
@@ -172,6 +288,7 @@
     border-radius: var(--border-radius);
     background-color: var(--bg-secondary);
     position: relative;
+    transition: border-color 0.2s ease;
 }
 
 .defaultAddress {
@@ -203,7 +320,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 60%; /* Evita que textos largos rompan el flex y empujen el badge */
+    max-width: 60%;
 }
 
 .defaultBadge {
@@ -226,7 +343,6 @@
     overflow: hidden;
 }
 
-/* Botones dentro de la tarjeta de dirección */
 .addressActions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -237,7 +353,7 @@
 }
 
 .addressActions button {
-    padding: 0.8rem 0.5rem; /* Botones más altos en móvil para la regla del pulgar */
+    padding: 0.8rem 0.5rem;
     border-radius: 6px;
     font-weight: 500;
     font-size: 0.9rem;
@@ -247,7 +363,7 @@
 
 @media (min-width: 768px) {
     .addressActions button {
-        padding: 0.6rem; /* En escritorio no necesitan ser tan altos */
+        padding: 0.6rem;
     }
 }
 
@@ -275,7 +391,12 @@
     color: var(--color-accent);
 }
 
-/* Mensajes de estado (Prompt / Vacío) */
+.setDefaultButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Mensajes de estado */
 .prompt, .emptyState {
     text-align: center;
     padding: 2rem 1rem;
@@ -299,7 +420,7 @@
 }
 
 .logoutButton {
-    width: 100%; /* Ocupa todo el ancho en móvil */
+    width: 100%;
     background: transparent;
     color: var(--color-error);
     border: 1px solid var(--color-error);
