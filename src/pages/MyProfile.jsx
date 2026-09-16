@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { useCustomerProfile } from '../hooks/useCustomerProfile';
 import { useCustomerAddresses } from '../hooks/useCustomerAddresses';
@@ -6,14 +7,55 @@ import { useLoyalty } from '../hooks/useLoyalty';
 import { useAlert } from '../context/AlertContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
-import { Navigate } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import AddressModal from '../components/AddressModal';
 import ConfirmModal from '../components/ConfirmModal';
 import StaticMap from '../components/StaticMap';
-import LoyaltyBadge from '../components/LoyaltyBadge';
+import LoyaltyBadge, { CrownIcon } from '../components/LoyaltyBadge';
+import ProfileNotificationCard from '../components/ProfileNotificationCard';
 import SEO from '../components/SEO';
 import styles from './MyProfile.module.css';
+
+// SVG Icons
+const MapPinIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+        <circle cx="12" cy="10" r="3" />
+    </svg>
+);
+
+const UserIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+    </svg>
+);
+
+const SettingsIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+);
+
+const ShieldIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+);
+
+const WhatsAppIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+);
+
+const PlusIcon = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+);
 
 export default function MyProfile() {
     const { showAlert } = useAlert();
@@ -21,11 +63,12 @@ export default function MyProfile() {
     const {
         name,
         setName,
+        birthdate,
+        setBirthdate,
         phone,
-        referralCode,
         isDirty,
         isSaving: isSavingProfile,
-        updateName,
+        updateProfile,
         resetForm,
     } = useCustomerProfile();
 
@@ -40,7 +83,7 @@ export default function MyProfile() {
 
     const { theme, changeTheme } = useTheme();
     const { settings, loading: settingsLoading } = useSettings();
-    const { status: loyaltyStatus, data: loyalty } = useLoyalty();
+    const { status: loyaltyStatus, data: loyalty, isVip } = useLoyalty();
 
     const visibilitySettings = settings?.client_visibility || {};
 
@@ -51,14 +94,33 @@ export default function MyProfile() {
     const [isDiscardModalOpen, setDiscardModalOpen] = useState(false);
 
     const isInitialLoading = isCustomerLoading || settingsLoading;
+    const todayIsoDate = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+    const memberSince = useMemo(() => {
+        if (!canonicalCustomer?.created_at) return null;
+        try {
+            const date = new Date(canonicalCustomer.created_at);
+            if (isNaN(date.getTime())) return null;
+            const month = date.toLocaleDateString('es-MX', { month: 'long' });
+            const year = date.getFullYear();
+            return `Cliente desde ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
+        } catch {
+            return null;
+        }
+    }, [canonicalCustomer?.created_at]);
+
+    const userInitial = useMemo(() => {
+        const candidate = (name?.trim() || canonicalCustomer?.name || '').trim();
+        return candidate ? candidate.charAt(0).toUpperCase() : 'U';
+    }, [name, canonicalCustomer?.name]);
 
     const handleInfoSubmit = async (e) => {
         e.preventDefault();
         try {
-            await updateName(name);
-            showAlert('Información actualizada con éxito.');
+            await updateProfile({ newName: name, newBirthdate: birthdate });
+            showAlert('Información personal guardada con éxito.');
         } catch (err) {
-            showAlert(err.message || 'Error al actualizar el nombre.');
+            showAlert(err.message || 'Error al actualizar el perfil.');
         }
     };
 
@@ -108,15 +170,6 @@ export default function MyProfile() {
         }
     };
 
-    const handleCopyReferralLink = () => {
-        if (!referralCode) return;
-        const link = `${window.location.origin}/?ref=${referralCode}`;
-        navigator.clipboard.writeText(link).then(
-            () => showAlert('¡Enlace de referido copiado!'),
-            () => showAlert('No se pudo copiar el enlace.')
-        );
-    };
-
     const confirmLogout = async () => {
         await signOut();
         setLogoutModalOpen(false);
@@ -145,125 +198,51 @@ export default function MyProfile() {
 
         return (
             <>
-                {/* 1. Categoría de Lealtad (Limpia, No Monetaria) */}
-                {loyaltyStatus === 'ready' && loyalty && (
-                    <section className={styles.loyaltyCard} aria-labelledby="loyalty-title">
-                        <div className={styles.loyaltyHeader}>
-                            <h2 id="loyalty-title">Nivel de Cliente</h2>
-                            <LoyaltyBadge category={loyalty.category} />
-                        </div>
-                        <p className={styles.loyaltyBenefit}>{loyalty.benefit_label}</p>
-                    </section>
-                )}
-
-                {/* 2. Información Personal y Preferencias */}
-                <div className={styles.settingsGroup}>
-                    {visibilitySettings.profile_my_data !== false && (
-                        <div className={styles.section}>
-                            <div className={styles.sectionHeaderRow}>
-                                <h2>Información Personal</h2>
+                {/* 1. HERO CARD DE IDENTIDAD Y LEALTAD */}
+                <section className={styles.heroCard} aria-labelledby="hero-profile-name">
+                    <div className={styles.heroHeader}>
+                        <div className={styles.avatarWrapper}>
+                            <div className={styles.avatar}>
+                                <span>{userInitial}</span>
                             </div>
-                            <form onSubmit={handleInfoSubmit} className={styles.form} noValidate>
-                                <div className={styles.inputGroup}>
-                                    <label htmlFor="customer-name">Nombre completo</label>
-                                    <input
-                                        id="customer-name"
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        required
-                                        minLength={2}
-                                        maxLength={100}
-                                        disabled={isSavingProfile}
-                                        autoComplete="name"
-                                    />
+                            {isVip && (
+                                <div className={styles.avatarCrown} title="Cliente VIP">
+                                    <CrownIcon size={13} />
                                 </div>
-                                <div className={styles.inputGroup}>
-                                    <label htmlFor="customer-phone">Número de WhatsApp</label>
-                                    <input
-                                        id="customer-phone"
-                                        type="tel"
-                                        value={phone}
-                                        readOnly
-                                        disabled
-                                        aria-describedby="phone-helper"
-                                    />
-                                    <small id="phone-helper">
-                                        Para cambiar de número, debes cerrar sesión y volver a autenticarte.
-                                    </small>
-                                </div>
-                                <div className={styles.formActions}>
-                                    <button
-                                        type="submit"
-                                        className={styles.actionButton}
-                                        disabled={isSavingProfile || !isDirty}
-                                    >
-                                        {isSavingProfile ? 'Guardando...' : 'Guardar Cambios'}
-                                    </button>
-                                    {isDirty && (
-                                        <button
-                                            type="button"
-                                            onClick={handleCancelEdit}
-                                            className={styles.cancelButton}
-                                            disabled={isSavingProfile}
-                                        >
-                                            Cancelar
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
+                            )}
                         </div>
-                    )}
 
-                    <div className={styles.section}>
-                        <h2>Preferencias</h2>
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="theme-select">Tema de la aplicación</label>
-                            <select
-                                id="theme-select"
-                                value={theme}
-                                onChange={(e) => changeTheme(e.target.value)}
-                                className={styles.themeSelector}
-                            >
-                                <option value="light">Claro</option>
-                                <option value="dark">Oscuro</option>
-                                <option value="system">Automático</option>
-                            </select>
+                        <div className={styles.heroMeta}>
+                            <h1 id="hero-profile-name" className={styles.heroName}>
+                                {name || canonicalCustomer.name || 'Mi Perfil'}
+                            </h1>
+                            <div className={styles.heroSubmeta}>
+                                <span className={styles.phoneBadge} title="WhatsApp verificado">
+                                    <WhatsAppIcon /> {phone || canonicalCustomer.phone}
+                                </span>
+                                {memberSince && (
+                                    <span className={styles.memberSince}>• {memberSince}</span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* 3. Código de Referidos Limpio (Sin balances monetarios) */}
-                {referralCode && (
-                    <section className={styles.referralSection} aria-labelledby="referral-title">
-                        <h2 id="referral-title">Tu Código de Invitación</h2>
-                        <p className={styles.referralDesc}>
-                            Comparte tu código para invitar a tus conocidos a pedir en Entre Alas.
-                        </p>
-                        <div className={styles.referralBox}>
-                            <input
-                                type="text"
-                                readOnly
-                                value={referralCode}
-                                className={styles.referralInput}
-                                aria-label="Tu código de referido"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleCopyReferralLink}
-                                className={styles.copyButton}
-                            >
-                                Copiar Enlace
-                            </button>
+                    {loyaltyStatus === 'ready' && loyalty && (
+                        <div className={styles.heroLoyaltyBar}>
+                            <LoyaltyBadge category={loyalty.category} />
+                            <p className={styles.loyaltyBenefit}>{loyalty.benefit_label}</p>
                         </div>
-                    </section>
-                )}
+                    )}
+                </section>
 
-                {/* 4. Direcciones Seguras y Atómicas */}
+                {/* 2. LIBRETA DE DIRECCIONES (PRIORIDAD EN DELIVERY) */}
                 {visibilitySettings.profile_my_addresses !== false && (
-                    <section className={styles.addressSection} aria-labelledby="addresses-title">
+                    <section className={styles.cardSection} aria-labelledby="addresses-title">
                         <div className={styles.sectionHeader}>
-                            <h2 id="addresses-title">Mis Direcciones</h2>
+                            <h2 id="addresses-title">
+                                <MapPinIcon /> Mis Direcciones{' '}
+                                <span className={styles.countBadge}>{addresses.length}</span>
+                            </h2>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -273,7 +252,7 @@ export default function MyProfile() {
                                 className={styles.addButton}
                                 disabled={addressActionLoading}
                             >
-                                + Añadir
+                                <PlusIcon /> Añadir
                             </button>
                         </div>
 
@@ -300,7 +279,9 @@ export default function MyProfile() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <p>{addr.address_reference || 'Sin referencia'}</p>
+                                            <p className={styles.addressReference}>
+                                                {addr.address_reference || 'Sin referencia registrada'}
+                                            </p>
                                         </div>
                                         <div className={styles.addressActions}>
                                             <button
@@ -321,7 +302,7 @@ export default function MyProfile() {
                                                 disabled={addressActionLoading || addresses.length <= 1}
                                                 title={
                                                     addresses.length <= 1
-                                                        ? 'Debes tener al menos una dirección registrada'
+                                                        ? 'Debes conservar al menos una dirección registrada'
                                                         : 'Eliminar esta dirección'
                                                 }
                                             >
@@ -342,21 +323,150 @@ export default function MyProfile() {
                                 ))}
                             </div>
                         ) : (
-                            <p className={styles.emptyState}>No tienes direcciones guardadas.</p>
+                            <div className={styles.emptyState}>
+                                <p>No tienes direcciones guardadas para entrega.</p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditingAddress(null);
+                                        setAddressModalOpen(true);
+                                    }}
+                                    className={styles.addButton}
+                                >
+                                    <PlusIcon /> Registrar mi primera dirección
+                                </button>
+                            </div>
                         )}
                     </section>
                 )}
 
-                {/* 5. Cierre de Sesión */}
-                <div className={styles.logoutSection}>
+                {/* 3. INFORMACIÓN PERSONAL Y CUMPLEAÑOS (DISCRETO) */}
+                {visibilitySettings.profile_my_data !== false && (
+                    <section className={styles.cardSection} aria-labelledby="personal-data-title">
+                        <div className={styles.sectionHeader}>
+                            <h2 id="personal-data-title">
+                                <UserIcon /> Información Personal
+                            </h2>
+                        </div>
+                        <form onSubmit={handleInfoSubmit} className={styles.form} noValidate>
+                            <div className={styles.inputGrid}>
+                                <div className={styles.inputGroup}>
+                                    <label htmlFor="customer-name">Nombre completo</label>
+                                    <input
+                                        id="customer-name"
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        required
+                                        minLength={2}
+                                        maxLength={100}
+                                        disabled={isSavingProfile}
+                                        autoComplete="name"
+                                    />
+                                </div>
+
+                                <div className={styles.inputGroup}>
+                                    <label htmlFor="customer-phone">Número de WhatsApp</label>
+                                    <input
+                                        id="customer-phone"
+                                        type="tel"
+                                        value={phone}
+                                        readOnly
+                                        disabled
+                                        aria-describedby="phone-helper"
+                                    />
+                                    <small id="phone-helper" className={styles.inputHelper}>
+                                        Vinculado a tu cuenta. Para cambiarlo, debes cerrar sesión.
+                                    </small>
+                                </div>
+
+                                <div className={styles.inputGroup}>
+                                    <label htmlFor="customer-birthdate">Fecha de cumpleaños (opcional)</label>
+                                    <input
+                                        id="customer-birthdate"
+                                        type="date"
+                                        value={birthdate || ''}
+                                        onChange={(e) => setBirthdate(e.target.value)}
+                                        max={todayIsoDate}
+                                        disabled={isSavingProfile}
+                                        autoComplete="bday"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className={styles.formActions}>
+                                <button
+                                    type="submit"
+                                    className={styles.saveButton}
+                                    disabled={isSavingProfile || !isDirty}
+                                >
+                                    {isSavingProfile ? 'Guardando...' : 'Guardar Cambios'}
+                                </button>
+                                {isDirty && (
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEdit}
+                                        className={styles.cancelButton}
+                                        disabled={isSavingProfile}
+                                    >
+                                        Cancelar
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    </section>
+                )}
+
+                {/* 4. PREFERENCIAS Y CENTRO DE NOTIFICACIONES */}
+                <section className={styles.cardSection} aria-labelledby="preferences-title">
+                    <div className={styles.sectionHeader}>
+                        <h2 id="preferences-title">
+                            <SettingsIcon /> Preferencias de la Aplicación
+                        </h2>
+                    </div>
+
+                    <div className={styles.preferencesWrapper}>
+                        <div className={styles.themeGroup}>
+                            <label htmlFor="theme-select">Tema de la interfaz</label>
+                            <select
+                                id="theme-select"
+                                value={theme}
+                                onChange={(e) => changeTheme(e.target.value)}
+                                className={styles.themeSelector}
+                            >
+                                <option value="light">Claro</option>
+                                <option value="dark">Oscuro</option>
+                                <option value="system">Automático (según tu dispositivo)</option>
+                            </select>
+                        </div>
+
+                        <ProfileNotificationCard />
+                    </div>
+                </section>
+
+                {/* 5. CUENTA Y SEGURIDAD */}
+                <section className={styles.cardSection} aria-labelledby="security-title">
+                    <div className={styles.sectionHeader}>
+                        <h2 id="security-title">
+                            <ShieldIcon /> Cuenta y Seguridad
+                        </h2>
+                    </div>
+
+                    <div className={styles.legalRow}>
+                        <span>Términos y Condiciones del Servicio</span>
+                        <Link to="/terminos" className={styles.legalLink}>
+                            Consultar documento →
+                        </Link>
+                    </div>
+
                     <button
                         type="button"
                         onClick={() => setLogoutModalOpen(true)}
                         className={styles.logoutButton}
                     >
-                        Cerrar Sesión (Cambiar de número)
+                        Cerrar Sesión en este dispositivo
                     </button>
-                </div>
+                </section>
             </>
         );
     };
@@ -396,7 +506,7 @@ export default function MyProfile() {
                 onConfirm={confirmDiscard}
                 title="¿Descartar Cambios?"
             >
-                Tienes modificaciones en tu nombre que aún no has guardado. ¿Deseas descartarlas?
+                Tienes modificaciones pendientes en tus datos personales que no has guardado. ¿Deseas descartarlas?
             </ConfirmModal>
 
             <ConfirmModal
@@ -405,7 +515,7 @@ export default function MyProfile() {
                 onConfirm={confirmLogout}
                 title="¿Cerrar Sesión?"
             >
-                Tu sesión se cerrará y tendrás que volver a ingresar con tu número de teléfono.
+                Tu sesión se cerrará en este dispositivo y tendrás que volver a autenticarte con tu número de WhatsApp.
             </ConfirmModal>
         </>
     );
