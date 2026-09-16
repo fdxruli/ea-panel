@@ -9,12 +9,12 @@ export function clearLoyaltyCache() {
 }
 
 export function useLoyalty() {
-    const { customer, customerId } = useCustomer();
+    const { customer, customerId, isAuthenticated } = useCustomer();
     const activeCustomerId = customerId || customer?.id || null;
     const [state, setState] = useState({ status: 'loading', data: null, error: null });
 
     const load = useCallback(async (id) => {
-        if (!id) {
+        if (!id || !isAuthenticated) {
             setState({ status: 'unauthenticated', data: null, error: null });
             return;
         }
@@ -26,16 +26,16 @@ export function useLoyalty() {
         }
 
         setState({ status: 'loading', data: null, error: null });
-        const result = await getCustomerLoyaltyCategory(id);
-        if (result.code === 'ok') {
+        const result = await getCustomerLoyaltyCategory();
+        if (result.code === 'ok' && result.data) {
             loyaltyCache.set(id, result.data);
             setState({ status: 'ready', data: result.data, error: null });
             return;
         }
 
         const error = result.error || new Error(result.code);
-        setState({ status: 'error', data: null, error });
-    }, []);
+        setState({ status: 'error', data: result.data, error });
+    }, [isAuthenticated]);
 
     const refresh = useCallback(async () => {
         if (activeCustomerId) {
@@ -45,7 +45,7 @@ export function useLoyalty() {
     }, [activeCustomerId, load]);
 
     useEffect(() => {
-        if (!activeCustomerId) {
+        if (!activeCustomerId || !isAuthenticated) {
             clearLoyaltyCache();
             setState({ status: 'unauthenticated', data: null, error: null });
             return;
@@ -54,9 +54,13 @@ export function useLoyalty() {
         load(activeCustomerId);
 
         const handleVisibility = () => {
-            if (document.visibilityState === 'visible') void refresh();
+            if (document.visibilityState === 'visible') {
+                refresh();
+            }
         };
-        const handleOrderCompleted = () => void refresh();
+        const handleOrderCompleted = () => {
+            refresh();
+        };
 
         window.addEventListener('visibilitychange', handleVisibility);
         window.addEventListener('ea:order-completed', handleOrderCompleted);
@@ -65,7 +69,11 @@ export function useLoyalty() {
             window.removeEventListener('visibilitychange', handleVisibility);
             window.removeEventListener('ea:order-completed', handleOrderCompleted);
         };
-    }, [activeCustomerId, load, refresh]);
+    }, [activeCustomerId, isAuthenticated, load, refresh]);
 
-    return { ...state, isVip: state.data?.category === 'vip', refresh };
+    return {
+        ...state,
+        isVip: state.data?.category === 'vip',
+        refresh,
+    };
 }
