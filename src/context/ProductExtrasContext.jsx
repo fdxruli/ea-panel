@@ -31,7 +31,7 @@ export const ProductExtrasProvider = ({ children }) => {
             // 1. Las reseñas se obtienen para carga inicial/refetch completo.
             const { data: revData } = await supabase
                 .from('product_reviews')
-                .select('*, products(id, name, image_url, is_active), customers(name)')
+                .select('*, products(id, name, slug, image_url, is_active, price), customers(name)')
                 .order('created_at', { ascending: false });
 
             const validReviews = revData || [];
@@ -44,7 +44,7 @@ export const ProductExtrasProvider = ({ children }) => {
                 const favoritesCacheKey = `${CACHE_KEYS.FAVORITES}-${currentCustomerId}`;
                 const { data: favData } = await supabase
                     .from('customer_favorites')
-                    .select('*, products(id, name, image_url, is_active)')
+                    .select('*, products(id, name, slug, image_url, is_active, price)')
                     .eq('customer_id', currentCustomerId);
 
                 const validFavorites = favData || [];
@@ -130,7 +130,7 @@ export const ProductExtrasProvider = ({ children }) => {
                 const fetchReviewWithRelations = async (reviewId) => {
                     const { data, error } = await supabase
                         .from('product_reviews')
-                        .select('*, products(id, name, image_url, is_active), customers(name)')
+                        .select('*, products(id, name, slug, image_url, is_active, price), customers(name)')
                         .eq('id', reviewId)
                         .maybeSingle(); // Usar maybeSingle por si se elimina justo antes
                     if (error) {
