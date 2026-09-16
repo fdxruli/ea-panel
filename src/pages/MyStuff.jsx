@@ -1,95 +1,153 @@
-// --- 1. AÑADIMOS 'lazy' y 'Suspense' ---
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
 import { useUserData } from '../context/UserDataContext';
 import { useProductExtras } from '../context/ProductExtrasContext';
-import styles from './MyStuff.module.css';
-import LoadingSpinner from '../components/LoadingSpinner';
-import ConfirmModal from '../components/ConfirmModal';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
-import AuthPrompt from '../components/AuthPrompt';
-import DOMPurify from 'dompurify';
 import { useAlert } from '../context/AlertContext';
-// --- 2. COMENTAMOS LA IMPORTACIÓN ESTÁTICA ---
-// import QRCodeModal from '../components/QRCodeModal';
+import { useSettings } from '../context/SettingsContext';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ConfirmModal from '../components/ConfirmModal';
+import AuthPrompt from '../components/AuthPrompt';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO from '../components/SEO';
-import { useSettings } from '../context/SettingsContext';
+import styles from './MyStuff.module.css';
 
-// --- 3. IMPORTAMOS EL MODAL CON 'lazy' ---
 const QRCodeModal = lazy(() => import('../components/QRCodeModal.jsx'));
 
-// --- (Iconos sin cambios) ---
-const HeartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
-const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
-const TrophyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L9 9h6l-3-7zM9 9H2l3 7h2M15 9h7l-3 7h-2M12 22l-3-3m3 3l3-3" /></svg>;
+// ============================================================================
+// SVG ICONS
+// ============================================================================
+const HeartIcon = ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+);
 
-// --- (Componente ReferralSystem) ---
-const ReferralSystem = ({ customer }) => {
-    const { showAlert } = useAlert();
-    const [isQrModalOpen, setQrModalOpen] = useState(false);
-    const referralLink = `${window.location.origin}/?ref=${customer.referral_code}`;
+const StarIcon = ({ filled = true, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "#ffb300" : "none"} stroke={filled ? "#ffb300" : "currentColor"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(referralLink).then(() => {
-            showAlert('¡Enlace de referido copiado!');
-        });
-    };
+const TrophyIcon = ({ size = 20 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+        <path d="M4 22h16" />
+        <path d="M10 14.66V17c0 .55-.45 1-1 1H7" />
+        <path d="M14 14.66V17c0 .55.45 1 1 1h2" />
+        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+    </svg>
+);
+
+const WhatsAppIcon = ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+);
+
+const CopyIcon = ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+);
+
+const QrCodeIcon = ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+    </svg>
+);
+
+// Componente StarRating para visualización y edición interactiva
+const StarRating = ({ rating = 5, onChange = null, size = 18 }) => {
+    const isInteractive = typeof onChange === 'function';
 
     return (
-        <div className={styles.card}>
-            <div className={styles.cardHeader}><TrophyIcon /><h2>Invita y Gana</h2></div>
-            <p>
-                Comparte tu enlace de referido con tus amigos. Cuando se registren usando tu enlace
-                y realicen su primera compra ¡acumularás puntos para subir de nivel y obtener recompensas!
-            </p>
-            <div className={styles.referralBox}>
-                <input type="text" readOnly value={referralLink} />
-                <div className={styles.referralActions}>
-                    <button onClick={handleCopy} className="admin-button-primary">Copiar Enlace</button>
-                    <button onClick={() => setQrModalOpen(true)} className="admin-button-secondary">Mostrar QR</button>
-                </div>
-            </div>
-            <div className={styles.referralStats}>
-                <p><strong>Amigos Invitados:</strong> {customer.referral_count || 0}</p>
-            </div>
-
-            {/* --- 4. ENVOLVEMOS EL MODAL EN SUSPENSE --- */}
-            {isQrModalOpen && (
-                <Suspense fallback={<LoadingSpinner />}>
-                    <QRCodeModal
-                        url={referralLink}
-                        onClose={() => setQrModalOpen(false)}
-                    />
-                </Suspense>
+        <div className={styles.starRatingRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    className={isInteractive ? styles.ratingStarBtn : styles.starIcon}
+                    onClick={() => isInteractive && onChange(star)}
+                    disabled={!isInteractive}
+                    title={isInteractive ? `${star} estrella${star > 1 ? 's' : ''}` : undefined}
+                >
+                    <StarIcon filled={star <= rating} size={size} />
+                </button>
+            ))}
+            {!isInteractive && (
+                <span className={styles.starScoreText}>{rating}/5</span>
             )}
-            {/* --- FIN DEL CAMBIO --- */}
         </div>
     );
 };
 
-// --- (Componente RewardsSection SIN CAMBIOS) ---
-const RewardsSection = ({ customerId }) => {
-    const [progress, setProgress] = useState(null);
-    const [loading, setLoading] = useState(true);
+// ============================================================================
+// COMPONENTE PESTAÑA: RECOMPENSAS & INVITA
+// ============================================================================
+const RewardsAndReferralTab = ({ customer, customerId }) => {
     const { showAlert } = useAlert();
+    const [progress, setProgress] = useState(null);
+    const [loadingProgress, setLoadingProgress] = useState(true);
+    const [isQrModalOpen, setQrModalOpen] = useState(false);
     const [isAccordionOpen, setIsAccordionOpen] = useState(true);
+
+    const referralLink = `${window.location.origin}/?ref=${customer.referral_code}`;
+
+    const handleShare = async () => {
+        const shareData = {
+            title: 'Entre Alas - ¡Pide tus alitas favoritas!',
+            text: `¡Hola! Te invito a probar Entre Alas 🍗 Usa mi código ${customer.referral_code} al hacer tu pedido:`,
+            url: referralLink,
+        };
+
+        if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+                showAlert('¡Compartido con éxito!');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+            }
+        }
+
+        // Fallback WhatsApp
+        const whatsappMsg = encodeURIComponent(
+            `¡Hola! Te invito a probar Entre Alas 🍗 Usa mi código de invitación ${customer.referral_code} al pedir:\n${referralLink}`
+        );
+        window.open(`https://api.whatsapp.com/send?text=${whatsappMsg}`, '_blank');
+    };
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referralLink).then(() => {
+            showAlert('¡Enlace de referido copiado al portapapeles!');
+        });
+    };
+
+    const handleCopyCode = (code) => {
+        navigator.clipboard.writeText(code);
+        showAlert(`¡Código "${code}" copiado! Úsalo en el checkout.`);
+    };
 
     const fetchProgress = useCallback(async () => {
         if (!customerId) return;
         try {
             const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
-            if (error) {
-                console.error("Error fetching rewards progress:", error);
-            } else {
+            if (!error && data) {
                 setProgress(data);
             }
         } catch (err) {
-            console.error("Unexpected error fetching rewards progress:", err);
+            console.error('Error fetching rewards progress:', err);
         } finally {
-            setLoading(false);
+            setLoadingProgress(false);
         }
     }, [customerId]);
 
@@ -97,20 +155,13 @@ const RewardsSection = ({ customerId }) => {
         fetchProgress();
     }, [fetchProgress]);
 
-    // Revalidación por foco, visibilidad o actualización de órdenes
     useEffect(() => {
         if (!customerId) return;
-
         const handleRevalidate = () => {
-            if (document.visibilityState === 'visible') {
-                fetchProgress();
-            }
+            if (document.visibilityState === 'visible') fetchProgress();
         };
-
         const handleOrderStatus = (e) => {
-            if (e?.detail?.status === 'completado') {
-                fetchProgress();
-            }
+            if (e?.detail?.status === 'completado') fetchProgress();
         };
 
         window.addEventListener('visibilitychange', handleRevalidate);
@@ -126,35 +177,28 @@ const RewardsSection = ({ customerId }) => {
 
     useEffect(() => {
         if (!customerId) return;
-
-        const handleChanges = (payload) => {
-            console.log('Cambio detectado en canal de recompensas:', payload);
-            fetchProgress();
-        };
-
         const channel = supabase
             .channel(`customer-rewards-${customerId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, handleChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'referral_levels' }, handleChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, handleChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, fetchProgress)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'referral_levels' }, fetchProgress)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, fetchProgress)
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-
     }, [customerId, fetchProgress]);
 
     const handleClaimCode = async (reward) => {
         try {
             const { data: newCode, error } = await supabase.rpc('generate_personal_reward_code', {
                 p_customer_id: customerId,
-                p_reward_id: reward.id
+                p_reward_id: reward.id,
             });
             if (error) {
-                showAlert(error.message || 'Hubo un error al generar tu código. Es posible que ya lo hayas reclamado.');
+                showAlert(error.message || 'Hubo un error al generar tu código.');
             } else {
-                showAlert(`¡Código personal "${newCode}" generado! Cópialo y úsalo en tu carrito.`, 'success');
+                showAlert(`¡Código personal "${newCode}" generado! Cópialo y úsalo en tu carrito.`);
                 fetchProgress();
             }
         } catch (err) {
@@ -162,158 +206,496 @@ const RewardsSection = ({ customerId }) => {
         }
     };
 
-    const handleCopyCode = (code) => {
-        navigator.clipboard.writeText(code);
-        showAlert(`¡Código "${code}" copiado!`);
-    };
+    const currentLevel = progress?.current_level;
+    const nextLevel = progress?.next_level;
+    const referralCount = progress?.referral_count ?? customer.referral_count ?? 0;
 
-    if (loading) return <LoadingSpinner />;
-    if (!progress) return <p>No se pudo cargar tu progreso de recompensas.</p>;
+    const progressPercentage = nextLevel?.min_referrals
+        ? Math.min(100, Math.round((referralCount / nextLevel.min_referrals) * 100))
+        : currentLevel?.name ? 100 : 0;
 
-    const { current_level, next_level, referral_count } = progress;
-
-    const progressPercentage = next_level?.min_referrals
-        ? (referral_count / next_level.min_referrals) * 100
-        : (current_level?.name ? 100 : 0);
-
-    const noLevelsConfigured = !current_level?.name && !next_level?.name;
-    const hasReachedMaxLevel = current_level?.name && !next_level?.name;
+    const noLevelsConfigured = !currentLevel?.name && !nextLevel?.name;
+    const hasReachedMaxLevel = currentLevel?.name && !nextLevel?.name;
 
     return (
-        <div className={styles.card}>
-            <div className={styles.cardHeader}><TrophyIcon /><h2>Mis Recompensas</h2></div>
-            <div className={styles.rewardsProgress}>
-                <div className={styles.levelInfo}>
-                    {current_level?.name && <span>Nivel actual: <strong>{current_level.name}</strong></span>}
-                    {next_level?.name && <span>Siguiente nivel: <strong>{next_level.name}</strong></span>}
-                </div>
-
-                {!noLevelsConfigured && (
-                    <div className={styles.progressBarContainer}>
-                        <div className={styles.progressBar} style={{ width: `${progressPercentage}%` }}></div>
+        <div className={styles.tabContent}>
+            {/* 1. Tarjeta Invita y Gana */}
+            <section className={styles.card} aria-labelledby="referral-system-title">
+                <div className={styles.cardHeader}>
+                    <div className={styles.cardTitle}>
+                        <TrophyIcon />
+                        <h2 id="referral-system-title">Invita y Gana</h2>
                     </div>
-                )}
-
-                <p className={styles.progressText}>
-                    {noLevelsConfigured
-                        ? "El sistema de recompensas se está preparando. ¡Vuelve pronto! Pero, puedes compartir tu link e ir acumulando puntos"
-                        : hasReachedMaxLevel
-                            ? "¡Has alcanzado el nivel más alto! Eres un(a) crack. 😎"
-                            : `Necesitas ${next_level.min_referrals - referral_count} referidos más para el siguiente nivel.`
-                    }
+                </div>
+                <p className={styles.cardDescription}>
+                    Comparte tu código con tus conocidos. Cuando se registren y hagan su primer pedido,
+                    acumularás puntos para subir de nivel y desbloquear cortesías y descuentos exclusivos.
                 </p>
-            </div>
-            {!noLevelsConfigured && (
-                <div className={`${styles.rewardsLists} ${hasReachedMaxLevel ? styles.centeredLayout : ''}`}>
-                    <div>
-                        <div className={styles.accordionHeader} onClick={() => setIsAccordionOpen(!isAccordionOpen)}>
-                            <h4>Recompensas Desbloqueadas</h4>
-                            <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>▼</span>
-                        </div>
-                        <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
-                            <ul>
-                                {progress.unlocked_rewards?.length > 0
-                                    ? progress.unlocked_rewards.map(reward => {
-                                        const claim = progress.claimed_rewards?.find(c => c.reward_id === reward.id);
-                                        return (
-                                            <li key={reward.id}>
-                                                <div className={styles.unlockedReward}>
-                                                    <span>🎁 {reward.description}</span>
-                                                    {claim ? (
-                                                        <button onClick={() => handleCopyCode(claim.generated_code)} className={styles.copyCodeButton}>
-                                                            Copiar: <strong>{claim.generated_code}</strong>
-                                                        </button>
-                                                    ) : (
-                                                        reward.reward_code && (
-                                                            <button onClick={() => handleClaimCode(reward)} className={styles.claimCodeButton}>
-                                                                Reclama tu código único
-                                                            </button>
-                                                        )
-                                                    )}
-                                                </div>
-                                            </li>
-                                        );
-                                    })
-                                    : <li>Cuando hayas alcanzado la meta aqui apareceran tus recompensa</li>
-                                }
-                            </ul>
-                        </div>
+
+                <div className={styles.referralHeroBox}>
+                    <div className={styles.referralCodeDisplay}>
+                        <span className={styles.referralCodeLabel}>Tu Código Único</span>
+                        <span className={styles.referralCodeBadge}>{customer.referral_code}</span>
                     </div>
 
-                    {next_level?.name && (
-                        <div>
-                            <h4>Próximas Recompensas</h4>
-                            <ul className={styles.upcomingRewards}>
-                                {progress.upcoming_rewards?.length > 0
-                                    ? progress.upcoming_rewards.map(r => (
-                                        <li key={r.id}>✨ {r.description}</li>
-                                    ))
-                                    : <li>Próximamente...</li>
-                                }
-                            </ul>
-                        </div>
-                    )}
+                    <div className={styles.referralActionsGrid}>
+                        <button type="button" onClick={handleShare} className={styles.whatsappButton}>
+                            <WhatsAppIcon /> Compartir por WhatsApp
+                        </button>
+                        <button type="button" onClick={handleCopy} className={styles.copyButton}>
+                            <CopyIcon /> Copiar Enlace
+                        </button>
+                        <button type="button" onClick={() => setQrModalOpen(true)} className={styles.qrButton}>
+                            <QrCodeIcon /> Código QR
+                        </button>
+                    </div>
                 </div>
-            )}
+
+                <div className={styles.referralStatsLine}>
+                    <span>Amigos que se han registrado con tu código:</span>
+                    <strong>{customer.referral_count || 0} amigos</strong>
+                </div>
+
+                {isQrModalOpen && (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <QRCodeModal
+                            url={referralLink}
+                            onClose={() => setQrModalOpen(false)}
+                        />
+                    </Suspense>
+                )}
+            </section>
+
+            {/* 2. Tarjeta Mis Recompensas */}
+            <section className={styles.card} aria-labelledby="rewards-progress-title">
+                <div className={styles.cardHeader}>
+                    <div className={styles.cardTitle}>
+                        <TrophyIcon />
+                        <h2 id="rewards-progress-title">Progreso de Recompensas</h2>
+                    </div>
+                </div>
+
+                {loadingProgress ? (
+                    <LoadingSpinner />
+                ) : !progress ? (
+                    <p className={styles.cardDescription}>No se pudo cargar el progreso de recompensas.</p>
+                ) : (
+                    <>
+                        <div className={styles.rewardsProgress}>
+                            <div className={styles.levelInfo}>
+                                <span>
+                                    Nivel actual: <strong>{currentLevel?.name || 'Inicial'}</strong>
+                                </span>
+                                {nextLevel?.name && (
+                                    <span>
+                                        Siguiente meta: <strong>{nextLevel.name}</strong>
+                                    </span>
+                                )}
+                            </div>
+
+                            {!noLevelsConfigured && (
+                                <div className={styles.progressBarContainer}>
+                                    <div
+                                        className={styles.progressBar}
+                                        style={{ width: `${progressPercentage}%` }}
+                                        role="progressbar"
+                                        aria-valuenow={progressPercentage}
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                    />
+                                </div>
+                            )}
+
+                            <p className={styles.progressText}>
+                                {noLevelsConfigured
+                                    ? 'El programa de recompensas se está configurando. ¡Comparte tu código y acumula puntos!'
+                                    : hasReachedMaxLevel
+                                    ? '¡Felicidades! Has alcanzado el nivel más alto del programa. 🏆'
+                                    : `Te faltan ${nextLevel.min_referrals - referralCount} referidos para alcanzar el nivel ${nextLevel.name}.`}
+                            </p>
+                        </div>
+
+                        {!noLevelsConfigured && (
+                            <div className={styles.rewardsLists}>
+                                <div>
+                                    <div
+                                        className={styles.accordionHeader}
+                                        onClick={() => setIsAccordionOpen(!isAccordionOpen)}
+                                    >
+                                        <h4>Recompensas Desbloqueadas ({progress.unlocked_rewards?.length || 0})</h4>
+                                        <span className={`${styles.accordionIcon} ${isAccordionOpen ? styles.open : ''}`}>
+                                            ▼
+                                        </span>
+                                    </div>
+
+                                    <div className={`${styles.accordionContent} ${isAccordionOpen ? styles.open : ''}`}>
+                                        <ul className={styles.rewardsListUl}>
+                                            {progress.unlocked_rewards?.length > 0 ? (
+                                                progress.unlocked_rewards.map((reward) => {
+                                                    const claim = progress.claimed_rewards?.find((c) => c.reward_id === reward.id);
+                                                    return (
+                                                        <li key={reward.id} className={styles.unlockedReward}>
+                                                            <span>🎁 {reward.title || reward.description}</span>
+                                                            {claim ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleCopyCode(claim.generated_code)}
+                                                                    className={styles.copyCodeButton}
+                                                                >
+                                                                    Copiar: <strong>{claim.generated_code}</strong>
+                                                                </button>
+                                                            ) : (
+                                                                reward.reward_code && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleClaimCode(reward)}
+                                                                        className={styles.claimCodeButton}
+                                                                    >
+                                                                        Reclamar Cupón
+                                                                    </button>
+                                                                )
+                                                            )}
+                                                        </li>
+                                                    );
+                                                })
+                                            ) : (
+                                                <li>Al invitar amigos desbloquearás premios y cupones aquí.</li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {nextLevel?.name && (
+                                    <div>
+                                        <h4>Próximos Premios ({nextLevel.name})</h4>
+                                        <ul className={styles.upcomingRewards}>
+                                            {progress.upcoming_rewards?.length > 0 ? (
+                                                progress.upcoming_rewards.map((r) => (
+                                                    <li key={r.id}>✨ {r.title || r.description}</li>
+                                                ))
+                                            ) : (
+                                                <li>Próximamente más recompensas...</li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                )}
+            </section>
         </div>
     );
 };
 
+// ============================================================================
+// COMPONENTE PESTAÑA: MIS FAVORITOS
+// ============================================================================
+const FavoritesTab = ({ favorites, liveProducts, onAddToCart, onRemoveFavorite }) => {
+    if (favorites.length === 0) {
+        return (
+            <div className={styles.emptyState}>
+                <span className={styles.emptyStateIcon}>❤️</span>
+                <h3 className={styles.emptyStateTitle}>Aún no tienes platillos favoritos</h3>
+                <p className={styles.emptyStateText}>
+                    Explora nuestro menú de alitas, boneless y salsas especiales. Presiona el corazón en cualquier
+                    platillo para guardarlo aquí y ordenarlo más rápido.
+                </p>
+                <Link to="/" className={styles.emptyStateBtn}>
+                    Explorar el Menú
+                </Link>
+            </div>
+        );
+    }
 
+    return (
+        <div className={styles.favoritesGrid}>
+            {favorites.map((fav) => {
+                const product = fav.products;
+                if (!product) return null;
+
+                const liveProduct = liveProducts.find((p) => p.id === product.id) || product;
+                const formattedPrice = liveProduct.price ? `$${Number(liveProduct.price).toFixed(2)}` : null;
+                const targetUrl = product.slug ? `/producto/${product.slug}` : '/';
+
+                return (
+                    <div
+                        key={product.id}
+                        className={`${styles.favoriteCard} ${!product.is_active ? styles.unavailable : ''}`}
+                    >
+                        <Link to={targetUrl} className={styles.favoriteMedia} title={`Ver detalles de ${product.name}`}>
+                            <ImageWithFallback src={product.image_url} alt={product.name} />
+                            {!product.is_active && <div className={styles.unavailableBadge}>No disponible</div>}
+                        </Link>
+
+                        <div className={styles.favoriteInfo}>
+                            <Link to={targetUrl} className={styles.favoriteTitle} title={product.name}>
+                                {product.name}
+                            </Link>
+                            {formattedPrice && <span className={styles.favoritePrice}>{formattedPrice}</span>}
+                        </div>
+
+                        <div className={styles.favoriteActions}>
+                            <button
+                                type="button"
+                                onClick={(e) => onAddToCart(e, product)}
+                                className={styles.favoriteAddBtn}
+                                disabled={!product.is_active}
+                            >
+                                Añadir
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onRemoveFavorite(fav)}
+                                className={styles.favoriteRemoveBtn}
+                                title="Quitar de favoritos"
+                            >
+                                Quitar
+                            </button>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// ============================================================================
+// COMPONENTE PESTAÑA: MIS RESEÑAS
+// ============================================================================
+const ReviewsTab = ({ myReviews, editingReview, setEditingReview, onUpdateReview, onDeleteReview }) => {
+    if (myReviews.length === 0) {
+        return (
+            <div className={styles.emptyState}>
+                <span className={styles.emptyStateIcon}>⭐</span>
+                <h3 className={styles.emptyStateTitle}>Todavía no has dejado reseñas</h3>
+                <p className={styles.emptyStateText}>
+                    Tus opiniones ayudan a otros comensales a elegir sus platillos favoritos. Puedes calificar y
+                    compartir tu opinión entrando a la ficha de cualquier producto en el menú.
+                </p>
+                <Link to="/" className={styles.emptyStateBtn}>
+                    Ver Menú para Calificar
+                </Link>
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.reviewList}>
+            {myReviews.map((rev) => {
+                const product = rev.products;
+                if (!product) return null;
+
+                const isEditing = editingReview?.id === rev.id;
+                const formattedDate = rev.created_at
+                    ? new Date(rev.created_at).toLocaleDateString('es-MX', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                      })
+                    : '';
+
+                if (isEditing) {
+                    return (
+                        <div key={rev.id} className={styles.reviewItem}>
+                            <div className={styles.reviewProductInfo}>
+                                <ImageWithFallback
+                                    src={product.image_url}
+                                    alt={product.name}
+                                    className={styles.reviewProductThumb}
+                                />
+                                <div className={styles.reviewProductMeta}>
+                                    <h4 className={styles.reviewProductTitle}>Editando: {product.name}</h4>
+                                </div>
+                            </div>
+
+                            <div className={styles.reviewEditor}>
+                                <div className={styles.ratingPicker}>
+                                    <span className={styles.ratingPickerLabel}>Tu Calificación:</span>
+                                    <StarRating
+                                        rating={editingReview.rating || 5}
+                                        onChange={(newRating) =>
+                                            setEditingReview((prev) => ({ ...prev, rating: newRating }))
+                                        }
+                                        size={22}
+                                    />
+                                </div>
+
+                                <textarea
+                                    rows="3"
+                                    value={editingReview.comment || ''}
+                                    onChange={(e) =>
+                                        setEditingReview((prev) => ({ ...prev, comment: e.target.value }))
+                                    }
+                                    className={styles.reviewTextarea}
+                                    placeholder="Escribe tu opinión sobre este platillo..."
+                                />
+
+                                <div className={styles.editorActions}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingReview(null)}
+                                        className={styles.editorCancelBtn}
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={onUpdateReview}
+                                        className={styles.editorSaveBtn}
+                                    >
+                                        Guardar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div key={rev.id} className={styles.reviewItem}>
+                        <div className={styles.reviewProductInfo}>
+                            <ImageWithFallback
+                                src={product.image_url}
+                                alt={product.name}
+                                className={styles.reviewProductThumb}
+                            />
+                            <div className={styles.reviewProductMeta}>
+                                <h4 className={styles.reviewProductTitle}>
+                                    {product.name}{' '}
+                                    {!product.is_active && (
+                                        <span className={styles.unavailableBadge}>(No disponible)</span>
+                                    )}
+                                </h4>
+                                {formattedDate && <span className={styles.reviewDate}>{formattedDate}</span>}
+                            </div>
+                        </div>
+
+                        <StarRating rating={rev.rating || 5} size={16} />
+
+                        {rev.comment && <p className={styles.reviewComment}>"{rev.comment}"</p>}
+
+                        <div className={styles.reviewActions}>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setEditingReview({
+                                        id: rev.id,
+                                        comment: rev.comment || '',
+                                        rating: rev.rating || 5,
+                                    })
+                                }
+                                className={styles.reviewEditBtn}
+                            >
+                                Editar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onDeleteReview(rev)}
+                                className={styles.reviewDeleteBtn}
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+// ============================================================================
+// COMPONENTE PRINCIPAL
+// ============================================================================
 export default function MyStuff() {
     const { phone, setCheckoutModalOpen } = useCustomer();
     const { addToCart, showToast } = useCart();
     const { products: liveProducts } = useProducts();
     const { customer, loading: userLoading, error } = useUserData();
     const { favorites, myReviews, loading: extrasLoading, refetch: refetchExtras } = useProductExtras();
+    const { settings, loading: settingsLoading } = useSettings();
+
+    const [activeTab, setActiveTab] = useState('rewards'); // 'rewards' | 'favorites' | 'reviews'
     const [editingReview, setEditingReview] = useState(null);
     const [reviewToDelete, setReviewToDelete] = useState(null);
     const [favoriteToRemove, setFavoriteToRemove] = useState(null);
-    const { settings, loading: settingsLoading } = useSettings();
+
     const visibilitySettings = settings.client_visibility || {};
     const loading = userLoading || extrasLoading || settingsLoading;
 
-    // --- (HANDLERS SIN CAMBIOS) ---
     const handleRemoveFavorite = async () => {
         if (!favoriteToRemove || !customer) return;
-        await supabase.from('customer_favorites').delete().match({ customer_id: customer.id, product_id: favoriteToRemove.products.id });
+        await supabase
+            .from('customer_favorites')
+            .delete()
+            .match({ customer_id: customer.id, product_id: favoriteToRemove.products.id });
         showToast(`${favoriteToRemove.products.name} eliminado de tus favoritos.`);
         setFavoriteToRemove(null);
         refetchExtras();
     };
+
     const handleUpdateReview = async () => {
         if (!editingReview) return;
-        const { error } = await supabase.from('product_reviews').update({ comment: editingReview.comment, rating: editingReview.rating }).eq('id', editingReview.id);
-        if (error) { showToast("Error al actualizar la reseña."); }
-        else { showToast("Reseña actualizada con éxito."); setEditingReview(null); refetchExtras(); }
+        const { error } = await supabase
+            .from('product_reviews')
+            .update({
+                comment: editingReview.comment,
+                rating: editingReview.rating || 5,
+            })
+            .eq('id', editingReview.id);
+
+        if (error) {
+            showToast('Error al actualizar la reseña.');
+        } else {
+            showToast('Reseña actualizada con éxito.');
+            setEditingReview(null);
+            refetchExtras();
+        }
     };
+
     const handleDeleteReview = async () => {
         if (!reviewToDelete) return;
         await supabase.from('product_reviews').delete().eq('id', reviewToDelete.id);
-        showToast("Reseña eliminada.");
+        showToast('Reseña eliminada.');
         setReviewToDelete(null);
         refetchExtras();
     };
+
     const handleAddToCartFromFav = (event, favoriteProduct) => {
         event.stopPropagation();
-        const fullProduct = liveProducts.find(p => p.id === favoriteProduct.id);
-        if (!fullProduct) { showToast("Lo sentimos, este producto ya no está disponible."); return; }
+        const fullProduct = liveProducts.find((p) => p.id === favoriteProduct.id);
+        if (!fullProduct) {
+            showToast('Lo sentimos, este producto ya no está disponible.');
+            return;
+        }
         addToCart(fullProduct, 1);
         showToast(`¡${fullProduct.name} añadido al carrito!`);
     };
 
-    // --- (FUNCIÓN RENDERCONTENT SIN CAMBIOS) ---
     const renderContent = () => {
         if (!phone) return <AuthPrompt />;
         if (loading) return <LoadingSpinner />;
-        if (error) return <div className={styles.prompt}><h2>Error Inesperado</h2><p>No pudimos cargar tus datos.</p></div>;
+        if (error) {
+            return (
+                <div className={styles.prompt}>
+                    <h2>Error Inesperado</h2>
+                    <p>No pudimos cargar tus datos de actividad.</p>
+                </div>
+            );
+        }
 
         if (!customer) {
             return (
                 <div className={styles.prompt}>
                     <h2>¡Bienvenido!</h2>
-                    <p>Completa tu perfil para guardar tus favoritos y reseñas.</p>
-                    <button onClick={() => setCheckoutModalOpen(true, 'profile')} className={styles.actionButton}>Completar mi perfil</button>
+                    <p>Completa tu perfil para acceder a tus recompensas, favoritos y reseñas.</p>
+                    <button
+                        type="button"
+                        onClick={() => setCheckoutModalOpen(true, 'profile')}
+                        className={styles.emptyStateBtn}
+                    >
+                        Completar mi perfil
+                    </button>
                 </div>
             );
         }
@@ -327,69 +709,114 @@ export default function MyStuff() {
             );
         }
 
-
         return (
             <>
-                {visibilitySettings.stuff_referrals !== false && customer.referral_code && <ReferralSystem customer={customer} />}
-                {visibilitySettings.stuff_rewards !== false && <RewardsSection customerId={customer.id} />}
+                {/* HERO CON KPIS DE ACTIVIDAD */}
+                <header className={styles.heroHeader}>
+                    <div className={styles.heroTitleGroup}>
+                        <h1 className={styles.heroTitle}>Mi Actividad & Recompensas</h1>
+                        <p className={styles.heroSubtitle}>
+                            Revisa tus beneficios acumulados, administra tus platillos preferidos y consulta tus reseñas.
+                        </p>
+                    </div>
 
-                {visibilitySettings.stuff_favorites !== false && (
-                    <div className={styles.card}>
-                        <div className={styles.cardHeader}><HeartIcon /><h2>Mis Favoritos ({favorites.length})</h2></div>
-                        {favorites.length > 0 ? (
-                            <div className={styles.grid}>
-                                {favorites.map(fav => fav.products && (
-                                    <div key={fav.products.id} className={`${styles.gridItem} ${!fav.products.is_active ? styles.unavailable : ''}`}>
-                                        {!fav.products.is_active && <div className={styles.unavailableBadge}>No disponible</div>}
-                                        <ImageWithFallback src={fav.products.image_url} alt={fav.products.name} />
-                                        <h3>{fav.products.name}</h3>
-                                        <div className={styles.gridItemActions}>
-                                            <button onClick={(e) => handleAddToCartFromFav(e, fav.products)} className={styles.addButton} disabled={!fav.products.is_active}>Añadir</button>
-                                            <button onClick={() => setFavoriteToRemove(fav)} className={styles.removeButton}>Quitar</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : <p>Aún no has guardado productos favoritos.</p>}
+                    <div className={styles.kpiBar}>
+                        <button
+                            type="button"
+                            className={`${styles.kpiPill} ${activeTab === 'rewards' ? styles.activeKpi : ''}`}
+                            onClick={() => setActiveTab('rewards')}
+                            title="Ver recompensas e invitaciones"
+                        >
+                            <span className={styles.kpiIcon}>🏆</span>
+                            <span className={styles.kpiValue}>{customer.referral_count || 0}</span>
+                            <span className={styles.kpiLabel}>Amigos</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className={`${styles.kpiPill} ${activeTab === 'favorites' ? styles.activeKpi : ''}`}
+                            onClick={() => setActiveTab('favorites')}
+                            title="Ver platillos favoritos"
+                        >
+                            <span className={styles.kpiIcon}>❤️</span>
+                            <span className={styles.kpiValue}>{favorites.length}</span>
+                            <span className={styles.kpiLabel}>Favoritos</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className={`${styles.kpiPill} ${activeTab === 'reviews' ? styles.activeKpi : ''}`}
+                            onClick={() => setActiveTab('reviews')}
+                            title="Ver mis reseñas"
+                        >
+                            <span className={styles.kpiIcon}>⭐</span>
+                            <span className={styles.kpiValue}>{myReviews.length}</span>
+                            <span className={styles.kpiLabel}>Reseñas</span>
+                        </button>
                     </div>
-                )}
-                {visibilitySettings.stuff_reviews !== false && (
-                    <div className={styles.card}>
-                        <div className={styles.cardHeader}><StarIcon /><h2>Mis Reseñas ({myReviews.length})</h2></div>
-                        {myReviews.length > 0 ? (
-                            <div className={styles.reviewList}>
-                                {myReviews.map(rev => rev.products && (
-                                    <div key={rev.id} className={styles.reviewItem}>
-                                        {editingReview?.id === rev.id ? (
-                                            <div className={styles.reviewEditor}>
-                                                <div className={styles.reviewProductInfo}><ImageWithFallback src={rev.products.image_url} alt={rev.products.name} /><h4>Editando: <strong>{rev.products.name}</strong></h4></div>
-                                                <textarea rows="3" value={editingReview.comment} onChange={e => setEditingReview({ ...editingReview, comment: e.target.value })} />
-                                                <div className={styles.reviewActions}>
-                                                    <button onClick={() => setEditingReview(null)} className={styles.cancelButton}>Cancelar</button>
-                                                    <button onClick={handleUpdateReview} className={styles.actionButton}>Guardar</button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className={styles.reviewProductInfo}><ImageWithFallback src={rev.products.image_url} alt={rev.products.name} /><h4>{rev.products.name} {!rev.products.is_active && <span className={styles.unavailableText}>(No disponible)</span>}</h4></div>
-                                                <p className={styles.reviewComment}>"{rev.comment}"</p>
-                                                <div className={styles.reviewActions}>
-                                                    <button onClick={() => setEditingReview(rev)}>Editar</button>
-                                                    <button onClick={() => setReviewToDelete(rev)} className={styles.removeButton}>Eliminar</button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : <p>Todavía no has escrito ninguna reseña.</p>}
-                    </div>
-                 )}
+                </header>
+
+                {/* BARRA DE PESTAÑAS */}
+                <nav className={styles.tabBar} aria-label="Navegación de actividad">
+                    <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeTab === 'rewards' ? styles.activeTab : ''}`}
+                        onClick={() => setActiveTab('rewards')}
+                    >
+                        <span>🎁</span>
+                        <span>Recompensas</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeTab === 'favorites' ? styles.activeTab : ''}`}
+                        onClick={() => setActiveTab('favorites')}
+                    >
+                        <span>❤️</span>
+                        <span>Favoritos</span>
+                        <span className={styles.tabBadge}>{favorites.length}</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeTab === 'reviews' ? styles.activeTab : ''}`}
+                        onClick={() => setActiveTab('reviews')}
+                    >
+                        <span>⭐</span>
+                        <span>Reseñas</span>
+                        <span className={styles.tabBadge}>{myReviews.length}</span>
+                    </button>
+                </nav>
+
+                {/* CONTENIDO DE LA PESTAÑA SELECCIONADA */}
+                <main>
+                    {activeTab === 'rewards' && (
+                        <RewardsAndReferralTab customer={customer} customerId={customer.id} />
+                    )}
+
+                    {activeTab === 'favorites' && (
+                        <FavoritesTab
+                            favorites={favorites}
+                            liveProducts={liveProducts}
+                            onAddToCart={handleAddToCartFromFav}
+                            onRemoveFavorite={setFavoriteToRemove}
+                        />
+                    )}
+
+                    {activeTab === 'reviews' && (
+                        <ReviewsTab
+                            myReviews={myReviews}
+                            editingReview={editingReview}
+                            setEditingReview={setEditingReview}
+                            onUpdateReview={handleUpdateReview}
+                            onDeleteReview={setReviewToDelete}
+                        />
+                    )}
+                </main>
             </>
         );
-    }
+    };
 
-    // --- (RETURN FINAL SIN CAMBIOS) ---
     return (
         <>
             <SEO
@@ -398,11 +825,25 @@ export default function MyStuff() {
                 type="website"
                 noindex
             />
-            <div className={styles.container}>
-                {renderContent()}
-                <ConfirmModal isOpen={!!favoriteToRemove} onClose={() => setFavoriteToRemove(null)} onConfirm={handleRemoveFavorite} title="¿Quitar de Favoritos?">¿Eliminar "{favoriteToRemove?.products?.name}" de tus favoritos?</ConfirmModal>
-                <ConfirmModal isOpen={!!reviewToDelete} onClose={() => setReviewToDelete(null)} onConfirm={handleDeleteReview} title="¿Eliminar Reseña?">Esta acción es permanente.</ConfirmModal>
-            </div>
+            <div className={styles.container}>{renderContent()}</div>
+
+            <ConfirmModal
+                isOpen={!!favoriteToRemove}
+                onClose={() => setFavoriteToRemove(null)}
+                onConfirm={handleRemoveFavorite}
+                title="¿Quitar de Favoritos?"
+            >
+                ¿Deseas eliminar "{favoriteToRemove?.products?.name}" de tus favoritos?
+            </ConfirmModal>
+
+            <ConfirmModal
+                isOpen={!!reviewToDelete}
+                onClose={() => setReviewToDelete(null)}
+                onConfirm={handleDeleteReview}
+                title="¿Eliminar Reseña?"
+            >
+                Esta acción eliminará permanentemente tu opinión sobre este platillo.
+            </ConfirmModal>
         </>
     );
 }
