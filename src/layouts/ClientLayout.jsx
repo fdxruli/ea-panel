@@ -63,7 +63,7 @@ export default function ClientLayout() {
     setIsFirstAddressRequired
   } = useCustomer();
 
-  const { customer, refetch: refetchUserData } = useUserData();
+  const { customer, orders, refetch: refetchUserData } = useUserData();
   const { isVip } = useLoyalty();
   const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
@@ -74,6 +74,10 @@ export default function ClientLayout() {
   const visibilitySettings = settings.client_visibility || EMPTY_VISIBILITY_SETTINGS;
   const isMaintenanceMode = maintenanceSetting?.enabled === true;
   const maintenanceMessage = maintenanceSetting?.message;
+
+  const hasActiveOrders = useMemo(() => {
+    return orders?.some(o => ['pendiente', 'en_proceso', 'en_envio'].includes(o.status));
+  }, [orders]);
 
   const totalItems = useMemo(
     () => cartItems.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0),
@@ -121,12 +125,12 @@ export default function ClientLayout() {
 
   const mobileNavItems = useMemo(() => [
     { to: "/", label: "Inicio", icon: <HomeIcon />, end: true },
-    (visibilitySettings.my_profile_page !== false) && {
-      to: "/mi-perfil",
-      label: "Perfil",
-      icon: <UserIcon />,
+    (visibilitySettings.my_orders_page !== false) && {
+      to: "/mis-pedidos",
+      label: "Pedidos",
+      icon: <ClipboardIcon />,
       replace: true,
-      isProfile: true,
+      isOrders: true,
     },
     (visibilitySettings.my_stuff_page !== false) && {
       to: "/mi-actividad",
@@ -134,11 +138,12 @@ export default function ClientLayout() {
       icon: <HeartIcon />,
       replace: true,
     },
-    (visibilitySettings.my_orders_page !== false) && {
-      to: "/mis-pedidos",
-      label: "Pedidos",
-      icon: <ClipboardIcon />,
+    (visibilitySettings.my_profile_page !== false) && {
+      to: "/mi-perfil",
+      label: "Perfil",
+      icon: <UserIcon />,
       replace: true,
+      isProfile: true,
     },
   ].filter(Boolean), [visibilitySettings]);
 
@@ -152,7 +157,7 @@ export default function ClientLayout() {
     [mobileNavItems, splitIndex]
   );
 
-  const renderMobileNavItems = useCallback((items) => items.map(({ to, label, icon, isProfile = false, replace = false, end = false }) => (
+  const renderMobileNavItems = useCallback((items) => items.map(({ to, label, icon, isProfile = false, isOrders = false, replace = false, end = false }) => (
     <NavLink
       key={to}
       to={to}
@@ -167,10 +172,17 @@ export default function ClientLayout() {
             <CrownIcon size={9} />
           </span>
         )}
+        {isOrders && hasActiveOrders && (
+          <span
+            className="bottom-nav-orders-pulse"
+            aria-label="Pedido en curso"
+            title="Tienes un pedido en curso"
+          />
+        )}
       </span>
       <span className="bottom-nav-label">{label}</span>
     </NavLink>
-  )), [isVip]);
+  )), [isVip, hasActiveOrders]);
 
   const openPhoneModal = useCallback(() => setPhoneModalOpen(true), [setPhoneModalOpen]);
   const closeAddressModal = useCallback(() => setAddressModalOpen(false), []);
@@ -245,6 +257,17 @@ export default function ClientLayout() {
 
         <header className="client-header">
           <div className="header-content-container">
+            {/* --- BADGE DE ESTADO DEL NEGOCIO (Columna 1 Móvil) --- */}
+            {!hoursLoading && (
+              <div
+                className={`mobile-store-status ${isBusinessOpen ? 'is-open' : 'is-closed'}`}
+                title={isBusinessOpen ? 'El restaurante está abierto' : 'El restaurante está cerrado'}
+              >
+                <span className="store-status-dot"></span>
+                <span className="store-status-text">{isBusinessOpen ? 'Abierto' : 'Cerrado'}</span>
+              </div>
+            )}
+
             <Link to="/" className="logo">
               <div className="logo-icon-wrapper">
                 <FlameIcon />
