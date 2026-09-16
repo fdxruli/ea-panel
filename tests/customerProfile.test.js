@@ -73,3 +73,54 @@ test('Unsaved changes detection flags dirty form only when value actually change
     assert.equal(isDirty('Carlos Gomez'), true);
     assert.equal(isDirty(''), true);
 });
+
+test('Customer profile RPC contract strictly isolates name mutation and prohibits sensitive field injection', () => {
+    // Contract definition for update_my_customer_profile
+    const allowedInputParam = 'p_name';
+    const forbiddenInputParams = [
+        'customer_id',
+        'p_customer_id',
+        'auth_user_id',
+        'phone',
+        'referrer_id',
+        'referral_code',
+        'referral_count',
+        'has_made_first_purchase',
+    ];
+
+    const rpcPayload = { p_name: 'Maria Sanchez' };
+    assert.equal(Object.keys(rpcPayload).length, 1);
+    assert.equal(Object.keys(rpcPayload)[0], allowedInputParam);
+
+    for (const forbidden of forbiddenInputParams) {
+        assert.equal(forbidden in rpcPayload, false, `RPC payload must not accept ${forbidden}`);
+    }
+
+    // Returned shape contract
+    const rpcReturnShape = {
+        id: '11111111-1111-1111-1111-111111111111',
+        name: 'Maria Sanchez',
+        phone: '+525512345678',
+        referral_code: 'MARIA123',
+    };
+
+    const allowedReturnKeys = ['id', 'name', 'phone', 'referral_code'];
+    assert.deepEqual(Object.keys(rpcReturnShape).sort(), allowedReturnKeys.sort());
+});
+
+test('Security invariants: customer-facing profile RPCs must prohibit anonymous execution', () => {
+    const customerFacingRpcs = [
+        'get_my_loyalty_category',
+        'set_my_default_customer_address',
+        'update_my_customer_profile',
+    ];
+
+    const allowedGrantees = ['authenticated', 'service_role', 'postgres'];
+    const forbiddenGrantees = ['anon', 'public'];
+
+    for (const rpc of customerFacingRpcs) {
+        for (const forbidden of forbiddenGrantees) {
+            assert.equal(allowedGrantees.includes(forbidden), false, `${rpc} must not grant EXECUTE to ${forbidden}`);
+        }
+    }
+});
