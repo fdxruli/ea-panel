@@ -5,7 +5,7 @@ import { useUserData } from '../context/UserDataContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
 
 export default function FloatingCartButton() {
-  const { cartItems, toggleCart } = useCart();
+  const { cartItems, toggleCart, total } = useCart();
   const { customer } = useUserData();
   const location = useLocation();
 
@@ -26,20 +26,26 @@ export default function FloatingCartButton() {
       <button
         type="button"
         data-cart-anchor="true"
-        className="floating-cart-button"
+        className="floating-cart-button floating-cart-pill"
         onClick={toggleCart}
         disabled={!hasItems}
         aria-hidden={!hasItems}
         tabIndex={hasItems ? 0 : -1}
-        aria-label={hasItems ? `Ver carrito con ${totalItems} producto(s)` : 'Ancla del carrito'}
+        aria-label={hasItems ? `Ver pedido con ${totalItems} producto(s) por $${total.toFixed(2)}` : 'Ancla del carrito'}
         style={{
           visibility: hasItems ? 'visible' : 'hidden',
           pointerEvents: hasItems ? 'auto' : 'none',
         }}
       >
-        <ShoppingCartIcon />
-        <span>Carrito</span>
-        {hasItems && <span className="floating-cart-badge">{totalItems}</span>}
+        <div className="floating-cart-pill-left">
+          <span className="floating-cart-badge">{totalItems}</span>
+          <span className="floating-cart-pill-total">${total.toFixed(2)}</span>
+        </div>
+        <div className="floating-cart-pill-divider" aria-hidden="true" />
+        <div className="floating-cart-pill-right">
+          <span className="floating-cart-pill-action">Ver Pedido</span>
+          <ShoppingCartIcon />
+        </div>
       </button>
     </div>
   );

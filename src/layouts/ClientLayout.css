@@ -458,40 +458,79 @@
 .floating-cart-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background-color: #28a745;
+  gap: 10px;
+  background-color: #16a34a;
   color: white;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 50px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   font-family: var(--font-family);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   border: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .floating-cart-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  background-color: #15803d;
+  transform: scale(1.03);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.floating-cart-button:active {
+  transform: scale(0.98);
+}
+
+.floating-cart-pill-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.floating-cart-pill-total {
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.floating-cart-pill-divider {
+  width: 1px;
+  height: 18px;
+  background-color: rgba(255, 255, 255, 0.35);
+}
+
+.floating-cart-pill-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floating-cart-pill-action {
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .floating-cart-badge {
   background-color: white;
-  color: #28a745;
-  min-width: 24px;
-  height: 24px;
+  color: #16a34a;
+  min-width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 0.9rem;
-  font-weight: bold;
+  font-size: 0.82rem;
+  font-weight: 800;
   padding: 0 4px;
 }
 
 .floating-cart-button svg {
   stroke: white;
+  width: 18px;
+  height: 18px;
 }
 
 .desktop-cart-button {
