@@ -1,0 +1,200 @@
+.stepperWrapper {
+    position: relative;
+    width: 100%;
+    margin: 1rem 0;
+    padding: 0.5rem 0.25rem;
+}
+
+.progressTrack {
+    position: absolute;
+    top: 22px;
+    left: 8%;
+    right: 8%;
+    height: 4px;
+    background-color: var(--border-color, #e2e8f0);
+    border-radius: 999px;
+    z-index: 1;
+}
+
+.progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-primary, #ea580c), #f97316);
+    border-radius: 999px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stepsContainer {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    z-index: 2;
+}
+
+.stepItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+    gap: 0.4rem;
+    transition: all 0.25s ease;
+}
+
+.stepCircle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-primary, #ffffff);
+    border: 2px solid var(--border-color, #cbd5e1);
+    color: var(--text-secondary, #94a3b8);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stepCompleted .stepCircle {
+    background-color: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.stepCurrent .stepCircle {
+    background-color: var(--color-primary, #ea580c);
+    border-color: var(--color-primary, #ea580c);
+    color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.22);
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.25);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(234, 88, 12, 0.1);
+    }
+}
+
+.stepUpcoming .stepCircle {
+    background-color: var(--bg-secondary, #f8fafc);
+    border-color: var(--border-color, #e2e8f0);
+    color: var(--text-secondary, #94a3b8);
+}
+
+.stepContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    max-width: 90px;
+}
+
+.stepLabel {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    line-height: 1.2;
+}
+
+.stepCompleted .stepLabel {
+    color: var(--text-primary, #0f172a);
+}
+
+.stepCurrent .stepLabel {
+    color: var(--color-primary, #ea580c);
+    font-weight: 700;
+}
+
+.stepDesc {
+    font-size: 0.68rem;
+    color: var(--text-secondary, #94a3b8);
+    line-height: 1.1;
+    display: block;
+}
+
+/* Compact mode for small cards or mobile list */
+.compact {
+    margin: 0.5rem 0;
+    padding: 0;
+}
+
+.compact .progressTrack {
+    top: 15px;
+    height: 3px;
+}
+
+.compact .stepCircle {
+    width: 28px;
+    height: 28px;
+}
+
+.compact .stepCircle svg {
+    width: 14px;
+    height: 14px;
+}
+
+.compact .stepLabel {
+    font-size: 0.72rem;
+}
+
+/* Cancelled Box */
+.cancelledContainer {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: 12px;
+    padding: 0.85rem 1.1rem;
+    margin: 0.75rem 0;
+}
+
+.cancelledHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.cancelledIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cancelledTitle {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #ef4444;
+}
+
+.cancelledReason {
+    font-size: 0.82rem;
+    color: var(--text-secondary, #64748b);
+    margin-top: 0.2rem;
+}
+
+@media (max-width: 480px) {
+    .stepCircle {
+        width: 30px;
+        height: 30px;
+    }
+    .progressTrack {
+        top: 17px;
+    }
+    .stepCircle svg {
+        width: 15px;
+        height: 15px;
+    }
+    .stepLabel {
+        font-size: 0.7rem;
+    }
+    .stepDesc {
+        display: none;
+    }
+}

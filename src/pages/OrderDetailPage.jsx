@@ -9,6 +9,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO from '../components/SEO';
 import ConfirmModal from '../components/ConfirmModal';
+import CancellationRequestModal from '../components/CancellationRequestModal';
+import OrderStatusStepper from '../components/OrderStatusStepper';
+import { getWhatsAppUrl } from '../services/whatsappService';
 import styles from './OrderDetailPage.module.css';
 
 export default function OrderDetailPage() {
@@ -27,6 +30,7 @@ export default function OrderDetailPage() {
     const [orderToCancel, setOrderToCancel] = useState(null);
     const [isRequestingCancel, setIsRequestingCancel] = useState(false);
     const [orderToReorder, setOrderToReorder] = useState(null);
+    const [isCopied, setIsCopied] = useState(false);
 
     // Resolución del pedido en contexto
     const contextOrder = useMemo(() => {
@@ -125,6 +129,15 @@ export default function OrderDetailPage() {
         }
     };
 
+    const handleCopyCode = () => {
+        if (orderCode && navigator.clipboard) {
+            navigator.clipboard.writeText(orderCode);
+            setIsCopied(true);
+            showToast(`Código #${orderCode} copiado al portapapeles`);
+            setTimeout(() => setIsCopied(false), 2500);
+        }
+    };
+
     const performReorder = (order) => {
         const newCartItems = order.order_items
             .filter(item => item.products)
@@ -155,9 +168,8 @@ export default function OrderDetailPage() {
             showToast('Error al cancelar el pedido.');
         } else {
             showToast('Pedido cancelado con éxito.');
-            // Actualizar orden local o contexto
             if (phone) {
-                navigate('/my-orders');
+                navigate('/mis-pedidos');
             } else {
                 setLocalOrder(prev => ({ ...prev, status: 'cancelado', cancellation_reason: 'Cancelado por el cliente.' }));
             }
@@ -194,8 +206,8 @@ export default function OrderDetailPage() {
                         <div className={styles.errorIcon}>⚠️</div>
                         <h1 className={styles.errorTitle}>Error al Cargar Pedido</h1>
                         <p className={styles.errorMessage}>{error}</p>
-                        <button onClick={() => navigate('/')} className={styles.errorButton}>
-                            Volver al Inicio
+                        <button onClick={() => navigate('/mis-pedidos')} className={styles.errorButton}>
+                            Volver a Mis Pedidos
                         </button>
                     </div>
                 </div>
@@ -212,8 +224,8 @@ export default function OrderDetailPage() {
                         <div className={styles.errorIcon}>🔍</div>
                         <h1 className={styles.errorTitle}>Pedido No Encontrado</h1>
                         <p className={styles.errorMessage}>No pudimos encontrar los detalles para el pedido {orderCode}.</p>
-                        <button onClick={() => navigate('/')} className={styles.errorButton}>
-                            Volver al Inicio
+                        <button onClick={() => navigate('/mis-pedidos')} className={styles.errorButton}>
+                            Volver a Mis Pedidos
                         </button>
                     </div>
                 </div>
@@ -225,7 +237,11 @@ export default function OrderDetailPage() {
     const formattedScheduledTime = formatScheduledTime(order.scheduled_for || order.scheduled_time);
     const orderDate = formatDate(order.created_at);
     const orderTime = formatTime(order.created_at);
-    const isActionable = phone || !phone; // Permitir acciones en ambos casos si corresponde
+    const isActive = ['pendiente', 'en_proceso', 'en_envio'].includes(order.status);
+
+    const whatsappHelpUrl = getWhatsAppUrl(
+        `¡Hola Entre Alas! 👋 Tengo una duda sobre mi pedido #${order.order_code}. ¿Podrían ayudarme?`
+    );
 
     return (
         <>
@@ -238,13 +254,13 @@ export default function OrderDetailPage() {
             <div className={styles.container}>
                 {/* Encabezado con botón de regreso */}
                 <div className={styles.pageHeader}>
-                    <button className={styles.backButton} onClick={() => navigate(-1)}>
+                    <Link to="/mis-pedidos" className={styles.backButton}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="m15 18-6-6 6-6" />
                         </svg>
-                        Atrás
-                    </button>
-                    <h1 className={styles.pageTitle}>Detalles del Pedido</h1>
+                        Volver a Mis Pedidos
+                    </Link>
+                    <h1 className={styles.pageTitle}>Detalle del Pedido</h1>
                 </div>
 
                 {/* Tarjeta principal */}
@@ -252,7 +268,26 @@ export default function OrderDetailPage() {
                     {/* Encabezado de tarjeta */}
                     <div className={styles.cardHeader}>
                         <div className={styles.headerContent}>
-                            <div className={styles.orderId}>Pedido #{order.order_code}</div>
+                            <div className={styles.orderIdRow}>
+                                <span className={styles.orderId}>Pedido #{order.order_code}</span>
+                                <button
+                                    type="button"
+                                    onClick={handleCopyCode}
+                                    className={styles.copyBtn}
+                                    title="Copiar código de pedido"
+                                >
+                                    {isCopied ? (
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    ) : (
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                             <div className={styles.orderMeta}>
                                 <div className={styles.metaRow}>
                                     <span className={styles.metaIcon}>📅</span>
@@ -267,15 +302,25 @@ export default function OrderDetailPage() {
                             </div>
                         </div>
                         <span className={`${styles.statusBadge} ${styles[order.status]}`}>
+                            {isActive && <span className={styles.statusDot}></span>}
                             {order.status.replace('_', ' ')}
                         </span>
+                    </div>
+
+                    {/* Stepper visual de progreso en vivo */}
+                    <div className={styles.stepperContainer}>
+                        <OrderStatusStepper
+                            status={order.status}
+                            cancellationReason={order.cancellation_reason}
+                            compact={false}
+                        />
                     </div>
 
                     {/* Sección de detalles */}
                     <div className={styles.detailsSection}>
                         {/* Productos */}
                         <div>
-                            <h3 className={styles.sectionTitle}>Productos</h3>
+                            <h3 className={styles.sectionTitle}>Productos del Pedido</h3>
                             <div className={styles.productsContainer}>
                                 {order.order_items && order.order_items.length > 0 ? (
                                     order.order_items.map(item => (
@@ -307,7 +352,7 @@ export default function OrderDetailPage() {
                         </div>
 
                         {/* Información de entrega */}
-                        {(order.address || order.notes) && (
+                        {(order.address || order.phone) && (
                             <div>
                                 <h3 className={styles.sectionTitle}>Entrega</h3>
                                 <div className={styles.deliveryInfo}>
@@ -335,14 +380,6 @@ export default function OrderDetailPage() {
                             </div>
                         )}
 
-                        {/* Motivo de cancelación */}
-                        {order.status === 'cancelado' && order.cancellation_reason && (
-                            <div className={styles.cancellationReason}>
-                                <p className={styles.cancellationLabel}>Motivo de cancelación</p>
-                                <p className={styles.cancellationText}>{order.cancellation_reason}</p>
-                            </div>
-                        )}
-
                         {/* Resumen y total */}
                         <div className={styles.orderSummary}>
                             <div className={`${styles.summaryRow} ${styles.subtotal}`}>
@@ -350,9 +387,51 @@ export default function OrderDetailPage() {
                                 <span>${order.total_amount.toFixed(2)}</span>
                             </div>
                             <div className={`${styles.summaryRow} ${styles.total}`}>
-                                <span>Total</span>
+                                <span>Total del pedido</span>
                                 <span>${order.total_amount.toFixed(2)}</span>
                             </div>
+                        </div>
+
+                        {/* Barra de Acciones */}
+                        <div className={styles.actionsBar}>
+                            {/* Soporte por WhatsApp */}
+                            <a
+                                href={whatsappHelpUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`${styles.actionBtn} ${styles.whatsappBtn}`}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.667-.699c.974.531 1.848.815 2.793.815 3.182 0 5.769-2.587 5.77-5.768 0-3.181-2.587-5.769-5.77-5.769zm3.376 8.212c-.144.405-.837.774-1.17.824-.312.045-.698.077-2.146-.523-1.722-.714-2.825-2.457-2.91-2.571-.086-.114-.691-.919-.691-1.753 0-.834.437-1.244.593-1.413.155-.17.34-.212.453-.212.113 0 .227 0 .326.005.106.005.248-.04.388.297.144.35.493 1.2.535 1.286.043.085.071.185.014.298-.056.113-.085.184-.17.284-.085.099-.179.222-.256.298-.085.085-.174.177-.075.347.099.17.441.727.947 1.177.652.58 1.202.76 1.372.845.17.085.27.071.37-.042.099-.114.425-.496.538-.666.114-.17.227-.142.383-.085.156.057.99.467 1.16.552.17.085.284.127.326.198.043.071.043.411-.101.816z"/>
+                                </svg>
+                                Ayuda con mi pedido
+                            </a>
+
+                            {/* Cancelar si está pendiente o en proceso */}
+                            {(order.status === 'pendiente' || order.status === 'en_proceso') && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleCancelClick(order)}
+                                    className={`${styles.actionBtn} ${styles.cancelBtn}`}
+                                >
+                                    Cancelar Pedido
+                                </button>
+                            )}
+
+                            {/* Volver a pedir si está completado */}
+                            {order.status === 'completado' && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleReorder(order)}
+                                    className={`${styles.actionBtn} ${styles.reorderBtn}`}
+                                >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="1 4 1 10 7 10" />
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                    </svg>
+                                    Volver a Pedir
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -365,8 +444,8 @@ export default function OrderDetailPage() {
                         <ul className={styles.promptBenefits}>
                             <li>Hacer pedidos futuros más rápido.</li>
                             <li>Ganar recompensas y descuentos.</li>
-                            <li>Recibir notificaciones de tus pedidos.</li>
-                            <li>Guardar tus direcciones, favoritos y reseñas a nuestros productos.</li>
+                            <li>Recibir notificaciones en vivo de tus pedidos.</li>
+                            <li>Guardar tus direcciones, favoritos y reseñas.</li>
                         </ul>
                         <button
                             onClick={() => setPhoneModalOpen(true)}
@@ -395,6 +474,16 @@ export default function OrderDetailPage() {
                 >
                     Tu carrito ya tiene productos. ¿Deseas vaciarlo y agregar los productos de este pedido?
                 </ConfirmModal>
+
+                {isRequestingCancel && orderToCancel && (
+                    <CancellationRequestModal
+                        order={orderToCancel}
+                        onClose={() => {
+                            setIsRequestingCancel(false);
+                            setOrderToCancel(null);
+                        }}
+                    />
+                )}
             </div>
         </>
     );
