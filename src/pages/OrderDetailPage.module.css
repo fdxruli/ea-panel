@@ -72,10 +72,64 @@
     flex: 1;
 }
 
+.orderIdRow {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
 .orderId {
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.35rem;
+    font-weight: 800;
     color: var(--text-primary);
+    letter-spacing: -0.3px;
+}
+
+.copyBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.copyBtn:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.stepperContainer {
+    padding: 1rem 1.5rem 0.5rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.statusDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: currentColor;
+    display: inline-block;
+    margin-right: 0.35rem;
+    animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(234, 88, 12, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(234, 88, 12, 0);
+    }
 }
 
 .orderMeta {
@@ -332,22 +386,41 @@
 }
 
 /* --- ACCIONES --- */
+.actionsBar,
 .actionsContainer {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
     padding-top: 1.5rem;
 }
 
 .actionBtn {
-    padding: 0.75rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
     border-radius: 12px;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     text-align: center;
+    text-decoration: none;
     transition: all 0.2s ease;
     border: 2px solid transparent;
+    font-family: inherit;
+}
+
+.whatsappBtn {
+    background-color: rgba(37, 211, 102, 0.12);
+    color: #128c7e;
+    border-color: rgba(37, 211, 102, 0.35);
+}
+
+.whatsappBtn:hover {
+    background-color: #25d366;
+    color: #ffffff;
+    border-color: #25d366;
 }
 
 .editBtn {
@@ -374,7 +447,6 @@
     background-color: var(--color-primary);
     color: #fff;
     border-color: var(--color-primary);
-    grid-column: 1 / -1;
 }
 
 .reorderBtn:hover {
