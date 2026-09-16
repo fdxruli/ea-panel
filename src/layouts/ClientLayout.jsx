@@ -257,17 +257,6 @@ export default function ClientLayout() {
 
         <header className="client-header">
           <div className="header-content-container">
-            {/* --- BADGE DE ESTADO DEL NEGOCIO (Columna 1 Móvil) --- */}
-            {!hoursLoading && (
-              <div
-                className={`mobile-store-status ${isBusinessOpen ? 'is-open' : 'is-closed'}`}
-                title={isBusinessOpen ? 'El restaurante está abierto' : 'El restaurante está cerrado'}
-              >
-                <span className="store-status-dot"></span>
-                <span className="store-status-text">{isBusinessOpen ? 'Abierto' : 'Cerrado'}</span>
-              </div>
-            )}
-
             <Link to="/" className="logo">
               <div className="logo-icon-wrapper">
                 <FlameIcon />

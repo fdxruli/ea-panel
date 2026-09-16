@@ -218,14 +218,85 @@
 /* ==========================================================================
    3. DIRECCIONES
    ========================================================================== */
-.addressGrid {
+.addressSectionWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.defaultAddressContainer {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 1rem;
 }
 
 @media (min-width: 768px) {
-    .addressGrid {
+    .defaultAddressContainer {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.otherAddressesSection {
+    margin-top: 0.25rem;
+}
+
+.accordionToggleBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    font-family: inherit;
+}
+
+.accordionToggleBtn:hover {
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--bg-secondary));
+    border-color: var(--color-primary);
+}
+
+.accordionToggleContent {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.accordionToggleTitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.accordionToggleSub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.accordionChevron {
+    color: var(--text-secondary);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+
+.chevronOpen {
+    transform: rotate(180deg);
+    color: var(--color-primary);
+}
+
+.otherAddressesGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 0.85rem;
+}
+
+@media (min-width: 768px) {
+    .otherAddressesGrid {
         grid-template-columns: repeat(2, 1fr);
     }
 }

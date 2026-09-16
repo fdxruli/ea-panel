@@ -91,6 +91,9 @@
 .kpiIcon {
     font-size: 1.2rem;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .kpiValue {
@@ -894,6 +897,9 @@
 .emptyStateIcon {
     font-size: 2.5rem;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .emptyStateTitle {
