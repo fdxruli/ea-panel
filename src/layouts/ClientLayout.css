@@ -140,49 +140,7 @@
   gap: 0.75rem;
 }
 
-.mobile-store-status {
-  grid-column: 1;
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  border: 1px solid transparent;
-  width: fit-content;
-}
 
-.mobile-store-status.is-open {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: #059669;
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.mobile-store-status.is-closed {
-  background-color: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-  border-color: rgba(239, 68, 68, 0.25);
-}
-
-.store-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: currentColor;
-}
-
-.mobile-store-status.is-open .store-status-dot {
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
-}
-
-@media (min-width: 1024px) {
-  .mobile-store-status {
-    display: none;
-  }
-}
 
 .mobile-login-btn {
   display: flex;

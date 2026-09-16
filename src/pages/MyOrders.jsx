@@ -566,7 +566,7 @@ export default function MyOrders() {
                         </svg>
                         <input
                             type="text"
-                            placeholder="Buscar por # pedido o producto..."
+                            placeholder="Buscar pedido o producto..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className={styles.searchInput}

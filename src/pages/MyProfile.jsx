@@ -57,6 +57,12 @@ const PlusIcon = () => (
     </svg>
 );
 
+const ChevronDownIcon = ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+    </svg>
+);
+
 export default function MyProfile() {
     const { showAlert } = useAlert();
     const { isAuthenticated, isLinked, customer: canonicalCustomer, isCustomerLoading, signOut } = useCustomer();
@@ -92,6 +98,17 @@ export default function MyProfile() {
     const [addressToDelete, setAddressToDelete] = useState(null);
     const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
     const [isDiscardModalOpen, setDiscardModalOpen] = useState(false);
+    const [showOtherAddresses, setShowOtherAddresses] = useState(false);
+
+    const defaultAddress = useMemo(() => {
+        if (!addresses || addresses.length === 0) return null;
+        return addresses.find((a) => a.is_default) || addresses[0];
+    }, [addresses]);
+
+    const otherAddresses = useMemo(() => {
+        if (!defaultAddress) return [];
+        return addresses.filter((a) => a.id !== defaultAddress.id);
+    }, [addresses, defaultAddress]);
 
     const isInitialLoading = isCustomerLoading || settingsLoading;
     const todayIsoDate = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -176,6 +193,68 @@ export default function MyProfile() {
         window.location.replace('/');
     };
 
+    const renderAddressCard = (addr, isDefaultCard = false) => (
+        <div
+            key={addr.id}
+            className={`${styles.addressItem} ${
+                isDefaultCard ? styles.defaultAddress : ''
+            }`}
+        >
+            <div className={styles.addressMapContainer}>
+                <StaticMap latitude={addr.latitude} longitude={addr.longitude} />
+            </div>
+            <div className={styles.addressContent}>
+                <div className={styles.addressLabelContainer}>
+                    <strong>{addr.label}</strong>
+                    {isDefaultCard && (
+                        <span className={styles.defaultBadge}>
+                            Predeterminada
+                        </span>
+                    )}
+                </div>
+                <p className={styles.addressReference}>
+                    {addr.address_reference || 'Sin referencia registrada'}
+                </p>
+            </div>
+            <div className={styles.addressActions}>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setEditingAddress(addr);
+                        setAddressModalOpen(true);
+                    }}
+                    className={styles.editButton}
+                    disabled={addressActionLoading}
+                >
+                    Editar
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setAddressToDelete(addr)}
+                    className={styles.deleteButton}
+                    disabled={addressActionLoading || addresses.length <= 1}
+                    title={
+                        addresses.length <= 1
+                            ? 'Debes conservar al menos una dirección registrada'
+                            : 'Eliminar esta dirección'
+                    }
+                >
+                    Eliminar
+                </button>
+                {!isDefaultCard && (
+                    <button
+                        type="button"
+                        onClick={() => handleSetDefaultAddress(addr.id)}
+                        className={styles.setDefaultButton}
+                        disabled={addressActionLoading}
+                    >
+                        Fijar como predeterminada
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     const renderContent = () => {
         if (!isAuthenticated) return <Navigate to="/" replace />;
         if (!isLinked || !canonicalCustomer) {
@@ -259,68 +338,47 @@ export default function MyProfile() {
                         {addressesLoading ? (
                             <LoadingSpinner />
                         ) : addresses.length > 0 ? (
-                            <div className={styles.addressGrid}>
-                                {addresses.map((addr) => (
-                                    <div
-                                        key={addr.id}
-                                        className={`${styles.addressItem} ${
-                                            addr.is_default ? styles.defaultAddress : ''
-                                        }`}
-                                    >
-                                        <div className={styles.addressMapContainer}>
-                                            <StaticMap latitude={addr.latitude} longitude={addr.longitude} />
-                                        </div>
-                                        <div className={styles.addressContent}>
-                                            <div className={styles.addressLabelContainer}>
-                                                <strong>{addr.label}</strong>
-                                                {addr.is_default && (
-                                                    <span className={styles.defaultBadge}>
-                                                        Predeterminada
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className={styles.addressReference}>
-                                                {addr.address_reference || 'Sin referencia registrada'}
-                                            </p>
-                                        </div>
-                                        <div className={styles.addressActions}>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setEditingAddress(addr);
-                                                    setAddressModalOpen(true);
-                                                }}
-                                                className={styles.editButton}
-                                                disabled={addressActionLoading}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setAddressToDelete(addr)}
-                                                className={styles.deleteButton}
-                                                disabled={addressActionLoading || addresses.length <= 1}
-                                                title={
-                                                    addresses.length <= 1
-                                                        ? 'Debes conservar al menos una dirección registrada'
-                                                        : 'Eliminar esta dirección'
-                                                }
-                                            >
-                                                Eliminar
-                                            </button>
-                                            {!addr.is_default && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleSetDefaultAddress(addr.id)}
-                                                    className={styles.setDefaultButton}
-                                                    disabled={addressActionLoading}
-                                                >
-                                                    Fijar como predeterminada
-                                                </button>
-                                            )}
-                                        </div>
+                            <div className={styles.addressSectionWrapper}>
+                                {defaultAddress && (
+                                    <div className={styles.defaultAddressContainer}>
+                                        {renderAddressCard(defaultAddress, true)}
                                     </div>
-                                ))}
+                                )}
+
+                                {otherAddresses.length > 0 && (
+                                    <div className={styles.otherAddressesSection}>
+                                        <button
+                                            type="button"
+                                            className={styles.accordionToggleBtn}
+                                            onClick={() => setShowOtherAddresses((prev) => !prev)}
+                                            aria-expanded={showOtherAddresses}
+                                        >
+                                            <div className={styles.accordionToggleContent}>
+                                                <span className={styles.accordionToggleTitle}>
+                                                    {showOtherAddresses
+                                                        ? 'Ocultar otras direcciones'
+                                                        : `Ver mis otras direcciones (${otherAddresses.length})`}
+                                                </span>
+                                                <span className={styles.accordionToggleSub}>
+                                                    {showOtherAddresses
+                                                        ? 'Colapsar lista de direcciones secundarias'
+                                                        : 'Gestionar o fijar otra como predeterminada'}
+                                                </span>
+                                            </div>
+                                            <ChevronDownIcon
+                                                className={`${styles.accordionChevron} ${
+                                                    showOtherAddresses ? styles.chevronOpen : ''
+                                                }`}
+                                            />
+                                        </button>
+
+                                        {showOtherAddresses && (
+                                            <div className={styles.otherAddressesGrid}>
+                                                {otherAddresses.map((addr) => renderAddressCard(addr, false))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className={styles.emptyState}>

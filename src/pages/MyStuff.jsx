@@ -65,6 +65,22 @@ const QrCodeIcon = ({ size = 16 }) => (
     </svg>
 );
 
+const GiftIcon = ({ size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 12 20 22 4 22 4 12" />
+        <rect x="2" y="7" width="20" height="5" />
+        <line x1="12" y1="22" x2="12" y2="7" />
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </svg>
+);
+
+const SparkleIcon = ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+    </svg>
+);
+
 // Componente StarRating para visualización y edición interactiva
 const StarRating = ({ rating = 5, onChange = null, size = 18 }) => {
     const isInteractive = typeof onChange === 'function';
@@ -310,7 +326,7 @@ const RewardsAndReferralTab = ({ customer, customerId }) => {
                                 {noLevelsConfigured
                                     ? 'El programa de recompensas se está configurando. ¡Comparte tu código y acumula puntos!'
                                     : hasReachedMaxLevel
-                                    ? '¡Felicidades! Has alcanzado el nivel más alto del programa. 🏆'
+                                    ? '¡Felicidades! Has alcanzado el nivel más alto del programa.'
                                     : `Te faltan ${nextLevel.min_referrals - referralCount} referidos para alcanzar el nivel ${nextLevel.name}.`}
                             </p>
                         </div>
@@ -335,7 +351,9 @@ const RewardsAndReferralTab = ({ customer, customerId }) => {
                                                     const claim = progress.claimed_rewards?.find((c) => c.reward_id === reward.id);
                                                     return (
                                                         <li key={reward.id} className={styles.unlockedReward}>
-                                                            <span>🎁 {reward.title || reward.description}</span>
+                                                            <span className={styles.rewardTitle}>
+                                                                <GiftIcon size={16} /> {reward.title || reward.description}
+                                                            </span>
                                                             {claim ? (
                                                                 <button
                                                                     type="button"
@@ -371,7 +389,9 @@ const RewardsAndReferralTab = ({ customer, customerId }) => {
                                         <ul className={styles.upcomingRewards}>
                                             {progress.upcoming_rewards?.length > 0 ? (
                                                 progress.upcoming_rewards.map((r) => (
-                                                    <li key={r.id}>✨ {r.title || r.description}</li>
+                                                    <li key={r.id} className={styles.upcomingItem}>
+                                                        <SparkleIcon size={14} /> {r.title || r.description}
+                                                    </li>
                                                 ))
                                             ) : (
                                                 <li>Próximamente más recompensas...</li>
@@ -395,7 +415,9 @@ const FavoritesTab = ({ favorites, liveProducts, onAddToCart, onRemoveFavorite }
     if (favorites.length === 0) {
         return (
             <div className={styles.emptyState}>
-                <span className={styles.emptyStateIcon}>❤️</span>
+                <span className={styles.emptyStateIcon}>
+                    <HeartIcon size={38} />
+                </span>
                 <h3 className={styles.emptyStateTitle}>Aún no tienes platillos favoritos</h3>
                 <p className={styles.emptyStateText}>
                     Explora nuestro menú de alitas, boneless y salsas especiales. Presiona el corazón en cualquier
@@ -467,7 +489,9 @@ const ReviewsTab = ({ myReviews, editingReview, setEditingReview, onUpdateReview
     if (myReviews.length === 0) {
         return (
             <div className={styles.emptyState}>
-                <span className={styles.emptyStateIcon}>⭐</span>
+                <span className={styles.emptyStateIcon}>
+                    <StarIcon size={38} filled={false} />
+                </span>
                 <h3 className={styles.emptyStateTitle}>Todavía no has dejado reseñas</h3>
                 <p className={styles.emptyStateText}>
                     Tus opiniones ayudan a otros comensales a elegir sus platillos favoritos. Puedes calificar y
@@ -727,7 +751,7 @@ export default function MyStuff() {
                             onClick={() => setActiveTab('rewards')}
                             title="Ver recompensas e invitaciones"
                         >
-                            <span className={styles.kpiIcon}>🏆</span>
+                            <span className={styles.kpiIcon}><TrophyIcon size={18} /></span>
                             <span className={styles.kpiValue}>{customer.referral_count || 0}</span>
                             <span className={styles.kpiLabel}>Amigos</span>
                         </button>
@@ -738,7 +762,7 @@ export default function MyStuff() {
                             onClick={() => setActiveTab('favorites')}
                             title="Ver platillos favoritos"
                         >
-                            <span className={styles.kpiIcon}>❤️</span>
+                            <span className={styles.kpiIcon}><HeartIcon size={18} filled={true} /></span>
                             <span className={styles.kpiValue}>{favorites.length}</span>
                             <span className={styles.kpiLabel}>Favoritos</span>
                         </button>
@@ -749,7 +773,7 @@ export default function MyStuff() {
                             onClick={() => setActiveTab('reviews')}
                             title="Ver mis reseñas"
                         >
-                            <span className={styles.kpiIcon}>⭐</span>
+                            <span className={styles.kpiIcon}><StarIcon size={18} filled={true} /></span>
                             <span className={styles.kpiValue}>{myReviews.length}</span>
                             <span className={styles.kpiLabel}>Reseñas</span>
                         </button>
@@ -763,7 +787,7 @@ export default function MyStuff() {
                         className={`${styles.tabButton} ${activeTab === 'rewards' ? styles.activeTab : ''}`}
                         onClick={() => setActiveTab('rewards')}
                     >
-                        <span>🎁</span>
+                        <GiftIcon size={16} />
                         <span>Recompensas</span>
                     </button>
 
@@ -772,7 +796,7 @@ export default function MyStuff() {
                         className={`${styles.tabButton} ${activeTab === 'favorites' ? styles.activeTab : ''}`}
                         onClick={() => setActiveTab('favorites')}
                     >
-                        <span>❤️</span>
+                        <HeartIcon size={16} filled={true} />
                         <span>Favoritos</span>
                         <span className={styles.tabBadge}>{favorites.length}</span>
                     </button>
@@ -782,7 +806,7 @@ export default function MyStuff() {
                         className={`${styles.tabButton} ${activeTab === 'reviews' ? styles.activeTab : ''}`}
                         onClick={() => setActiveTab('reviews')}
                     >
-                        <span>⭐</span>
+                        <StarIcon size={16} filled={true} />
                         <span>Reseñas</span>
                         <span className={styles.tabBadge}>{myReviews.length}</span>
                     </button>
