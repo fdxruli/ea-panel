@@ -352,10 +352,23 @@ export const UserDataProvider = ({ children }) => {
         };
 
         const unsubscribe = subscribeToStoreBroadcast('order_changed', handleBroadcastOrder);
+        const unsubAddress = subscribeToStoreBroadcast('address_updated', (data) => {
+            if (!data?.customerId || data.customerId === canonicalCustomerId) {
+                fetchAndCacheUserData(phone, canonicalCustomerId);
+            }
+        });
+        const unsubCustomer = subscribeToStoreBroadcast('customer_updated', (data) => {
+            if (!data?.customerId || data.customerId === canonicalCustomerId) {
+                fetchAndCacheUserData(phone, canonicalCustomerId);
+            }
+        });
+
         return () => {
             if (unsubscribe) unsubscribe();
+            if (unsubAddress) unsubAddress();
+            if (unsubCustomer) unsubCustomer();
         };
-    }, [ORDERS_CACHE_KEY]);
+    }, [ORDERS_CACHE_KEY, canonicalCustomerId, fetchAndCacheUserData, phone]);
 
     useEffect(() => {
         const reconcileOnFocus = () => {
@@ -368,9 +381,11 @@ export const UserDataProvider = ({ children }) => {
 
         document.addEventListener('visibilitychange', reconcileOnFocus);
         window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
+        window.addEventListener('online', reconcileOnFocus);
         return () => {
             document.removeEventListener('visibilitychange', reconcileOnFocus);
             window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
+            window.removeEventListener('online', reconcileOnFocus);
         };
     }, [canonicalCustomerId, fetchAndCacheUserData, isCustomerLoading, phone]);
 

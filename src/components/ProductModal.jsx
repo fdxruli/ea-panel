@@ -8,6 +8,7 @@ import { useAlert } from '../context/AlertContext';
 import DOMPurify from 'dompurify';
 import ImageWithFallback from './ImageWithFallback';
 import { animateToCart } from '../utils/cartAnimation';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -224,6 +225,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             } else {
                 await supabase.from('customer_favorites').insert({ product_id: product.id, customer_id: customerId });
             }
+            broadcastStoreChange('favorites_updated', { customerId });
             refetchExtras();
         } catch (error) {
             console.error("Error toggling favorite:", error);
@@ -253,6 +255,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         } else {
             setUserRating(0);
             setUserComment('');
+            broadcastStoreChange('reviews_updated');
             refetchExtras();
             setIsReviewFormVisible(false);
         }

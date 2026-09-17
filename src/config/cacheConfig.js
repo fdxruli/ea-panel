@@ -7,7 +7,8 @@ export const CACHE_TTL = {
   BUSINESS_STATUS: 1 * 60 * 1000,
   USER_DATA: 15 * 60 * 1000,
   USER_ORDERS: 10 * 60 * 1000,
-  PRODUCT_EXTRAS: 3 * 60 * 1000,
+  PRODUCT_EXTRAS: 10 * 60 * 1000,
+  REWARDS_PROGRESS: 15 * 60 * 1000,
 };
 
 /**
@@ -24,6 +25,7 @@ export const CACHE_KEYS = {
   USER_ORDERS: 'ea-user-orders-cache:v2',
   FAVORITES: 'ea-favorites-cache',
   REVIEWS: 'ea-reviews-cache',
+  REWARDS_PROGRESS: 'ea-rewards-progress',
   SPECIAL_PRICE: 'ea-special-price-cache',
   SPECIAL_PRICES: 'ea-special-price-cache',
 };
