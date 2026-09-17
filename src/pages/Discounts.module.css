@@ -5,13 +5,16 @@
 }
 
 .header {
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .header h1 {
     margin: 0 0 8px 0;
-    font-size: 28px;
+    font-size: 26px;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .subtitle {
@@ -30,17 +33,34 @@
     box-shadow: 0 2px 8px var(--shadow-color);
 }
 
-.formCard h2 {
-    margin: 0 0 20px 0;
-    font-size: 20px;
+.formCardHeader {
+    margin-bottom: 20px;
+}
+
+.formCardHeader h2 {
+    margin: 0 0 6px 0;
+    font-size: 19px;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.titleIcon {
+    color: var(--color-primary);
+}
+
+.formCardSubtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 .formGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .formGroup {
@@ -48,11 +68,15 @@
     flex-direction: column;
 }
 
+.fullWidth {
+    grid-column: 1 / -1;
+}
+
 .formGroup label {
     font-weight: 600;
     margin-bottom: 8px;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .formGroup input,
@@ -75,13 +99,172 @@
 
 .formGroup small {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
 }
 
-.checkboxGroup {
+/* Mode Toggle (% vs $) */
+.modeToggleGroup {
+    display: flex;
+    gap: 8px;
+}
+
+.modeBtn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.modeBtn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.activeMode {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 2px 6px rgba(229, 115, 115, 0.3);
+}
+
+/* Audiencia & Selector de Clientes */
+.audienceSelection {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.radioLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.customerPicker {
+    margin-top: 6px;
+}
+
+.selectedCustomerCard {
     display: flex;
     align-items: center;
+    gap: 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 16px;
+}
+
+.customerIcon {
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.customerInfo {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    font-size: 13px;
+}
+
+.customerInfo span {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.removeCustomerBtn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.removeCustomerBtn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.customerSearchWrapper {
+    position: relative;
+}
+
+.searchBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0 12px;
+}
+
+.searchBar input {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 9px 0 !important;
+    width: 100%;
+}
+
+.customerResultsList {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 20;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    margin-top: 4px;
+}
+
+.customerResultItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--text-primary);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.15s ease;
+}
+
+.customerResultItem:hover {
+    background: var(--bg-primary);
+    color: var(--color-primary);
+}
+
+/* Checkboxes */
+.checkboxesRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    grid-column: 1 / -1;
+    padding: 6px 0;
 }
 
 .checkboxGroup label {
@@ -89,24 +272,33 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-weight: normal;
+    font-size: 13px;
     color: var(--text-primary);
 }
 
 .checkboxGroup input[type="checkbox"] {
     width: 18px;
     height: 18px;
-    cursor: pointer;
     accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.formFooter {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .submitButton {
-    padding: 12px 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
     background: var(--color-primary);
-    color: var(--text-light);
+    color: #fff;
     border: none;
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-speed) ease;
@@ -114,7 +306,7 @@
 
 .submitButton:hover:not(:disabled) {
     background: var(--color-primary-dark);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px var(--shadow-color);
 }
 
@@ -133,12 +325,100 @@
     box-shadow: 0 2px 8px var(--shadow-color);
 }
 
-.tableCard h2 {
-    margin: 0 0 16px 0;
-    font-size: 20px;
-    color: var(--text-primary);
+/* Pestañas */
+.tabsHeader {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    overflow-x: auto;
 }
 
+.tabBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+    white-space: nowrap;
+}
+
+.tabBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.activeTab {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+    border-color: var(--color-primary) !important;
+}
+
+/* Filtros y Búsqueda */
+.filtersBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0 12px;
+    min-width: 250px;
+    flex: 1;
+}
+
+.searchBox input {
+    border: none;
+    background: transparent;
+    padding: 8px 0;
+    width: 100%;
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.searchBox input:focus {
+    outline: none;
+}
+
+.filterControls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filterSelect {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.filterSelect:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* Table */
 .tableWrapper {
     overflow-x: auto;
     border-radius: 8px;
@@ -147,7 +427,7 @@
 .discountsTable {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 13px;
     background: var(--bg-secondary);
 }
 
@@ -156,29 +436,25 @@
 }
 
 .discountsTable th {
-    padding: 14px 12px;
+    padding: 12px 10px;
     text-align: left;
     font-weight: 600;
     color: var(--text-primary);
     border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
 }
 
 .discountsTable td {
-    padding: 14px 12px;
+    padding: 12px 10px;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-secondary);
-}
-
-.discountsTable tbody tr {
-    background: var(--bg-secondary);
-    transition: background-color var(--transition-speed) ease;
 }
 
 .discountsTable tbody tr:hover {
     background: var(--bg-primary);
 }
 
-/* ===== TABLE CELLS ===== */
+/* Celdas especiales */
 .codeCell code {
     background: var(--bg-primary);
     padding: 4px 8px;
@@ -186,24 +462,139 @@
     font-family: 'Courier New', monospace;
     font-size: 13px;
     color: var(--color-primary);
+    font-weight: 700;
+}
+
+.codeWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.referralTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
     font-weight: 600;
+    color: #e65100;
+    background: rgba(230, 81, 0, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.valueCell {
+    display: flex;
+    flex-direction: column;
+}
+
+.valueNumber {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.modeIndicator {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
 }
 
 .typeBadge {
     display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.typeBadge.category {
+    background: rgba(33, 150, 243, 0.1);
+    color: #1976d2;
+    border-color: rgba(33, 150, 243, 0.3);
+}
+
+.typeBadge.product {
+    background: rgba(156, 39, 176, 0.1);
+    color: #7b1fa2;
+    border-color: rgba(156, 39, 176, 0.3);
+}
+
+.audienceCell {
+    white-space: nowrap;
+}
+
+.customerAudience {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
     font-weight: 600;
-    background: var(--color-accent);
-    color: var(--text-light);
+    color: var(--color-primary);
+    background: rgba(229, 115, 115, 0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.referralAudience {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ef6c00;
+}
+
+.publicAudience {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.dateCell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.validityBadge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+    text-transform: uppercase;
+}
+
+.statusActive {
+    background: rgba(46, 125, 50, 0.12);
+    color: #2e7d32;
+}
+
+.statusScheduled {
+    background: rgba(245, 127, 23, 0.12);
+    color: #f57f17;
+}
+
+.statusExpired {
+    background: rgba(198, 40, 40, 0.12);
+    color: #c62828;
+}
+
+.statusInactive {
+    background: rgba(158, 158, 158, 0.15);
+    color: var(--text-secondary);
 }
 
 .usageBadge {
     display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
     font-weight: 600;
     background: var(--bg-primary);
     color: var(--text-primary);
@@ -212,20 +603,67 @@
 
 .statusBadge {
     display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
     font-weight: 600;
 }
 
 .statusBadge.active {
-    background: var(--color-success);
-    color: var(--text-light);
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+[data-theme="dark"] .statusBadge.active {
+    background: rgba(46, 125, 50, 0.2);
+    color: #81c784;
 }
 
 .statusBadge.inactive {
-    background: var(--color-error);
-    color: var(--text-light);
+    background: #ffebee;
+    color: #c62828;
+}
+
+[data-theme="dark"] .statusBadge.inactive {
+    background: rgba(198, 40, 40, 0.2);
+    color: #ff8a80;
+}
+
+/* Actions */
+.actions {
+    display: flex;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.toggleButton,
+.editButton,
+.deleteButton {
+    padding: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-speed) ease;
+}
+
+.toggleButton:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.editButton:hover {
+    border-color: #1976d2;
+    color: #1976d2;
+}
+
+.deleteButton:hover {
+    border-color: #c62828;
+    color: #c62828;
 }
 
 .emptyMessage {
@@ -235,94 +673,22 @@
     font-style: italic;
 }
 
-/* ===== ACTIONS ===== */
-.actions {
-    display: flex;
-    gap: 8px;
-}
-
-.toggleButton {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    transition: all var(--transition-speed) ease;
-}
-
-.toggleButton:hover {
-    background: var(--color-primary);
-    color: var(--text-light);
-    border-color: var(--color-primary);
-    transform: translateY(-1px);
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-    .formGrid {
-        grid-template-columns: 1fr;
-    }
-
-    .discountsTable {
-        font-size: 12px;
-    }
-
-    .discountsTable th,
-    .discountsTable td {
-        padding: 10px 8px;
-    }
-
-    .actions {
+/* Responsive */
+@media (max-width: 900px) {
+    .filtersBar {
         flex-direction: column;
+        align-items: stretch;
     }
 
-    .toggleButton {
+    .searchBox {
+        min-width: auto;
+    }
+
+    .filterControls {
         width: 100%;
     }
-}
 
-/* ===== DARK MODE OVERRIDES ===== */
-[data-theme="dark"] .discountsTable tbody tr:hover {
-    background: rgba(77, 182, 172, 0.08);
-}
-
-[data-theme="dark"] .codeCell code {
-    background: rgba(77, 182, 172, 0.1);
-}
-
-/* ===== LAYOUT HORIZONTAL DE CHECKBOXES ===== */
-.checkboxesRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px; /* Espacio entre checkboxes */
-    grid-column: 1 / -1; /* Ocupa todo el ancho del grid */
-    padding: 10px 0;
-}
-
-.checkboxesRow .checkboxGroup {
-    flex: 0 1 auto; /* No crece, se ajusta al contenido */
-    min-width: max-content;
-    padding: 0;
-}
-
-.checkboxesRow .checkboxGroup label {
-    font-size: 14px;
-    white-space: nowrap;
-}
-
-/* En móvil, permite que ocupen ancho completo */
-@media (max-width: 768px) {
-    .checkboxesRow {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    .checkboxesRow .checkboxGroup label {
-        font-size: 13px;
-        white-space: normal;
+    .filterSelect {
+        flex: 1;
     }
 }

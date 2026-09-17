@@ -13,8 +13,9 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 import { useReferralLevelsCache } from '../hooks/useReferralLevelsCache';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { useCacheAdmin } from '../context/CacheAdminContext';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 // --- FIN PASO A ---
-import { Gift, Pencil } from 'lucide-react';
+import { Gift, Pencil, Percent, DollarSign } from 'lucide-react';
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
 const TrophyIcon = memo(() => ( /* ... (código SVG) ... */ <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>));
@@ -26,8 +27,8 @@ GiftIcon.displayName = 'GiftIcon';
 
 // ==================== COMPONENTE: WELCOME REWARD EDITOR (Sin cambios) ====================
 const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
-    // ... (código existente de WelcomeRewardEditor) ...
     const { hasPermission } = useAdminAuth();
+    const { invalidate } = useCacheAdmin();
     const canEdit = hasPermission('referidos.edit');
 
     const [reward, setReward] = useState({
@@ -35,6 +36,8 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
         message: '',
         discount_code: ''
     });
+    const [discountMode, setDiscountMode] = useState('percentage');
+    const [discountValue, setDiscountValue] = useState('10');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -48,7 +51,21 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                     .single();
 
                 if (error) throw error;
-                if (data) setReward(data.value);
+                if (data && data.value) {
+                    setReward(data.value);
+                    if (data.value.discount_code) {
+                        const { data: disc } = await supabase
+                            .from('discounts')
+                            .select('id, code, value, discount_mode')
+                            .eq('code', data.value.discount_code)
+                            .maybeSingle();
+
+                        if (disc) {
+                            setDiscountMode(disc.discount_mode || 'percentage');
+                            setDiscountValue(String(disc.value || '10'));
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching reward:', error);
             } finally {
@@ -61,45 +78,84 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
     const handleSave = useCallback(async () => {
         if (!canEdit) return;
 
+        if (!reward.discount_code.trim()) {
+            showAlert('El código de descuento es obligatorio.');
+            return;
+        }
+
+        const parsedVal = parseFloat(discountValue);
+        if (isNaN(parsedVal) || parsedVal <= 0) {
+            showAlert('El valor del descuento debe ser mayor a 0.');
+            return;
+        }
+
+        if (discountMode === 'percentage' && parsedVal > 100) {
+            showAlert('El porcentaje de descuento no puede ser mayor al 100%.');
+            return;
+        }
+
         setSaving(true);
         try {
-            const { data: discount, error: findError } = await supabase
+            const upperCode = reward.discount_code.toUpperCase().trim();
+            const { data: existingDiscount } = await supabase
                 .from('discounts')
                 .select('id')
-                .eq('code', reward.discount_code)
-                .single();
+                .eq('code', upperCode)
+                .maybeSingle();
 
-            if (findError) {
-                showAlert(`Error: El código "${reward.discount_code}" no existe. Créalo primero en Descuentos.`);
-                return;
+            if (existingDiscount) {
+                const { error: updateError } = await supabase
+                    .from('discounts')
+                    .update({
+                        requires_referred_status: true,
+                        is_single_use: true,
+                        is_active: reward.enabled,
+                        discount_mode: discountMode,
+                        value: parsedVal
+                    })
+                    .eq('id', existingDiscount.id);
+
+                if (updateError) throw updateError;
+            } else {
+                // Creación automática del cupón de bienvenida en Referidos
+                const { error: insertError } = await supabase
+                    .from('discounts')
+                    .insert([{
+                        code: upperCode,
+                        type: 'global',
+                        discount_mode: discountMode,
+                        value: parsedVal,
+                        is_active: reward.enabled,
+                        is_single_use: true,
+                        requires_referred_status: true
+                    }]);
+
+                if (insertError) throw insertError;
             }
 
-            const { error: updateError } = await supabase
-                .from('discounts')
-                .update({
-                    requires_referred_status: true,
-                    is_single_use: true,
-                    is_active: reward.enabled
-                })
-                .eq('id', discount.id);
-
-            if (updateError) throw updateError;
+            const updatedReward = {
+                ...reward,
+                discount_code: upperCode
+            };
 
             const { error: settingsError } = await supabase
                 .from('settings')
-                .update({ value: reward })
+                .update({ value: updatedReward })
                 .eq('key', 'welcome_reward');
 
             if (settingsError) throw settingsError;
 
-            showAlert('Recompensa actualizada con éxito.', 'success');
+            invalidate('discounts:all');
+            broadcastStoreChange('discounts_updated', { action: 'welcome_reward_update' });
+
+            showAlert('Recompensa y cupón de bienvenida actualizados con éxito.', 'success');
             onUpdate();
         } catch (error) {
             showAlert(`Error: ${error.message}`);
         } finally {
             setSaving(false);
         }
-    }, [canEdit, reward, showAlert, onUpdate]);
+    }, [canEdit, reward, discountMode, discountValue, showAlert, onUpdate, invalidate]);
 
     if (loading) return <div className={styles.loadingEditor}>Cargando editor...</div>;
 
@@ -120,7 +176,7 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
             {reward.enabled && (
                 <>
                     <div className={styles.formGroup}>
-                    <small>Usa " &#123;CODE&#125; " donde quieras que aparezca el código.</small>
+                        <small>Usa " &#123;CODE&#125; " donde quieras que aparezca el código.</small>
                         <label htmlFor="message">Mensaje de Bienvenida</label>
                         <textarea
                             id="message"
@@ -131,25 +187,68 @@ const WelcomeRewardEditor = memo(({ showAlert, onUpdate }) => {
                             disabled={!canEdit}
                         />
                     </div>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="discount_code">Código de Descuento</label>
-                        <input
-                            id="discount_code"
-                            type="text"
-                            value={reward.discount_code}
-                            onChange={(e) => setReward(prev => ({ ...prev, discount_code: e.target.value.toUpperCase() }))}
-                            placeholder="BIENVENIDA10"
-                            disabled={!canEdit}
-                        />
-                        <small>Este código debe existir en la sección de Descuentos</small>
+
+                    <div className={styles.rewardInputsGrid}>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="discount_code">Código de Descuento *</label>
+                            <input
+                                id="discount_code"
+                                type="text"
+                                value={reward.discount_code}
+                                onChange={(e) => setReward(prev => ({ ...prev, discount_code: e.target.value.toUpperCase() }))}
+                                placeholder="BIENVENIDA10"
+                                disabled={!canEdit}
+                            />
+                            <small>Si no existe, se creará automáticamente como cupón de referido.</small>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label>Modalidad</label>
+                            <div className={styles.rewardModeToggle}>
+                                <button
+                                    type="button"
+                                    className={`${styles.modeBtn} ${discountMode === 'percentage' ? styles.activeMode : ''}`}
+                                    onClick={() => setDiscountMode('percentage')}
+                                    disabled={!canEdit}
+                                >
+                                    <Percent size={14} /> % Porcentaje
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${styles.modeBtn} ${discountMode === 'fixed' ? styles.activeMode : ''}`}
+                                    onClick={() => setDiscountMode('fixed')}
+                                    disabled={!canEdit}
+                                >
+                                    <DollarSign size={14} /> $ Monto Fijo
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                            <label htmlFor="discount_value">
+                                {discountMode === 'fixed' ? 'Monto ($) *' : 'Porcentaje (%) *'}
+                            </label>
+                            <input
+                                id="discount_value"
+                                type="number"
+                                min="0.01"
+                                step={discountMode === 'fixed' ? '0.5' : '1'}
+                                max={discountMode === 'percentage' ? '100' : undefined}
+                                value={discountValue}
+                                onChange={(e) => setDiscountValue(e.target.value)}
+                                placeholder={discountMode === 'fixed' ? '20.00' : '10'}
+                                disabled={!canEdit}
+                            />
+                        </div>
                     </div>
+
                     {canEdit && (
                         <button
                             onClick={handleSave}
                             className={styles.saveButton}
-                            disabled={saving}
+                            disabled={saving || !reward.discount_code || !discountValue}
                         >
-                            {saving ? 'Guardando...' : 'Guardar Cambios'}
+                            {saving ? 'Guardando...' : 'Guardar y Configurar Cupón'}
                         </button>
                     )}
                 </>

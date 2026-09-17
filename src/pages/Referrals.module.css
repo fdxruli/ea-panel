@@ -460,3 +460,44 @@
 [data-theme="dark"] .levelCard:hover {
     box-shadow: 0 6px 20px rgba(77, 182, 172, 0.2);
 }
+
+/* ===== REWARD EDITOR ENHANCEMENTS ===== */
+.rewardInputsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.rewardModeToggle {
+    display: flex;
+    gap: 8px;
+}
+
+.modeBtn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-speed) ease;
+}
+
+.modeBtn:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.activeMode {
+    background: var(--color-primary) !important;
+    color: #fff !important;
+    border-color: var(--color-primary) !important;
+}
