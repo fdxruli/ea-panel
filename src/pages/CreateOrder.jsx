@@ -254,6 +254,7 @@ export default function CreateOrder() {
             const { data: specialPrices, error: specialPricesError } = await supabase
                 .from('special_prices')
                 .select('product_id, category_id, override_price, target_customer_ids')
+                .eq('is_active', true)
                 .lte('start_date', today)
                 .gte('end_date', today);
 
