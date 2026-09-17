@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, use
 import { supabase } from '../lib/supabaseClient';
 import { useProducts } from './ProductContext';
 import { normalizeCartItems, addCartItem, updateCartQuantity, reconcileCartItems } from '../lib/cartState';
+import { calculateDiscountAmount } from '../lib/discountCalculation';
 
 const CartContext = createContext();
 
@@ -74,21 +75,9 @@ export const CartProvider = ({ children }) => {
         }
     }, [liveProducts, productsLoading, productsError, catalogReady, showToast]);
 
-    // 3. Cálculos de Totales y Descuentos (Sin cambios mayores)
+    // 3. Cálculos de Totales y Descuentos
     const calculateDiscount = useCallback((currentSubtotal, items, discountDetails) => {
-        if (!discountDetails) return 0;
-        let applicableValue = 0;
-        switch (discountDetails.type) {
-            case 'global': applicableValue = currentSubtotal; break;
-            case 'category':
-                applicableValue = items.filter(item => item.category_id === discountDetails.target_id).reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                break;
-            case 'product':
-                applicableValue = items.filter(item => item.id === discountDetails.target_id).reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                break;
-            default: return 0;
-        }
-        return (applicableValue * (discountDetails.value / 100));
+        return calculateDiscountAmount(currentSubtotal, items, discountDetails);
     }, []);
 
     const subtotal = useMemo(() => (
@@ -140,7 +129,7 @@ export const CartProvider = ({ children }) => {
             const discountAmount = calculateDiscount(currentSubtotal, cartItems, discountData);
 
             if (discountAmount > 0) {
-                setDiscount({ code: discountData.code, value: discountData.value, details: discountData });
+                setDiscount({ code: discountData.code, value: discountData.value, discount_mode: discountData.discount_mode || 'percentage', details: discountData });
                 return { success: true, message: '¡Descuento aplicado!' };
             } else {
                 return { success: false, message: 'Este código no aplica para los productos en tu carrito.' };

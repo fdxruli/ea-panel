@@ -364,7 +364,9 @@ export default function Cart({ networkState }) {
                                             <div key={coupon.id} className={styles.couponChip}>
                                                 <div className={styles.couponChipInfo}>
                                                     <strong className={styles.couponCode}>{coupon.code}</strong>
-                                                    <span className={styles.couponDesc}>{coupon.value}% de descuento</span>
+                                                    <span className={styles.couponDesc}>
+                                                        {coupon.discount_mode === 'fixed' ? `$${coupon.value}` : `${coupon.value}%`} de descuento
+                                                    </span>
                                                 </div>
                                                 <button
                                                     type="button"
