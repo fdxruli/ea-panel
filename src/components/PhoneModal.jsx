@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { useCustomer } from '../context/CustomerContext';
 import { useSettings } from '../context/SettingsContext';
@@ -42,7 +42,8 @@ export default function PhoneModal() {
   const [pendingCustomer, setPendingCustomer] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasBlockingError, setHasBlockingError] = useState(false);
-  const [referralWarning, setReferralWarning] = useState(''); // Nuevo: mensaje de advertencia referral
+  const [referralWarning, setReferralWarning] = useState('');
+  const [slowNotice, setSlowNotice] = useState(false);
 
   useEffect(() => {
     if (!isPhoneModalOpen) return;
@@ -57,20 +58,21 @@ export default function PhoneModal() {
     setIsVerifying(false);
     setHasBlockingError(false);
     setReferralWarning('');
+    setSlowNotice(false);
   }, [isPhoneModalOpen]);
 
   const handleLookupResult = useCallback((result) => {
+    if (!result) {
+      setHasBlockingError(true);
+      setError('Error al conectar con el servidor. Inténtalo de nuevo.');
+      return;
+    }
+
     if (result.status === 'found') {
       // Cliente YA EXISTE EN LA BD
 
-      // Si ya tiene sesión activa, no volver a verificar
-      if (customer?.phone === result.customer?.phone) {
-        return;
-      }
-
-      // Si tiene términos aceptados, iniciar sesión
+      // Si tiene términos aceptados, iniciar sesión y cerrar modal
       if (result.customer.terms_accepted) {
-        // Ya inició sesión - no puede usar referral code
         if (referralCode && !localStorage.getItem('REFERRAL_SHOWN_WARNING')) {
           setReferralWarning(
             'Como ya estás registrado, no puedes usar códigos de referidos. ' +
@@ -80,10 +82,11 @@ export default function PhoneModal() {
           localStorage.setItem('REFERRAL_SHOWN_WARNING', 'true');
         }
         executeLogin(result.customer);
+        setPhoneModalOpen(false);
         return;
       }
 
-      // Cliente existe pero NO ha iniciado sesión aún
+      // Cliente existe pero NO ha aceptado términos aún
       if (referralCode && !localStorage.getItem('REFERRAL_SHOWN_WARNING')) {
         setReferralWarning(
           '¡Invitación activada! Completa tu registro aceptando los términos para obtener tus beneficios.'
@@ -107,7 +110,17 @@ export default function PhoneModal() {
 
     setHasBlockingError(true);
     setError(getVerificationErrorMessage(result.code));
-  }, [referralCode, executeLogin, customer?.phone]);
+  }, [referralCode, executeLogin, setPhoneModalOpen]);
+
+  const handleLookupResultRef = useRef(handleLookupResult);
+  useEffect(() => {
+    handleLookupResultRef.current = handleLookupResult;
+  }, [handleLookupResult]);
+
+  const verifyCustomerRef = useRef(verifyCustomer);
+  useEffect(() => {
+    verifyCustomerRef.current = verifyCustomer;
+  }, [verifyCustomer]);
 
   useEffect(() => {
     setIsNewUser(false);
@@ -117,35 +130,53 @@ export default function PhoneModal() {
     setHasBlockingError(false);
     setAgreed(false);
     setReferralWarning('');
+    setSlowNotice(false);
 
     if (inputValue.length !== 10) {
       setIsVerifying(false);
       return;
     }
 
-    // Skip verification if this phone is already the logged-in customer
     const fullPhone = `${countryCode}${inputValue}`;
-    if (customer?.phone === fullPhone) {
+    if (customer?.phone === fullPhone && customer?.terms_accepted) {
       setIsVerifying(false);
+      setPhoneModalOpen(false);
       return;
     }
 
     let cancelled = false;
     setIsVerifying(true);
 
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setSlowNotice(true);
+    }, 2500);
+
     const debounceCheck = setTimeout(async () => {
-      const result = await verifyCustomer(fullPhone);
-      if (!cancelled) {
-        setIsVerifying(false);
-        handleLookupResult(result);
+      try {
+        const result = await verifyCustomerRef.current(fullPhone);
+        if (!cancelled) {
+          handleLookupResultRef.current(result);
+        }
+      } catch (err) {
+        console.error('[PhoneModal] Error inesperado verificando número:', err);
+        if (!cancelled) {
+          setHasBlockingError(true);
+          setError('Error al verificar tu número. Por favor, intenta de nuevo.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsVerifying(false);
+          setSlowNotice(false);
+        }
       }
     }, 400);
 
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
       clearTimeout(debounceCheck);
     };
-  }, [inputValue, countryCode, verifyCustomer, handleLookupResult, customer?.phone]);
+  }, [inputValue, countryCode, customer?.phone, customer?.terms_accepted, setPhoneModalOpen]);
 
   const handleSubmit = async () => {
     setError('');
@@ -334,6 +365,11 @@ export default function PhoneModal() {
         )}
 
         <div className={styles.feedbackArea}>
+          {isVerifying && slowNotice && (
+            <p className={styles.promptText} style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Conexión lenta, verificando datos con el servidor...
+            </p>
+          )}
           {error && <p className={styles.errorText}>{error}</p>}
         </div>
 

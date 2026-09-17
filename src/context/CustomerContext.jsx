@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 
 const CustomerContext = createContext();
 
@@ -39,40 +40,74 @@ const generateUniqueReferralCode = async (name, phone) => {
 };
 
 export const CustomerProvider = ({ children }) => {
-  const [phone, setPhone] = useState('');
-  const [customer, setCustomer] = useState(null);
-  const [activeTermsId, setActiveTermsId] = useState(null);
+  const [phone, setPhone] = useState(() => {
+    try {
+      return localStorage.getItem(CUSTOMER_PHONE_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+  const [customer, setCustomer] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CUSTOMER_DATA_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [activeTermsId, setActiveTermsId] = useState(() => {
+    try {
+      return localStorage.getItem('active_terms_id') || null;
+    } catch {
+      return null;
+    }
+  });
   const [isPhoneModalOpen, setPhoneModalOpen] = useState(false);
   const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [checkoutMode, setCheckoutMode] = useState('checkout');
   const [onSuccessCallback, setOnSuccessCallback] = useState(null);
-  const [isCustomerLoading, setIsCustomerLoading] = useState(true);
+  const [isCustomerLoading, setIsCustomerLoading] = useState(() => {
+    try {
+      const hasPhone = !!localStorage.getItem(CUSTOMER_PHONE_KEY);
+      const hasData = !!localStorage.getItem(CUSTOMER_DATA_KEY);
+      return !(hasPhone && hasData);
+    } catch {
+      return true;
+    }
+  });
   const isMountedRef = useRef(false);
   const sessionRestoreIdRef = useRef(0);
+  const activeTermsIdRef = useRef(activeTermsId);
   const fetchActiveTermsIdRef = useRef(null);
   const checkAndLoginRef = useRef(null);
+
+  useEffect(() => {
+    activeTermsIdRef.current = activeTermsId;
+  }, [activeTermsId]);
 
   const fetchActiveTermsId = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('terms_and_conditions').select('id').order('version', { ascending: false }).limit(1).maybeSingle();
       if (error || !data?.id) {
         console.error('Error buscando terminos vigentes:', error || 'No hay una version vigente de terminos publicada.');
-        return null;
+        return activeTermsIdRef.current || null;
       }
+      activeTermsIdRef.current = data.id;
       setActiveTermsId(data.id);
+      try { localStorage.setItem('active_terms_id', data.id); } catch {}
       return data.id;
     } catch (error) {
       console.error('Error buscando terminos vigentes:', error);
-      return null;
+      return activeTermsIdRef.current || null;
     }
   }, []);
 
   const resolveActiveTermsId = useCallback(async (currentTermsId = null) => {
     if (currentTermsId) return { ok: true, termsId: currentTermsId };
-    if (activeTermsId) return { ok: true, termsId: activeTermsId };
+    if (activeTermsIdRef.current) return { ok: true, termsId: activeTermsIdRef.current };
     const fetchedTermsId = await fetchActiveTermsId();
     return fetchedTermsId ? { ok: true, termsId: fetchedTermsId } : { ok: false, code: 'terms_unavailable' };
-  }, [activeTermsId, fetchActiveTermsId]);
+  }, [fetchActiveTermsId]);
 
   const verifyCustomer = useCallback(async (phoneToVerify, currentTermsId = null) => {
     if (!phoneToVerify || phoneToVerify.length < 10) return { status: 'error', code: 'invalid_phone' };
@@ -169,7 +204,11 @@ export const CustomerProvider = ({ children }) => {
       clearCachedCustomerData();
       return result;
     }
-    if (result.status === 'not_found') clearPhone();
+    if (result.status === 'not_found') {
+      clearPhone();
+      return result;
+    }
+    console.warn('[CustomerContext] Error al validar sesión en servidor (posible timeout/red lenta):', result.code);
     return result;
   }, [clearCachedCustomerData, clearPhone, executeLogin, verifyCustomer]);
 
@@ -177,6 +216,18 @@ export const CustomerProvider = ({ children }) => {
     const restoreId = sessionRestoreIdRef.current + 1;
     sessionRestoreIdRef.current = restoreId;
     const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
+    const savedData = localStorage.getItem(CUSTOMER_DATA_KEY);
+
+    if (savedPhone && savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed?.id) {
+          setCustomer(parsed);
+          setPhone(savedPhone);
+        }
+      } catch {}
+    }
+
     await fetchActiveTermsIdRef.current?.();
     const canContinueRestore = isMountedRef.current && sessionRestoreIdRef.current === restoreId && localStorage.getItem(CUSTOMER_PHONE_KEY) === savedPhone;
     if (savedPhone && canContinueRestore) {
@@ -191,9 +242,20 @@ export const CustomerProvider = ({ children }) => {
   }, [checkAndLogin, fetchActiveTermsId]);
 
   const reconcileCanonicalCustomer = useCallback(async () => {
-    const currentPhone = phone;
+    if (!isMountedRef.current) return;
+    const currentPhone = phone || localStorage.getItem(CUSTOMER_PHONE_KEY);
     const currentCustomer = customer;
-    if (!currentPhone || !currentCustomer?.id || !isMountedRef.current) return;
+
+    if (!currentPhone) return;
+
+    if (!currentCustomer?.id) {
+      const savedPhone = localStorage.getItem(CUSTOMER_PHONE_KEY);
+      if (savedPhone) {
+        console.info('[CustomerContext] Intentando auto-recuperar sesión al volver la conexión/foco...');
+        await checkAndLoginRef.current?.(savedPhone, { requirePersistedSession: true });
+      }
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -235,9 +297,11 @@ export const CustomerProvider = ({ children }) => {
 
     document.addEventListener('visibilitychange', reconcileOnFocus);
     window.addEventListener('online', reconcileOnFocus);
+    window.addEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
     return () => {
       document.removeEventListener('visibilitychange', reconcileOnFocus);
       window.removeEventListener('online', reconcileOnFocus);
+      window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
     };
   }, [reconcileCanonicalCustomer]);
 

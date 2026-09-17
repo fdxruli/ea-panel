@@ -13,6 +13,9 @@ import ConfirmModal from '../components/ConfirmModal';
 import AuthPrompt from '../components/AuthPrompt';
 import ImageWithFallback from '../components/ImageWithFallback';
 import SEO from '../components/SEO';
+import { getCache, setCache } from '../utils/cache';
+import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
+import { broadcastStoreChange, subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 import styles from './MyStuff.module.css';
 
 const QRCodeModal = lazy(() => import('../components/QRCodeModal.jsx'));
@@ -111,8 +114,18 @@ const StarRating = ({ rating = 5, onChange = null, size = 18 }) => {
 // ============================================================================
 const RewardsAndReferralTab = ({ customer, customerId }) => {
     const { showAlert } = useAlert();
-    const [progress, setProgress] = useState(null);
-    const [loadingProgress, setLoadingProgress] = useState(true);
+    const rewardsCacheKey = customerId ? `${CACHE_KEYS.REWARDS_PROGRESS}-${customerId}` : null;
+
+    const [progress, setProgress] = useState(() => {
+        if (!rewardsCacheKey) return null;
+        const cached = getCache(rewardsCacheKey, CACHE_TTL.REWARDS_PROGRESS);
+        return cached?.data || null;
+    });
+    const [loadingProgress, setLoadingProgress] = useState(() => {
+        if (!rewardsCacheKey) return false;
+        const cached = getCache(rewardsCacheKey, CACHE_TTL.REWARDS_PROGRESS);
+        return !cached?.data;
+    });
     const [isQrModalOpen, setQrModalOpen] = useState(false);
     const [isAccordionOpen, setIsAccordionOpen] = useState(true);
 
@@ -153,31 +166,42 @@ const RewardsAndReferralTab = ({ customer, customerId }) => {
         showAlert(`¡Código "${code}" copiado! Úsalo en el checkout.`);
     };
 
-    const fetchProgress = useCallback(async () => {
+    const fetchProgress = useCallback(async (options = {}) => {
         if (!customerId) return;
+        const { background = false } = options;
+        if (!background && !progress) {
+            setLoadingProgress(true);
+        }
         try {
             const { data, error } = await supabase.rpc('get_customer_rewards_progress', { p_customer_id: customerId });
             if (!error && data) {
                 setProgress(data);
+                if (rewardsCacheKey) {
+                    setCache(rewardsCacheKey, data, CACHE_TTL.REWARDS_PROGRESS);
+                }
             }
         } catch (err) {
             console.error('Error fetching rewards progress:', err);
         } finally {
             setLoadingProgress(false);
         }
-    }, [customerId]);
+    }, [customerId, progress, rewardsCacheKey]);
 
     useEffect(() => {
-        fetchProgress();
-    }, [fetchProgress]);
+        const cached = rewardsCacheKey ? getCache(rewardsCacheKey, CACHE_TTL.REWARDS_PROGRESS) : null;
+        const isStale = !cached || cached.isStale;
+        if (isStale || !cached?.data) {
+            fetchProgress({ background: !!cached?.data });
+        }
+    }, [fetchProgress, rewardsCacheKey]);
 
     useEffect(() => {
         if (!customerId) return;
         const handleRevalidate = () => {
-            if (document.visibilityState === 'visible') fetchProgress();
+            if (document.visibilityState === 'visible') fetchProgress({ background: true });
         };
         const handleOrderStatus = (e) => {
-            if (e?.detail?.status === 'completado') fetchProgress();
+            if (e?.detail?.status === 'completado') fetchProgress({ background: true });
         };
 
         window.addEventListener('visibilitychange', handleRevalidate);
@@ -195,13 +219,24 @@ const RewardsAndReferralTab = ({ customer, customerId }) => {
         if (!customerId) return;
         const channel = supabase
             .channel(`customer-rewards-${customerId}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, fetchProgress)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'referral_levels' }, fetchProgress)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, fetchProgress)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers', filter: `id=eq.${customerId}` }, () => fetchProgress({ background: true }))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'referral_levels' }, () => fetchProgress({ background: true }))
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, () => fetchProgress({ background: true }))
             .subscribe();
+
+        const unsubRewardsBroadcast = subscribeToStoreBroadcast('rewards_updated', (data) => {
+            if (!data?.customerId || data.customerId === customerId) {
+                fetchProgress({ background: true });
+            }
+        });
+        const unsubOrderBroadcast = subscribeToStoreBroadcast('order_changed', () => {
+            fetchProgress({ background: true });
+        });
 
         return () => {
             supabase.removeChannel(channel);
+            if (unsubRewardsBroadcast) unsubRewardsBroadcast();
+            if (unsubOrderBroadcast) unsubOrderBroadcast();
         };
     }, [customerId, fetchProgress]);
 
@@ -215,7 +250,8 @@ const RewardsAndReferralTab = ({ customer, customerId }) => {
                 showAlert(error.message || 'Hubo un error al generar tu código.');
             } else {
                 showAlert(`¡Código personal "${newCode}" generado! Cópialo y úsalo en tu carrito.`);
-                fetchProgress();
+                broadcastStoreChange('rewards_updated', { customerId });
+                fetchProgress({ background: false });
             }
         } catch (err) {
             showAlert(err.message || 'Error inesperado al reclamar recompensa.');
@@ -654,6 +690,7 @@ export default function MyStuff() {
             .delete()
             .match({ customer_id: customer.id, product_id: favoriteToRemove.products.id });
         showToast(`${favoriteToRemove.products.name} eliminado de tus favoritos.`);
+        broadcastStoreChange('favorites_updated', { customerId: customer.id });
         setFavoriteToRemove(null);
         refetchExtras();
     };
@@ -672,6 +709,7 @@ export default function MyStuff() {
             showToast('Error al actualizar la reseña.');
         } else {
             showToast('Reseña actualizada con éxito.');
+            broadcastStoreChange('reviews_updated');
             setEditingReview(null);
             refetchExtras();
         }
@@ -681,6 +719,7 @@ export default function MyStuff() {
         if (!reviewToDelete) return;
         await supabase.from('product_reviews').delete().eq('id', reviewToDelete.id);
         showToast('Reseña eliminada.');
+        broadcastStoreChange('reviews_updated');
         setReviewToDelete(null);
         refetchExtras();
     };

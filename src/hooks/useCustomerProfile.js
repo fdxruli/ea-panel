@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from '../context/CustomerContext';
+import { broadcastStoreChange } from '../lib/broadcastRealtime';
 
 export function useCustomerProfile() {
     const { customer: canonicalCustomer, isAuthenticated, isLinked } = useCustomer();
@@ -68,6 +69,10 @@ export function useCustomerProfile() {
                 setInitialName(nextName);
                 setBirthdate(nextBirthdate);
                 setInitialBirthdate(nextBirthdate);
+
+                if (canonicalCustomer?.id) {
+                    broadcastStoreChange('customer_updated', { customerId: canonicalCustomer.id });
+                }
             }
             return { ok: true };
         } catch (err) {
