@@ -225,10 +225,11 @@ export const ProductProvider = ({ children }) => {
         }
 
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
             let query = supabase
                 .from('special_prices')
                 .select('*')
+                .eq('is_active', true)
                 .lte('start_date', today)
                 .gte('end_date', today);
 

@@ -1,26 +1,264 @@
 .form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
   align-items: flex-end;
+  background: var(--bg-secondary);
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
 }
 
 .formGroup label {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
-.submitButton {
+.formGroup input[type="text"],
+.formGroup input[type="number"],
+.formGroup input[type="date"],
+.formGroup select {
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.formGroup input:focus,
+.formGroup select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(77, 182, 172, 0.15);
+}
+
+/* Previsualización financiera del producto */
+.pricePreviewCard {
   grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.previewItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.previewLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.previewValue {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.savingsBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background-color: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.priceWarning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  background-color: rgba(231, 76, 60, 0.12);
+  color: var(--color-error);
+  font-size: 0.85rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+.priceNotice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  background-color: rgba(241, 196, 15, 0.15);
+  color: #d68910;
+  font-size: 0.85rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+/* Búsqueda de clientes y dropdown */
+.customerSearchWrapper {
+  position: relative;
+}
+
+.customerSearchResults {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow-color);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 50;
+  margin: 4px 0 0 0;
+  padding: 4px 0;
+  list-style: none;
+}
+
+.customerSearchItem {
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.customerSearchItem:hover {
+  background-color: var(--bg-primary);
+}
+
+.customerSearchPhone {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.noResults {
+  margin-top: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Tags de clientes seleccionados */
+.selectedCustomersSection {
+  margin-top: 0.5rem;
+}
+
+.selectedCustomersList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.selectedCustomerTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.removeCustomerBtn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2px;
+  transition: color 0.15s ease;
+}
+
+.removeCustomerBtn:hover {
+  color: var(--color-error);
+}
+
+/* Toggle de estado Activo/Pausado en formulario */
+.statusToggleGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+}
+
+.statusToggleGroup input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.statusToggleGroup label {
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Botones de acción */
+.formActions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
   margin-top: 1rem;
-  padding: 0.8rem 1.5rem;
+}
+
+.cancelButton {
+  padding: 0.75rem 1.4rem;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelButton:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.submitButton {
+  padding: 0.75rem 1.6rem;
   font-weight: 600;
   font-size: 0.9rem;
   border-radius: 8px;
@@ -29,15 +267,20 @@
   transition: all 0.2s ease;
   background-color: var(--color-primary);
   color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
+
 .submitButton:hover {
   background-color: var(--color-primary-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px var(--shadow-color);
 }
+
 .submitButton:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
