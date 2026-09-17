@@ -12,6 +12,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import CancellationRequestModal from '../components/CancellationRequestModal';
 import OrderStatusStepper from '../components/OrderStatusStepper';
 import { getWhatsAppUrl } from '../services/whatsappService';
+import { cancelMyOrder } from '../services/orderService';
 import styles from './OrderDetailPage.module.css';
 
 export default function OrderDetailPage() {
@@ -160,12 +161,9 @@ export default function OrderDetailPage() {
 
     const confirmDirectCancel = async () => {
         if (!orderToCancel) return;
-        const { error: updateError } = await supabase
-            .from('orders')
-            .update({ status: 'cancelado', cancellation_reason: 'Cancelado por el cliente.' })
-            .eq('id', orderToCancel.id);
-        if (updateError) {
-            showToast('Error al cancelar el pedido.');
+        const { ok, error: updateError } = await cancelMyOrder(supabase, orderToCancel.id);
+        if (!ok || updateError) {
+            showToast(updateError?.message || 'Error al cancelar el pedido.');
         } else {
             showToast('Pedido cancelado con éxito.');
             if (phone) {

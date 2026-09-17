@@ -142,9 +142,13 @@ export const CustomerProvider = ({ children }) => {
 
   const executeLogin = useCallback(async (customerData) => {
     if (!customerData.referral_code) {
-      const newReferralCode = await generateUniqueReferralCode(customerData.name, customerData.phone);
-      const { data: updated, error } = await supabase.from('customers').update({ referral_code: newReferralCode }).eq('id', customerData.id).select().single();
-      if (!error && updated) customerData = { ...customerData, referral_code: newReferralCode };
+      try {
+        const newReferralCode = await generateUniqueReferralCode(customerData.name, customerData.phone);
+        const { data: updated, error } = await supabase.from('customers').update({ referral_code: newReferralCode }).eq('id', customerData.id).select().single();
+        if (!error && updated) customerData = { ...customerData, referral_code: newReferralCode };
+      } catch (err) {
+        console.warn('[CustomerContext] Actualización directa de referral_code omitida:', err);
+      }
     }
     const canonical = normalizeCustomer(customerData);
     setCustomer(canonical);

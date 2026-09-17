@@ -74,6 +74,25 @@ export const deactivateSingleUseDiscount = async (supabase, params) => {
 };
 
 /**
+ * Cancels an order owned by the authenticated customer via secure RPC.
+ *
+ * @param {object} supabase - Supabase client instance
+ * @param {string} orderId - Order UUID
+ * @returns {{ ok: boolean, error: Error|null }}
+ */
+export const cancelMyOrder = async (supabase, orderId) => {
+  const { data, error } = await supabase.rpc('cancel_my_order', {
+    p_order_id: orderId,
+  });
+
+  if (error) {
+    return { ok: false, error };
+  }
+
+  return { ok: true, error: null };
+};
+
+/**
  * Network error detection utility (extracted from the original component).
  *
  * @param {Error} error

@@ -2,7 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { createClient } from '@supabase/supabase-js';
 
-const sb = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_SERVICE_ROLE_KEY);
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const sb = createClient(process.env.VITE_SUPABASE_URL, serviceRoleKey);
 const sql = `CREATE OR REPLACE FUNCTION public.create_order_with_stock_check(
     p_customer_id uuid,
     p_total_amount numeric,
@@ -22,18 +23,32 @@ DECLARE
     v_order_status public.order_status;
     cart_item public.cart_item;
     req_ingredient RECORD;
+    v_item_price numeric;
+    v_item_cost numeric;
+    c_guest_customer_id CONSTANT uuid := '68491ec0-3198-4aca-89e4-8034ebe1e35f'::uuid;
 BEGIN
+    -- 1. VALIDACIÓN DE IDENTIDAD Y SEGURIDAD DE CLIENTE
     IF (SELECT auth.uid()) IS NOT NULL AND NOT public.is_admin() THEN
         v_customer_id := public.require_my_customer_id();
         IF p_customer_id IS DISTINCT FROM v_customer_id THEN
             RAISE EXCEPTION 'Customer ownership mismatch';
         END IF;
+    ELSIF (SELECT auth.uid()) IS NULL AND NOT public.is_admin() THEN
+        IF p_customer_id IS DISTINCT FROM c_guest_customer_id THEN
+            RAISE EXCEPTION 'Invitados solo pueden ordenar bajo el perfil de invitado';
+        END IF;
+        v_customer_id := c_guest_customer_id;
     END IF;
 
     IF array_length(p_cart_items, 1) IS NULL THEN
         RAISE EXCEPTION 'El carrito está vacío';
     END IF;
 
+    IF p_total_amount < 0 THEN
+        RAISE EXCEPTION 'El monto total no puede ser negativo';
+    END IF;
+
+    -- 2. VERIFICACIÓN Y BLOQUEO DE STOCK CONSOLIDADO
     FOR req_ingredient IN
         WITH cart_expanded AS (
             SELECT 
@@ -75,6 +90,7 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- 3. INSERTAR EL PEDIDO
     INSERT INTO public.orders (customer_id, total_amount, status, scheduled_for, notes)
     VALUES (v_customer_id, p_total_amount, 'pendiente', p_scheduled_for, p_notes)
     RETURNING public.orders.id, public.orders.status INTO v_new_order_id, v_order_status;
@@ -83,12 +99,48 @@ BEGIN
     FROM public.orders 
     WHERE public.orders.id = v_new_order_id;
 
+    -- 4. INSERTAR LOS ITEMS DEL PEDIDO (VALIDANDO PRECIOS REALES DE LA BASE DE DATOS)
     FOR cart_item IN SELECT * FROM unnest(p_cart_items)
     LOOP
+        IF cart_item.quantity <= 0 THEN
+            RAISE EXCEPTION 'La cantidad debe ser mayor a 0';
+        END IF;
+
+        IF public.is_admin() THEN
+            v_item_price := cart_item.price;
+            v_item_cost := COALESCE(cart_item.cost, 0);
+        ELSE
+            SELECT COALESCE(sp.override_price, prod.price), COALESCE(prod.cost, 0)
+            INTO v_item_price, v_item_cost
+            FROM public.products prod
+            LEFT JOIN LATERAL (
+                SELECT override_price
+                FROM public.special_prices sp
+                WHERE sp.is_active = true
+                  AND (sp.product_id = prod.id OR sp.category_id = prod.category_id)
+                  AND CURRENT_DATE >= sp.start_date
+                  AND (sp.end_date IS NULL OR CURRENT_DATE <= sp.end_date)
+                  AND (
+                      sp.target_customer_ids IS NULL
+                      OR cardinality(sp.target_customer_ids) = 0
+                      OR v_customer_id = ANY(sp.target_customer_ids)
+                  )
+                ORDER BY sp.product_id NULLS LAST, sp.created_at DESC
+                LIMIT 1
+            ) sp ON true
+            WHERE prod.id = cart_item.product_id
+              AND (prod.is_active = true OR public.is_admin());
+
+            IF v_item_price IS NULL THEN
+                RAISE EXCEPTION 'El producto % no existe o no está disponible', cart_item.product_id;
+            END IF;
+        END IF;
+
         INSERT INTO public.order_items (order_id, product_id, quantity, price, cost)
-        VALUES (v_new_order_id, cart_item.product_id, cart_item.quantity, cart_item.price, cart_item.cost);
+        VALUES (v_new_order_id, cart_item.product_id, cart_item.quantity, v_item_price, v_item_cost);
     END LOOP;
 
+    -- 5. DESCONTAR EL STOCK EN BLOQUE POR INGREDIENTE CONSOLIDADO
     UPDATE public.ingredients ing
     SET current_stock = ing.current_stock - agg.total_deduction
     FROM (
