@@ -66,15 +66,17 @@ export const UserDataProvider = ({ children }) => {
         localStorage.removeItem(INFO_CACHE_KEY);
         localStorage.removeItem(ORDERS_CACHE_KEY);
     }, [INFO_CACHE_KEY, ORDERS_CACHE_KEY]);
-
     const fetchCustomerAndAddresses = useCallback(async (phoneNumber, expectedCustomerId) => {
-        const { data: customerData, error: customerError } = await supabase
-            .from('customers')
-            .select('id, name, phone, created_at, referral_code, referrer_id, referral_count, has_made_first_purchase, birthdate')
-            .eq('phone', phoneNumber)
-            .maybeSingle();
+        let customerData = null;
+        try {
+            const { data: verifyData, error: verifyError } = await supabase.rpc('verify_customer_by_phone', { p_phone: phoneNumber });
+            if (!verifyError && verifyData?.found && verifyData?.customer) {
+                customerData = verifyData.customer;
+            }
+        } catch (err) {
+            console.warn('[UserDataContext] Error verificando cliente por RPC:', err);
+        }
 
-        if (customerError) throw customerError;
         if (!customerData) return { customer: null, addresses: [] };
         if (expectedCustomerId && customerData.id !== expectedCustomerId) {
             const identityError = new Error('Canonical customer changed while loading user data.');

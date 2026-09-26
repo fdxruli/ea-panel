@@ -15,29 +15,6 @@ const normalizeCustomer = (customer) => {
   return customer;
 };
 
-const generateUniqueReferralCode = async (name, phone) => {
-  const namePart = name.substring(0, 2).toUpperCase();
-  const phonePart = phone.slice(-2);
-  const baseCode = `EA-${namePart}-${phonePart}`;
-
-  let finalCode = baseCode;
-  let counter = 1;
-  let isUnique = false;
-
-  while (!isUnique) {
-    const { data, error } = await supabase.from('customers').select('id').eq('referral_code', finalCode).maybeSingle();
-    if (error) {
-      console.error('Error checking for unique code:', error);
-      return `EA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    }
-    if (!data) isUnique = true;
-    else {
-      counter++;
-      finalCode = `${baseCode}-${counter}`;
-    }
-  }
-  return finalCode;
-};
 
 export const CustomerProvider = ({ children }) => {
   const [phone, setPhone] = useState(() => {
@@ -109,28 +86,24 @@ export const CustomerProvider = ({ children }) => {
     return fetchedTermsId ? { ok: true, termsId: fetchedTermsId } : { ok: false, code: 'terms_unavailable' };
   }, [fetchActiveTermsId]);
 
-  const verifyCustomer = useCallback(async (phoneToVerify, currentTermsId = null) => {
+  const verifyCustomer = useCallback(async (phoneToVerify) => {
     if (!phoneToVerify || phoneToVerify.length < 10) return { status: 'error', code: 'invalid_phone' };
-    const termsResolution = await resolveActiveTermsId(currentTermsId);
-    if (!termsResolution.ok) return { status: 'error', code: termsResolution.code };
 
     try {
-      const { data, error } = await supabase.from('customers').select(`*, customer_terms_acceptances ( terms_version_id )`).eq('phone', phoneToVerify).maybeSingle();
+      const { data, error } = await supabase.rpc('verify_customer_by_phone', { p_phone: phoneToVerify });
       if (error) {
         console.error('Error de red o DB en verifyCustomer:', error);
         return { status: 'error', code: 'customer_lookup_failed' };
       }
-      if (!data) return { status: 'not_found' };
+      if (!data || !data.found || !data.customer) return { status: 'not_found' };
 
-      const hasAcceptedCurrent = data.customer_terms_acceptances?.some(acceptance => acceptance.terms_version_id === termsResolution.termsId);
-      const customerData = normalizeCustomer({ ...data, terms_accepted: !!hasAcceptedCurrent });
-      delete customerData.customer_terms_acceptances;
+      const customerData = normalizeCustomer(data.customer);
       return { status: 'found', customer: customerData };
     } catch (error) {
       console.error('Error inesperado verificando cliente:', error);
       return { status: 'error', code: 'unexpected_customer_lookup_error' };
     }
-  }, [resolveActiveTermsId]);
+  }, []);
 
   const persistCanonicalCustomer = useCallback((customerData) => {
     const canonical = normalizeCustomer(customerData);
@@ -141,11 +114,6 @@ export const CustomerProvider = ({ children }) => {
   }, []);
 
   const executeLogin = useCallback(async (customerData) => {
-    if (!customerData.referral_code) {
-      const newReferralCode = await generateUniqueReferralCode(customerData.name, customerData.phone);
-      const { data: updated, error } = await supabase.from('customers').update({ referral_code: newReferralCode }).eq('id', customerData.id).select().single();
-      if (!error && updated) customerData = { ...customerData, referral_code: newReferralCode };
-    }
     const canonical = normalizeCustomer(customerData);
     setCustomer(canonical);
     setPhone(canonical.phone);
@@ -258,17 +226,13 @@ export const CustomerProvider = ({ children }) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('phone', currentPhone)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('verify_customer_by_phone', { p_phone: currentPhone });
 
-      if (error || !data || !isMountedRef.current) return;
-      if (data.id === currentCustomer.id) return;
+      if (error || !data || !data.found || !data.customer || !isMountedRef.current) return;
+      if (data.customer.id === currentCustomer.id && data.customer.name === currentCustomer.name) return;
 
       const canonical = normalizeCustomer({
-        ...data,
+        ...data.customer,
         terms_accepted: currentCustomer.terms_accepted,
       });
 
@@ -307,37 +271,39 @@ export const CustomerProvider = ({ children }) => {
 
   const registerNewCustomer = useCallback(async (customerPhone, name, inviterCode = null) => {
     const codeToUse = inviterCode || (typeof window !== 'undefined' ? localStorage.getItem('REFERRAL_CODE') : null);
-    const newClientReferralCode = await generateUniqueReferralCode(name, customerPhone);
-    let referrerId = null;
-    if (codeToUse) {
-      const { data: referrerData } = await supabase.from('customers').select('id').eq('referral_code', codeToUse.trim().toUpperCase()).maybeSingle();
-      if (referrerData) referrerId = referrerData.id;
-    }
-    const { data: newCustomer, error } = await supabase.from('customers').insert({ name, phone: customerPhone, referral_code: newClientReferralCode, referrer_id: referrerId, referral_count: 0, has_made_first_purchase: false }).select().single();
-    if (error) {
-      console.error('Error registrando nuevo cliente:', error);
+    try {
+      const { data, error } = await supabase.rpc('register_customer_by_phone', {
+        p_phone: customerPhone,
+        p_name: name,
+        p_referrer_code: codeToUse || null,
+      });
+      if (error || !data || !data.ok) {
+        console.error('Error registrando nuevo cliente:', error || data?.error);
+        return null;
+      }
+      return data.customer;
+    } catch (err) {
+      console.error('Error inesperado registrando cliente:', err);
       return null;
     }
-    return newCustomer;
   }, []);
 
   const acceptTerms = useCallback(async (customerId) => {
     if (!customerId) return { ok: false, code: 'invalid_customer_id' };
-    const termsResolution = await resolveActiveTermsId();
-    if (!termsResolution.ok) return { ok: false, code: termsResolution.code };
     try {
-      const { error } = await supabase.from('customer_terms_acceptances').insert({ customer_id: customerId, terms_version_id: termsResolution.termsId });
-      if (error) {
-        if (error.code === '23505') return { ok: true, code: 'already_accepted', termsId: termsResolution.termsId };
-        console.error('Error aceptando terminos relacionales:', error);
-        return { ok: false, code: 'acceptance_failed' };
+      const { data, error } = await supabase.rpc('accept_customer_terms', {
+        p_customer_id: customerId,
+      });
+      if (error || !data || !data.ok) {
+        console.error('Error aceptando terminos relacionales:', error || data);
+        return { ok: false, code: data?.code || 'acceptance_failed' };
       }
-      return { ok: true, code: 'accepted', termsId: termsResolution.termsId };
+      return { ok: true, code: data.code || 'accepted', termsId: data.terms_id };
     } catch (error) {
       console.error('Error inesperado aceptando terminos:', error);
       return { ok: false, code: 'unexpected_acceptance_error' };
     }
-  }, [resolveActiveTermsId]);
+  }, []);
 
   const savePhoneAndContinue = useCallback(async (phoneToSave, name = null) => {
     const loginResult = await checkAndLogin(phoneToSave);
