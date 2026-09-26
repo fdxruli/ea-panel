@@ -110,7 +110,7 @@ export const CartProvider = ({ children }) => {
                 return { success: false, message: 'Este código de recompensa es personal y no te pertenece.' };
             }
             if (discountData.requires_referred_status) {
-                const { data: customerData } = await supabase.from('customers').select('referrer_id, has_made_first_purchase').eq('id', customerId).single();
+                const { data: customerData } = await supabase.rpc('get_customer_referral_status', { p_customer_id: customerId });
                 if (!customerData?.referrer_id) {
                     return { success: false, message: 'Este código es exclusivo para clientes invitados.' };
                 }
