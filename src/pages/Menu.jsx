@@ -504,78 +504,48 @@ export default function Menu() {
 
         <div className={styles.filters}>
           <div className={styles.filterHeader}>
-            <div>
+            <div className={styles.filterTitleGroup}>
               <p className={styles.filterEyebrow}>Categorias</p>
               <h2>{selectedCategoryLabel}</h2>
             </div>
 
-            <div className={styles.layoutToggle}>
-              <button
-                type="button"
-                onClick={toggleLayout}
-                title={layout === 'list' ? 'Cambiar a vista de cuadrícula' : 'Cambiar a vista de lista'}
-                aria-label={layout === 'list' ? 'Cambiar a vista de cuadrícula' : 'Cambiar a vista de lista'}
-              >
-                {layout === 'list' ? <GridIcon /> : <ListIcon />}
-              </button>
-            </div>
-          </div>
+            <div className={styles.filterControls}>
+              <div className={styles.searchBar}>
+                <SearchIcon />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Buscar por nombre o descripción"
+                  aria-label="Buscar productos del menú"
+                  enterKeyHint="search"
+                  autoComplete="off"
+                  className={styles.searchInput}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    aria-label="Limpiar búsqueda"
+                    title="Limpiar búsqueda"
+                    className={styles.searchClearButton}
+                  >
+                    <CloseIcon />
+                  </button>
+                )}
+              </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              width: '100%',
-              marginBottom: '0.85rem',
-              padding: '0.7rem 0.85rem',
-              border: '1px solid var(--border-color)',
-              borderRadius: '999px',
-              background: 'var(--bg-secondary)',
-              boxSizing: 'border-box',
-            }}
-          >
-            <SearchIcon />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Buscar por nombre o descripción"
-              aria-label="Buscar productos del menú"
-              enterKeyHint="search"
-              autoComplete="off"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                border: 0,
-                outline: 'none',
-                background: 'transparent',
-                color: 'var(--text-primary)',
-                fontSize: '0.95rem',
-              }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                aria-label="Limpiar búsqueda"
-                title="Limpiar búsqueda"
-                style={{
-                  width: 34,
-                  height: 34,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                  border: 0,
-                  borderRadius: '50%',
-                  background: 'transparent',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                }}
-              >
-                <CloseIcon />
-              </button>
-            )}
+              <div className={styles.layoutToggle}>
+                <button
+                  type="button"
+                  onClick={toggleLayout}
+                  title={layout === 'list' ? 'Cambiar a vista de cuadrícula' : 'Cambiar a vista de lista'}
+                  aria-label={layout === 'list' ? 'Cambiar a vista de cuadrícula' : 'Cambiar a vista de lista'}
+                >
+                  {layout === 'list' ? <GridIcon /> : <ListIcon />}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div ref={categoryRailRef} className={styles.categoryRail} aria-label="Categorias del menu">
@@ -598,7 +568,7 @@ export default function Menu() {
                         alt={`Categoria ${category.name}`}
                         className={styles.categoryImage}
                         imageSizes={[120, 180, 240]}
-                        sizes="76px"
+                        sizes="62px"
                       />
                     ) : (
                       <span className={styles.categoryFallback}>{category.fallback}</span>

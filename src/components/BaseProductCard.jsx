@@ -93,8 +93,8 @@ const BaseProductCard = memo(({
 }) => {
   const cardClassName = `${styles.baseCard} ${layout === 'list' ? styles.listCard : ''} ${inactive ? styles.inactive : ''}`;
   const imageSizes = layout === 'list'
-    ? '(max-width: 767px) 100vw, 48vw'
-    : '(max-width: 430px) 100vw, (max-width: 767px) 50vw, 33vw';
+    ? '(max-width: 767px) 90px, 120px'
+    : '(max-width: 767px) 50vw, (max-width: 1200px) 25vw, 20vw';
 
   const imageUrl = product?.image_url || product?.product_images?.[0]?.image_url || '';
   const parsedThumbnailSizes = typeof thumbnailSize === 'string'
