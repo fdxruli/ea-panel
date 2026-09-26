@@ -9,29 +9,25 @@
 .menuHero {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  margin-bottom: 1rem;
-  padding: 1.2rem 1rem;
-  /* Reducido drásticamente para móviles */
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--border-color);
-  border-radius: 20px;
+  border-radius: 16px;
   background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-  /* Sombra más sutil */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .heroCopy {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  /* Menor separación entre título y párrafo */
+  gap: 0.2rem;
 }
 
 .heroCopy h1 {
   margin: 0;
-  font-size: 1.7rem;
-  /* Reducido para evitar saltos a 3 líneas en pantallas pequeñas */
-  line-height: 1.1;
+  font-size: 1.3rem;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--text-primary);
 }
@@ -39,33 +35,33 @@
 .heroCopy p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.92rem;
-  line-height: 1.4;
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .heroStats {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.2rem;
+  gap: 0.35rem;
+  margin-top: 0.1rem;
 }
 
 .heroStatus,
 .heroMessage {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.8rem;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
 /* Indicador luminoso para el estado */
 .statusDot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
 }
 
@@ -102,23 +98,29 @@
   position: sticky;
   top: 50px;
   z-index: 900;
-  margin-bottom: 1.5rem;
-  padding: 0.8rem 0 0.5rem;
+  margin-bottom: 0.85rem;
+  padding: 0.45rem 0 0.3rem;
   background: var(--bg-primary);
 }
 
 .filterHeader {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.filterTitleGroup {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.9rem;
+  gap: 0.5rem;
 }
 
 .filterEyebrow {
-  margin: 0 0 0.25rem;
+  margin: 0;
   color: var(--text-secondary);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -127,14 +129,57 @@
 .filterHeader h2 {
   margin: 0;
   color: var(--text-primary);
-  font-size: 1.3rem;
+  font-size: 1.15rem;
+}
+
+.filterControls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  box-sizing: border-box;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+
+.searchClearButton {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
 }
 
 .categoryRail {
   display: flex;
-  gap: 0.9rem;
+  gap: 0.65rem;
   overflow-x: auto;
-  padding: 0.15rem 0.05rem 0.75rem;
+  padding: 0.15rem 0.05rem 0.35rem;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -146,11 +191,11 @@
 }
 
 .categoryButton {
-  flex: 0 0 90px;
+  flex: 0 0 70px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.35rem;
   padding: 0;
   color: var(--text-secondary);
   background: none;
@@ -165,31 +210,31 @@
 
 .categoryCircle {
   position: relative;
-  width: 76px;
-  height: 76px;
-  padding: 3px;
+  width: 56px;
+  height: 56px;
+  padding: 2px;
   overflow: visible;
   border: 2px solid transparent;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(229, 115, 115, 0.16), rgba(38, 50, 56, 0.08));
-  box-shadow: 0 12px 26px rgba(38, 50, 56, 0.08);
+  box-shadow: 0 6px 16px rgba(38, 50, 56, 0.07);
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .categoryOfferBadge {
   position: absolute;
-  top: -4px;
-  left: -4px;
+  top: -3px;
+  left: -3px;
   z-index: 2;
-  padding: 0.25rem 0.45rem;
+  padding: 0.2rem 0.4rem;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--color-error), #c62828);
   color: #fff;
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  box-shadow: 0 2px 6px rgba(211, 47, 47, 0.3);
+  box-shadow: 0 2px 5px rgba(211, 47, 47, 0.3);
   animation: categoryOfferPulse 2s ease-in-out infinite;
 }
 
@@ -204,7 +249,7 @@
 
 .categoryButtonActive .categoryCircle {
   border-color: var(--color-primary-dark);
-  box-shadow: 0 16px 32px rgba(211, 47, 47, 0.18);
+  box-shadow: 0 10px 22px rgba(211, 47, 47, 0.18);
   transform: translateY(-2px);
 }
 
@@ -226,7 +271,7 @@
   justify-content: center;
   background: linear-gradient(145deg, var(--color-primary), var(--color-primary-dark));
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -237,12 +282,12 @@
   max-width: 100%;
   margin: 0;
   color: inherit;
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.15;
   text-align: center;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
 }
 
 .categoryButtonActive .categoryName {
@@ -254,8 +299,8 @@
 }
 
 .layoutToggle button {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -263,8 +308,13 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 50%;
-  box-shadow: 0 10px 24px rgba(38, 50, 56, 0.08);
+  box-shadow: 0 6px 16px rgba(38, 50, 56, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.layoutToggle button svg {
+  width: 18px;
+  height: 18px;
 }
 
 .skeletonBlock {
@@ -289,68 +339,75 @@
 
 .skeletonHeroTitle {
   width: min(18rem, 82%);
-  height: 2.2rem;
+  height: 1.6rem;
 }
 
 .skeletonHeroText {
   width: min(28rem, 100%);
-  height: 0.95rem;
+  height: 0.85rem;
 }
 
 .skeletonHeroTextShort {
   width: min(18rem, 74%);
-  height: 0.95rem;
+  height: 0.85rem;
 }
 
 .skeletonPill {
-  height: 2rem;
+  height: 1.6rem;
   border-radius: 999px;
 }
 
 .skeletonPillWide {
-  width: 10.5rem;
+  width: 9rem;
 }
 
 .skeletonPillMedium {
-  width: 8rem;
+  width: 6.5rem;
 }
 
 .skeletonEyebrow {
-  width: 5.5rem;
-  height: 0.8rem;
-  margin-bottom: 0.45rem;
+  width: 4.5rem;
+  height: 0.7rem;
+  margin-bottom: 0.35rem;
 }
 
 .skeletonSectionTitle {
-  width: 9rem;
-  height: 1.45rem;
+  width: 8rem;
+  height: 1.25rem;
 }
 
 .skeletonToggle {
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   border-radius: 50%;
 }
 
 .skeletonCategoryCircle {
+  width: 56px;
+  height: 56px;
   background-position: center;
 }
 
 .skeletonCategoryName {
-  width: 4.5rem;
-  height: 0.85rem;
+  width: 3.8rem;
+  height: 0.75rem;
 }
 
 .productList {
   display: grid;
-  gap: 1rem;
+  gap: 0.65rem;
   padding: 0;
 }
 
-.productList.grid,
+.productList.grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
 .productList.list {
   grid-template-columns: 1fr;
+  gap: 0.65rem;
 }
 
 @keyframes menuSkeletonShimmer {
@@ -398,8 +455,8 @@
   overflow: hidden;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-size: 0.82rem;
+  line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
 }
@@ -408,19 +465,19 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.45rem 0.65rem;
+  gap: 0.35rem 0.5rem;
 }
 
 .originalPrice {
   color: var(--text-secondary);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
   text-decoration: line-through;
 }
 
 .specialPrice,
 .price {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 900;
   letter-spacing: -0.02em;
 }
@@ -435,16 +492,16 @@
 
 .cardActionButton {
   width: 100%;
-  min-height: 48px;
-  padding: 0.85rem 1.2rem;
+  min-height: 38px;
+  padding: 0.45rem 0.85rem;
   border: none;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 800;
   letter-spacing: 0.01em;
-  box-shadow: 0 14px 24px rgba(211, 47, 47, 0.22);
+  box-shadow: 0 8px 18px rgba(211, 47, 47, 0.2);
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
@@ -579,15 +636,16 @@
   text-decoration: underline;
 }
 
-@media (min-width: 430px) {
+@media (min-width: 560px) {
   .productList.grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+    gap: 0.85rem;
   }
 }
 
 @media (min-width: 768px) {
   .menuContainer {
-    padding-top: 1.25rem;
+    padding-top: 0.75rem;
   }
 
   .menuContainerWithLeadCapture {
@@ -596,51 +654,91 @@
 
   .menuHero {
     flex-direction: row;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
-    padding: 1.8rem;
-    margin-bottom: 1.5rem;
-    gap: 2rem;
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 0.85rem;
+    gap: 1.5rem;
+    border-radius: 18px;
   }
 
   .heroCopy h1 {
-    font-size: 2.2rem;
+    font-size: 1.5rem;
   }
 
   .heroCopy p {
-    font-size: 1rem;
-    max-width: 500px;
+    font-size: 0.88rem;
+    max-width: 520px;
   }
 
   .heroStats {
     justify-content: flex-end;
+    margin-top: 0;
+    flex-shrink: 0;
   }
 
   .filters {
-    padding-top: 1.1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.35rem;
     top: 60px;
+    margin-bottom: 1rem;
+  }
+
+  .filterHeader {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .filterControls {
+    width: auto;
+    gap: 0.65rem;
+  }
+
+  .searchBar {
+    width: 280px;
+    flex: initial;
+    padding: 0.45rem 0.85rem;
+  }
+
+  .layoutToggle button {
+    width: 40px;
+    height: 40px;
   }
 
   .categoryButton {
-    flex-basis: 98px;
+    flex-basis: 76px;
+    gap: 0.4rem;
   }
 
   .categoryCircle {
-    width: 82px;
-    height: 82px;
+    width: 62px;
+    height: 62px;
+  }
+
+  .categoryName {
+    font-size: 0.82rem;
   }
 
   .categoryOfferBadge {
-    font-size: 0.62rem;
-    padding: 0.28rem 0.5rem;
+    font-size: 0.58rem;
+    padding: 0.22rem 0.45rem;
   }
 
   .productList {
-    gap: 1.35rem;
+    gap: 1.1rem;
   }
 
   .productList.grid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 1.1rem;
+  }
+
+  .productList.list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
   }
 
   .seoFooter {

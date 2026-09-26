@@ -42,12 +42,15 @@ const MenuRouteSkeleton = ({ layout, showLeadCapture = false }) => {
 
       <div className={styles.filters}>
         <div className={styles.filterHeader}>
-          <div>
+          <div className={styles.filterTitleGroup}>
             <div className={`${styles.skeletonBlock} ${styles.skeletonEyebrow}`} />
             <div className={`${styles.skeletonBlock} ${styles.skeletonSectionTitle}`} />
           </div>
 
-          <div className={`${styles.skeletonBlock} ${styles.skeletonToggle}`} />
+          <div className={styles.filterControls}>
+            <div className={`${styles.skeletonBlock} ${styles.searchBar}`} style={{ border: 'none' }} />
+            <div className={`${styles.skeletonBlock} ${styles.skeletonToggle}`} />
+          </div>
         </div>
 
         <div className={styles.categoryRail}>
