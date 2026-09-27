@@ -1805,6 +1805,21 @@
   gap: 0.5rem;
 }
 
+.modifierOptionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 0.65rem;
+  transition: border-color 0.2s;
+}
+
+.modifierOptionCard:hover {
+  border-color: rgba(249, 115, 22, 0.35);
+}
+
 .modifierOptionRow {
   display: grid;
   grid-template-columns: 1fr 140px 36px;
@@ -1812,11 +1827,84 @@
   align-items: center;
 }
 
+.modifierOptionInventoryRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.8rem;
+}
+
+.modifierOptionInventorySelectWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 180px;
+}
+
+.modifierOptionInventoryIcon {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.modifierOptionInventorySelect {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.modifierOptionInventorySelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.modifierOptionQuantityWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+}
+
+.modifierOptionQuantityLabel {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.modifierOptionQuantityInput {
+  width: 65px;
+  padding: 0.2rem 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+  outline: none;
+}
+
+.modifierOptionQuantityUnit {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
 .modifierOptionNameInput {
   padding: 0.45rem 0.75rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-primary);
   color: var(--text-primary);
   font-size: 0.88rem;
 }
@@ -2004,9 +2092,23 @@
     width: 100%;
   }
 
+  .modifierOptionCard {
+    padding: 0.5rem;
+  }
+
   .modifierOptionRow {
     grid-template-columns: 1fr 105px 32px;
     gap: 0.35rem;
+  }
+
+  .modifierOptionInventoryRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+
+  .modifierOptionQuantityWrapper {
+    justify-content: space-between;
   }
 
   .modifierOptionNameInput {

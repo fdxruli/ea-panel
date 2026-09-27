@@ -142,6 +142,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                         option_id: option.id,
                         name: option.name,
                         price_delta: Number(option.price_delta) || 0,
+                        ingredient_id: option.ingredient_id || null,
+                        quantity_used: option.ingredient_id && Number(option.quantity_used) > 0 ? Number(option.quantity_used) : null,
                     }
                 ];
             } else {
@@ -161,6 +163,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                         option_id: option.id,
                         name: option.name,
                         price_delta: Number(option.price_delta) || 0,
+                        ingredient_id: option.ingredient_id || null,
+                        quantity_used: option.ingredient_id && Number(option.quantity_used) > 0 ? Number(option.quantity_used) : null,
                     }
                 ];
             }

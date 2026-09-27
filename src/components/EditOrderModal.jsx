@@ -178,13 +178,29 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
             modifiers: [],
         };
 
+        const existingMods = Array.isArray(item.selected_modifiers) ? item.selected_modifiers : [];
+        const enrichedMods = existingMods.map(sm => {
+            if (sm.ingredient_id && sm.quantity_used) return sm;
+            for (const g of (catalogProd?.modifiers || [])) {
+                const foundOpt = g.options?.find(o => o.id === sm.option_id || o.name === sm.name);
+                if (foundOpt?.ingredient_id) {
+                    return {
+                        ...sm,
+                        ingredient_id: foundOpt.ingredient_id,
+                        quantity_used: foundOpt.quantity_used
+                    };
+                }
+            }
+            return sm;
+        });
+
         setCustomizingItem({
             isNew: false,
             line_id: item.line_id,
             product_id: item.product_id,
             name: item.name,
             base_price: item.base_price !== undefined ? item.base_price : (catalogProd.price || item.price),
-            selected_modifiers: Array.isArray(item.selected_modifiers) ? [...item.selected_modifiers] : [],
+            selected_modifiers: enrichedMods,
             item_notes: item.item_notes || '',
             product: catalogProd,
             quantity: item.quantity,
@@ -263,6 +279,8 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                             option_id: option.id,
                             name: option.name,
                             price_delta: Number(option.price_delta) || 0,
+                            ingredient_id: option.ingredient_id || null,
+                            quantity_used: option.ingredient_id && Number(option.quantity_used) > 0 ? Number(option.quantity_used) : null,
                         }
                     ];
                 }
@@ -283,6 +301,8 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                             option_id: option.id,
                             name: option.name,
                             price_delta: Number(option.price_delta) || 0,
+                            ingredient_id: option.ingredient_id || null,
+                            quantity_used: option.ingredient_id && Number(option.quantity_used) > 0 ? Number(option.quantity_used) : null,
                         }
                     ];
                 }

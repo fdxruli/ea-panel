@@ -7,7 +7,7 @@ import imageCompression from "browser-image-compression";
 import styles from "../pages/Products.module.css";
 import LoadingSpinner from "./LoadingSpinner";
 import { useCustomersBasicCache } from "../hooks/useCustomersBasicCache";
-import { Globe, Sparkles, Search, X, UserCheck, Users, Lock, Crown, Star, Plus, Trash2, Check } from "lucide-react";
+import { Globe, Sparkles, Search, X, UserCheck, Users, Lock, Crown, Star, Plus, Trash2, Check, Package } from "lucide-react";
 
 // --- Iconos para la Receta ---
 const AddIcon = () => (
@@ -232,7 +232,9 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           {
             id: `opt_${Date.now()}_1`,
             name: '',
-            price_delta: 0
+            price_delta: 0,
+            ingredient_id: null,
+            quantity_used: null
           }
         ]
       };
@@ -258,7 +260,9 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           const newOption = {
             id: `opt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: '',
-            price_delta: 0
+            price_delta: 0,
+            ingredient_id: null,
+            quantity_used: null
           };
           return { ...g, options: [...g.options, newOption] };
         }
@@ -282,9 +286,15 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
             ...g,
             options: g.options.map(o => {
               if (o.id === optionId) {
+                let parsedValue = value;
+                if (field === 'price_delta') {
+                  parsedValue = value === '' ? '' : (parseFloat(value) || 0);
+                } else if (field === 'quantity_used') {
+                  parsedValue = value === '' ? '' : (parseFloat(value) || 0);
+                }
                 return { 
                   ...o, 
-                  [field]: field === 'price_delta' ? (parseFloat(value) || 0) : value 
+                  [field]: parsedValue 
                 };
               }
               return o;
@@ -463,7 +473,9 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                   .map(o => ({
                     id: o.id || `opt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
                     name: o.name.trim(),
-                    price_delta: Number(o.price_delta) || 0
+                    price_delta: Number(o.price_delta) || 0,
+                    ingredient_id: o.ingredient_id || null,
+                    quantity_used: o.ingredient_id && Number(o.quantity_used) > 0 ? Number(o.quantity_used) : null
                   }))
               }))
               .filter(g => g.options.length > 0);
@@ -970,37 +982,92 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                               </div>
 
                               <div className={styles.modifierOptionsList}>
-                                {group.options.map((option, oIndex) => (
-                                  <div key={option.id || oIndex} className={styles.modifierOptionRow}>
-                                    <input
-                                      type="text"
-                                      className={styles.modifierOptionNameInput}
-                                      value={option.name}
-                                      onChange={(e) => handleModifierOptionChange(group.id, option.id, 'name', e.target.value)}
-                                      placeholder="Nombre de la opción (ej: Extra pollo, Sin cebolla)"
-                                    />
-                                    <div className={styles.modifierOptionPriceWrapper}>
-                                      <span className={styles.modifierOptionPricePrefix}>Precio: $</span>
-                                      <input
-                                        type="number"
-                                        step="0.5"
-                                        className={styles.modifierOptionPriceInput}
-                                        value={option.price_delta}
-                                        onChange={(e) => handleModifierOptionChange(group.id, option.id, 'price_delta', e.target.value)}
-                                        placeholder="0.00"
-                                        title="Ajuste al precio: positivo (+), cero ($0) o negativo (-)"
-                                      />
+                                {group.options.map((option, oIndex) => {
+                                  const selectedIng = allIngredients.find(i => i.id === option.ingredient_id);
+                                  return (
+                                    <div key={option.id || oIndex} className={styles.modifierOptionCard}>
+                                      <div className={styles.modifierOptionRow}>
+                                        <input
+                                          type="text"
+                                          className={styles.modifierOptionNameInput}
+                                          value={option.name}
+                                          onChange={(e) => handleModifierOptionChange(group.id, option.id, 'name', e.target.value)}
+                                          placeholder="Nombre de la opción (ej: Extra queso parmesano)"
+                                        />
+                                        <div className={styles.modifierOptionPriceWrapper}>
+                                          <span className={styles.modifierOptionPricePrefix}>Precio: $</span>
+                                          <input
+                                            type="number"
+                                            step="0.5"
+                                            className={styles.modifierOptionPriceInput}
+                                            value={option.price_delta !== undefined ? option.price_delta : ''}
+                                            onChange={(e) => handleModifierOptionChange(group.id, option.id, 'price_delta', e.target.value)}
+                                            placeholder="0.00"
+                                            title="Ajuste al precio: positivo (+), cero ($0) o negativo (-)"
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          className={styles.modifierOptionDeleteBtn}
+                                          onClick={() => handleDeleteModifierOption(group.id, option.id)}
+                                          title="Eliminar opción"
+                                        >
+                                          <Trash2 size={15} />
+                                        </button>
+                                      </div>
+
+                                      {/* Vinculación con Inventario */}
+                                      <div className={styles.modifierOptionInventoryRow}>
+                                        <div className={styles.modifierOptionInventorySelectWrapper}>
+                                          <Package size={14} className={styles.modifierOptionInventoryIcon} />
+                                          <select
+                                            className={styles.modifierOptionInventorySelect}
+                                            value={option.ingredient_id || ''}
+                                            onChange={(e) => {
+                                              const selectedIngId = e.target.value || null;
+                                              handleModifierOptionChange(group.id, option.id, 'ingredient_id', selectedIngId);
+                                              if (selectedIngId) {
+                                                const ing = allIngredients.find(i => i.id === selectedIngId);
+                                                if (ing && (!option.name || option.name.trim() === '')) {
+                                                  handleModifierOptionChange(group.id, option.id, 'name', ing.name);
+                                                }
+                                                if (!option.quantity_used || Number(option.quantity_used) <= 0) {
+                                                  handleModifierOptionChange(group.id, option.id, 'quantity_used', 1);
+                                                }
+                                              }
+                                            }}
+                                          >
+                                            <option value="">(Sin vincular a inventario)</option>
+                                            {allIngredients.map((ing) => (
+                                              <option key={ing.id} value={ing.id}>
+                                                {ing.name} ({ing.current_stock} {ing.base_unit} en stock)
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        {option.ingredient_id && (
+                                          <div className={styles.modifierOptionQuantityWrapper}>
+                                            <span className={styles.modifierOptionQuantityLabel}>Descontar:</span>
+                                            <input
+                                              type="number"
+                                              step="any"
+                                              min="0.001"
+                                              className={styles.modifierOptionQuantityInput}
+                                              value={option.quantity_used !== undefined ? option.quantity_used : ''}
+                                              onChange={(e) => handleModifierOptionChange(group.id, option.id, 'quantity_used', e.target.value)}
+                                              placeholder="Cant."
+                                              title={`Cantidad de ${selectedIng?.name || 'ingrediente'} a descontar del stock`}
+                                            />
+                                            <span className={styles.modifierOptionQuantityUnit}>
+                                              {selectedIng?.base_unit || 'u'}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                    <button
-                                      type="button"
-                                      className={styles.modifierOptionDeleteBtn}
-                                      onClick={() => handleDeleteModifierOption(group.id, option.id)}
-                                      title="Eliminar opción"
-                                    >
-                                      <Trash2 size={15} />
-                                    </button>
-                                  </div>
-                                ))}
+                                  );
+                                })}
 
                                 <button
                                   type="button"

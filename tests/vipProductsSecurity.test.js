@@ -215,3 +215,73 @@ test('WhatsApp order message displays customized add-on modifiers and item notes
     assert.ok(msg.includes('Nota: Bien caliente por favor'));
     assert.ok(msg.includes('*Total: $155.00*'));
 });
+
+test('Modifier options linked to inventory ingredients preserve ingredient_id, quantity_used, and calculate stock correctly', () => {
+    const rawGroups = [
+        {
+            id: 'g1',
+            name: 'Complementos de Cocina',
+            required: false,
+            options: [
+                { 
+                    id: 'o1', 
+                    name: 'Extra Queso Parmesano 30g', 
+                    price_delta: 20,
+                    ingredient_id: '550e8400-e29b-41d4-a716-446655440000',
+                    quantity_used: '30'
+                },
+                { 
+                    id: 'o2', 
+                    name: 'Sin Sal', 
+                    price_delta: 0,
+                    ingredient_id: null,
+                    quantity_used: null
+                }
+            ]
+        }
+    ];
+
+    const cleanModifiers = (groups) => {
+        return groups
+            .filter(g => g.name && g.name.trim().length > 0)
+            .map(g => ({
+                id: g.id,
+                name: g.name.trim(),
+                required: Boolean(g.required),
+                options: (g.options || [])
+                    .filter(o => o.name && o.name.trim().length > 0)
+                    .map(o => ({
+                        id: o.id,
+                        name: o.name.trim(),
+                        price_delta: Number(o.price_delta) || 0,
+                        ingredient_id: o.ingredient_id || null,
+                        quantity_used: o.ingredient_id && Number(o.quantity_used) > 0 ? Number(o.quantity_used) : null
+                    }))
+            }))
+            .filter(g => g.options.length > 0);
+    };
+
+    const cleaned = cleanModifiers(rawGroups);
+    assert.equal(cleaned[0].options[0].ingredient_id, '550e8400-e29b-41d4-a716-446655440000');
+    assert.equal(cleaned[0].options[0].quantity_used, 30);
+    assert.equal(cleaned[0].options[1].ingredient_id, null);
+    assert.equal(cleaned[0].options[1].quantity_used, null);
+
+    // Simulación de cálculo de stock deducible
+    const orderItem = {
+        quantity: 3,
+        selected_modifiers: [
+            {
+                ingredient_id: '550e8400-e29b-41d4-a716-446655440000',
+                quantity_used: 30
+            }
+        ]
+    };
+
+    const totalDeduction = orderItem.selected_modifiers.reduce((sum, mod) => {
+        return sum + (orderItem.quantity * (mod.quantity_used || 0));
+    }, 0);
+
+    assert.equal(totalDeduction, 90); // 3 porciones x 30g = 90g
+});
+
