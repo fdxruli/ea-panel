@@ -26,7 +26,7 @@ export function useLoyalty() {
         }
 
         setState({ status: 'loading', data: null, error: null });
-        const result = await getCustomerLoyaltyCategory();
+        const result = await getCustomerLoyaltyCategory(id);
         if (result.code === 'ok' && result.data) {
             loyaltyCache.set(id, result.data);
             setState({ status: 'ready', data: result.data, error: null });

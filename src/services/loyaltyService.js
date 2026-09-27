@@ -7,9 +7,11 @@ const DEFAULT_LOYALTY = Object.freeze({
     condition_label: 'Nivel Inicial.',
 });
 
-export async function getCustomerLoyaltyCategory() {
+export async function getCustomerLoyaltyCategory(customerId = null) {
     try {
-        const { data, error } = await supabase.rpc('get_my_loyalty_category');
+        const { data, error } = await supabase.rpc('get_my_loyalty_category', {
+            p_customer_id: customerId || null
+        });
 
         if (error) {
             console.warn('[loyaltyService] Error recuperando categoría RPC:', error.message);
