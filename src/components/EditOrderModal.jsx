@@ -696,9 +696,14 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
                                                                 </span>
                                                                 <span className={styles.optionName}>{opt.name}</span>
                                                             </div>
-                                                            <span className={`${styles.optionPrice} ${delta > 0 ? styles.pricePlus : delta < 0 ? styles.priceMinus : ''}`}>
-                                                                {delta > 0 ? `+$${delta.toFixed(2)}` : delta < 0 ? `-$${Math.abs(delta).toFixed(2)}` : 'Gratis'}
-                                                            </span>
+                                                            <div className={styles.optionPriceCol}>
+                                                                <span className={`${styles.optionPrice} ${delta > 0 ? styles.pricePlus : delta < 0 ? styles.priceMinus : ''}`}>
+                                                                    {delta > 0 ? `+$${delta.toFixed(2)}` : delta < 0 ? `-$${Math.abs(delta).toFixed(2)}` : 'Gratis'}
+                                                                </span>
+                                                                <span className={styles.optionResultingPrice}>
+                                                                    (${(Number(customizingItem.base_price || 0) + delta).toFixed(2)}/u)
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })}
@@ -726,10 +731,13 @@ export default function EditOrderModal({ order, onClose, onOrderUpdated }) {
 
                         <div className={styles.customizerFooter}>
                             <div className={styles.customizerPriceBox}>
-                                <span className={styles.priceBoxLabel}>Precio unitario</span>
+                                <span className={styles.priceBoxLabel}>Precio unitario en pantalla</span>
                                 <strong className={styles.priceBoxValue}>
                                     ${customizingEffectiveUnitPrice.toFixed(2)}
                                 </strong>
+                                <span className={styles.priceBoxSub}>
+                                    (Base ${(Number(customizingItem.base_price) || 0).toFixed(2)} {customizingDeltaSum > 0 ? `+ $${customizingDeltaSum.toFixed(2)} extras` : customizingDeltaSum < 0 ? `- $${Math.abs(customizingDeltaSum).toFixed(2)} ajuste` : 'precio normal'})
+                                </span>
                             </div>
                             <div className={styles.customizerActions}>
                                 <button type="button" className={styles.customizerCancelBtn} onClick={() => setCustomizingItem(null)}>

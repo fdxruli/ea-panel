@@ -1900,6 +1900,129 @@
   font-weight: 600;
 }
 
+.modifierOptionPricingPreview {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.modifierOptionPricingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.previewTag {
+  color: var(--text-secondary);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.previewBadgeAdd {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.previewBadgeNormal {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: var(--text-secondary);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.previewBadgeMinus {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.modifierOptionPricingValues {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.pricingValueItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pricingValueLabel {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.pricingValueNum {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pricingOperator {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  align-self: center;
+}
+
+.pricingFinalItem {
+  background-color: rgba(249, 115, 22, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.pricingFinalItem .pricingValueLabel {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.pricingFinalNum {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.modifierOptionCostInsight {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+  border-top: 1px dashed rgba(148, 163, 184, 0.2);
+}
+
+.modifierOptionMargin strong {
+  color: #16a34a;
+}
+
 .modifierOptionNameInput {
   padding: 0.45rem 0.75rem;
   border-radius: 6px;
@@ -2124,6 +2247,23 @@
   .modifierOptionPriceInput {
     font-size: 0.82rem;
     padding: 0.4rem 0.15rem;
+  }
+
+  .modifierOptionPricingValues {
+    gap: 0.35rem;
+  }
+
+  .pricingValueItem {
+    flex: 1;
+    min-width: 75px;
+  }
+
+  .pricingFinalItem {
+    width: 100%;
+    margin-top: 0.25rem;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .pricingSection {

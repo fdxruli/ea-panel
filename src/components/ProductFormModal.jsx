@@ -984,6 +984,13 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                               <div className={styles.modifierOptionsList}>
                                 {group.options.map((option, oIndex) => {
                                   const selectedIng = allIngredients.find(i => i.id === option.ingredient_id);
+                                  const basePrice = parseFloat(formData.price) || 0;
+                                  const delta = parseFloat(option.price_delta) || 0;
+                                  const resultingPrice = Math.max(0, basePrice + delta);
+                                  const ingCostPerUnit = selectedIng?.average_cost || 0;
+                                  const ingQty = parseFloat(option.quantity_used) || 0;
+                                  const totalIngCost = selectedIng ? (ingQty * ingCostPerUnit) : 0;
+
                                   return (
                                     <div key={option.id || oIndex} className={styles.modifierOptionCard}>
                                       <div className={styles.modifierOptionRow}>
@@ -1062,6 +1069,66 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                                             <span className={styles.modifierOptionQuantityUnit}>
                                               {selectedIng?.base_unit || 'u'}
                                             </span>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Campo visual: Precio por unidad y precio final en pantalla */}
+                                      <div className={styles.modifierOptionPricingPreview}>
+                                        <div className={styles.modifierOptionPricingHeader}>
+                                          <span className={styles.previewTag}>
+                                            👁️ Precio que saldrá en pantalla:
+                                          </span>
+                                          {delta > 0 ? (
+                                            <span className={styles.previewBadgeAdd}>
+                                              +${delta.toFixed(2)} nuevo precio
+                                            </span>
+                                          ) : delta === 0 ? (
+                                            <span className={styles.previewBadgeNormal}>
+                                              Mantiene precio normal ($0)
+                                            </span>
+                                          ) : (
+                                            <span className={styles.previewBadgeMinus}>
+                                              -${Math.abs(delta).toFixed(2)} descuento
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <div className={styles.modifierOptionPricingValues}>
+                                          <div className={styles.pricingValueItem}>
+                                            <span className={styles.pricingValueLabel}>Precio base por unidad</span>
+                                            <span className={styles.pricingValueNum}>
+                                              ${basePrice.toFixed(2)}
+                                            </span>
+                                          </div>
+                                          <span className={styles.pricingOperator}>
+                                            {delta >= 0 ? '+' : '-'}
+                                          </span>
+                                          <div className={styles.pricingValueItem}>
+                                            <span className={styles.pricingValueLabel}>Ajuste del extra</span>
+                                            <span className={styles.pricingValueNum}>
+                                              ${Math.abs(delta).toFixed(2)}
+                                            </span>
+                                          </div>
+                                          <span className={styles.pricingOperator}>=</span>
+                                          <div className={`${styles.pricingValueItem} ${styles.pricingFinalItem}`}>
+                                            <span className={styles.pricingValueLabel}>Total en pantalla al elegir</span>
+                                            <strong className={styles.pricingFinalNum}>
+                                              ${resultingPrice.toFixed(2)}
+                                            </strong>
+                                          </div>
+                                        </div>
+
+                                        {selectedIng && totalIngCost > 0 && (
+                                          <div className={styles.modifierOptionCostInsight}>
+                                            <span>
+                                              📦 Costo ingrediente por porción ({ingQty} {selectedIng.base_unit}): <strong>${totalIngCost.toFixed(2)}</strong>
+                                            </span>
+                                            {delta > 0 && (
+                                              <span className={styles.modifierOptionMargin}>
+                                                (Margen extra: <strong>+${Math.max(0, delta - totalIngCost).toFixed(2)}</strong>)
+                                              </span>
+                                            )}
                                           </div>
                                         )}
                                       </div>

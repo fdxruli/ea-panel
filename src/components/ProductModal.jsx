@@ -530,9 +530,24 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                                                                     <span className={styles.optionLabel}>{opt.name}</span>
                                                                 </div>
                                                                 <div className={styles.optionRight}>
-                                                                    {delta > 0 && <span className={styles.pricePlus}>+${delta.toFixed(2)}</span>}
-                                                                    {delta < 0 && <span className={styles.priceMinus}>-${Math.abs(delta).toFixed(2)}</span>}
-                                                                    {delta === 0 && <span className={styles.priceZero}>Sin costo</span>}
+                                                                    {delta > 0 && (
+                                                                        <div className={styles.optionPriceCol}>
+                                                                            <span className={styles.pricePlus}>+${delta.toFixed(2)}</span>
+                                                                            <span className={styles.optionResultingPrice}>(${(Number(product.price || 0) + delta).toFixed(2)}/u)</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {delta < 0 && (
+                                                                        <div className={styles.optionPriceCol}>
+                                                                            <span className={styles.priceMinus}>-${Math.abs(delta).toFixed(2)}</span>
+                                                                            <span className={styles.optionResultingPrice}>(${(Number(product.price || 0) + delta).toFixed(2)}/u)</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {delta === 0 && (
+                                                                        <div className={styles.optionPriceCol}>
+                                                                            <span className={styles.priceZero}>Sin costo extra</span>
+                                                                            <span className={styles.optionResultingPrice}>(${Number(product.price || 0).toFixed(2)}/u normal)</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         );
@@ -583,29 +598,52 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     </div>
 
                     {(activeTab === 'details' || activeTab === 'modifiers') && (
-                        <div className={styles.footer}>
-                            <div className={styles.quantitySelector}>
-                                <button type="button" onClick={decrementQuantity} disabled={product.is_out_of_stock}>-</button>
-                                <span>{quantity}</span>
-                                <button type="button" onClick={incrementQuantity} disabled={product.is_out_of_stock}>+</button>
-                            </div>
-                            <div className={styles.actionButtons}>
-                                <button
-                                    type="button"
-                                    onClick={handleAddToCartClick}
-                                    className={`${styles.addButton} ${wasAdded ? styles.added : ''} ${product.is_out_of_stock ? styles.outOfStockButton : ''}`}
-                                    disabled={wasAdded || product.is_out_of_stock}
-                                >
-                                    {product.is_out_of_stock 
-                                        ? 'Producto Agotado' 
-                                        : wasAdded 
-                                            ? '¡Añadido!' 
-                                            : `Añadir por $${effectiveTotalPrice.toFixed(2)}${selectedModifiers.length > 0 ? ` (+${selectedModifiers.length})` : ''}`
-                                    }
-                                </button>
-                                <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.desktopOnly}`}>
-                                    <HeartIcon isFavorite={isFavorite} />
-                                </button>
+                        <div className={styles.footerContainer}>
+                            {hasModifiers && (
+                                <div className={styles.unitPriceBanner}>
+                                    <div className={styles.unitPriceInfo}>
+                                        <span className={styles.unitPriceLabel}>Precio por unidad:</span>
+                                        <strong className={styles.unitPriceAmount}>${effectiveUnitPrice.toFixed(2)}</strong>
+                                        <span className={styles.unitPriceDetails}>
+                                            {selectedModifiers.length > 0
+                                                ? `(Base $${Number(product.price || 0).toFixed(2)} ${modifierDeltaSum >= 0 ? `+ $${modifierDeltaSum.toFixed(2)} extras` : `- $${Math.abs(modifierDeltaSum).toFixed(2)} ajuste`})`
+                                                : `(Precio normal)`
+                                            }
+                                        </span>
+                                    </div>
+                                    {quantity > 1 && (
+                                        <div className={styles.totalPriceInfo}>
+                                            <span>Total ({quantity} uds):</span>
+                                            <strong>${effectiveTotalPrice.toFixed(2)}</strong>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className={styles.footer}>
+                                <div className={styles.quantitySelector}>
+                                    <button type="button" onClick={decrementQuantity} disabled={product.is_out_of_stock}>-</button>
+                                    <span>{quantity}</span>
+                                    <button type="button" onClick={incrementQuantity} disabled={product.is_out_of_stock}>+</button>
+                                </div>
+                                <div className={styles.actionButtons}>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddToCartClick}
+                                        className={`${styles.addButton} ${wasAdded ? styles.added : ''} ${product.is_out_of_stock ? styles.outOfStockButton : ''}`}
+                                        disabled={wasAdded || product.is_out_of_stock}
+                                    >
+                                        {product.is_out_of_stock 
+                                            ? 'Producto Agotado' 
+                                            : wasAdded 
+                                                ? '¡Añadido!' 
+                                                : `Añadir por $${effectiveTotalPrice.toFixed(2)}${selectedModifiers.length > 0 ? ` (+${selectedModifiers.length})` : ''}`
+                                        }
+                                    </button>
+                                    <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.desktopOnly}`}>
+                                        <HeartIcon isFavorite={isFavorite} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
