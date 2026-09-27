@@ -95,8 +95,8 @@ export default function OrderDetailPage() {
     }, [orderCode, phone, isCustomerLoading, userLoading, contextOrder]);
 
     // Variables derivadas
-    const isPageLoading = phone ? (isCustomerLoading || userLoading) : localLoading;
     const finalOrder = phone ? contextOrder : localOrder;
+    const isPageLoading = (phone ? (isCustomerLoading || userLoading) : localLoading) && !finalOrder;
 
     // Funciones auxiliares
     const formatDate = (isoString) => {

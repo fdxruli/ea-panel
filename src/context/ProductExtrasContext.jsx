@@ -1,6 +1,5 @@
 // src/context/ProductExtrasContext.jsx
-import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from './CustomerContext';
 import { getCache, setCache } from '../utils/cache';
@@ -12,36 +11,45 @@ const ProductExtrasContext = createContext();
 export const useProductExtras = () => useContext(ProductExtrasContext);
 
 export const ProductExtrasProvider = ({ children }) => {
-    const { phone, customer: canonicalCustomer } = useCustomer();
+    const { customer: canonicalCustomer } = useCustomer();
     const effectiveCustomerId = canonicalCustomer?.id || null;
-    const { pathname } = useLocation();
-    const extrasEnabled = pathname === '/mi-actividad' || pathname.startsWith('/producto/');
-    const extrasEnabledRef = useRef(extrasEnabled);
-    extrasEnabledRef.current = extrasEnabled;
 
     // Inicialización síncrona desde caché para evitar spinner si ya hay datos
     const [allReviews, setAllReviews] = useState(() => {
-        const cached = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
-        return cached?.data || [];
+        try {
+            const cached = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
+            return Array.isArray(cached?.data) ? cached.data : [];
+        } catch {
+            return [];
+        }
     });
+
     const [favorites, setFavorites] = useState(() => {
         if (!effectiveCustomerId) return [];
-        const cached = getCache(`${CACHE_KEYS.FAVORITES}-${effectiveCustomerId}`, CACHE_TTL.PRODUCT_EXTRAS);
-        return cached?.data || [];
+        try {
+            const cached = getCache(`${CACHE_KEYS.FAVORITES}-${effectiveCustomerId}`, CACHE_TTL.PRODUCT_EXTRAS);
+            return Array.isArray(cached?.data) ? cached.data : [];
+        } catch {
+            return [];
+        }
     });
+
     const [customerId, setCustomerId] = useState(effectiveCustomerId);
     const [loading, setLoading] = useState(() => {
-        const cachedRevs = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
-        if (effectiveCustomerId) {
-            const cachedFavs = getCache(`${CACHE_KEYS.FAVORITES}-${effectiveCustomerId}`, CACHE_TTL.PRODUCT_EXTRAS);
-            return !cachedRevs?.data || !cachedFavs?.data;
+        try {
+            const cachedRevs = getCache(CACHE_KEYS.REVIEWS, CACHE_TTL.PRODUCT_EXTRAS);
+            if (effectiveCustomerId) {
+                const cachedFavs = getCache(`${CACHE_KEYS.FAVORITES}-${effectiveCustomerId}`, CACHE_TTL.PRODUCT_EXTRAS);
+                return !cachedRevs?.data || !cachedFavs?.data;
+            }
+            return !cachedRevs?.data;
+        } catch {
+            return false;
         }
-        return !cachedRevs?.data;
     });
 
     // --- FUNCIÓN PRINCIPAL DE FETCH Y CACHÉ ---
     const fetchAndCacheExtras = useCallback(async (currentCustomerId, options = {}) => {
-        if (!extrasEnabledRef.current) return;
         const { background = false } = options;
 
         if (!background) {
@@ -55,7 +63,6 @@ export const ProductExtrasProvider = ({ children }) => {
                 .order('created_at', { ascending: false });
 
             const validReviews = revData || [];
-            if (!extrasEnabledRef.current) return;
             setAllReviews(validReviews);
             setCache(CACHE_KEYS.REVIEWS, validReviews);
 
@@ -68,7 +75,6 @@ export const ProductExtrasProvider = ({ children }) => {
                     .eq('customer_id', currentCustomerId);
 
                 const validFavorites = favData || [];
-                if (!extrasEnabledRef.current) return;
                 setFavorites(validFavorites);
                 setCache(favoritesCacheKey, validFavorites);
             } else {
@@ -83,11 +89,6 @@ export const ProductExtrasProvider = ({ children }) => {
 
     // --- useEffect para CARGA INICIAL CON STALE-WHILE-REVALIDATE ---
     useEffect(() => {
-        if (!extrasEnabled) {
-            setLoading(false);
-            return undefined;
-        }
-
         let cancelled = false;
 
         const initializeAndFetch = async () => {
@@ -135,94 +136,69 @@ export const ProductExtrasProvider = ({ children }) => {
         return () => {
             cancelled = true;
         };
-    }, [extrasEnabled, effectiveCustomerId, fetchAndCacheExtras]);
+    }, [effectiveCustomerId, fetchAndCacheExtras]);
 
-    // --- 👇 useEffect para REALTIME CON ACTUALIZACIÓN INCREMENTAL ---
+    // --- useEffect para REALTIME CON ACTUALIZACIÓN INCREMENTAL Y BROADCAST ---
     useEffect(() => {
-        if (!extrasEnabled) return undefined;
-
         const handleChanges = (payload) => {
-            // --- ✅ Lógica Incremental para Reseñas ---
             if (payload.table === 'product_reviews') {
                 const { eventType, new: newRecord, old: oldRecord } = payload;
 
-                // **IMPORTANTE**: Necesitas fetchear los datos relacionados (products, customers)
-                // para la nueva reseña insertada o actualizada, ya que el payload no los incluye.
-                // Usaremos una función auxiliar para esto.
                 const fetchReviewWithRelations = async (reviewId) => {
                     const { data, error } = await supabase
                         .from('product_reviews')
                         .select('*, products(id, name, slug, image_url, is_active, price), customers(name)')
                         .eq('id', reviewId)
-                        .maybeSingle(); // Usar maybeSingle por si se elimina justo antes
+                        .maybeSingle();
                     if (error) {
                         console.error("Error fetching related data for review:", error);
-                        return null; // Devolver null si falla
+                        return null;
                     }
                     return data;
                 };
 
-
                 if (eventType === 'INSERT') {
                     fetchReviewWithRelations(newRecord.id).then(fullNewRecord => {
-                        if (fullNewRecord && extrasEnabledRef.current) {
+                        if (fullNewRecord) {
                             setAllReviews(prev => {
-                                // Evitar duplicados si la inserción llega muy rápido
-                                if (prev.some(r => r.id === fullNewRecord.id)) {
-                                    return prev;
-                                }
+                                if (prev.some(r => r.id === fullNewRecord.id)) return prev;
                                 const updatedReviews = [fullNewRecord, ...prev];
-                                setCache(CACHE_KEYS.REVIEWS, updatedReviews); // Actualizar caché
+                                setCache(CACHE_KEYS.REVIEWS, updatedReviews);
                                 return updatedReviews;
                             });
                         }
                     });
-
                 } else if (eventType === 'UPDATE') {
                     fetchReviewWithRelations(newRecord.id).then(fullUpdatedRecord => {
-                         if (fullUpdatedRecord && extrasEnabledRef.current) {
+                        if (fullUpdatedRecord) {
                             setAllReviews(prev => {
                                 const updatedReviews = prev.map(r =>
                                     r.id === fullUpdatedRecord.id ? fullUpdatedRecord : r
                                 );
-                                setCache(CACHE_KEYS.REVIEWS, updatedReviews); // Actualizar caché
+                                setCache(CACHE_KEYS.REVIEWS, updatedReviews);
                                 return updatedReviews;
                             });
-                         }
-                     });
-
+                        }
+                    });
                 } else if (eventType === 'DELETE') {
                     const deletedId = oldRecord.id;
-                    if (!extrasEnabledRef.current) return;
                     setAllReviews(prev => {
                         const updatedReviews = prev.filter(r => r.id !== deletedId);
-                        setCache(CACHE_KEYS.REVIEWS, updatedReviews); // Actualizar caché
+                        setCache(CACHE_KEYS.REVIEWS, updatedReviews);
                         return updatedReviews;
                     });
                 }
-            }
-            // --- Fin Lógica Incremental ---
-
-            // --- Lógica para Favoritos (sin cambios, sigue usando refetch) ---
-            else if (payload.table === 'customer_favorites') {
-                // Solo re-fetchear favoritos si el cambio afecta al cliente actual
-                // Usar fetchAndCacheExtras aquí es aceptable porque los favoritos son menos numerosos
-                // y ya están filtrados por customerId en la consulta.
+            } else if (payload.table === 'customer_favorites') {
                 const customerIdAffected = payload.new?.customer_id || payload.old?.customer_id;
                 if (customerIdAffected === customerId) {
-                    fetchAndCacheExtras(customerId);
+                    fetchAndCacheExtras(customerId, { background: true });
                 }
             }
         };
 
         const channel = supabase.channel('product-extras-listener');
-
-        // Escuchar cambios en TODAS las reseñas
         channel.on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, handleChanges);
-
-        // Escuchar cambios en favoritos (filtrado en el handler)
         channel.on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites' }, handleChanges);
-
         channel.subscribe();
 
         const unsubReviewsBroadcast = subscribeToStoreBroadcast('reviews_updated', () => {
@@ -240,17 +216,14 @@ export const ProductExtrasProvider = ({ children }) => {
             if (unsubReviewsBroadcast) unsubReviewsBroadcast();
             if (unsubFavoritesBroadcast) unsubFavoritesBroadcast();
         };
-    // La función es estable; el canal solo cambia de identidad al cambiar el cliente.
-    }, [customerId, extrasEnabled, fetchAndCacheExtras]);
-    // --- FIN useEffect REALTIME ---
+    }, [customerId, fetchAndCacheExtras]);
 
-    // --- myReviews calculado con useMemo (sin cambios) ---
     const myReviews = useMemo(() => {
         if (!customerId) return [];
         return allReviews.filter(review => review.customer_id === customerId);
     }, [allReviews, customerId]);
 
-    const refetch = useCallback(() => fetchAndCacheExtras(customerId), [customerId, fetchAndCacheExtras]);
+    const refetch = useCallback(() => fetchAndCacheExtras(customerId, { background: true }), [customerId, fetchAndCacheExtras]);
 
     const value = useMemo(() => ({
         reviews: allReviews,

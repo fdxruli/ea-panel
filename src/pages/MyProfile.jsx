@@ -265,7 +265,7 @@ export default function MyProfile() {
                 </div>
             );
         }
-        if (isInitialLoading) return <LoadingSpinner />;
+        if (isInitialLoading && !canonicalCustomer) return <LoadingSpinner />;
         if (visibilitySettings.my_profile_page === false) {
             return (
                 <div className={styles.prompt}>

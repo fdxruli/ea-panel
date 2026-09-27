@@ -451,7 +451,7 @@ export default function Menu() {
     );
   }
 
-  if (loading) {
+  if (loading && products.length === 0) {
     return (
       <>
         <SEO

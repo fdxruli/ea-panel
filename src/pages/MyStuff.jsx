@@ -737,7 +737,7 @@ export default function MyStuff() {
 
     const renderContent = () => {
         if (!phone) return <AuthPrompt />;
-        if (loading) return <LoadingSpinner />;
+        if (loading && !customer) return <LoadingSpinner />;
         if (error) {
             return (
                 <div className={styles.prompt}>

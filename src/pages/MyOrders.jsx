@@ -481,7 +481,7 @@ export default function MyOrders() {
 
     const renderContent = () => {
         if (!phone) return <AuthPrompt />;
-        if (loading) return <LoadingSpinner />;
+        if (loading && !customer) return <LoadingSpinner />;
         if (visibilitySettings.my_orders_page === false) {
             return (
                 <div className={styles.prompt}>

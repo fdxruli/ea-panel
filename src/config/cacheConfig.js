@@ -9,6 +9,7 @@ export const CACHE_TTL = {
   USER_ORDERS: 10 * 60 * 1000,
   PRODUCT_EXTRAS: 10 * 60 * 1000,
   REWARDS_PROGRESS: 15 * 60 * 1000,
+  SETTINGS: 60 * 60 * 1000,
 };
 
 /**
@@ -21,6 +22,7 @@ export const CACHE_KEYS = {
   PRODUCTS: 'client:catalog:base:v1',
   PRODUCTS_BASIC: 'client:products:basic:v1',
   BUSINESS_STATUS: 'ea-business-status-cache',
+  SETTINGS: 'ea-settings-cache',
   USER_INFO: 'ea-user-info-cache:v2',
   USER_ORDERS: 'ea-user-orders-cache:v2',
   FAVORITES: 'ea-favorites-cache',
