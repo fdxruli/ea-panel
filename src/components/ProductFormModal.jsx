@@ -530,20 +530,23 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                     className={`${styles.tabButton} ${activeTab === 'audience' ? styles.active : ''}`}
                     onClick={() => setActiveTab('audience')}
                   >
-                    Audiencia {
-                      audienceType === 'tiers'
-                        ? `(👑 ${selectedCustomerTiers.map(t => t.toUpperCase()).join(', ') || 'VIP'})`
-                        : (audienceType === 'customers' || audienceType === 'special')
-                          ? `(👤 ${selectedCustomerIds.length})`
-                          : '(🌐 Público)'
-                    }
+                    Audiencia
+                    {audienceType === 'tiers' && (
+                      <span className={styles.tabBadge}>VIP</span>
+                    )}
+                    {(audienceType === 'customers' || audienceType === 'special') && selectedCustomerIds.length > 0 && (
+                      <span className={styles.tabBadge}>{selectedCustomerIds.length}</span>
+                    )}
                   </button>
                   <button
                     type="button"
                     className={`${styles.tabButton} ${activeTab === 'modifiers' ? styles.active : ''}`}
                     onClick={() => setActiveTab('modifiers')}
                   >
-                    Complementos {modifierGroups.length > 0 ? `(${modifierGroups.reduce((acc, g) => acc + (g.options?.length || 0), 0)})` : ''}
+                    Complementos
+                    {modifierGroups.length > 0 && (
+                      <span className={styles.tabBadge}>{modifierGroups.reduce((acc, g) => acc + (g.options?.length || 0), 0)}</span>
+                    )}
                   </button>
                 </div>
 

@@ -221,7 +221,14 @@
 }
 
 .calloutIcon {
-  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.calloutSparkles {
+  color: #f59e0b;
 }
 
 .calloutButton {

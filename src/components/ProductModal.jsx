@@ -9,6 +9,7 @@ import DOMPurify from 'dompurify';
 import ImageWithFallback from './ImageWithFallback';
 import { animateToCart } from '../utils/cartAnimation';
 import { broadcastStoreChange } from '../lib/broadcastRealtime';
+import { Sparkles } from 'lucide-react';
 
 
 const StarRating = ({ rating, onRatingChange }) => {
@@ -205,6 +206,9 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     const handleClose = useCallback(() => {
         setIsAnimating(false);
+        setSelectedModifiers([]);
+        setItemNotes('');
+        setQuantity(1);
         setTimeout(onClose, 280);
     }, [onClose]);
 
@@ -294,6 +298,11 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                 flySize: 48 // Tamaño reducido temporalmente para mitigar el desbordamiento en el botón
             });
         }
+
+        // Limpiar selecciones para que no queden marcadas
+        setSelectedModifiers([]);
+        setItemNotes('');
+        setQuantity(1);
 
         setWasAdded(true);
         setTimeout(() => setWasAdded(false), 2000);
@@ -454,7 +463,9 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                                 {hasModifiers && (
                                     <div className={styles.detailsModifiersCallout} onClick={() => setActiveTab('modifiers')}>
                                         <div className={styles.calloutHeader}>
-                                            <span className={styles.calloutIcon}>✨</span>
+                                            <span className={styles.calloutIcon}>
+                                                <Sparkles size={18} className={styles.calloutSparkles} aria-hidden="true" />
+                                            </span>
                                             <div>
                                                 <strong>Personaliza con Complementos</strong>
                                                 <p>{modifierGroups.map(g => g.name).join(', ')}</p>

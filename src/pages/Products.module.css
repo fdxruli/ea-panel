@@ -258,6 +258,8 @@
     background-color: rgba(0,0,0,0.5); z-index: 1000;
     display: flex; justify-content: center; align-items: center;
     padding: 1rem;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 .modalContent {
     background-color: var(--bg-secondary);
@@ -267,11 +269,17 @@
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 .productForm {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 .formGroup {
     display: flex;
@@ -526,18 +534,39 @@
     transform: none;
 }
 .productFormModalLarge {
+  width: 100%;
   max-width: 800px;
+  box-sizing: border-box;
 }
 
 .modalTabs {
   display: flex;
   border-bottom: 2px solid var(--border-color);
   margin-bottom: 1.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  gap: 0.25rem;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.modalTabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.modalTabs::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
 }
 
 .tabButton {
-  padding: 0.8rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.75rem 1.1rem;
+  font-size: 0.92rem;
   font-weight: 600;
   background: none;
   border: none;
@@ -545,6 +574,12 @@
   cursor: pointer;
   border-bottom: 3px solid transparent;
   margin-bottom: -2px; /* Alinea con el borde inferior */
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
 }
 
 .tabButton.active {
@@ -552,11 +587,27 @@
   border-bottom-color: var(--color-primary);
 }
 
+.tabBadge {
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: 50px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-left: 0.25rem;
+  display: inline-block;
+  line-height: 1;
+}
+
 .tabContent {
   display: none; /* Oculto por defecto */
   flex-direction: column;
   gap: 1.5rem;
   animation: fadeIn 0.3s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .tabContent.active {
@@ -1858,6 +1909,105 @@
   max-width: 420px;
   line-height: 1.4;
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .modalOverlay {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .modalContent {
+    padding: 1.25rem 0.9rem;
+    border-radius: 16px 16px 0 0;
+    max-height: 94vh;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .productFormModalLarge {
+    max-width: 100%;
+  }
+
+  .modalTabs {
+    margin-bottom: 1rem;
+    padding-bottom: 4px;
+    gap: 0.2rem;
+  }
+
+  .tabButton {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.84rem;
+  }
+
+  .audienceRadioGrid {
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem;
+  }
+
+  .audienceRadioCard {
+    padding: 0.85rem;
+  }
+
+  .modifierTopBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .modifierTopBar > div:last-child {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .addModifierGroupBtn,
+  .presetTemplateBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modifierGroupCard {
+    padding: 0.85rem;
+  }
+
+  .modifierGroupHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .modifierGroupNameInput {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .modifierGroupActions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .modifierOptionRow {
+    grid-template-columns: 1fr 105px 32px;
+    gap: 0.35rem;
+  }
+
+  .modifierOptionNameInput {
+    min-width: 0;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .modifierOptionPriceWrapper {
+    padding: 0 0.35rem;
+  }
+
+  .modifierOptionPriceInput {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.15rem;
+  }
 }
 
 
