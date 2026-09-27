@@ -219,9 +219,15 @@ export default function Ingredients() {
           onClose={() => setIsIngredientModalOpen(false)}
           onSave={() => {
             invalidate('ingredients:all');
+            invalidate('ingredients');
             broadcastStoreChange('inventory_updated');
           }}
           ingredient={selectedIngredient}
+          allIngredients={ingredients}
+          onSelectExisting={(existing) => {
+            setIsIngredientModalOpen(false);
+            handleOpenEditIngredient(existing);
+          }}
         />
       )}
 
