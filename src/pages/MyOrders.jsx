@@ -171,7 +171,13 @@ export default function MyOrders() {
     const performReorder = (order) => {
         const newCartItems = order.order_items
             .filter(item => item.products)
-            .map(item => ({ ...item.products, quantity: item.quantity }));
+            .map(item => ({
+                ...item.products,
+                price: item.price,
+                quantity: item.quantity,
+                selected_modifiers: Array.isArray(item.selected_modifiers) ? item.selected_modifiers : [],
+                item_notes: item.item_notes || null,
+            }));
 
         replaceCart(newCartItems);
         showToast('¡Pedido añadido al carrito!');
@@ -367,16 +373,35 @@ export default function MyOrders() {
                             <div className={styles.ticketTitle}>Productos</div>
                             <div className={styles.itemsList}>
                                 {order.order_items?.map(item => (
-                                    <div key={item.id} className={styles.itemRow}>
-                                        <div className={styles.itemMain}>
-                                            <span className={styles.itemQty}>{item.quantity}x</span>
-                                            <span className={styles.itemName}>
-                                                {item.products?.name || 'Producto no disponible'}
+                                    <div key={item.id} className={styles.itemRow} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '3px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div className={styles.itemMain}>
+                                                <span className={styles.itemQty}>{item.quantity}x</span>
+                                                <span className={styles.itemName}>
+                                                    {item.products?.name || 'Producto no disponible'}
+                                                </span>
+                                            </div>
+                                            <span className={styles.itemPrice}>
+                                                ${(item.price * item.quantity).toFixed(2)}
                                             </span>
                                         </div>
-                                        <span className={styles.itemPrice}>
-                                            ${(item.price * item.quantity).toFixed(2)}
-                                        </span>
+                                        {Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0 && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', paddingLeft: '1.5rem' }}>
+                                                {item.selected_modifiers.map((mod, mIdx) => (
+                                                    <span key={mIdx} style={{ fontSize: '0.74rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '1px 5px', borderRadius: '4px' }}>
+                                                        {mod.name || mod.option_name}
+                                                        {Number(mod.price_delta) !== 0 && (
+                                                            <strong style={{ color: 'var(--color-primary)' }}> ({Number(mod.price_delta) > 0 ? `+$${Number(mod.price_delta).toFixed(2)}` : `-$${Math.abs(Number(mod.price_delta)).toFixed(2)}`})</strong>
+                                                        )}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {item.item_notes && (
+                                            <div style={{ paddingLeft: '1.5rem', fontSize: '0.76rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                                                Nota: {item.item_notes}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

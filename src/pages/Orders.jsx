@@ -71,6 +71,13 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
     items.forEach(item => {
       const subtotal = item.quantity * item.price;
       message += `• ${item.products?.name || 'Producto'}\n`;
+      if (Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0) {
+        const modText = item.selected_modifiers.map(m => m.name || m.option_name).filter(Boolean).join(', ');
+        if (modText) message += `   ↳ Complementos: ${modText}\n`;
+      }
+      if (item.item_notes?.trim()) {
+        message += `   ↳ Nota: ${item.item_notes.trim()}\n`;
+      }
       message += `  ${item.quantity} x $${(item.price || 0).toFixed(2)} = $${subtotal.toFixed(2)}\n`;
     });
 
@@ -153,13 +160,32 @@ const OrderCard = memo(({ order, onUpdateStatus, onShowDeliveryInfo, onEditOrder
           <h4>Productos</h4>
           <ul className={styles.productsList}>
             {items.map((item, index) => (
-              <li key={`${item.id || index}`}>
-                <span className={styles.productName}>
-                  {item.products?.name || 'Producto'}
-                </span>
-                <span className={styles.productQuantity}>
-                  {item.quantity} x ${item.price}
-                </span>
+              <li key={`${item.id || index}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px', paddingBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                  <span className={styles.productName}>
+                    {item.products?.name || 'Producto'}
+                  </span>
+                  <span className={styles.productQuantity}>
+                    {item.quantity} x ${item.price}
+                  </span>
+                </div>
+                {Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '2px' }}>
+                    {item.selected_modifiers.map((mod, mIdx) => (
+                      <span key={mIdx} style={{ fontSize: '0.75rem', background: '#f1f5f9', color: '#334155', padding: '1px 6px', borderRadius: '4px' }}>
+                        {mod.name || mod.option_name}
+                        {Number(mod.price_delta) !== 0 && (
+                          <strong> ({Number(mod.price_delta) > 0 ? `+$${Number(mod.price_delta).toFixed(2)}` : `-$${Math.abs(Number(mod.price_delta)).toFixed(2)}`})</strong>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {item.item_notes && (
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontStyle: 'italic' }}>
+                    Nota: {item.item_notes}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -375,7 +401,7 @@ export default function Orders() {
           updated_at,
           cancellation_reason,
           customers(id, name, phone),
-          order_items(id, product_id, quantity, price, products(id, name, image_url))
+          order_items(id, product_id, quantity, price, selected_modifiers, item_notes, products(id, name, image_url))
       `, { count: 'exact' });
 
       // 1. Filtrado por Estado en el Servidor

@@ -76,3 +76,72 @@ test('unchanged or invalid catalog prices preserve the current cart', () => {
         assert.strictEqual(reconcileCartItems(cart, [{ ...product, price }], { catalogReady: true }).items, cart);
     }
 });
+
+test('items with distinct modifiers or notes create separate cart lines', () => {
+    const modA = [{ group_id: 'g1', option_id: 'o1', name: 'Extra Pollo', price_delta: 35 }];
+    const modB = [{ group_id: 'g1', option_id: 'o2', name: 'Sin Cebolla', price_delta: 0 }];
+
+    const itemA = { ...product, price: 135, quantity: 1, selected_modifiers: modA };
+    const itemB = { ...product, price: 100, quantity: 2, selected_modifiers: modB };
+    const itemC = { ...product, price: 100, quantity: 1, selected_modifiers: modB, item_notes: 'Sin picante' };
+
+    const normalized = normalizeCartItems([itemA, itemB, itemC]);
+    assert.equal(normalized.length, 3);
+    assert.equal(normalized[0].price, 135);
+    assert.equal(normalized[0].quantity, 1);
+    assert.equal(normalized[1].quantity, 2);
+    assert.equal(normalized[2].item_notes, 'Sin picante');
+});
+
+test('items with identical modifiers and notes combine quantities', () => {
+    const modA = [{ group_id: 'g1', option_id: 'o1', name: 'Extra Pollo', price_delta: 35 }];
+    const item1 = { ...product, price: 135, quantity: 1, selected_modifiers: modA, item_notes: 'Bien cocido' };
+    const item2 = { ...product, price: 135, quantity: 2, selected_modifiers: modA, item_notes: 'Bien cocido' };
+
+    const result = normalizeCartItems([item1, item2]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].quantity, 3);
+    assert.equal(result[0].price, 135);
+});
+
+test('updating quantity and removing customized items targets specific line', () => {
+    const modA = [{ group_id: 'g1', option_id: 'o1', name: 'Extra Pollo', price_delta: 35 }];
+    const modB = [{ group_id: 'g1', option_id: 'o2', name: 'Sin Cebolla', price_delta: 0 }];
+
+    const itemA = { ...product, price: 135, quantity: 1, selected_modifiers: modA };
+    const itemB = { ...product, price: 100, quantity: 2, selected_modifiers: modB };
+
+    const cartWithMods = normalizeCartItems([itemA, itemB]);
+    const lineAId = cartWithMods[0].line_id;
+    const lineBId = cartWithMods[1].line_id;
+
+    assert.ok(lineAId);
+    assert.ok(lineBId);
+    assert.notEqual(lineAId, lineBId);
+
+    // Update quantity of line A
+    const updated = updateCartQuantity(cartWithMods, lineAId, 4);
+    assert.equal(updated.find(i => i.line_id === lineAId).quantity, 4);
+    assert.equal(updated.find(i => i.line_id === lineBId).quantity, 2);
+
+    // Remove line A by setting quantity 0
+    const afterRemoval = updateCartQuantity(updated, lineAId, 0);
+    assert.equal(afterRemoval.length, 1);
+    assert.equal(afterRemoval[0].line_id, lineBId);
+});
+
+test('reconciliation recalculates price deltas when catalog base price changes', () => {
+    const mod = [{ group_id: 'g1', option_id: 'o1', name: 'Extra Pollo', price_delta: 35 }];
+    const customizedCart = normalizeCartItems([{
+        ...product,
+        price: 135,
+        quantity: 2,
+        selected_modifiers: mod
+    }]);
+
+    // Catalog base price changed from 100 to 120
+    const result = reconcileCartItems(customizedCart, [{ ...product, price: 120 }], { catalogReady: true });
+    assert.equal(result.pricesChanged, true);
+    assert.equal(result.items[0].price, 155); // 120 + 35
+    assert.equal(result.items[0].quantity, 2);
+});

@@ -18,7 +18,9 @@ import {
   Edit3, 
   Image as ImageIcon,
   Power,
-  Globe
+  Globe,
+  Crown,
+  Sparkles
 } from 'lucide-react';
 import ImageWithFallback from './ImageWithFallback';
 
@@ -132,7 +134,15 @@ export default memo(function ProductDetailDrawer({
               <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
                 {product.category_name || 'Sin categoría'}
               </span>
-              {product.is_exclusive ? (
+              {product.is_vip_exclusive || product.target_customer_tiers?.includes('vip') ? (
+                <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: 'rgba(234, 179, 8, 0.18)', color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Crown size={11} /> Exclusivo VIP
+                </span>
+              ) : (product.target_customer_tiers && product.target_customer_tiers.length > 0) ? (
+                <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: 'rgba(56, 189, 248, 0.18)', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Star size={11} /> Tier {product.target_customer_tiers.map(t => t.toUpperCase()).join(', ')}
+                </span>
+              ) : product.is_exclusive ? (
                 <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', background: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                   <Users size={11} /> Clientes Especiales ({analyticsData?.assigned_customers?.length || product.target_customers_count || 0})
                 </span>
@@ -233,7 +243,15 @@ export default memo(function ProductDetailDrawer({
                   <div className={styles.financialCard} style={{ marginTop: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {product.is_exclusive ? <Users size={16} color="#8b5cf6" /> : <Globe size={16} color="#10b981" />}
+                        {product.is_vip_exclusive || product.target_customer_tiers?.includes('vip') ? (
+                          <Crown size={16} color="#eab308" />
+                        ) : (product.target_customer_tiers && product.target_customer_tiers.length > 0) ? (
+                          <Star size={16} color="#38bdf8" />
+                        ) : product.is_exclusive ? (
+                          <Users size={16} color="#8b5cf6" />
+                        ) : (
+                          <Globe size={16} color="#10b981" />
+                        )}
                         Audiencia y Visibilidad
                       </div>
                       {canEdit && (
@@ -254,7 +272,19 @@ export default memo(function ProductDetailDrawer({
                         </button>
                       )}
                     </div>
-                    {product.is_exclusive ? (
+                    {product.is_vip_exclusive || product.target_customer_tiers?.includes('vip') ? (
+                      <div>
+                        <p style={{ fontSize: '13px', color: '#fde047', margin: '0 0 8px 0' }}>
+                          👑 <strong>Acceso Exclusivo VIP:</strong> Este producto solo es visible en el menú digital para comensales en categoría VIP (&gt;$3,000 de consumo o &gt;15 pedidos).
+                        </p>
+                      </div>
+                    ) : (product.target_customer_tiers && product.target_customer_tiers.length > 0) ? (
+                      <div>
+                        <p style={{ fontSize: '13px', color: '#7dd3fc', margin: '0 0 8px 0' }}>
+                          ⭐ <strong>Acceso por Categoría:</strong> Visible para clientes con nivel de lealtad: <strong>{product.target_customer_tiers.map(t => t.toUpperCase()).join(', ')}</strong>.
+                        </p>
+                      </div>
+                    ) : product.is_exclusive ? (
                       <div>
                         <p style={{ fontSize: '13px', color: '#c4b5fd', margin: '0 0 8px 0' }}>
                           🔒 <strong>Acceso Exclusivo:</strong> Este producto solo es visible en el menú digital para los clientes asignados.
@@ -292,6 +322,42 @@ export default memo(function ProductDetailDrawer({
                       </div>
                     )}
                   </div>
+
+                  {/* Complementos Configurados Card */}
+                  {(product.modifiers?.length > 0 || initialProduct?.modifiers?.length > 0) && (
+                    <div className={styles.financialCard} style={{ marginTop: '12px' }}>
+                      <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <Sparkles size={16} color="var(--color-primary)" />
+                        Complementos y Opciones ({((product.modifiers || initialProduct?.modifiers) || []).reduce((acc, g) => acc + (g.options?.length || 0), 0)})
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {((product.modifiers || initialProduct?.modifiers) || []).map((grp, idx) => (
+                          <div key={grp.id || idx} style={{ background: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                              {grp.name} {grp.required && <span style={{ color: '#f87171', fontSize: '10px' }}>(Obligatorio)</span>}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {(grp.options || []).map((opt, oIdx) => (
+                                <span
+                                  key={opt.id || oIdx}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    background: 'var(--bg-primary)',
+                                    border: '1px solid var(--border-color)',
+                                    color: 'var(--text-secondary)'
+                                  }}
+                                >
+                                  {opt.name} {Number(opt.price_delta) !== 0 ? `(${Number(opt.price_delta) > 0 ? '+' : ''}$${Number(opt.price_delta).toFixed(2)})` : '($0)'}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* High Level Sales Metrics */}
                   <div className={styles.metricsGrid}>

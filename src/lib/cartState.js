@@ -5,6 +5,20 @@ const toFiniteNumber = (value) => {
     return Number.isFinite(number) ? number : NaN;
 };
 
+export const getCartLineKey = (item) => {
+    if (!item) return '';
+    const baseId = String(item.id || item.product_id || '');
+    const modifiers = Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0
+        ? [...item.selected_modifiers]
+            .map(m => `${m.group_id || ''}:${m.option_id || m.id || ''}:${m.name || ''}:${toFiniteNumber(m.price_delta) || 0}`)
+            .sort()
+            .join('|')
+        : '';
+    const notes = typeof item.item_notes === 'string' ? item.item_notes.trim().toLowerCase() : '';
+    if (!modifiers && !notes) return baseId;
+    return `${baseId}__mods[${modifiers}]__notes[${notes}]`;
+};
+
 export const normalizeCartItems = (value) => {
     if (!Array.isArray(value)) return [];
     const items = new Map();
@@ -20,14 +34,28 @@ export const normalizeCartItems = (value) => {
             || !Number.isFinite(quantity) || quantity <= 0
             || !Number.isFinite(price * quantity)) continue;
 
-        const existing = items.get(item.id);
+        const lineKey = item.line_id || getCartLineKey(item);
+        const hasModifiers = Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0;
+        const hasNotes = typeof item.item_notes === 'string' && item.item_notes.trim().length > 0;
+
+        const existing = items.get(lineKey);
         if (existing) {
             const combinedQuantity = existing.quantity + quantity;
             if (Number.isFinite(combinedQuantity) && Number.isFinite(existing.price * combinedQuantity)) {
-                items.set(item.id, { ...existing, quantity: combinedQuantity });
+                items.set(lineKey, { ...existing, quantity: combinedQuantity });
             }
         } else {
-            items.set(item.id, { ...item, price, quantity });
+            const normalized = { ...item, price, quantity };
+            if (hasModifiers) {
+                normalized.selected_modifiers = item.selected_modifiers;
+            }
+            if (hasNotes) {
+                normalized.item_notes = item.item_notes.trim();
+            }
+            if (lineKey !== String(item.id)) {
+                normalized.line_id = lineKey;
+            }
+            items.set(lineKey, normalized);
         }
     }
 
@@ -40,11 +68,14 @@ export const addCartItem = (items, product, quantity = 1) => {
     return normalizeCartItems([...items, item]);
 };
 
-export const updateCartQuantity = (items, productId, value) => {
+export const updateCartQuantity = (items, key, value) => {
     const quantity = toFiniteNumber(value);
+    const targetKey = String(key);
     if (!Number.isFinite(quantity)) return items;
-    if (quantity < 1) return items.filter(item => item.id !== productId);
-    return items.map(item => item.id === productId && Number.isFinite(item.price * quantity)
+    const isTarget = (item) => (item.line_id ? String(item.line_id) === targetKey : String(item.id) === targetKey);
+
+    if (quantity < 1) return items.filter(item => !isTarget(item));
+    return items.map(item => isTarget(item) && Number.isFinite(item.price * quantity)
         ? { ...item, quantity }
         : item);
 };
@@ -62,11 +93,20 @@ export const reconcileCartItems = (items, products, { loading = false, error = n
             result.removedNames.push(item.name);
             continue;
         }
-        const price = toFiniteNumber(product.price);
-        if (Number.isFinite(price) && price >= 0 && price !== item.price
-            && Number.isFinite(price * item.quantity)) {
+        const basePrice = toFiniteNumber(product.price);
+        if (!Number.isFinite(basePrice) || basePrice < 0) {
+            nextItems.push(item);
+            continue;
+        }
+        const modifierDeltaSum = Array.isArray(item.selected_modifiers)
+            ? item.selected_modifiers.reduce((sum, m) => sum + (toFiniteNumber(m.price_delta) || 0), 0)
+            : 0;
+        const expectedPrice = Math.max(0, basePrice + modifierDeltaSum);
+
+        if (Number.isFinite(expectedPrice) && expectedPrice >= 0 && expectedPrice !== item.price
+            && Number.isFinite(expectedPrice * item.quantity)) {
             result.pricesChanged = true;
-            nextItems.push({ ...item, price });
+            nextItems.push({ ...item, price: expectedPrice });
         } else {
             nextItems.push(item);
         }

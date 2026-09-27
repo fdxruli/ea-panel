@@ -3,8 +3,8 @@
  * Pure functions for building WhatsApp order messages and generating URLs.
  * No React, no Supabase, no side effects.
  */
-import { formatScheduledTime } from '../utils/checkoutDateUtils';
-import { BUSINESS_PHONE } from '../config/constantes';
+import { formatScheduledTime } from '../utils/checkoutDateUtils.js';
+import { BUSINESS_PHONE } from '../config/constantes.js';
 
 /**
  * Builds a WhatsApp-compatible text message for a guest (non-registered) order.
@@ -21,6 +21,13 @@ export const buildGuestOrderMessage = ({ orderCode, cartItems, total }) => {
 
   cartItems.forEach((item) => {
     message += `• ${item.quantity}x ${item.name}\n`;
+    if (Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0) {
+      const modNames = item.selected_modifiers.map(m => m.name || m.option_name).filter(Boolean).join(', ');
+      if (modNames) message += `   ↳ Complementos: ${modNames}\n`;
+    }
+    if (item.item_notes?.trim()) {
+      message += `   ↳ Nota: ${item.item_notes.trim()}\n`;
+    }
   });
 
   message += `\n*Total: $${total.toFixed(2)}*`;
@@ -58,6 +65,13 @@ export const buildCustomerOrderMessage = ({
 
   cartItems.forEach((item) => {
     message += `• ${item.quantity}x ${item.name}\n`;
+    if (Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0) {
+      const modNames = item.selected_modifiers.map(m => m.name || m.option_name).filter(Boolean).join(', ');
+      if (modNames) message += `   ↳ Complementos: ${modNames}\n`;
+    }
+    if (item.item_notes?.trim()) {
+      message += `   ↳ Nota: ${item.item_notes.trim()}\n`;
+    }
   });
 
   if (discount) {

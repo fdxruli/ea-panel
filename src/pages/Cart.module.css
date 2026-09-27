@@ -184,6 +184,33 @@
   font-weight: 700;
 }
 
+.itemModifiersList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+}
+
+.itemModifierTag {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+}
+
+.itemModifierTag small {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.itemNoteText {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
 .itemActions { 
     display: flex; 
     align-items: center; 

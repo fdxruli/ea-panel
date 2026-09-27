@@ -7,7 +7,7 @@ import imageCompression from "browser-image-compression";
 import styles from "../pages/Products.module.css";
 import LoadingSpinner from "./LoadingSpinner";
 import { useCustomersBasicCache } from "../hooks/useCustomersBasicCache";
-import { Globe, Sparkles, Search, X, UserCheck, Users, Lock } from "lucide-react";
+import { Globe, Sparkles, Search, X, UserCheck, Users, Lock, Crown, Star, Plus, Trash2, Check } from "lucide-react";
 
 // --- Iconos para la Receta ---
 const AddIcon = () => (
@@ -27,7 +27,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     const { showAlert } = useAlert();
 
     // --- Pestaña activa ---
-    const [activeTab, setActiveTab] = useState('info'); // 'info' | 'recipe' | 'audience'
+    const [activeTab, setActiveTab] = useState('info'); // 'info' | 'recipe' | 'audience' | 'modifiers'
 
     // --- Estado del formulario principal ---
     const [formData, setFormData] = useState({ name: "", description: "", price: "", cost: "0", category_id: "", image_url: "" });
@@ -45,11 +45,15 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     // --- ESTADO PARA AUDIENCIA Y VISIBILIDAD ---
     const { data: customersData, isLoading: loadingCustomers } = useCustomersBasicCache();
     const allCustomers = useMemo(() => customersData || [], [customersData]);
-    const [audienceType, setAudienceType] = useState('public'); // 'public' | 'special'
+    const [audienceType, setAudienceType] = useState('public'); // 'public' | 'tiers' | 'customers'
+    const [selectedCustomerTiers, setSelectedCustomerTiers] = useState([]);
     const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
     const [customerSearchQuery, setCustomerSearchQuery] = useState('');
     const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
     const customerSearchContainerRef = useRef(null);
+
+    // --- ESTADO PARA COMPLEMENTOS Y MODIFICADORES ---
+    const [modifierGroups, setModifierGroups] = useState([]);
 
     // Cargar todos los ingredientes disponibles para el dropdown
     const fetchAllIngredients = async () => {
@@ -126,14 +130,28 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 }
 
                 // 3. Poblar formulario de Audiencia
-                const hasSpecial = Boolean(
-                  initialProduct.target_customer_ids &&
-                  initialProduct.target_customer_ids.length > 0
-                );
-                setAudienceType(hasSpecial ? 'special' : 'public');
-                setSelectedCustomerIds(hasSpecial ? [...initialProduct.target_customer_ids] : []);
+                if (initialProduct.target_customer_tiers && initialProduct.target_customer_tiers.length > 0) {
+                  setAudienceType('tiers');
+                  setSelectedCustomerTiers([...initialProduct.target_customer_tiers]);
+                  setSelectedCustomerIds([]);
+                } else if (initialProduct.target_customer_ids && initialProduct.target_customer_ids.length > 0) {
+                  setAudienceType('customers');
+                  setSelectedCustomerIds([...initialProduct.target_customer_ids]);
+                  setSelectedCustomerTiers([]);
+                } else {
+                  setAudienceType('public');
+                  setSelectedCustomerTiers([]);
+                  setSelectedCustomerIds([]);
+                }
                 setCustomerSearchQuery('');
                 setIsCustomerDropdownOpen(false);
+
+                // 4. Poblar formulario de Complementos (Modifiers)
+                if (Array.isArray(initialProduct.modifiers) && initialProduct.modifiers.length > 0) {
+                  setModifierGroups(JSON.parse(JSON.stringify(initialProduct.modifiers)));
+                } else {
+                  setModifierGroups([]);
+                }
             } else {
                 // Resetear todo para un producto nuevo
                 setFormData({ name: "", description: "", price: "", cost: "0", category_id: "", image_url: "" });
@@ -142,7 +160,9 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 setTrackStock(false);
                 setRecipeItems([]);
                 setAudienceType('public');
+                setSelectedCustomerTiers([]);
                 setSelectedCustomerIds([]);
+                setModifierGroups([]);
                 setCustomerSearchQuery('');
                 setIsCustomerDropdownOpen(false);
             }
@@ -184,6 +204,12 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
       });
     }, [selectedCustomerIds, allCustomers]);
 
+    const handleToggleTier = (tier) => {
+      setSelectedCustomerTiers(prev => 
+        prev.includes(tier) ? prev.filter(t => t !== tier) : [...prev, tier]
+      );
+    };
+
     const handleAddCustomer = (customer) => {
       if (!selectedCustomerIds.includes(customer.id)) {
         setSelectedCustomerIds(prev => [...prev, customer.id]);
@@ -194,6 +220,95 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
 
     const handleRemoveCustomer = (customerId) => {
       setSelectedCustomerIds(prev => prev.filter(id => id !== customerId));
+    };
+
+    // --- Handlers de Complementos / Modificadores ---
+    const handleAddModifierGroup = (name = 'Complementos') => {
+      const newGroup = {
+        id: `mod_grp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name,
+        required: false,
+        options: [
+          {
+            id: `opt_${Date.now()}_1`,
+            name: '',
+            price_delta: 0
+          }
+        ]
+      };
+      setModifierGroups(prev => [...prev, newGroup]);
+    };
+
+    const handleDeleteModifierGroup = (groupId) => {
+      setModifierGroups(prev => prev.filter(g => g.id !== groupId));
+    };
+
+    const handleModifierGroupChange = (groupId, field, value) => {
+      setModifierGroups(prev => prev.map(g => {
+        if (g.id === groupId) {
+          return { ...g, [field]: value };
+        }
+        return g;
+      }));
+    };
+
+    const handleAddModifierOption = (groupId) => {
+      setModifierGroups(prev => prev.map(g => {
+        if (g.id === groupId) {
+          const newOption = {
+            id: `opt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            name: '',
+            price_delta: 0
+          };
+          return { ...g, options: [...g.options, newOption] };
+        }
+        return g;
+      }));
+    };
+
+    const handleDeleteModifierOption = (groupId, optionId) => {
+      setModifierGroups(prev => prev.map(g => {
+        if (g.id === groupId) {
+          return { ...g, options: g.options.filter(o => o.id !== optionId) };
+        }
+        return g;
+      }));
+    };
+
+    const handleModifierOptionChange = (groupId, optionId, field, value) => {
+      setModifierGroups(prev => prev.map(g => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            options: g.options.map(o => {
+              if (o.id === optionId) {
+                return { 
+                  ...o, 
+                  [field]: field === 'price_delta' ? (parseFloat(value) || 0) : value 
+                };
+              }
+              return o;
+            })
+          };
+        }
+        return g;
+      }));
+    };
+
+    const handleLoadModifierPreset = () => {
+      const presetGroup = {
+        id: `mod_grp_${Date.now()}`,
+        name: 'Personalización y Extras',
+        required: false,
+        options: [
+          { id: `opt_${Date.now()}_1`, name: 'Extra porción / pollo', price_delta: 25 },
+          { id: `opt_${Date.now()}_2`, name: 'Doble queso', price_delta: 15 },
+          { id: `opt_${Date.now()}_3`, name: 'Sin cebolla', price_delta: 0 },
+          { id: `opt_${Date.now()}_4`, name: 'Sin salsa picante', price_delta: 0 }
+        ]
+      };
+      setModifierGroups(prev => [...prev, presetGroup]);
+      showAlert('Plantilla de complementos agregada. Puedes personalizar nombres y precios.', 'success');
     };
 
     // --- Handlers del Formulario de Receta ---
@@ -315,7 +430,12 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
           const confirm = window.confirm('Has marcado "Rastrear Stock" pero no has añadido ingredientes a la receta. El costo será $0. ¿Continuar?');
           if (!confirm) return;
         }
-        if (audienceType === 'special' && selectedCustomerIds.length === 0) {
+        if (audienceType === 'tiers' && selectedCustomerTiers.length === 0) {
+          showAlert('Has marcado "Por categoría" pero no has seleccionado ninguna categoría (ej. VIP). Selecciona al menos una.', 'warning');
+          setActiveTab('audience');
+          return;
+        }
+        if ((audienceType === 'customers' || audienceType === 'special') && selectedCustomerIds.length === 0) {
           showAlert('Has marcado "Clientes especiales" pero no has seleccionado ningún cliente. Selecciona al menos uno o elige "Público en general".', 'warning');
           setActiveTab('audience');
           return;
@@ -331,7 +451,24 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 imageUrl = await uploadImageWithRetry(imageFile);
             }
 
-            // 3. Preparar datos del PRODUCTO con Audiencia
+            // 3. Preparar complementos / modificadores limpios
+            const cleanedModifiers = modifierGroups
+              .filter(g => g.name && g.name.trim().length > 0)
+              .map(g => ({
+                id: g.id || `mod_grp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                name: g.name.trim(),
+                required: Boolean(g.required),
+                options: (g.options || [])
+                  .filter(o => o.name && o.name.trim().length > 0)
+                  .map(o => ({
+                    id: o.id || `opt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                    name: o.name.trim(),
+                    price_delta: Number(o.price_delta) || 0
+                  }))
+              }))
+              .filter(g => g.options.length > 0);
+
+            // 4. Preparar datos del PRODUCTO con Audiencia y Modificadores
             const productData = {
                 ...formData,
                 id: initialProduct?.id,
@@ -341,17 +478,19 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                 cost: calculatedCost,
                 image_url: imageUrl,
                 track_stock: trackStock,
-                target_customer_ids: audienceType === 'public' ? null : selectedCustomerIds
+                target_customer_ids: (audienceType === 'customers' || audienceType === 'special') ? selectedCustomerIds : null,
+                target_customer_tiers: audienceType === 'tiers' ? selectedCustomerTiers : null,
+                modifiers: cleanedModifiers
             };
 
-            // 4. Preparar datos de la RECETA
+            // 5. Preparar datos de la RECETA
             const recipeData = trackStock ? recipeItems.map(item => ({
                 ingredient_id: item.ingredient_id,
                 quantity_used: Number(item.quantity_used) || 0,
                 deduct_stock_automatically: item.deduct_stock_automatically
             })) : [];
 
-            // 5. Llamar a onSave
+            // 6. Llamar a onSave
             await onSave({ productData, recipeData });
 
         } catch (error) {
@@ -391,7 +530,20 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                     className={`${styles.tabButton} ${activeTab === 'audience' ? styles.active : ''}`}
                     onClick={() => setActiveTab('audience')}
                   >
-                    Audiencia {audienceType === 'special' ? `(⭐ ${selectedCustomerIds.length})` : '(🌐 Público)'}
+                    Audiencia {
+                      audienceType === 'tiers'
+                        ? `(👑 ${selectedCustomerTiers.map(t => t.toUpperCase()).join(', ') || 'VIP'})`
+                        : (audienceType === 'customers' || audienceType === 'special')
+                          ? `(👤 ${selectedCustomerIds.length})`
+                          : '(🌐 Público)'
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.tabButton} ${activeTab === 'modifiers' ? styles.active : ''}`}
+                    onClick={() => setActiveTab('modifiers')}
+                  >
+                    Complementos {modifierGroups.length > 0 ? `(${modifierGroups.reduce((acc, g) => acc + (g.options?.length || 0), 0)})` : ''}
                   </button>
                 </div>
 
@@ -519,7 +671,7 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                     {/* --- CONTENIDO PESTAÑA 3: AUDIENCIA Y VISIBILIDAD --- */}
                     <div className={`${styles.tabContent} ${activeTab === 'audience' ? styles.active : ''}`}>
                       <div className={styles.audienceTabSection}>
-                        <div className={styles.audienceRadioGrid}>
+                        <div className={styles.audienceRadioGrid} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
                           {/* Opción 1: Público en general */}
                           <div 
                             className={`${styles.audienceRadioCard} ${audienceType === 'public' ? styles.audienceRadioCardActive : ''}`}
@@ -527,30 +679,121 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                           >
                             <div className={styles.audienceRadioTitle}>
                               <Globe size={18} />
-                              Público en general
+                              Público general
                             </div>
                             <p className={styles.audienceRadioDesc}>
-                              Visible y disponible para todos los clientes y visitantes anónimos del catálogo.
+                              Visible y disponible para todos los clientes y visitantes del menú.
                             </p>
                           </div>
 
-                          {/* Opción 2: Clientes especiales */}
+                          {/* Opción 2: Categorías de clientes (VIP) */}
                           <div 
-                            className={`${styles.audienceRadioCard} ${audienceType === 'special' ? styles.audienceRadioCardSpecialActive : ''}`}
-                            onClick={() => setAudienceType('special')}
+                            className={`${styles.audienceRadioCard} ${audienceType === 'tiers' ? styles.audienceRadioCardTiersActive : ''}`}
+                            onClick={() => setAudienceType('tiers')}
+                          >
+                            <div className={styles.audienceRadioTitle}>
+                              <Crown size={18} style={{ color: '#eab308' }} />
+                              Por Categoría (VIP)
+                            </div>
+                            <p className={styles.audienceRadioDesc}>
+                              Exclusivo para clientes que alcanzan nivel VIP o Frecuente.
+                            </p>
+                          </div>
+
+                          {/* Opción 3: Clientes específicos */}
+                          <div 
+                            className={`${styles.audienceRadioCard} ${(audienceType === 'customers' || audienceType === 'special') ? styles.audienceRadioCardSpecialActive : ''}`}
+                            onClick={() => setAudienceType('customers')}
                           >
                             <div className={styles.audienceRadioTitle}>
                               <Sparkles size={18} />
-                              Clientes especiales
+                              Clientes específicos
                             </div>
                             <p className={styles.audienceRadioDesc}>
-                              Solo visible para los clientes específicos seleccionados. Queda 100% oculto para los demás.
+                              Visible únicamente para clientes individuales asignados a mano.
                             </p>
                           </div>
                         </div>
 
-                        {/* Selector de clientes cuando es especial */}
-                        {audienceType === 'special' && (
+                        {/* Selector de categorías cuando es tiers */}
+                        {audienceType === 'tiers' && (
+                          <div className={styles.audienceTiersPicker}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '0.9rem', color: '#fde047' }}>
+                                Categorías Asignadas ({selectedCustomerTiers.length})
+                              </strong>
+                              <span style={{ fontSize: '0.8rem', color: '#eab308' }}>
+                                <Lock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                                Exclusivo por Lealtad
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                              {/* VIP Row */}
+                              <div
+                                className={`${styles.audienceTierRow} ${selectedCustomerTiers.includes('vip') ? styles.audienceTierRowActive : ''}`}
+                                onClick={() => handleToggleTier('vip')}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <Crown size={20} style={{ color: '#eab308' }} />
+                                  <div>
+                                    <div style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>Cliente VIP</div>
+                                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                                      Consumo &gt; $3,000 o &gt; 15 pedidos completados en los últimos 90 días.
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '6px',
+                                  border: '2px solid var(--border-color)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: selectedCustomerTiers.includes('vip') ? '#eab308' : 'transparent',
+                                  borderColor: selectedCustomerTiers.includes('vip') ? '#eab308' : 'var(--border-color)',
+                                  color: '#0f172a'
+                                }}>
+                                  {selectedCustomerTiers.includes('vip') && <Check size={14} />}
+                                </div>
+                              </div>
+
+                              {/* Frecuente Row */}
+                              <div
+                                className={`${styles.audienceTierRow} ${selectedCustomerTiers.includes('frecuente') ? styles.audienceTierRowActive : ''}`}
+                                onClick={() => handleToggleTier('frecuente')}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <Star size={20} style={{ color: '#38bdf8' }} />
+                                  <div>
+                                    <div style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>Cliente Frecuente</div>
+                                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                                      Consumo &gt; $750 o &gt; 3 pedidos completados en los últimos 90 días.
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '6px',
+                                  border: '2px solid var(--border-color)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: selectedCustomerTiers.includes('frecuente') ? '#eab308' : 'transparent',
+                                  borderColor: selectedCustomerTiers.includes('frecuente') ? '#eab308' : 'var(--border-color)',
+                                  color: '#0f172a'
+                                }}>
+                                  {selectedCustomerTiers.includes('frecuente') && <Check size={14} />}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Selector de clientes cuando es especial/customers */}
+                        {(audienceType === 'customers' || audienceType === 'special') && (
                           <div className={styles.audienceSpecialPicker}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <strong style={{ fontSize: '0.9rem', color: '#c4b5fd' }}>
@@ -633,6 +876,139 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                               )}
                             </div>
                           </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* --- CONTENIDO PESTAÑA 4: COMPLEMENTOS / MODIFICADORES --- */}
+                    <div className={`${styles.tabContent} ${activeTab === 'modifiers' ? styles.active : ''}`}>
+                      <div className={styles.modifiersContainer}>
+                        <div className={styles.modifierTopBar}>
+                          <div>
+                            <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                              Complementos y Opciones del Producto
+                            </h4>
+                            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                              Permite al cliente agregar extras (+ costo), quitar ingredientes ($0) o aplicar ajustes de precio.
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              type="button"
+                              className={styles.presetTemplateBtn}
+                              onClick={handleLoadModifierPreset}
+                              title="Carga una lista con ejemplos comunes de extras"
+                            >
+                              <Sparkles size={14} /> + Plantilla Rápida
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.addModifierGroupBtn}
+                              onClick={() => handleAddModifierGroup('Complementos')}
+                            >
+                              <Plus size={15} /> + Grupo de Opciones
+                            </button>
+                          </div>
+                        </div>
+
+                        {modifierGroups.length === 0 ? (
+                          <div className={styles.emptyModifiersBox}>
+                            <Sparkles size={32} style={{ color: 'var(--color-primary)', opacity: 0.8 }} />
+                            <div className={styles.emptyModifiersTitle}>Sin complementos configurados</div>
+                            <p className={styles.emptyModifiersDesc}>
+                              Los clientes no verán opciones adicionales para este producto. Agrega un grupo de complementos para que puedan elegir ingredientes extra como salsa, porciones adicionales o modificaciones.
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                              <button
+                                type="button"
+                                className={styles.addModifierGroupBtn}
+                                onClick={() => handleAddModifierGroup('Complementos')}
+                              >
+                                <Plus size={14} /> Crear Primer Grupo
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.presetTemplateBtn}
+                                onClick={handleLoadModifierPreset}
+                              >
+                                <Sparkles size={14} /> Usar Plantilla Rápida
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          modifierGroups.map((group, gIndex) => (
+                            <div key={group.id || gIndex} className={styles.modifierGroupCard}>
+                              <div className={styles.modifierGroupHeader}>
+                                <input
+                                  type="text"
+                                  className={styles.modifierGroupNameInput}
+                                  value={group.name}
+                                  onChange={(e) => handleModifierGroupChange(group.id, 'name', e.target.value)}
+                                  placeholder="Nombre del grupo (ej: Complementos, Extras)"
+                                />
+                                <div className={styles.modifierGroupActions}>
+                                  <label className={styles.modifierRequiredToggle}>
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(group.required)}
+                                      onChange={(e) => handleModifierGroupChange(group.id, 'required', e.target.checked)}
+                                    />
+                                    <span>¿Selección obligatoria?</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    className={styles.modifierDeleteGroupBtn}
+                                    onClick={() => handleDeleteModifierGroup(group.id)}
+                                    title="Eliminar este grupo"
+                                  >
+                                    <Trash2 size={13} /> Eliminar Grupo
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className={styles.modifierOptionsList}>
+                                {group.options.map((option, oIndex) => (
+                                  <div key={option.id || oIndex} className={styles.modifierOptionRow}>
+                                    <input
+                                      type="text"
+                                      className={styles.modifierOptionNameInput}
+                                      value={option.name}
+                                      onChange={(e) => handleModifierOptionChange(group.id, option.id, 'name', e.target.value)}
+                                      placeholder="Nombre de la opción (ej: Extra pollo, Sin cebolla)"
+                                    />
+                                    <div className={styles.modifierOptionPriceWrapper}>
+                                      <span className={styles.modifierOptionPricePrefix}>Precio: $</span>
+                                      <input
+                                        type="number"
+                                        step="0.5"
+                                        className={styles.modifierOptionPriceInput}
+                                        value={option.price_delta}
+                                        onChange={(e) => handleModifierOptionChange(group.id, option.id, 'price_delta', e.target.value)}
+                                        placeholder="0.00"
+                                        title="Ajuste al precio: positivo (+), cero ($0) o negativo (-)"
+                                      />
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className={styles.modifierOptionDeleteBtn}
+                                      onClick={() => handleDeleteModifierOption(group.id, option.id)}
+                                      title="Eliminar opción"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
+                                ))}
+
+                                <button
+                                  type="button"
+                                  className={styles.addOptionBtn}
+                                  onClick={() => handleAddModifierOption(group.id)}
+                                >
+                                  <Plus size={13} /> + Añadir Opción a este grupo
+                                </button>
+                              </div>
+                            </div>
+                          ))
                         )}
                       </div>
                     </div>

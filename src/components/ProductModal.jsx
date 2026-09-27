@@ -79,6 +79,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [wasAdded, setWasAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('details');
+    const [selectedModifiers, setSelectedModifiers] = useState([]);
+    const [itemNotes, setItemNotes] = useState('');
 
     const { reviews: allReviews, favorites, customerId, refetch: refetchExtras } = useProductExtras();
 
@@ -101,6 +103,69 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
         ...(product.product_images?.map(img => img.image_url) || [])
     ].filter(Boolean) : [];
 
+    const isVip = Boolean(product?.is_vip_exclusive || product?.target_customer_tiers?.includes('vip'));
+    const isSpecialAudience = Boolean(
+        isVip ||
+        (Array.isArray(product?.target_customer_tiers) && product.target_customer_tiers.length > 0) ||
+        (Array.isArray(product?.target_customer_ids) && product.target_customer_ids.length > 0)
+    );
+    const modifierGroups = useMemo(() => Array.isArray(product?.modifiers) ? product.modifiers : [], [product?.modifiers]);
+    const hasModifiers = modifierGroups.length > 0;
+
+    const modifierDeltaSum = useMemo(() => {
+        return selectedModifiers.reduce((sum, mod) => sum + (Number(mod.price_delta) || 0), 0);
+    }, [selectedModifiers]);
+
+    const effectiveUnitPrice = useMemo(() => {
+        const base = Number(product?.price || 0);
+        return Math.max(0, base + modifierDeltaSum);
+    }, [product?.price, modifierDeltaSum]);
+
+    const effectiveTotalPrice = effectiveUnitPrice * quantity;
+
+    const handleToggleModifier = useCallback((group, option) => {
+        setSelectedModifiers(prev => {
+            const isSingle = group.max === 1;
+            const exists = prev.some(m => m.option_id === option.id && m.group_id === group.id);
+
+            if (isSingle) {
+                if (exists) {
+                    return group.required ? prev : prev.filter(m => !(m.group_id === group.id && m.option_id === option.id));
+                }
+                const withoutGroup = prev.filter(m => m.group_id !== group.id);
+                return [
+                    ...withoutGroup,
+                    {
+                        group_id: group.id,
+                        group_name: group.name,
+                        option_id: option.id,
+                        name: option.name,
+                        price_delta: Number(option.price_delta) || 0,
+                    }
+                ];
+            } else {
+                if (exists) {
+                    return prev.filter(m => !(m.option_id === option.id && m.group_id === group.id));
+                }
+                const currentGroupCount = prev.filter(m => m.group_id === group.id).length;
+                if (group.max && currentGroupCount >= group.max) {
+                    showAlert(`Solo puedes seleccionar hasta ${group.max} opción(es) en "${group.name}".`);
+                    return prev;
+                }
+                return [
+                    ...prev,
+                    {
+                        group_id: group.id,
+                        group_name: group.name,
+                        option_id: option.id,
+                        name: option.name,
+                        price_delta: Number(option.price_delta) || 0,
+                    }
+                ];
+            }
+        });
+    }, [showAlert]);
+
     useEffect(() => {
         const timer = setTimeout(() => setIsAnimating(true), 10);
         return () => clearTimeout(timer);
@@ -115,6 +180,8 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             setUserRating(0);
             setUserComment('');
             setIsReviewFormVisible(false);
+            setSelectedModifiers([]);
+            setItemNotes('');
         }
     }, [product?.id]);
 
@@ -194,8 +261,29 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
             return;
         }
 
+        // Validar grupos de complementos requeridos
+        for (const group of modifierGroups) {
+            if (group.required) {
+                const count = selectedModifiers.filter(m => m.group_id === group.id).length;
+                const min = group.min || 1;
+                if (count < min) {
+                    showAlert(`Por favor selecciona al menos ${min} opción(es) en "${group.name}".`);
+                    setActiveTab('modifiers');
+                    return;
+                }
+            }
+        }
+
+        const customizedProduct = {
+            ...product,
+            price: effectiveUnitPrice,
+            base_price: product.price,
+            selected_modifiers: selectedModifiers,
+            item_notes: itemNotes?.trim() || null,
+        };
+
         // Bloquea explícitamente la propagación del evento hacia Menu.jsx
-        onAddToCart(product, quantity, null);
+        onAddToCart(customizedProduct, quantity, null);
 
         // Usa el botón actual como origen estricto y la clase CSS correcta
         if (event?.currentTarget) {
@@ -271,7 +359,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
     return (
         <div className={`${styles.overlay} ${isAnimating ? styles.open : ''}`} onClick={handleClose}>
-            <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''}`} onClick={(e) => e.stopPropagation()}>
+            <div className={`${styles.modalContent} ${isAnimating ? styles.open : ''} ${isVip ? styles.vipModalContent : ''}`} onClick={(e) => e.stopPropagation()}>
                 <div
                     className={styles.galleryContainer}
                     onMouseEnter={stopCarousel}
@@ -300,10 +388,22 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                     ))}
                 </div>
 
-                <div className={styles.productDetails}>
+                <div className={`${styles.productDetails} ${isVip ? styles.vipDetails : ''}`}>
                     <div className={styles.header}>
                         <div className={styles.headerInfo}>
-                            <h1 className={styles.productName}>{product.name}</h1>
+                            <div className={styles.productTitleRow}>
+                                <h1 className={styles.productName}>{product.name}</h1>
+                                {isVip && (
+                                    <span className={styles.vipBadge}>
+                                        👑 Exclusivo VIP
+                                    </span>
+                                )}
+                                {!isVip && isSpecialAudience && (
+                                    <span className={styles.audienceBadge}>
+                                        ⭐ Exclusivo
+                                    </span>
+                                )}
+                            </div>
                             <AverageRating reviews={productReviews} />
                         </div>
 
@@ -332,6 +432,18 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
 
                     <div className={styles.tabButtons}>
                         <button type="button" onClick={() => setActiveTab('details')} className={activeTab === 'details' ? styles.active : ''}>Detalles</button>
+                        {hasModifiers && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('modifiers')}
+                                className={`${activeTab === 'modifiers' ? styles.active : ''} ${styles.tabWithCount}`}
+                            >
+                                Complementos
+                                {selectedModifiers.length > 0 && (
+                                    <span className={styles.tabBadge}>{selectedModifiers.length}</span>
+                                )}
+                            </button>
+                        )}
                         <button type="button" onClick={() => setActiveTab('reviews')} className={activeTab === 'reviews' ? styles.active : ''}>Reseñas ({productReviews.length})</button>
                     </div>
 
@@ -339,6 +451,97 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                         {activeTab === 'details' && (
                             <div className={styles.tabContentInner}>
                                 <p className={styles.productDescription}>{product.description || 'Descripción no disponible.'}</p>
+                                {hasModifiers && (
+                                    <div className={styles.detailsModifiersCallout} onClick={() => setActiveTab('modifiers')}>
+                                        <div className={styles.calloutHeader}>
+                                            <span className={styles.calloutIcon}>✨</span>
+                                            <div>
+                                                <strong>Personaliza con Complementos</strong>
+                                                <p>{modifierGroups.map(g => g.name).join(', ')}</p>
+                                            </div>
+                                        </div>
+                                        <button type="button" className={styles.calloutButton}>
+                                            {selectedModifiers.length > 0 ? `Elegidos (${selectedModifiers.length})` : 'Personalizar'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {activeTab === 'modifiers' && hasModifiers && (
+                            <div className={styles.tabContentInner}>
+                                <div className={styles.modifiersSection}>
+                                    {modifierGroups.map(group => {
+                                        const groupSelected = selectedModifiers.filter(m => m.group_id === group.id);
+                                        return (
+                                            <div key={group.id} className={styles.modifierGroupCard}>
+                                                <div className={styles.modifierGroupHeader}>
+                                                    <div>
+                                                        <h4 className={styles.modifierGroupTitle}>{group.name}</h4>
+                                                        <span className={styles.modifierGroupSubtitle}>
+                                                            {group.max === 1 
+                                                                ? 'Selecciona 1 opción' 
+                                                                : group.max 
+                                                                    ? `Hasta ${group.max} opciones` 
+                                                                    : 'Opciones adicionales'}
+                                                        </span>
+                                                    </div>
+                                                    {group.required && (
+                                                        <span className={styles.requiredPill}>Requerido</span>
+                                                    )}
+                                                </div>
+
+                                                <div className={styles.optionsList}>
+                                                    {group.options?.map(opt => {
+                                                        const isSelected = groupSelected.some(m => m.option_id === opt.id);
+                                                        const delta = Number(opt.price_delta) || 0;
+                                                        return (
+                                                            <div
+                                                                key={opt.id}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                className={`${styles.optionRow} ${isSelected ? styles.optionRowSelected : ''}`}
+                                                                onClick={() => handleToggleModifier(group, opt)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === ' ' || e.key === 'Enter') {
+                                                                        e.preventDefault();
+                                                                        handleToggleModifier(group, opt);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <div className={styles.optionLeft}>
+                                                                    <span className={`${styles.optionIndicator} ${group.max === 1 ? styles.radioIndicator : styles.checkIndicator} ${isSelected ? styles.indicatorActive : ''}`}>
+                                                                        {isSelected && (group.max === 1 ? '•' : '✓')}
+                                                                    </span>
+                                                                    <span className={styles.optionLabel}>{opt.name}</span>
+                                                                </div>
+                                                                <div className={styles.optionRight}>
+                                                                    {delta > 0 && <span className={styles.pricePlus}>+${delta.toFixed(2)}</span>}
+                                                                    {delta < 0 && <span className={styles.priceMinus}>-${Math.abs(delta).toFixed(2)}</span>}
+                                                                    {delta === 0 && <span className={styles.priceZero}>Sin costo</span>}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <div className={styles.instructionsContainer}>
+                                        <label htmlFor="product-item-notes" className={styles.instructionsLabel}>
+                                            Instrucciones de preparación (opcional):
+                                        </label>
+                                        <textarea
+                                            id="product-item-notes"
+                                            rows="2"
+                                            className={styles.instructionsTextarea}
+                                            placeholder="Ej. salsa aparte, bien crujiente, sin aderezo..."
+                                            value={itemNotes}
+                                            onChange={(e) => setItemNotes(e.target.value)}
+                                            maxLength={200}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
                         {activeTab === 'reviews' && (
@@ -364,7 +567,7 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                         )}
                     </div>
 
-                    {activeTab === 'details' && (
+                    {(activeTab === 'details' || activeTab === 'modifiers') && (
                         <div className={styles.footer}>
                             <div className={styles.quantitySelector}>
                                 <button type="button" onClick={decrementQuantity} disabled={product.is_out_of_stock}>-</button>
@@ -378,7 +581,12 @@ export default function ProductModal({ product, onClose, onAddToCart }) {
                                     className={`${styles.addButton} ${wasAdded ? styles.added : ''} ${product.is_out_of_stock ? styles.outOfStockButton : ''}`}
                                     disabled={wasAdded || product.is_out_of_stock}
                                 >
-                                    {product.is_out_of_stock ? 'Producto Agotado' : wasAdded ? '¡Añadido!' : `Añadir por $${(product.price * quantity).toFixed(2)}`}
+                                    {product.is_out_of_stock 
+                                        ? 'Producto Agotado' 
+                                        : wasAdded 
+                                            ? '¡Añadido!' 
+                                            : `Añadir por $${effectiveTotalPrice.toFixed(2)}${selectedModifiers.length > 0 ? ` (+${selectedModifiers.length})` : ''}`
+                                    }
                                 </button>
                                 <button type="button" onClick={handleToggleFavorite} className={`${styles.favoriteButton} ${styles.desktopOnly}`}>
                                     <HeartIcon isFavorite={isFavorite} />

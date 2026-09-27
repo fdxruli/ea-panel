@@ -343,12 +343,34 @@ export default function Products() {
     invalidate(ADMIN_PRODUCTS_KPIS_CACHE_KEY);
     invalidate(/^admin:products:dir:/);
     loadDirectory(true);
+
+    const hasTiers = (savedData?.targetCustomerTiers?.length || 0) > 0;
+    const hasIds = (savedData?.targetCustomerIds?.length || 0) > 0;
+    const isVip = (savedData?.targetCustomerTiers || []).includes('vip');
+
+    // Actualizar optimísticamente la lista de productos
+    setProducts(prevProds => prevProds.map(p => {
+      if (p.id === savedData?.productId) {
+        return {
+          ...p,
+          target_customer_ids: savedData.targetCustomerIds,
+          target_customers_count: savedData.targetCustomerIds?.length || 0,
+          target_customer_tiers: savedData.targetCustomerTiers || [],
+          is_exclusive: hasTiers || hasIds,
+          is_vip_exclusive: isVip
+        };
+      }
+      return p;
+    }));
+
     if (drawerProduct && drawerProduct.id === savedData?.productId) {
       setDrawerProduct(prev => prev ? {
         ...prev,
         target_customer_ids: savedData.targetCustomerIds,
         target_customers_count: savedData.targetCustomerIds?.length || 0,
-        is_exclusive: (savedData.targetCustomerIds?.length || 0) > 0
+        target_customer_tiers: savedData.targetCustomerTiers || [],
+        is_exclusive: hasTiers || hasIds,
+        is_vip_exclusive: isVip
       } : null);
     }
   }, [invalidate, loadDirectory, drawerProduct]);
@@ -540,7 +562,9 @@ export default function Products() {
             >
               <option value="all">👥 Toda la audiencia</option>
               <option value="public">🌐 Público General</option>
-              <option value="special">🔒 Clientes Especiales</option>
+              <option value="vip">👑 Exclusivo VIP</option>
+              <option value="customers">👤 Clientes Específicos</option>
+              <option value="special">🔒 Todo Exclusivo</option>
             </select>
 
             {/* Ordenamiento */}

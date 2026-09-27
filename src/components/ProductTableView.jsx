@@ -3,7 +3,7 @@ import React, { memo } from 'react';
 import styles from '../pages/Products.module.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import ImageWithFallback from './ImageWithFallback';
-import { Eye, Edit3, Camera, Power, TrendingUp, Users, Globe } from 'lucide-react';
+import { Eye, Edit3, Camera, Power, TrendingUp, Users, Globe, Crown, Star, Sparkles } from 'lucide-react';
 
 const renderMatrixBadge = (matrixClass) => {
   switch (matrixClass) {
@@ -146,12 +146,38 @@ export default memo(function ProductTableView({
                 {/* Audiencia */}
                 <td className={styles.textCenter} onClick={(e) => e.stopPropagation()}>
                   <button
-                    className={`${styles.tableAudienceBadge} ${p.is_exclusive ? styles.tableAudienceSpecial : styles.tableAudiencePublic}`}
+                    className={`${styles.tableAudienceBadge} ${
+                      p.is_vip_exclusive || (p.target_customer_tiers && p.target_customer_tiers.includes('vip'))
+                        ? styles.tableAudienceVip
+                        : (p.target_customer_tiers && p.target_customer_tiers.length > 0)
+                          ? styles.tableAudienceTier
+                          : p.is_exclusive
+                            ? styles.tableAudienceSpecial
+                            : styles.tableAudiencePublic
+                    }`}
                     onClick={() => onManageAudience && onManageAudience(p)}
-                    title={p.is_exclusive ? `Exclusivo para ${p.target_customers_count || 0} cliente(s) - Clic para gestionar` : "Público general - Clic para restringir acceso"}
+                    title={
+                      p.is_vip_exclusive || (p.target_customer_tiers && p.target_customer_tiers.includes('vip'))
+                        ? "👑 Exclusivo VIP - Clic para gestionar"
+                        : (p.target_customer_tiers && p.target_customer_tiers.length > 0)
+                          ? `⭐ Exclusivo categoría ${p.target_customer_tiers.join(', ')} - Clic para gestionar`
+                          : p.is_exclusive
+                            ? `Exclusivo para ${p.target_customers_count || 0} cliente(s) - Clic para gestionar`
+                            : "Público general - Clic para restringir acceso"
+                    }
                     style={{ cursor: canEdit ? 'pointer' : 'default', border: 'none' }}
                   >
-                    {p.is_exclusive ? (
+                    {p.is_vip_exclusive || (p.target_customer_tiers && p.target_customer_tiers.includes('vip')) ? (
+                      <>
+                        <Crown size={12} style={{ marginRight: 3, color: '#eab308' }} />
+                        VIP
+                      </>
+                    ) : (p.target_customer_tiers && p.target_customer_tiers.length > 0) ? (
+                      <>
+                        <Star size={12} style={{ marginRight: 3, color: '#38bdf8' }} />
+                        {p.target_customer_tiers.map(t => t.toUpperCase()).join(', ')}
+                      </>
+                    ) : p.is_exclusive ? (
                       <>
                         <Users size={12} style={{ marginRight: 3 }} />
                         {p.target_customers_count ? `${p.target_customers_count} clientes` : 'Especial'}

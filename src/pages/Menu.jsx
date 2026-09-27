@@ -287,7 +287,7 @@ export default function Menu() {
     setLayout((currentLayout) => (currentLayout === 'list' ? 'grid' : 'list'));
   }, []);
 
-  const handleAddToCart = useCallback((product, quantity, event) => {
+  const handleAddToCart = useCallback((product, quantity, event, customOptions = null) => {
     if (!product?.id) {
       showToast('Este producto no esta disponible en este momento.');
       return;
@@ -309,7 +309,8 @@ export default function Menu() {
       return;
     }
 
-    addToCart(product, safeQuantity);
+    const itemToAdd = customOptions ? { ...product, ...customOptions } : product;
+    addToCart(itemToAdd, safeQuantity);
 
     const quantityAdded = safeQuantity;
     const isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
