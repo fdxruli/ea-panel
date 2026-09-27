@@ -255,7 +255,7 @@
 
 .modalOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5); z-index: 1000;
+    background-color: rgba(0,0,0,0.65); z-index: 2500;
     display: flex; justify-content: center; align-items: center;
     padding: 1rem;
     overflow-x: hidden;
@@ -1913,16 +1913,31 @@
 
 @media (max-width: 640px) {
   .modalOverlay {
-    padding: 0.5rem;
+    padding: 0.5rem 0.5rem 0 0.5rem;
     align-items: flex-end;
+    z-index: 2500;
   }
 
   .modalContent {
-    padding: 1.25rem 0.9rem;
-    border-radius: 16px 16px 0 0;
-    max-height: 94vh;
+    padding: 1.25rem 0.9rem 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
     max-width: 100%;
     width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .productForm {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     overflow-x: hidden;
   }
 
@@ -2007,6 +2022,34 @@
   .modifierOptionPriceInput {
     font-size: 0.82rem;
     padding: 0.4rem 0.15rem;
+  }
+
+  .pricingSection {
+    padding-bottom: 1rem;
+  }
+
+  .modalActions {
+    position: sticky;
+    bottom: 0;
+    margin: 1.5rem -0.9rem 0 -0.9rem;
+    padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom, 14px));
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 40;
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .cancelButton,
+  .saveButton {
+    flex: 1;
+    padding: 0.8rem 0.5rem;
+    font-size: 0.9rem;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
