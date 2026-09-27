@@ -364,8 +364,6 @@ export const ProductProvider = ({ children }) => {
         const initSequence = ++pricesFetchSequenceRef.current;
 
         const initSpecialPrices = async () => {
-            setLoadingPrices(true);
-
             const { data: cachedPrices } = await getAsyncCache(cacheKey);
 
             if (
@@ -385,6 +383,7 @@ export const ProductProvider = ({ children }) => {
                 return;
             }
 
+            setLoadingPrices(true);
             setSpecialPrices([]);
             fetchSpecialPrices(customerId).catch(() => { });
         };

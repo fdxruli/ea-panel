@@ -4,6 +4,7 @@ import { captureReferralCodeFromUrl } from "./hooks/useReferralCode.js";
 import { CartProvider } from "./context/CartContext.jsx";
 import { CustomerProvider } from "./context/CustomerContext.jsx";
 import { ProductProvider } from "./context/ProductContext.jsx";
+import { ProductExtrasProvider } from "./context/ProductExtrasContext.jsx";
 import { UserDataProvider, useUserData } from "./context/UserDataContext.jsx";
 import { AlertProvider } from "./context/AlertContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
@@ -20,7 +21,6 @@ const MyStuff = lazy(() => import("./pages/MyStuff.jsx"));
 const TermsPage = lazy(() => import("./pages/TermsPage.jsx"));
 const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage.jsx"));
 const AdminRoutes = lazy(() => import("./routes/AdminRoutes.jsx"));
-const ClientExtrasProvider = lazy(() => import("./context/ProductExtrasContext.jsx").then(({ ProductExtrasProvider }) => ({ default: ProductExtrasProvider })));
 const Login = lazy(() => import("./pages/Login.jsx"));
 const NotFoundPage = lazy(() => import("./components/NotFoundPage.jsx"));
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
@@ -30,6 +30,11 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { cleanupExpiredCache } from "./utils/cache.js";
 
 const FullscreenLoader = () => <div className="fullscreen-loader"><LoadingSpinner /></div>;
+const RouteContentLoader = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh', width: '100%' }}>
+    <LoadingSpinner />
+  </div>
+);
 const ClientMenuFallback = () => { const { customer } = useUserData(); return <MenuRouteSkeleton showLeadCapture={!customer} />; };
 
 function App() {
@@ -47,13 +52,25 @@ function App() {
             <ErrorBoundary scope="application">
               <Suspense fallback={<FullscreenLoader />}>
                 <Routes>
-                  <Route path="/" element={<CustomerProvider><UserDataProvider><ProductProvider><CartProvider><ClientLayout /></CartProvider></ProductProvider></UserDataProvider></CustomerProvider>}>
+                  <Route path="/" element={
+                    <CustomerProvider>
+                      <UserDataProvider>
+                        <ProductProvider>
+                          <ProductExtrasProvider>
+                            <CartProvider>
+                              <ClientLayout />
+                            </CartProvider>
+                          </ProductExtrasProvider>
+                        </ProductProvider>
+                      </UserDataProvider>
+                    </CustomerProvider>
+                  }>
                     <Route index element={<Suspense fallback={<ClientMenuFallback />}><Menu /></Suspense>} />
-                    <Route path="producto/:productSlug" element={<Suspense fallback={<ClientMenuFallback />}><ClientExtrasProvider><Menu /></ClientExtrasProvider></Suspense>} />
-                    <Route path="mis-pedidos" element={<CustomerAuthGuard><MyOrders /></CustomerAuthGuard>} />
-                    <Route path="mis-pedidos/:orderCode" element={<CustomerAuthGuard><OrderDetailPage /></CustomerAuthGuard>} />
-                    <Route path="mi-perfil" element={<CustomerAuthGuard><MyProfile /></CustomerAuthGuard>} />
-                    <Route path="mi-actividad" element={<CustomerAuthGuard><Suspense fallback={<FullscreenLoader />}><ClientExtrasProvider><MyStuff /></ClientExtrasProvider></Suspense></CustomerAuthGuard>} />
+                    <Route path="producto/:productSlug" element={<Suspense fallback={<ClientMenuFallback />}><Menu /></Suspense>} />
+                    <Route path="mis-pedidos" element={<CustomerAuthGuard><Suspense fallback={<RouteContentLoader />}><MyOrders /></Suspense></CustomerAuthGuard>} />
+                    <Route path="mis-pedidos/:orderCode" element={<CustomerAuthGuard><Suspense fallback={<RouteContentLoader />}><OrderDetailPage /></Suspense></CustomerAuthGuard>} />
+                    <Route path="mi-perfil" element={<CustomerAuthGuard><Suspense fallback={<RouteContentLoader />}><MyProfile /></Suspense></CustomerAuthGuard>} />
+                    <Route path="mi-actividad" element={<CustomerAuthGuard><Suspense fallback={<RouteContentLoader />}><MyStuff /></Suspense></CustomerAuthGuard>} />
                     <Route path="terminos" element={<TermsPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                   </Route>

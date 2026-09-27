@@ -26,8 +26,8 @@ const EMPTY_USER_DATA = {
 };
 
 const isValidCustomer = (customer, canonicalCustomerId) => (
-    !!customer?.id &&
-    !!canonicalCustomerId &&
+    Boolean(customer?.id) &&
+    Boolean(canonicalCustomerId) &&
     customer.id === canonicalCustomerId
 );
 
@@ -39,17 +39,40 @@ const areValidOrders = (orders, canonicalCustomerId) => (
 export const UserDataProvider = ({ children }) => {
     const { phone, customer: canonicalCustomer, isCustomerLoading } = useCustomer();
     const canonicalCustomerId = canonicalCustomer?.id || null;
-    const [userData, setUserData] = useState(EMPTY_USER_DATA);
-    const [loading, setLoading] = useState(true);
+
+    const INFO_CACHE_KEY = phone ? `${CACHE_KEYS.USER_INFO}-${phone}` : null;
+    const ORDERS_CACHE_KEY = phone ? `${CACHE_KEYS.USER_ORDERS}-${phone}` : null;
+
+    // Hidratación síncrona desde caché para evitar pantallas de carga al cambiar de ruta
+    const initialCache = useMemo(() => {
+        if (!phone || !canonicalCustomerId) return null;
+        try {
+            const { data: cachedInfo } = getCache(`${CACHE_KEYS.USER_INFO}-${phone}`, CACHE_TTL.USER_DATA);
+            const { data: cachedOrders } = getCache(`${CACHE_KEYS.USER_ORDERS}-${phone}`, CACHE_TTL.USER_ORDERS);
+            if (isValidCustomer(cachedInfo?.customer, canonicalCustomerId)) {
+                return {
+                    customer: cachedInfo.customer,
+                    addresses: Array.isArray(cachedInfo.addresses) ? cachedInfo.addresses : [],
+                    orders: areValidOrders(cachedOrders, canonicalCustomerId) ? cachedOrders : [],
+                };
+            }
+        } catch {
+            return null;
+        }
+        return null;
+    }, [canonicalCustomerId, phone]);
+
+    const [userData, setUserData] = useState(() => initialCache || EMPTY_USER_DATA);
+    const [loading, setLoading] = useState(() => {
+        if (initialCache) return false;
+        return Boolean(phone && canonicalCustomerId);
+    });
     const [error, setError] = useState(null);
 
-    const customerRef = useRef(null);
-    const addressesRef = useRef([]);
-    const ordersRef = useRef([]);
+    const customerRef = useRef(initialCache?.customer || null);
+    const addressesRef = useRef(initialCache?.addresses || []);
+    const ordersRef = useRef(initialCache?.orders || []);
     const requestIdRef = useRef(0);
-
-    const INFO_CACHE_KEY = `${CACHE_KEYS.USER_INFO}-${phone}`;
-    const ORDERS_CACHE_KEY = `${CACHE_KEYS.USER_ORDERS}-${phone}`;
 
     const syncUserDataRefs = useCallback((nextUserData) => {
         customerRef.current = nextUserData.customer;
@@ -63,9 +86,10 @@ export const UserDataProvider = ({ children }) => {
     }, [syncUserDataRefs]);
 
     const invalidateIdentityCaches = useCallback(() => {
-        localStorage.removeItem(INFO_CACHE_KEY);
-        localStorage.removeItem(ORDERS_CACHE_KEY);
+        if (INFO_CACHE_KEY) localStorage.removeItem(INFO_CACHE_KEY);
+        if (ORDERS_CACHE_KEY) localStorage.removeItem(ORDERS_CACHE_KEY);
     }, [INFO_CACHE_KEY, ORDERS_CACHE_KEY]);
+
     const fetchCustomerAndAddresses = useCallback(async (phoneNumber, expectedCustomerId) => {
         let customerData = null;
         try {
@@ -106,7 +130,7 @@ export const UserDataProvider = ({ children }) => {
         return ordersData || [];
     }, []);
 
-    const fetchAndCacheUserData = useCallback(async (phoneNumber, expectedCustomerId) => {
+    const fetchAndCacheUserData = useCallback(async (phoneNumber, expectedCustomerId, { background = false } = {}) => {
         const requestId = ++requestIdRef.current;
 
         if (!phoneNumber || !expectedCustomerId) {
@@ -116,7 +140,11 @@ export const UserDataProvider = ({ children }) => {
             return;
         }
 
-        setLoading(true);
+        const hasExistingData = Boolean(customerRef.current?.id === expectedCustomerId);
+        // Solo activar loading si es una carga inicial sin datos en pantalla
+        if (!background && !hasExistingData) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
@@ -141,8 +169,10 @@ export const UserDataProvider = ({ children }) => {
 
             syncUserDataRefs(nextUserData);
             setUserData(nextUserData);
-            setCache(INFO_CACHE_KEY, userInfo, CACHE_TTL.USER_DATA);
-            setCache(ORDERS_CACHE_KEY, limitedOrdersForCache, CACHE_TTL.USER_ORDERS);
+            const infoKey = `${CACHE_KEYS.USER_INFO}-${phoneNumber}`;
+            const ordersKey = `${CACHE_KEYS.USER_ORDERS}-${phoneNumber}`;
+            setCache(infoKey, userInfo, CACHE_TTL.USER_DATA);
+            setCache(ordersKey, limitedOrdersForCache, CACHE_TTL.USER_ORDERS);
         } catch (err) {
             if (requestId !== requestIdRef.current) return;
             console.error('Error fetching user data:', err);
@@ -155,9 +185,6 @@ export const UserDataProvider = ({ children }) => {
                 resetUserData();
                 invalidateIdentityCaches();
             } else {
-                // Do not resurrect an unverified cache after an identity mismatch.
-                // Offline fallback is only safe while the currently published identity
-                // is already canonical and was previously validated.
                 if (!isValidCustomer(customerRef.current, canonicalCustomerId)) {
                     resetUserData();
                 }
@@ -170,8 +197,6 @@ export const UserDataProvider = ({ children }) => {
         canonicalCustomerId,
         fetchCustomerAndAddresses,
         fetchOrders,
-        INFO_CACHE_KEY,
-        ORDERS_CACHE_KEY,
         invalidateIdentityCaches,
         isCustomerLoading,
         resetUserData,
@@ -184,8 +209,10 @@ export const UserDataProvider = ({ children }) => {
 
     useEffect(() => {
         if (isCustomerLoading) {
-            setLoading(true);
-            resetUserData();
+            if (!initialCache) {
+                setLoading(true);
+                resetUserData();
+            }
             return undefined;
         }
 
@@ -198,36 +225,36 @@ export const UserDataProvider = ({ children }) => {
 
         let cancelled = false;
         const currentRequestId = ++requestIdRef.current;
+        const infoKey = `${CACHE_KEYS.USER_INFO}-${phone}`;
+        const ordersKey = `${CACHE_KEYS.USER_ORDERS}-${phone}`;
 
-        const { data: cachedInfo, isStale: isInfoStale } = getCache(INFO_CACHE_KEY, CACHE_TTL.USER_DATA);
-        const { data: cachedOrders, isStale: isOrdersStale } = getCache(ORDERS_CACHE_KEY, CACHE_TTL.USER_ORDERS);
+        const { data: cachedInfo, isStale: isInfoStale } = getCache(infoKey, CACHE_TTL.USER_DATA);
+        const { data: cachedOrders, isStale: isOrdersStale } = getCache(ordersKey, CACHE_TTL.USER_ORDERS);
         const cacheIdentityValid = isValidCustomer(cachedInfo?.customer, canonicalCustomerId);
         const cacheOrdersIdentityValid = areValidOrders(cachedOrders, canonicalCustomerId);
         const infoCacheValid = cacheIdentityValid && !isInfoStale;
         const ordersCacheValid = infoCacheValid && cacheOrdersIdentityValid && !isOrdersStale;
 
-        // Legacy caches use the v1 namespace and are therefore never read here.
-        // A v2 cache with B is also rejected as a complete snapshot; B is never
-        // rewritten to A.
-        if (!cacheIdentityValid || isInfoStale) {
-            localStorage.removeItem(INFO_CACHE_KEY);
-            localStorage.removeItem(ORDERS_CACHE_KEY);
-        }
-
-        if (cacheIdentityValid && !isInfoStale) {
+        // Solo descartar la caché si la identidad NO coincide con el cliente logueado
+        if (!cacheIdentityValid) {
+            localStorage.removeItem(infoKey);
+            localStorage.removeItem(ordersKey);
+            resetUserData();
+        } else {
+            // El caché pertenece al cliente actual: mostrarlo inmediatamente sin spinner
             const nextUserData = {
                 customer: cachedInfo.customer,
                 addresses: Array.isArray(cachedInfo.addresses) ? cachedInfo.addresses : [],
-                orders: ordersCacheValid ? cachedOrders : [],
+                orders: cacheOrdersIdentityValid ? cachedOrders : (ordersRef.current || []),
             };
             syncUserDataRefs(nextUserData);
             setUserData(nextUserData);
-        } else {
-            resetUserData();
+            setLoading(false);
         }
 
+        // Si los datos son viejos o faltan, revalidar silenciosamente en segundo plano
         if (!infoCacheValid || !ordersCacheValid) {
-            fetchAndCacheUserData(phone, canonicalCustomerId);
+            fetchAndCacheUserData(phone, canonicalCustomerId, { background: cacheIdentityValid });
         } else if (!cancelled) {
             setLoading(false);
         }
@@ -241,8 +268,7 @@ export const UserDataProvider = ({ children }) => {
         canonicalCustomerId,
         isCustomerLoading,
         fetchAndCacheUserData,
-        INFO_CACHE_KEY,
-        ORDERS_CACHE_KEY,
+        initialCache,
         resetUserData,
         syncUserDataRefs,
     ]);
@@ -252,7 +278,7 @@ export const UserDataProvider = ({ children }) => {
         if (!customerId || isCustomerLoading) return undefined;
 
         const handleOrderOrAddressChange = () => {
-            fetchAndCacheUserData(phone, customerId);
+            fetchAndCacheUserData(phone, customerId, { background: true });
         };
 
         const handleCustomerUpdate = (payload) => {
@@ -270,11 +296,11 @@ export const UserDataProvider = ({ children }) => {
             };
             syncUserDataRefs(nextUserData);
             setUserData(nextUserData);
-            setCache(INFO_CACHE_KEY, {
+            const infoKey = `${CACHE_KEYS.USER_INFO}-${phone}`;
+            setCache(infoKey, {
                 customer: newCustomerData,
                 addresses: addressesRef.current,
             }, CACHE_TTL.USER_DATA);
-            localStorage.removeItem(ORDERS_CACHE_KEY);
         };
 
         const handleOrderUpdate = (payload) => {
@@ -289,7 +315,8 @@ export const UserDataProvider = ({ children }) => {
 
             ordersRef.current = updatedOrders;
             setUserData(prev => ({ ...prev, orders: updatedOrders }));
-            setCache(ORDERS_CACHE_KEY, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
+            const ordersKey = `${CACHE_KEYS.USER_ORDERS}-${phone}`;
+            setCache(ordersKey, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
 
             window.setTimeout(() => {
                 window.dispatchEvent(new CustomEvent('order-status-updated', {
@@ -323,9 +350,7 @@ export const UserDataProvider = ({ children }) => {
     }, [
         canonicalCustomerId,
         fetchAndCacheUserData,
-        INFO_CACHE_KEY,
         isCustomerLoading,
-        ORDERS_CACHE_KEY,
         phone,
         syncUserDataRefs,
     ]);
@@ -342,7 +367,8 @@ export const UserDataProvider = ({ children }) => {
                 );
                 ordersRef.current = updatedOrders;
                 setUserData(prev => ({ ...prev, orders: updatedOrders }));
-                setCache(ORDERS_CACHE_KEY, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
+                const ordersKey = `${CACHE_KEYS.USER_ORDERS}-${phone}`;
+                setCache(ordersKey, updatedOrders.slice(0, CACHE_LIMITS.RECENT_ORDERS), CACHE_TTL.USER_ORDERS);
 
                 window.dispatchEvent(new CustomEvent('order-status-updated', {
                     detail: {
@@ -350,18 +376,21 @@ export const UserDataProvider = ({ children }) => {
                         status: data.status,
                     },
                 }));
+            } else if (canonicalCustomerId) {
+                // Si la orden no existía en memoria pero pertenece al cliente, refrescar en segundo plano
+                fetchAndCacheUserData(phone, canonicalCustomerId, { background: true });
             }
         };
 
         const unsubscribe = subscribeToStoreBroadcast('order_changed', handleBroadcastOrder);
         const unsubAddress = subscribeToStoreBroadcast('address_updated', (data) => {
             if (!data?.customerId || data.customerId === canonicalCustomerId) {
-                fetchAndCacheUserData(phone, canonicalCustomerId);
+                fetchAndCacheUserData(phone, canonicalCustomerId, { background: true });
             }
         });
         const unsubCustomer = subscribeToStoreBroadcast('customer_updated', (data) => {
             if (!data?.customerId || data.customerId === canonicalCustomerId) {
-                fetchAndCacheUserData(phone, canonicalCustomerId);
+                fetchAndCacheUserData(phone, canonicalCustomerId, { background: true });
             }
         });
 
@@ -370,15 +399,12 @@ export const UserDataProvider = ({ children }) => {
             if (unsubAddress) unsubAddress();
             if (unsubCustomer) unsubCustomer();
         };
-    }, [ORDERS_CACHE_KEY, canonicalCustomerId, fetchAndCacheUserData, phone]);
+    }, [canonicalCustomerId, fetchAndCacheUserData, phone]);
 
     useEffect(() => {
         const reconcileOnFocus = () => {
             if (document.visibilityState !== 'visible' || !phone || !canonicalCustomerId || isCustomerLoading) return;
-            // CustomerContext performs the canonical phone -> UUID reconciliation.
-            // Re-running this effect when its canonical ID changes causes the cache
-            // namespace to be evaluated again before any identity is published.
-            fetchAndCacheUserData(phone, canonicalCustomerId);
+            fetchAndCacheUserData(phone, canonicalCustomerId, { background: true });
         };
 
         document.addEventListener('visibilitychange', reconcileOnFocus);
@@ -398,7 +424,7 @@ export const UserDataProvider = ({ children }) => {
     }, [invalidateIdentityCaches, resetUserData]);
 
     const refetch = useCallback(
-        () => fetchAndCacheUserData(phone, canonicalCustomerId),
+        () => fetchAndCacheUserData(phone, canonicalCustomerId, { background: Boolean(customerRef.current) }),
         [canonicalCustomerId, fetchAndCacheUserData, phone]
     );
 
