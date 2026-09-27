@@ -13,7 +13,9 @@ import {
   Check, 
   Lock, 
   Sparkles,
-  UserCheck
+  UserCheck,
+  Crown,
+  Star
 } from 'lucide-react';
 
 const ProductAudienceModal = memo(({
@@ -21,14 +23,16 @@ const ProductAudienceModal = memo(({
   onClose,
   product,
   categoryName = 'General',
-  onSaveSuccess
+  onSaveSuccess,
+  onAudienceUpdated
 }) => {
   const { showAlert } = useAlert();
   const { data: customersData, isLoading: loadingCustomers } = useCustomersBasicCache();
   const allCustomers = useMemo(() => customersData || [], [customersData]);
 
   // Estados locales
-  const [audienceType, setAudienceType] = useState('public'); // 'public' | 'special'
+  const [audienceType, setAudienceType] = useState('public'); // 'public' | 'tiers' | 'customers'
+  const [selectedTiers, setSelectedTiers] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -40,12 +44,19 @@ const ProductAudienceModal = memo(({
   // Inicializar estado cuando se abre con el producto seleccionado
   useEffect(() => {
     if (isOpen && product) {
-      const hasSpecial = Boolean(
-        product.target_customer_ids && 
-        product.target_customer_ids.length > 0
-      );
-      setAudienceType(hasSpecial ? 'special' : 'public');
-      setSelectedIds(hasSpecial ? [...product.target_customer_ids] : []);
+      if (product.target_customer_tiers && product.target_customer_tiers.length > 0) {
+        setAudienceType('tiers');
+        setSelectedTiers([...product.target_customer_tiers]);
+        setSelectedIds([]);
+      } else if (product.target_customer_ids && product.target_customer_ids.length > 0) {
+        setAudienceType('customers');
+        setSelectedIds([...product.target_customer_ids]);
+        setSelectedTiers([]);
+      } else {
+        setAudienceType('public');
+        setSelectedTiers([]);
+        setSelectedIds([]);
+      }
       setSearchQuery('');
       setIsDropdownOpen(false);
     }
@@ -96,6 +107,12 @@ const ProductAudienceModal = memo(({
     });
   }, [selectedIds, allCustomers]);
 
+  const handleToggleTier = (tier) => {
+    setSelectedTiers(prev => 
+      prev.includes(tier) ? prev.filter(t => t !== tier) : [...prev, tier]
+    );
+  };
+
   const handleAddCustomer = (customer) => {
     if (!selectedIds.includes(customer.id)) {
       setSelectedIds(prev => [...prev, customer.id]);
@@ -110,25 +127,43 @@ const ProductAudienceModal = memo(({
   };
 
   const handleSave = async () => {
-    if (audienceType === 'special' && selectedIds.length === 0) {
-      showAlert('Debes seleccionar al menos un cliente especial o marcar la opción "Público en general".', 'warning');
+    if (audienceType === 'tiers' && selectedTiers.length === 0) {
+      showAlert('Debes seleccionar al menos una categoría (ej. VIP) o marcar la opción "Público en general".', 'warning');
+      return;
+    }
+    if ((audienceType === 'customers' || audienceType === 'special') && selectedIds.length === 0) {
+      showAlert('Debes seleccionar al menos un cliente especial o marcar otra opción.', 'warning');
       return;
     }
 
     setIsSaving(true);
     try {
-      const targetIdsToSave = audienceType === 'public' ? null : selectedIds;
-      await updateProductAudience(product.id, targetIdsToSave);
+      const targetIdsToSave = (audienceType === 'customers' || audienceType === 'special') ? selectedIds : null;
+      const targetTiersToSave = audienceType === 'tiers' ? selectedTiers : null;
 
-      showAlert(
-        audienceType === 'public'
-          ? `El producto "${product.name}" ahora es visible para todo el público.`
-          : `El producto "${product.name}" ahora es exclusivo para ${selectedIds.length} cliente(s).`,
-        'success'
-      );
+      await updateProductAudience(product.id, targetIdsToSave, targetTiersToSave);
 
+      let successMsg = `El producto "${product.name}" ahora es visible para todo el público.`;
+      if (audienceType === 'tiers') {
+        const tierNames = selectedTiers.map(t => t === 'vip' ? 'VIP' : 'Frecuente').join(' y ');
+        successMsg = `El producto "${product.name}" ahora es exclusivo para clientes ${tierNames}.`;
+      } else if (audienceType === 'customers' || audienceType === 'special') {
+        successMsg = `El producto "${product.name}" ahora es exclusivo para ${selectedIds.length} cliente(s).`;
+      }
+
+      showAlert(successMsg, 'success');
+
+      const callbackPayload = {
+        productId: product.id,
+        targetCustomerIds: targetIdsToSave,
+        targetCustomerTiers: targetTiersToSave
+      };
+
+      if (onAudienceUpdated) {
+        onAudienceUpdated(callbackPayload);
+      }
       if (onSaveSuccess) {
-        onSaveSuccess(product.id, targetIdsToSave);
+        onSaveSuccess(product.id, targetIdsToSave, targetTiersToSave);
       }
       onClose();
     } catch (err) {
@@ -185,30 +220,97 @@ const ProductAudienceModal = memo(({
             >
               <div className={styles.radioHeader}>
                 <Globe size={18} />
-                Público en general
+                Público general
               </div>
               <p className={styles.radioDesc}>
-                Cualquier persona puede ver y ordenar este producto en el menú (clientes e invitados).
+                Cualquier persona puede ver y ordenar este producto (clientes e invitados).
               </p>
             </div>
 
-            {/* Opción 2: Clientes especiales */}
+            {/* Opción 2: Categorías de clientes (VIP) */}
             <div 
-              className={`${styles.radioOption} ${audienceType === 'special' ? styles.radioSelectedSpecial : ''}`}
-              onClick={() => setAudienceType('special')}
+              className={`${styles.radioOption} ${audienceType === 'tiers' ? styles.radioSelectedTiers : ''}`}
+              onClick={() => setAudienceType('tiers')}
+            >
+              <div className={styles.radioHeader}>
+                <Crown size={18} style={{ color: '#eab308' }} />
+                Por Categoría (VIP)
+              </div>
+              <p className={styles.radioDesc}>
+                Exclusivo para clientes que pertenecen a una categoría de lealtad (VIP o Frecuente).
+              </p>
+            </div>
+
+            {/* Opción 3: Clientes específicos */}
+            <div 
+              className={`${styles.radioOption} ${(audienceType === 'customers' || audienceType === 'special') ? styles.radioSelectedSpecial : ''}`}
+              onClick={() => setAudienceType('customers')}
             >
               <div className={styles.radioHeader}>
                 <Sparkles size={18} />
-                Clientes especiales
+                Clientes específicos
               </div>
               <p className={styles.radioDesc}>
-                Solo visible para los clientes específicos que selecciones. Queda 100% oculto para los demás.
+                Solo visible para clientes individuales seleccionados a mano.
               </p>
             </div>
           </div>
 
+          {/* SECCIÓN DINÁMICA: SELECCIÓN DE CATEGORÍAS (TIERS) */}
+          {audienceType === 'tiers' && (
+            <div className={styles.tiersSection}>
+              <div className={styles.sectionTitle} style={{ color: '#fde047' }}>
+                <span>Categorías con acceso ({selectedTiers.length})</span>
+                <span style={{ fontSize: '0.75rem', color: '#eab308' }}>
+                  <Lock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                  Acceso exclusivo por lealtad
+                </span>
+              </div>
+
+              <div className={styles.tiersList}>
+                {/* VIP Card */}
+                <div 
+                  className={`${styles.tierCard} ${selectedTiers.includes('vip') ? styles.tierCardActive : ''}`}
+                  onClick={() => handleToggleTier('vip')}
+                >
+                  <div className={styles.tierCardLeft}>
+                    <Crown size={22} className={styles.tierCardIconVip} />
+                    <div>
+                      <div className={styles.tierCardTitle}>Cliente VIP</div>
+                      <div className={styles.tierCardDesc}>
+                        Consumo &gt; $3,000 o &gt; 15 pedidos completados en los últimos 90 días.
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`${styles.tierCheckbox} ${selectedTiers.includes('vip') ? styles.tierCheckboxActive : ''}`}>
+                    {selectedTiers.includes('vip') && <Check size={14} />}
+                  </div>
+                </div>
+
+                {/* Frecuente Card */}
+                <div 
+                  className={`${styles.tierCard} ${selectedTiers.includes('frecuente') ? styles.tierCardActive : ''}`}
+                  onClick={() => handleToggleTier('frecuente')}
+                >
+                  <div className={styles.tierCardLeft}>
+                    <Star size={22} className={styles.tierCardIconFrecuente} />
+                    <div>
+                      <div className={styles.tierCardTitle}>Cliente Frecuente</div>
+                      <div className={styles.tierCardDesc}>
+                        Consumo &gt; $750 o &gt; 3 pedidos completados en los últimos 90 días.
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`${styles.tierCheckbox} ${selectedTiers.includes('frecuente') ? styles.tierCheckboxActive : ''}`}>
+                    {selectedTiers.includes('frecuente') && <Check size={14} />}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* SECCIÓN DINÁMICA: SELECCIÓN DE CLIENTES ESPECIALES */}
-          {audienceType === 'special' && (
+          {(audienceType === 'customers' || audienceType === 'special') && (
             <div className={styles.specialSection}>
               <div className={styles.sectionTitle}>
                 <span>Clientes con acceso exclusivo ({selectedIds.length})</span>

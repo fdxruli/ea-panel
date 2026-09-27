@@ -3,7 +3,7 @@ import React, { memo } from "react";
 import styles from "../pages/Products.module.css";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import ImageWithFallback from './ImageWithFallback';
-import { Camera, Eye, Users, Globe, TrendingUp } from 'lucide-react';
+import { Camera, Eye, Users, Globe, TrendingUp, Crown, Star, Sparkles } from 'lucide-react';
 
 const StarIcon = memo(() => (
   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#ffc107" stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -75,8 +75,26 @@ const ProductCard = memo(({ product, categoryName, onToggle, onEdit, onManageIma
         <ImageWithFallback src={product.image_url || 'https://placehold.co/300x200'} alt={product.name} />
         
         {/* Insignia de Audiencia */}
-        <span className={`${styles.cardAudienceBadge} ${product.is_exclusive ? styles.audienceSpecial : styles.audiencePublic}`}>
-          {product.is_exclusive ? (
+        <span className={`${styles.cardAudienceBadge} ${
+          product.is_vip_exclusive || (product.target_customer_tiers && product.target_customer_tiers.includes('vip'))
+            ? styles.audienceVip
+            : (product.target_customer_tiers && product.target_customer_tiers.length > 0)
+              ? styles.audienceTier
+              : product.is_exclusive
+                ? styles.audienceSpecial
+                : styles.audiencePublic
+        }`}>
+          {product.is_vip_exclusive || (product.target_customer_tiers && product.target_customer_tiers.includes('vip')) ? (
+            <>
+              <Crown size={12} aria-hidden="true" />
+              VIP
+            </>
+          ) : (product.target_customer_tiers && product.target_customer_tiers.length > 0) ? (
+            <>
+              <Star size={12} aria-hidden="true" />
+              {product.target_customer_tiers.map(t => t.toUpperCase()).join(', ')}
+            </>
+          ) : product.is_exclusive ? (
             <>
               <Users size={12} aria-hidden="true" />
               {product.target_customers_count ? `${product.target_customers_count} clientes` : 'Especial'}

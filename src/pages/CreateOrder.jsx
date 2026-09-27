@@ -553,10 +553,12 @@ export default function CreateOrder() {
 
             // 1. Mapear el carrito al formato que espera la RPC ('cart_item[]')
             const p_cart_items = cart.map(item => ({
-                product_id: item.id,
+                product_id: item.id || item.product_id,
                 quantity: item.quantity,
                 price: item.price,
-                cost: item.cost // El 'cost' se guarda al crear el producto
+                cost: item.cost || 0,
+                selected_modifiers: Array.isArray(item.selected_modifiers) ? item.selected_modifiers : [],
+                item_notes: typeof item.item_notes === 'string' && item.item_notes.trim() ? item.item_notes.trim() : null
             }));
 
             console.log('Debug notas:', {

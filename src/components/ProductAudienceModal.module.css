@@ -116,14 +116,14 @@
 
 .radioGroup {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.75rem;
 }
 
 .radioOption {
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: 0.9rem;
   border-radius: 12px;
   border: 2px solid var(--border-color, #334155);
   background-color: var(--bg-primary, #0f172a);
@@ -140,6 +140,11 @@
 .radioSelected {
   border-color: var(--color-primary, #f97316);
   background-color: rgba(249, 115, 22, 0.08);
+}
+
+.radioSelectedTiers {
+  border-color: #eab308;
+  background-color: rgba(234, 179, 8, 0.1);
 }
 
 .radioSelectedSpecial {
@@ -161,14 +166,99 @@
   color: var(--color-primary, #f97316);
 }
 
+.radioSelectedTiers .radioHeader svg {
+  color: #eab308;
+}
+
 .radioSelectedSpecial .radioHeader svg {
   color: #a78bfa;
 }
 
 .radioDesc {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--text-secondary, #94a3b8);
-  line-height: 1.35;
+  line-height: 1.3;
+}
+
+.tiersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem;
+  background-color: var(--bg-primary, #0f172a);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 12px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.tiersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tierCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tierCard:hover {
+  border-color: #eab308;
+}
+
+.tierCardActive {
+  border-color: #eab308;
+  background-color: rgba(234, 179, 8, 0.08);
+}
+
+.tierCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tierCardIconVip {
+  color: #eab308;
+}
+
+.tierCardIconFrecuente {
+  color: #38bdf8;
+}
+
+.tierCardTitle {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary, #f8fafc);
+}
+
+.tierCardDesc {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.tierCheckbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--border-color, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.tierCheckboxActive {
+  background-color: #eab308;
+  border-color: #eab308;
+  color: #0f172a;
 }
 
 .specialSection {

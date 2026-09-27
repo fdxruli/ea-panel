@@ -272,55 +272,75 @@ export default function Cart({ networkState }) {
                     <>
                         <div className={styles.cartBody}>
                             <div className={styles.cartItemsList}>
-                                {cartItems.map(item => (
-                                    <div key={item.id} className={styles.cartItem}>
-                                        <ImageWithFallback
-                                            src={item.image_url}
-                                            alt={item.name}
-                                        />
-                                        <div className={styles.itemInfo}>
-                                            <span className={styles.itemName}>{item.name}</span>
-                                            <div className={styles.itemPriceRow}>
-                                                <span className={styles.itemUnitPrice}>${Number(item.price).toFixed(2)} c/u</span>
-                                                {item.quantity > 1 && (
-                                                    <span className={styles.itemLineTotal}>
-                                                        Total: ${(Number(item.price) * item.quantity).toFixed(2)}
-                                                    </span>
+                                {cartItems.map(item => {
+                                    const itemKey = item.line_id || item.id;
+                                    return (
+                                        <div key={itemKey} className={styles.cartItem}>
+                                            <ImageWithFallback
+                                                src={item.image_url}
+                                                alt={item.name}
+                                            />
+                                            <div className={styles.itemInfo}>
+                                                <span className={styles.itemName}>{item.name}</span>
+                                                {Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0 && (
+                                                    <div className={styles.itemModifiersList}>
+                                                        {item.selected_modifiers.map((mod, idx) => (
+                                                            <span key={`${mod.option_id || mod.name}-${idx}`} className={styles.itemModifierTag}>
+                                                                {mod.name || mod.option_name}
+                                                                {Number(mod.price_delta) !== 0 && (
+                                                                    <small> ({Number(mod.price_delta) > 0 ? `+$${Number(mod.price_delta).toFixed(2)}` : `-$${Math.abs(Number(mod.price_delta)).toFixed(2)}`})</small>
+                                                                )}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 )}
+                                                {item.item_notes && (
+                                                    <p className={styles.itemNoteText}>
+                                                        <em>Nota: {item.item_notes}</em>
+                                                    </p>
+                                                )}
+                                                <div className={styles.itemPriceRow}>
+                                                    <span className={styles.itemUnitPrice}>${Number(item.price).toFixed(2)} c/u</span>
+                                                    {item.quantity > 1 && (
+                                                        <span className={styles.itemLineTotal}>
+                                                            Total: ${(Number(item.price) * item.quantity).toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className={styles.itemActions}>
+                                                {item.quantity === 1 ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFromCart(itemKey)}
+                                                        className={`${styles.quantityButton} ${styles.deleteButton}`}
+                                                        title="Eliminar producto"
+                                                    >
+                                                        <TrashIcon />
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                                                        className={styles.quantityButton}
+                                                        title="Disminuir cantidad"
+                                                    >
+                                                        -
+                                                    </button>
+                                                )}
+                                                <span className={styles.quantityDisplay}>{item.quantity}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => updateQuantity(itemKey, item.quantity + 1)}
+                                                    className={styles.quantityButton}
+                                                    title="Aumentar cantidad"
+                                                >
+                                                    +
+                                                </button>
                                             </div>
                                         </div>
-                                        <div className={styles.itemActions}>
-                                            {item.quantity === 1 ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeFromCart(item.id)}
-                                                    className={`${styles.quantityButton} ${styles.deleteButton}`}
-                                                    title="Eliminar producto"
-                                                >
-                                                    <TrashIcon />
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                    className={styles.quantityButton}
-                                                    title="Disminuir cantidad"
-                                                >
-                                                    -
-                                                </button>
-                                            )}
-                                            <span className={styles.quantityDisplay}>{item.quantity}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                className={styles.quantityButton}
-                                                title="Aumentar cantidad"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 

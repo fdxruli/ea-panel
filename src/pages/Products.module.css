@@ -1345,6 +1345,20 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+.audienceVip {
+  background-color: rgba(202, 138, 4, 0.9);
+  color: #0f172a;
+  border: 1px solid rgba(253, 224, 71, 0.8);
+  font-weight: 800;
+}
+
+.audienceTier {
+  background-color: rgba(14, 165, 233, 0.85);
+  color: #0f172a;
+  border: 1px solid rgba(125, 211, 252, 0.8);
+  font-weight: 800;
+}
+
 .audienceSpecial {
   background-color: rgba(109, 40, 217, 0.85);
   color: #f5f3ff;
@@ -1367,6 +1381,18 @@
   background: rgba(148, 163, 184, 0.12);
   color: var(--text-secondary);
   border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.tableAudienceVip {
+  background: rgba(234, 179, 8, 0.18);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.tableAudienceTier {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
 }
 
 .tableAudienceSpecial {
@@ -1432,6 +1458,11 @@
   background-color: rgba(139, 92, 246, 0.08);
 }
 
+.audienceRadioCardTiersActive {
+  border-color: #eab308;
+  background-color: rgba(234, 179, 8, 0.08);
+}
+
 .audienceRadioTitle {
   font-weight: 700;
   font-size: 1rem;
@@ -1444,6 +1475,10 @@
 
 .audienceRadioCardActive .audienceRadioTitle svg {
   color: var(--color-primary);
+}
+
+.audienceRadioCardTiersActive .audienceRadioTitle svg {
+  color: #eab308;
 }
 
 .audienceRadioCardSpecialActive .audienceRadioTitle svg {
@@ -1558,4 +1593,271 @@
 .audienceChipRemove:hover {
   color: #ef4444;
 }
+
+/* Tiers picker in ProductFormModal */
+.audienceTiersPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem;
+  background-color: var(--bg-primary);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 12px;
+}
+
+.audienceTierRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.audienceTierRow:hover {
+  border-color: #eab308;
+}
+
+.audienceTierRowActive {
+  border-color: #eab308;
+  background-color: rgba(234, 179, 8, 0.08);
+}
+
+/* Modifiers / Complementos Builder */
+.modifiersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0;
+}
+
+.modifierTopBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.addModifierGroupBtn {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.addModifierGroupBtn:hover {
+  background-color: var(--color-primary-dark, #ea580c);
+}
+
+.presetTemplateBtn {
+  background-color: transparent;
+  color: #a78bfa;
+  border: 1px dashed rgba(167, 139, 250, 0.5);
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+
+.presetTemplateBtn:hover {
+  background-color: rgba(167, 139, 250, 0.1);
+  border-color: #a78bfa;
+}
+
+.modifierGroupCard {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modifierGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.modifierGroupNameInput {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.modifierGroupActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modifierRequiredToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.modifierDeleteGroupBtn {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s;
+}
+
+.modifierDeleteGroupBtn:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+.modifierOptionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modifierOptionRow {
+  display: grid;
+  grid-template-columns: 1fr 140px 36px;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.modifierOptionNameInput {
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+
+.modifierOptionPriceWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0 0.5rem;
+}
+
+.modifierOptionPricePrefix {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.modifierOptionPriceInput {
+  width: 100%;
+  padding: 0.45rem 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  text-align: right;
+  outline: none;
+}
+
+.modifierOptionDeleteBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.modifierOptionDeleteBtn:hover {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
+.addOptionBtn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px dashed var(--border-color);
+  color: var(--color-primary);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s;
+}
+
+.addOptionBtn:hover {
+  border-color: var(--color-primary);
+  background-color: rgba(249, 115, 22, 0.08);
+}
+
+.emptyModifiersBox {
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.emptyModifiersTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.emptyModifiersDesc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 420px;
+  line-height: 1.4;
+  margin: 0;
+}
+
 

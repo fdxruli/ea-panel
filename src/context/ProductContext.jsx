@@ -166,13 +166,18 @@ export const ProductProvider = ({ children }) => {
                 if (currentCustomerId) {
                     fallbackQuery = fallbackQuery.or(`target_customer_ids.is.null,target_customer_ids.cs.{"${currentCustomerId}"}`);
                 } else {
-                    fallbackQuery = fallbackQuery.is('target_customer_ids', null);
+                    fallbackQuery = fallbackQuery.is('target_customer_ids', null).is('target_customer_tiers', null);
                 }
                 const fallbackRes = await fallbackQuery;
                 if (fallbackRes.error) throw fallbackRes.error;
                 productsData = (fallbackRes.data || []).map(p => ({
                     ...p,
-                    is_exclusive: Boolean(p.target_customer_ids && p.target_customer_ids.length > 0)
+                    is_exclusive: Boolean(
+                        (p.target_customer_ids && p.target_customer_ids.length > 0) ||
+                        (p.target_customer_tiers && p.target_customer_tiers.length > 0)
+                    ),
+                    is_vip_exclusive: Boolean(p.target_customer_tiers && p.target_customer_tiers.includes('vip')),
+                    modifiers: p.modifiers || []
                 }));
             } else {
                 productsData = productsRpcRes.data || [];

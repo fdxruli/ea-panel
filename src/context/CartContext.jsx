@@ -150,12 +150,13 @@ export const CartProvider = ({ children }) => {
         setCartItems(prevItems => addCartItem(prevItems, product, quantityToAdd));
     }, []);
 
-    const removeFromCart = useCallback((productId) => {
-        setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
+    const removeFromCart = useCallback((key) => {
+        const target = String(key);
+        setCartItems(prevItems => prevItems.filter(item => (item.line_id ? String(item.line_id) !== target : String(item.id) !== target)));
     }, []);
 
-    const updateQuantity = useCallback((productId, quantity) => {
-        setCartItems(prevItems => updateCartQuantity(prevItems, productId, quantity));
+    const updateQuantity = useCallback((key, quantity) => {
+        setCartItems(prevItems => updateCartQuantity(prevItems, key, quantity));
     }, []);
 
     const clearCart = useCallback(() => {

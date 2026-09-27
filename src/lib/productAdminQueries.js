@@ -101,7 +101,10 @@ export const fetchAdminProductsDirectory = async ({
     max_preparable: p.max_preparable !== null && p.max_preparable !== undefined ? Number(p.max_preparable) : null,
     target_customer_ids: p.target_customer_ids || null,
     target_customers_count: Number(p.target_customers_count || 0),
+    target_customer_tiers: p.target_customer_tiers || [],
     is_exclusive: Boolean(p.is_exclusive),
+    is_vip_exclusive: Boolean(p.is_vip_exclusive),
+    modifiers: p.modifiers || [],
     total_count: Number(p.total_count || 0)
   }));
 
@@ -114,14 +117,16 @@ export const fetchAdminProductsDirectory = async ({
  * Actualiza de forma atómica y rápida la audiencia de clientes para un producto.
  * @param {string} productId 
  * @param {string[]|null} targetCustomerIds 
+ * @param {string[]|null} targetCustomerTiers
  * @returns {Promise<boolean>}
  */
-export const updateProductAudience = async (productId, targetCustomerIds = null) => {
+export const updateProductAudience = async (productId, targetCustomerIds = null, targetCustomerTiers = null) => {
   if (!productId) throw new Error('Product ID is required');
 
   const { data, error } = await supabase.rpc('update_product_audience', {
     p_product_id: productId,
-    p_target_customer_ids: targetCustomerIds && targetCustomerIds.length > 0 ? targetCustomerIds : null
+    p_target_customer_ids: targetCustomerIds && targetCustomerIds.length > 0 ? targetCustomerIds : null,
+    p_target_customer_tiers: targetCustomerTiers && targetCustomerTiers.length > 0 ? targetCustomerTiers : null
   });
 
   if (error) {

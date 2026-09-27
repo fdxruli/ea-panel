@@ -141,7 +141,13 @@ export default function OrderDetailPage() {
     const performReorder = (order) => {
         const newCartItems = order.order_items
             .filter(item => item.products)
-            .map(item => ({ ...item.products, quantity: item.quantity }));
+            .map(item => ({
+                ...item.products,
+                price: item.price,
+                quantity: item.quantity,
+                selected_modifiers: Array.isArray(item.selected_modifiers) ? item.selected_modifiers : [],
+                item_notes: item.item_notes || null,
+            }));
 
         replaceCart(newCartItems);
         showToast('¡Pedido añadido al carrito!');
@@ -336,6 +342,23 @@ export default function OrderDetailPage() {
                                                     <span className={styles.productName}>
                                                         {item.products?.name || 'Producto no disponible'}
                                                     </span>
+                                                    {Array.isArray(item.selected_modifiers) && item.selected_modifiers.length > 0 && (
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                                            {item.selected_modifiers.map((mod, mIdx) => (
+                                                                <span key={mIdx} style={{ fontSize: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                    {mod.name || mod.option_name}
+                                                                    {Number(mod.price_delta) !== 0 && (
+                                                                        <strong style={{ color: 'var(--color-primary)' }}> ({Number(mod.price_delta) > 0 ? `+$${Number(mod.price_delta).toFixed(2)}` : `-$${Math.abs(Number(mod.price_delta)).toFixed(2)}`})</strong>
+                                                                    )}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {item.item_notes && (
+                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '2px', display: 'block' }}>
+                                                            Nota: {item.item_notes}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                             <span className={styles.productPrice}>
