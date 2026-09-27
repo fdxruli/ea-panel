@@ -266,12 +266,12 @@ test('flushDraft waits for the immediate persistence write', async () => {
 
 test('debounced saver does not write before the delay and saves the latest value', async () => {
   const saved = [];
-  const saver = createDebouncedDraftSaver(async (value) => { saved.push(value); }, 30);
+  const saver = createDebouncedDraftSaver(async (value) => { saved.push(value); }, 60);
   saver.schedule('first');
   saver.schedule('second');
-  await wait(5);
+  await wait(10);
   assert.deepEqual(saved, []);
-  await wait(40);
+  await wait(80);
   assert.deepEqual(saved, ['second']);
 });
 
