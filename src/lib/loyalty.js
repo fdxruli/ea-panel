@@ -12,9 +12,34 @@ export const LOYALTY_CATEGORY_LABELS = Object.freeze({
 
 const RECENCY_DAYS = 90;
 
-export function calculateLoyaltyCategory({ totalSpent = 0, completedOrders = 0, lastOrderDate = null, now = new Date() }) {
+export function calculateLoyaltyCategory({ totalSpent = 0, completedOrders = 0, lastOrderDate = null, now = new Date(), tiers = [] }) {
     const spent = Number(totalSpent) || 0;
     const orders = Number(completedOrders) || 0;
+
+    // Si se pasan niveles dinámicos configurados
+    if (Array.isArray(tiers) && tiers.length > 0) {
+        const sortedTiers = [...tiers].sort((a, b) => (b.rank_priority || 0) - (a.rank_priority || 0));
+        const defaultTier = sortedTiers.find(t => t.is_default) || { slug: LOYALTY_CATEGORIES.INICIAL };
+
+        if (!lastOrderDate) return defaultTier.slug;
+        const lastOrder = new Date(lastOrderDate);
+        if (Number.isNaN(lastOrder.getTime())) return defaultTier.slug;
+
+        const referenceNow = now instanceof Date ? now : new Date(now);
+        if (Number.isNaN(referenceNow.getTime())) return defaultTier.slug;
+
+        for (const tier of sortedTiers) {
+            if (tier.is_default || !tier.is_active) continue;
+            const period = tier.period_days || RECENCY_DAYS;
+            const recentEnough = lastOrder.getTime() >= referenceNow.getTime() - period * 24 * 60 * 60 * 1000;
+            if (!recentEnough) continue;
+
+            if ((tier.min_spent > 0 && spent >= tier.min_spent) || (tier.min_orders > 0 && orders >= tier.min_orders)) {
+                return tier.slug;
+            }
+        }
+        return defaultTier.slug;
+    }
 
     if (!lastOrderDate) return LOYALTY_CATEGORIES.INICIAL;
 
@@ -32,6 +57,15 @@ export function calculateLoyaltyCategory({ totalSpent = 0, completedOrders = 0, 
     return LOYALTY_CATEGORIES.INICIAL;
 }
 
-export function getLoyaltyCategoryLabel(category) {
-    return LOYALTY_CATEGORY_LABELS[category] || null;
+export function getLoyaltyCategoryLabel(category, customTiers = []) {
+    if (!category) return null;
+    const lower = String(category).toLowerCase();
+    if (LOYALTY_CATEGORY_LABELS[lower]) {
+        return LOYALTY_CATEGORY_LABELS[lower];
+    }
+    if (Array.isArray(customTiers) && customTiers.length > 0) {
+        const found = customTiers.find(t => t.slug === lower);
+        if (found) return found.name;
+    }
+    return `Cliente ${lower.charAt(0).toUpperCase() + lower.slice(1)}`;
 }

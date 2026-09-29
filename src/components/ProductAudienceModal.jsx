@@ -1,6 +1,7 @@
 /* src/components/ProductAudienceModal.jsx */
 import React, { useState, useEffect, useMemo, memo, useRef } from 'react';
 import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
+import { useLoyaltyTiersCache } from '../hooks/useLoyaltyTiersCache';
 import { updateProductAudience } from '../lib/productAdminQueries';
 import { useAlert } from '../context/AlertContext';
 import ImageWithFallback from './ImageWithFallback';
@@ -29,6 +30,8 @@ const ProductAudienceModal = memo(({
   const { showAlert } = useAlert();
   const { data: customersData, isLoading: loadingCustomers } = useCustomersBasicCache();
   const allCustomers = useMemo(() => customersData || [], [customersData]);
+  const { data: loyaltyTiersData } = useLoyaltyTiersCache();
+  const loyaltyTiers = useMemo(() => (loyaltyTiersData || []).filter(t => !t.is_default && t.is_active), [loyaltyTiersData]);
 
   // Estados locales
   const [audienceType, setAudienceType] = useState('public'); // 'public' | 'tiers' | 'customers'
@@ -145,7 +148,10 @@ const ProductAudienceModal = memo(({
 
       let successMsg = `El producto "${product.name}" ahora es visible para todo el público.`;
       if (audienceType === 'tiers') {
-        const tierNames = selectedTiers.map(t => t === 'vip' ? 'VIP' : 'Frecuente').join(' y ');
+        const tierNames = selectedTiers.map(t => {
+          const found = loyaltyTiers.find(lt => lt.slug === t);
+          return found ? found.name : t.toUpperCase();
+        }).join(' y ');
         successMsg = `El producto "${product.name}" ahora es exclusivo para clientes ${tierNames}.`;
       } else if (audienceType === 'customers' || audienceType === 'special') {
         successMsg = `El producto "${product.name}" ahora es exclusivo para ${selectedIds.length} cliente(s).`;
@@ -268,43 +274,47 @@ const ProductAudienceModal = memo(({
               </div>
 
               <div className={styles.tiersList}>
-                {/* VIP Card */}
-                <div 
-                  className={`${styles.tierCard} ${selectedTiers.includes('vip') ? styles.tierCardActive : ''}`}
-                  onClick={() => handleToggleTier('vip')}
-                >
-                  <div className={styles.tierCardLeft}>
-                    <Crown size={22} className={styles.tierCardIconVip} />
-                    <div>
-                      <div className={styles.tierCardTitle}>Cliente VIP</div>
-                      <div className={styles.tierCardDesc}>
-                        Consumo &gt; $3,000 o &gt; 15 pedidos completados en los últimos 90 días.
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`${styles.tierCheckbox} ${selectedTiers.includes('vip') ? styles.tierCheckboxActive : ''}`}>
-                    {selectedTiers.includes('vip') && <Check size={14} />}
-                  </div>
-                </div>
+                {loyaltyTiers.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '0.5rem 0' }}>
+                    No hay categorías o niveles configurados. Puedes crearlos en Clientes.
+                  </p>
+                ) : (
+                  loyaltyTiers.map((tier) => {
+                    const isSelected = selectedTiers.includes(tier.slug);
+                    const tierColor = tier.color || '#eab308';
+                    const criteriaText = tier.benefit_description || 
+                      `Consumo > $${Number(tier.min_spent || 0).toLocaleString('es-MX')} o > ${tier.min_orders} pedidos en los últimos ${tier.period_days || 90} días.`;
 
-                {/* Frecuente Card */}
-                <div 
-                  className={`${styles.tierCard} ${selectedTiers.includes('frecuente') ? styles.tierCardActive : ''}`}
-                  onClick={() => handleToggleTier('frecuente')}
-                >
-                  <div className={styles.tierCardLeft}>
-                    <Star size={22} className={styles.tierCardIconFrecuente} />
-                    <div>
-                      <div className={styles.tierCardTitle}>Cliente Frecuente</div>
-                      <div className={styles.tierCardDesc}>
-                        Consumo &gt; $750 o &gt; 3 pedidos completados en los últimos 90 días.
+                    return (
+                      <div
+                        key={tier.id || tier.slug}
+                        className={`${styles.tierCard} ${isSelected ? styles.tierCardActive : ''}`}
+                        onClick={() => handleToggleTier(tier.slug)}
+                        style={isSelected ? { borderColor: tierColor, background: `${tierColor}18` } : {}}
+                      >
+                        <div className={styles.tierCardLeft}>
+                          {tier.rank_priority >= 100 ? (
+                            <Crown size={22} style={{ color: tierColor }} />
+                          ) : (
+                            <Star size={22} style={{ color: tierColor }} />
+                          )}
+                          <div>
+                            <div className={styles.tierCardTitle}>Cliente {tier.name}</div>
+                            <div className={styles.tierCardDesc}>
+                              {criteriaText}
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className={`${styles.tierCheckbox} ${isSelected ? styles.tierCheckboxActive : ''}`}
+                          style={isSelected ? { backgroundColor: tierColor, borderColor: tierColor } : {}}
+                        >
+                          {isSelected && <Check size={14} />}
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <div className={`${styles.tierCheckbox} ${selectedTiers.includes('frecuente') ? styles.tierCheckboxActive : ''}`}>
-                    {selectedTiers.includes('frecuente') && <Check size={14} />}
-                  </div>
-                </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
