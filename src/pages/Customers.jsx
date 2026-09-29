@@ -17,6 +17,7 @@ import { generateKey } from '../utils/cacheAdminUtils';
 import { fetchCustomerDirectory, fetchCustomerGlobalKPIs, fetchCustomerFavoriteProducts } from '../lib/customerQueries';
 import { subscribeToTables } from '../lib/sharedAdminRealtime';
 import { exportToCSV } from '../utils/exportUtils';
+import CustomerLoyaltyTiersSection from '../components/CustomerLoyaltyTiersSection';
 // --- FIN PASO A ---
 import { CircleCheck, Gift, Info, Star, Trash2, X, Users, DollarSign, TrendingUp, AlertTriangle, ArrowUpDown, Crown, ShoppingBag, Clock, LayoutGrid, Table as TableIcon, Download, Phone, MessageCircle, Package, Repeat, Sparkles } from 'lucide-react';
 
@@ -882,6 +883,7 @@ export default function Customers() {
   const [editingAddress, setEditingAddress] = useState(null);
   const [deletingAddress, setDeletingAddress] = useState(null);
 
+  const [activeMainTab, setActiveMainTab] = useState('directory'); // 'directory' | 'loyalty_tiers'
   const [viewMode, setViewMode] = useState(() => {
     try {
       return localStorage.getItem('admin_customers_view_mode') || 'table';
@@ -1217,12 +1219,12 @@ export default function Customers() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1>Directorio de Clientes</h1>
+          <h1>Clientes y Fidelización</h1>
           <p className={styles.subtitle}>
-            Administración profesional, análisis de consumo y fidelización (CRM)
+            Administración profesional, análisis de consumo y gestión de niveles
           </p>
         </div>
-        {canEdit && (
+        {canEdit && activeMainTab === 'directory' && (
           <button
             className={styles.addButton}
             onClick={() => {
@@ -1235,7 +1237,34 @@ export default function Customers() {
         )}
       </div>
 
-      {/* KPI CARDS */}
+      {/* TABS DE SUB-SECCIÓN */}
+      <div className={styles.mainTabsNav} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMainTab === 'directory'}
+          className={`${styles.mainTabButton} ${activeMainTab === 'directory' ? styles.mainTabButtonActive : ''}`}
+          onClick={() => setActiveMainTab('directory')}
+        >
+          <Users size={16} /> Directorio de Clientes
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMainTab === 'loyalty_tiers'}
+          className={`${styles.mainTabButton} ${activeMainTab === 'loyalty_tiers' ? styles.mainTabButtonActiveVip : ''}`}
+          onClick={() => setActiveMainTab('loyalty_tiers')}
+        >
+          <Crown size={16} style={{ color: activeMainTab === 'loyalty_tiers' ? '#eab308' : 'inherit' }} />
+          Niveles de Clientes
+        </button>
+      </div>
+
+      {activeMainTab === 'loyalty_tiers' ? (
+        <CustomerLoyaltyTiersSection />
+      ) : (
+        <>
+          {/* KPI CARDS */}
       <div className={styles.kpisContainer}>
         <div className={styles.kpiCard}>
           <div className={`${styles.kpiIcon} ${styles.kpiIconBlue}`}>
@@ -1653,6 +1682,8 @@ export default function Customers() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
 
       <CustomerFormModal

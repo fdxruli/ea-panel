@@ -5,8 +5,8 @@ import { useAlert } from "../context/AlertContext";
 import DOMPurify from 'dompurify';
 import imageCompression from "browser-image-compression";
 import styles from "../pages/Products.module.css";
-import LoadingSpinner from "./LoadingSpinner";
 import { useCustomersBasicCache } from "../hooks/useCustomersBasicCache";
+import { useLoyaltyTiersCache } from "../hooks/useLoyaltyTiersCache";
 import { Globe, Sparkles, Search, X, UserCheck, Users, Lock, Crown, Star, Plus, Trash2, Check, Package } from "lucide-react";
 
 // --- Iconos para la Receta ---
@@ -45,6 +45,8 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
     // --- ESTADO PARA AUDIENCIA Y VISIBILIDAD ---
     const { data: customersData, isLoading: loadingCustomers } = useCustomersBasicCache();
     const allCustomers = useMemo(() => customersData || [], [customersData]);
+    const { data: loyaltyTiersData } = useLoyaltyTiersCache();
+    const loyaltyTiers = useMemo(() => (loyaltyTiersData || []).filter(t => !t.is_default && t.is_active), [loyaltyTiersData]);
     const [audienceType, setAudienceType] = useState('public'); // 'public' | 'tiers' | 'customers'
     const [selectedCustomerTiers, setSelectedCustomerTiers] = useState([]);
     const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
@@ -744,65 +746,57 @@ const ProductFormModal = memo(({ isOpen, onClose, onSave, categories, product: i
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                              {/* VIP Row */}
-                              <div
-                                className={`${styles.audienceTierRow} ${selectedCustomerTiers.includes('vip') ? styles.audienceTierRowActive : ''}`}
-                                onClick={() => handleToggleTier('vip')}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                  <Crown size={20} style={{ color: '#eab308' }} />
-                                  <div>
-                                    <div style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>Cliente VIP</div>
-                                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                                      Consumo &gt; $3,000 o &gt; 15 pedidos completados en los últimos 90 días.
-                                    </div>
-                                  </div>
-                                </div>
-                                <div style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  borderRadius: '6px',
-                                  border: '2px solid var(--border-color)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: selectedCustomerTiers.includes('vip') ? '#eab308' : 'transparent',
-                                  borderColor: selectedCustomerTiers.includes('vip') ? '#eab308' : 'var(--border-color)',
-                                  color: '#0f172a'
-                                }}>
-                                  {selectedCustomerTiers.includes('vip') && <Check size={14} />}
-                                </div>
-                              </div>
+                              {loyaltyTiers.length === 0 ? (
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '0.5rem 0' }}>
+                                  No hay niveles de cliente configurados. Puedes crearlos en la sección de Clientes.
+                                </p>
+                              ) : (
+                                loyaltyTiers.map((tier) => {
+                                  const isSelected = selectedCustomerTiers.includes(tier.slug);
+                                  const tierColor = tier.color || '#eab308';
+                                  const criteriaText = tier.benefit_description || 
+                                    `Consumo > $${Number(tier.min_spent || 0).toLocaleString('es-MX')} o > ${tier.min_orders} pedidos en los últimos ${tier.period_days || 90} días.`;
 
-                              {/* Frecuente Row */}
-                              <div
-                                className={`${styles.audienceTierRow} ${selectedCustomerTiers.includes('frecuente') ? styles.audienceTierRowActive : ''}`}
-                                onClick={() => handleToggleTier('frecuente')}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                  <Star size={20} style={{ color: '#38bdf8' }} />
-                                  <div>
-                                    <div style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>Cliente Frecuente</div>
-                                    <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
-                                      Consumo &gt; $750 o &gt; 3 pedidos completados en los últimos 90 días.
+                                  return (
+                                    <div
+                                      key={tier.id || tier.slug}
+                                      className={`${styles.audienceTierRow} ${isSelected ? styles.audienceTierRowActive : ''}`}
+                                      onClick={() => handleToggleTier(tier.slug)}
+                                      style={isSelected ? { borderColor: tierColor, background: `${tierColor}18` } : {}}
+                                    >
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        {tier.rank_priority >= 100 ? (
+                                          <Crown size={20} style={{ color: tierColor }} />
+                                        ) : (
+                                          <Star size={20} style={{ color: tierColor }} />
+                                        )}
+                                        <div>
+                                          <div style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                                            Cliente {tier.name}
+                                          </div>
+                                          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>
+                                            {criteriaText}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '6px',
+                                        border: '2px solid var(--border-color)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backgroundColor: isSelected ? tierColor : 'transparent',
+                                        borderColor: isSelected ? tierColor : 'var(--border-color)',
+                                        color: '#0f172a'
+                                      }}>
+                                        {isSelected && <Check size={14} />}
+                                      </div>
                                     </div>
-                                  </div>
-                                </div>
-                                <div style={{
-                                  width: '20px',
-                                  height: '20px',
-                                  borderRadius: '6px',
-                                  border: '2px solid var(--border-color)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  backgroundColor: selectedCustomerTiers.includes('frecuente') ? '#eab308' : 'transparent',
-                                  borderColor: selectedCustomerTiers.includes('frecuente') ? '#eab308' : 'var(--border-color)',
-                                  color: '#0f172a'
-                                }}>
-                                  {selectedCustomerTiers.includes('frecuente') && <Check size={14} />}
-                                </div>
-                              </div>
+                                  );
+                                })
+                              )}
                             </div>
                           </div>
                         )}
