@@ -346,37 +346,40 @@ export function useCaja() {
           // Si el estado de la caja cambió en otro dispositivo, sincronizar inmediatamente
           await cargarEstadoCaja(true);
         }
-      )
-      .on(
+      );
+
+    const activeCajaId = activeCajaIdRef.current;
+    if (activeCajaId) {
+      channel.on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'cash_movements'
+          table: 'cash_movements',
+          filter: `caja_id=eq.${activeCajaId}`
         },
         async (payload) => {
-          const currentId = activeCajaIdRef.current;
-          if (currentId && payload.new?.caja_id === currentId) {
-            console.log('[useCaja] ⚡ Nuevo movimiento recibido por Realtime:', payload.new);
-            await saveDataSafe(STORES.MOVIMIENTOS_CAJA, payload.new);
-            setMovimientosCaja(prev => {
-              if (prev.some(m => m.id === payload.new.id)) return prev;
-              return [...prev, payload.new];
-            });
-            await cargarEstadoCaja(false);
-          }
+          console.log('[useCaja] ⚡ Nuevo movimiento recibido por Realtime:', payload.new);
+          await saveDataSafe(STORES.MOVIMIENTOS_CAJA, payload.new);
+          setMovimientosCaja(prev => {
+            if (prev.some(m => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+          await cargarEstadoCaja(false);
         }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('[useCaja] 🟢 Conectado a Realtime de Caja');
-        }
-      });
+      );
+    }
+
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('[useCaja] 🟢 Conectado a Realtime de Caja');
+      }
+    });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, canOperateCaja, cargarEstadoCaja]);
+  }, [userId, canOperateCaja, cargarEstadoCaja, cajaActual?.id]);
 
   // ============================================================
   // ABRIR CAJA (Atómico y Seguro con RPC)

@@ -94,6 +94,7 @@ export const subscribeToStoreBroadcast = (eventName, callback) => {
 
 /**
  * Canales dedicados por código de orden para invitados y clientes.
+ * Se gestionan con temporizador de inactividad para evitar memory leaks.
  */
 const orderChannels = new Map();
 
@@ -104,26 +105,53 @@ export const broadcastOrderUpdate = (orderCode, orderData = {}) => {
   if (!orderCode) return;
 
   const channelName = `order-updates:${orderCode}`;
-  let channel = orderChannels.get(orderCode);
+  const payload = { orderCode, ...orderData, timestamp: Date.now() };
 
-  if (!channel) {
-    channel = supabase.channel(channelName, {
-      config: { broadcast: { self: true } },
-    });
-    orderChannels.set(orderCode, channel);
-    channel.subscribe();
+  const sendPayload = (targetChannel) => {
+    try {
+      targetChannel.send({
+        type: 'broadcast',
+        event: 'status_changed',
+        payload,
+      });
+      console.log(`[Broadcast] Actualización de pedido emitida para "${orderCode}":`, orderData);
+    } catch (err) {
+      console.error(`[Broadcast] Error enviando actualización de pedido "${orderCode}":`, err);
+    }
+  };
+
+  const scheduleCleanup = (code) => {
+    const entry = orderChannels.get(code);
+    if (!entry) return;
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => {
+      supabase.removeChannel(entry.channel);
+      orderChannels.delete(code);
+    }, 15000);
+  };
+
+  const existingEntry = orderChannels.get(orderCode);
+  if (existingEntry) {
+    scheduleCleanup(orderCode);
+    sendPayload(existingEntry.channel);
+    return;
   }
 
-  try {
-    channel.send({
-      type: 'broadcast',
-      event: 'status_changed',
-      payload: { orderCode, ...orderData, timestamp: Date.now() },
-    });
-    console.log(`[Broadcast] Actualización de pedido emitida para "${orderCode}":`, orderData);
-  } catch (err) {
-    console.error(`[Broadcast] Error enviando actualización de pedido "${orderCode}":`, err);
-  }
+  const channel = supabase.channel(channelName, {
+    config: { broadcast: { self: true } },
+  });
+
+  orderChannels.set(orderCode, { channel, timer: null });
+
+  channel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      scheduleCleanup(orderCode);
+      sendPayload(channel);
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      supabase.removeChannel(channel);
+      orderChannels.delete(orderCode);
+    }
+  });
 };
 
 /**

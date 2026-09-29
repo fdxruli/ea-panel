@@ -54,6 +54,9 @@ export default function OrderDetailPage() {
                 setError('Pedido no encontrado en tu historial.');
             }
         } else if (orderCode) {
+            let isMounted = true;
+            let guestChannel = null;
+
             const fetchOrderStandalone = async () => {
                 try {
                     setLocalLoading(true);
@@ -63,30 +66,42 @@ export default function OrderDetailPage() {
                         .eq('order_code', orderCode)
                         .maybeSingle();
 
+                    if (!isMounted) return;
                     if (fetchError) throw fetchError;
                     if (!data) throw new Error('Pedido no encontrado.');
 
                     setLocalOrder(data);
 
                     // Suscripción al socket para invitados (Postgres CDC)
-                    const channel = supabase.channel(`guest-order-${data.id}`)
+                    guestChannel = supabase.channel(`guest-order-${data.id}`)
                         .on('postgres_changes',
                             { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${data.id}` },
-                            (payload) => setLocalOrder(prev => ({ ...prev, ...payload.new }))
+                            (payload) => {
+                                if (isMounted) {
+                                    setLocalOrder(prev => ({ ...prev, ...payload.new }));
+                                }
+                            }
                         ).subscribe();
-
-                    return () => {
-                        supabase.removeChannel(channel);
-                    };
                 } catch (_err) {
-                    setError(_err.message);
-                    return null;
+                    if (isMounted) {
+                        setError(_err.message);
+                    }
                 } finally {
-                    setLocalLoading(false);
+                    if (isMounted) {
+                        setLocalLoading(false);
+                    }
                 }
             };
 
             fetchOrderStandalone();
+
+            return () => {
+                isMounted = false;
+                if (unsubBroadcast) unsubBroadcast();
+                if (guestChannel) {
+                    supabase.removeChannel(guestChannel);
+                }
+            };
         }
 
         return () => {
