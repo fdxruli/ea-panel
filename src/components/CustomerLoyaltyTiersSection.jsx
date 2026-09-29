@@ -47,6 +47,8 @@ export default function CustomerLoyaltyTiersSection() {
   const [editingTier, setEditingTier] = useState(null);
   const [deletingTier, setDeletingTier] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingTierId, setTogglingTierId] = useState(null);
 
   // Formulario
   const [formData, setFormData] = useState({
@@ -173,6 +175,8 @@ export default function CustomerLoyaltyTiersSection() {
   };
 
   const handleToggleStatus = async (tier) => {
+    if (togglingTierId) return;
+    setTogglingTierId(tier.id);
     try {
       const nextState = !tier.is_active;
       await toggleLoyaltyTierStatus(tier.id, nextState);
@@ -182,11 +186,14 @@ export default function CustomerLoyaltyTiersSection() {
       await refetch();
     } catch (err) {
       showAlert(`Error al cambiar estado: ${err.message}`, 'error');
+    } finally {
+      setTogglingTierId(null);
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deletingTier) return;
+    if (!deletingTier || isDeleting) return;
+    setIsDeleting(true);
     try {
       await deleteLoyaltyTier(deletingTier.id);
       showAlert(`Nivel "${deletingTier.name}" eliminado correctamente.`, 'success');
@@ -196,6 +203,8 @@ export default function CustomerLoyaltyTiersSection() {
       setDeletingTier(null);
     } catch (err) {
       showAlert(`Error al eliminar: ${err.message}`, 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -399,9 +408,10 @@ export default function CustomerLoyaltyTiersSection() {
                         type="button"
                         className={styles.btnToggle}
                         onClick={() => handleToggleStatus(tier)}
+                        disabled={Boolean(togglingTierId)}
                         title={isActive ? 'Pausar nivel' : 'Activar nivel'}
                       >
-                        <Power size={13} /> {isActive ? 'Pausar' : 'Activar'}
+                        <Power size={13} /> {togglingTierId === tier.id ? 'Cambiando...' : (isActive ? 'Pausar' : 'Activar')}
                       </button>
                     )}
                   </div>
@@ -468,9 +478,13 @@ export default function CustomerLoyaltyTiersSection() {
                         slug: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_')
                       }))}
                       required
-                      disabled={editingTier && (editingTier.slug === 'vip' || editingTier.slug === 'frecuente' || editingTier.slug === 'inicial')}
+                      disabled={Boolean(editingTier)}
                     />
-                    <span className={styles.formHint}>Identificador interno único (minúsculas)</span>
+                    <span className={styles.formHint}>
+                      {editingTier
+                        ? 'El slug no se puede modificar una vez creado para proteger productos asignados.'
+                        : 'Identificador interno único (minúsculas, ej: oro_plus)'}
+                    </span>
                   </div>
                 </div>
 
@@ -655,17 +669,18 @@ export default function CustomerLoyaltyTiersSection() {
               <button
                 type="button"
                 style={{
-                  background: '#ef4444',
+                  background: isDeleting ? '#9ca3af' : '#ef4444',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '8px 16px',
                   fontWeight: 600,
-                  cursor: 'pointer'
+                  cursor: isDeleting ? 'not-allowed' : 'pointer'
                 }}
+                disabled={isDeleting}
                 onClick={handleDeleteConfirm}
               >
-                Sí, Eliminar Nivel
+                {isDeleting ? 'Eliminando...' : 'Sí, Eliminar Nivel'}
               </button>
             </div>
           </div>

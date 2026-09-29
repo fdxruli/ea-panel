@@ -54,14 +54,7 @@ export async function createLoyaltyTier(tierData) {
     updated_at: new Date().toISOString()
   };
 
-  // Si se marca como default, desmarcar los demás
-  if (payload.is_default) {
-    await supabase
-      .from('customer_loyalty_tiers')
-      .update({ is_default: false })
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-  }
-
+  // Nota: La unicidad atómica de is_default está garantizada por el trigger PostgreSQL trg_enforce_single_default_tier
   const { data, error } = await supabase
     .from('customer_loyalty_tiers')
     .insert(payload)
@@ -77,6 +70,7 @@ export async function createLoyaltyTier(tierData) {
 
 /**
  * Actualiza un nivel de lealtad existente.
+ * Nota: El slug se preserva inmutable para proteger integridad en products.target_customer_tiers.
  * @param {string} id
  * @param {Object} tierData
  * @returns {Promise<Object>}
@@ -87,15 +81,7 @@ export async function updateLoyaltyTier(id, tierData) {
   };
 
   if (tierData.name !== undefined) payload.name = tierData.name.trim();
-  if (tierData.slug !== undefined) {
-    payload.slug = tierData.slug
-      .toLowerCase()
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9_-]/g, '_')
-      .replace(/_+/g, '_');
-  }
+  // El slug no se modifica en updates para evitar huérfanos en productos asignados
   if (tierData.min_orders !== undefined) payload.min_orders = Math.max(0, parseInt(tierData.min_orders) || 0);
   if (tierData.min_spent !== undefined) payload.min_spent = Math.max(0, parseFloat(tierData.min_spent) || 0);
   if (tierData.period_days !== undefined) payload.period_days = Math.max(1, parseInt(tierData.period_days) || 90);
@@ -106,12 +92,7 @@ export async function updateLoyaltyTier(id, tierData) {
   if (tierData.is_active !== undefined) payload.is_active = Boolean(tierData.is_active);
   if (tierData.is_default !== undefined) {
     payload.is_default = Boolean(tierData.is_default);
-    if (payload.is_default) {
-      await supabase
-        .from('customer_loyalty_tiers')
-        .update({ is_default: false })
-        .neq('id', id);
-    }
+    // La desmarcación de otros defaults la realiza de forma atómica el trigger trg_enforce_single_default_tier
   }
 
   const { data, error } = await supabase
