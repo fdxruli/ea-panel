@@ -21,18 +21,21 @@ export function calculateLoyaltyCategory({ totalSpent = 0, completedOrders = 0, 
         const sortedTiers = [...tiers].sort((a, b) => (b.rank_priority || 0) - (a.rank_priority || 0));
         const defaultTier = sortedTiers.find(t => t.is_default) || { slug: LOYALTY_CATEGORIES.INICIAL };
 
-        if (!lastOrderDate) return defaultTier.slug;
-        const lastOrder = new Date(lastOrderDate);
-        if (Number.isNaN(lastOrder.getTime())) return defaultTier.slug;
+        if (spent <= 0 && orders <= 0) return defaultTier.slug;
 
         const referenceNow = now instanceof Date ? now : new Date(now);
-        if (Number.isNaN(referenceNow.getTime())) return defaultTier.slug;
+        const lastOrder = lastOrderDate ? new Date(lastOrderDate) : null;
+        const hasValidLastOrder = lastOrder && !Number.isNaN(lastOrder.getTime());
 
         for (const tier of sortedTiers) {
             if (tier.is_default || !tier.is_active) continue;
-            const period = tier.period_days || RECENCY_DAYS;
-            const recentEnough = lastOrder.getTime() >= referenceNow.getTime() - period * 24 * 60 * 60 * 1000;
-            if (!recentEnough) continue;
+
+            // Si hay fecha y el tier exige período, verificar recencia
+            if (hasValidLastOrder && tier.period_days > 0) {
+                const period = tier.period_days || RECENCY_DAYS;
+                const recentEnough = lastOrder.getTime() >= referenceNow.getTime() - period * 24 * 60 * 60 * 1000;
+                if (!recentEnough) continue;
+            }
 
             if ((tier.min_spent > 0 && spent >= tier.min_spent) || (tier.min_orders > 0 && orders >= tier.min_orders)) {
                 return tier.slug;
@@ -41,16 +44,16 @@ export function calculateLoyaltyCategory({ totalSpent = 0, completedOrders = 0, 
         return defaultTier.slug;
     }
 
-    if (!lastOrderDate) return LOYALTY_CATEGORIES.INICIAL;
-
-    const lastOrder = new Date(lastOrderDate);
-    if (Number.isNaN(lastOrder.getTime())) return LOYALTY_CATEGORIES.INICIAL;
+    if (spent <= 0 && orders <= 0) return LOYALTY_CATEGORIES.INICIAL;
 
     const referenceNow = now instanceof Date ? now : new Date(now);
-    if (Number.isNaN(referenceNow.getTime())) return LOYALTY_CATEGORIES.INICIAL;
+    const lastOrder = lastOrderDate ? new Date(lastOrderDate) : null;
+    const hasValidLastOrder = lastOrder && !Number.isNaN(lastOrder.getTime());
 
-    const recentEnough = lastOrder.getTime() >= referenceNow.getTime() - RECENCY_DAYS * 24 * 60 * 60 * 1000;
-    if (!recentEnough) return LOYALTY_CATEGORIES.INICIAL;
+    if (hasValidLastOrder) {
+        const recentEnough = lastOrder.getTime() >= referenceNow.getTime() - RECENCY_DAYS * 24 * 60 * 60 * 1000;
+        if (!recentEnough) return LOYALTY_CATEGORIES.INICIAL;
+    }
 
     if (spent >= 3000 || orders >= 15) return LOYALTY_CATEGORIES.VIP;
     if (spent >= 750 || orders >= 3) return LOYALTY_CATEGORIES.FRECUENTE;
