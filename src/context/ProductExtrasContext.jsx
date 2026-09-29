@@ -196,9 +196,17 @@ export const ProductExtrasProvider = ({ children }) => {
             }
         };
 
-        const channel = supabase.channel('product-extras-listener');
+        const channelName = customerId ? `product-extras-${customerId}` : 'product-extras-global';
+        const channel = supabase.channel(channelName);
         channel.on('postgres_changes', { event: '*', schema: 'public', table: 'product_reviews' }, handleChanges);
-        channel.on('postgres_changes', { event: '*', schema: 'public', table: 'customer_favorites' }, handleChanges);
+        if (customerId) {
+            channel.on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'customer_favorites',
+                filter: `customer_id=eq.${customerId}`
+            }, handleChanges);
+        }
         channel.subscribe();
 
         const unsubReviewsBroadcast = subscribeToStoreBroadcast('reviews_updated', () => {

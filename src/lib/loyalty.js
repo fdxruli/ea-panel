@@ -70,5 +70,5 @@ export function getLoyaltyCategoryLabel(category, customTiers = []) {
         const found = customTiers.find(t => t.slug === lower);
         if (found) return found.name;
     }
-    return `Cliente ${lower.charAt(0).toUpperCase() + lower.slice(1)}`;
+    return null;
 }
