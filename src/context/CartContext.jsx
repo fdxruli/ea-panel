@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useProducts } from './ProductContext';
+import { useSettings } from './SettingsContext';
 import { normalizeCartItems, addCartItem, updateCartQuantity, reconcileCartItems } from '../lib/cartState';
 import { calculateDiscountAmount } from '../lib/discountCalculation';
 
@@ -11,6 +12,8 @@ const CART_STORAGE_KEY = 'ea-panel-cart';
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
+    const { isMaintenanceMode } = useSettings();
+
     // 1. Carga inicial del carrito desde LocalStorage
     const [cartItems, setCartItems] = useState(() => {
         try {
@@ -24,6 +27,13 @@ export const CartProvider = ({ children }) => {
 
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [discount, setDiscount] = useState(null);
+
+    // Cerrar carrito forzosamente si se entra en modo mantenimiento
+    useEffect(() => {
+        if (isMaintenanceMode) {
+            setIsCartOpen(false);
+        }
+    }, [isMaintenanceMode]);
 
     // Notificaciones
     const [cartNotification, setCartNotification] = useState(''); // Para modales de alerta (items eliminados)
@@ -96,6 +106,7 @@ export const CartProvider = ({ children }) => {
 
     // 4. Funciones del carrito
     const applyDiscount = useCallback(async (code, customerId) => {
+        if (isMaintenanceMode) return { success: false, message: 'La tienda se encuentra en modo mantenimiento.' };
         if (!customerId) return { success: false, message: 'Debes iniciar sesión para usar un código.' };
         const upperCaseCode = code.toUpperCase();
         try {
@@ -138,13 +149,16 @@ export const CartProvider = ({ children }) => {
             console.error("Error applying discount:", error);
             return { success: false, message: 'Ocurrió un error inesperado al validar el código.' };
         }
-    }, [calculateDiscount, cartItems]);
+    }, [calculateDiscount, cartItems, isMaintenanceMode]);
 
     const removeDiscount = useCallback(() => setDiscount(null), []);
     const closeCart = useCallback(() => {
         setIsCartOpen(false);
     }, []);
-    const toggleCart = useCallback(() => setIsCartOpen(prev => !prev), []);
+    const toggleCart = useCallback(() => {
+        if (isMaintenanceMode) return;
+        setIsCartOpen(prev => !prev);
+    }, [isMaintenanceMode]);
 
     const addToCart = useCallback((product, quantityToAdd = 1) => {
         setCartItems(prevItems => addCartItem(prevItems, product, quantityToAdd));

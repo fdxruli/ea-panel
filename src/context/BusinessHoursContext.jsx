@@ -4,12 +4,14 @@ import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
 import { subscribeToTables } from '../lib/sharedAdminRealtime';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
+import { useSettings } from './SettingsContext';
 
 const BusinessHoursContext = createContext();
 
 export const useBusinessHours = () => useContext(BusinessHoursContext);
 
 export const BusinessHoursProvider = ({ children }) => {
+    const { isMaintenanceMode } = useSettings();
     const [businessStatus, setBusinessStatus] = useState({
         isOpen: false,
         message: 'Verificando horario...',
@@ -18,6 +20,8 @@ export const BusinessHoursProvider = ({ children }) => {
 
     // --- 👇 MEJORA: Envolvemos en useCallback para consistencia y estabilidad con retry y fallback ---
     const checkBusinessHours = useCallback(async (retryCount = 0) => {
+        if (isMaintenanceMode) return;
+
         try {
             // Llama a la función de Supabase (aquí es donde se genera el mensaje mejorado)
             const { data, error } = await supabase.rpc('get_business_status');
@@ -69,9 +73,18 @@ export const BusinessHoursProvider = ({ children }) => {
                 loading: false,
             }));
         }
-    }, []);
+    }, [isMaintenanceMode]);
 
     useEffect(() => {
+        if (isMaintenanceMode) {
+            setBusinessStatus({
+                isOpen: false,
+                message: '',
+                loading: false
+            });
+            return undefined;
+        }
+
         // 1. Carga inicial desde caché para velocidad
         const { data: cachedStatus } = getCache(CACHE_KEYS.BUSINESS_STATUS, CACHE_TTL.BUSINESS_STATUS);
 
@@ -80,16 +93,16 @@ export const BusinessHoursProvider = ({ children }) => {
         }
 
         // 2. SIEMPRE verifica con el servidor en segundo plano al montar el componente
-        // Esto asegura que si acabas de cerrar, el usuario se entere en milisegundos
-        // aunque su caché diga que está abierto.
         checkBusinessHours();
 
         // 3. Verifica periódicamente
         const interval = setInterval(checkBusinessHours, 60000); // Cada 1 minuto
         return () => clearInterval(interval);
-    }, [checkBusinessHours]);
+    }, [checkBusinessHours, isMaintenanceMode]);
 
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
+
         // Escucha cambios en tiempo real en las tablas de horarios y excepciones vía canal compartido
         const handleChanges = () => {
             console.log('Cambio detectado en los horarios (Shared Realtime / Broadcast), actualizando...');
@@ -104,7 +117,7 @@ export const BusinessHoursProvider = ({ children }) => {
             if (unsubscribeTables) unsubscribeTables();
             if (unsubscribeBroadcast) unsubscribeBroadcast();
         };
-    }, [checkBusinessHours]);
+    }, [checkBusinessHours, isMaintenanceMode]);
 
 
     return (

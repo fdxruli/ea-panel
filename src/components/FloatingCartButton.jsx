@@ -2,17 +2,19 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useUserData } from '../context/UserDataContext';
+import { useSettings } from '../context/SettingsContext';
 import ShoppingCartIcon from '../assets/icons/shopping-cart.svg?react';
 
 export default function FloatingCartButton() {
   const { cartItems, toggleCart, total } = useCart();
   const { customer } = useUserData();
+  const { isMaintenanceMode } = useSettings();
   const location = useLocation();
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const isMenuRoute = location.pathname === '/' || location.pathname.startsWith('/producto/');
 
-  if (!isMenuRoute) {
+  if (isMaintenanceMode || !isMenuRoute) {
     return null;
   }
 

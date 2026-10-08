@@ -67,13 +67,18 @@ export default function ClientLayout() {
   const { isVip } = useLoyalty();
   const [isAddressModalOpen, setAddressModalOpen] = useState(false);
 
-  const { settings, loading: settingsLoading } = useSettings();
+  const {
+    settings,
+    loading: settingsLoading,
+    isMaintenanceMode: contextIsMaintenance,
+    maintenanceMessage: contextMaintenanceMsg
+  } = useSettings();
   const { isOpen: isBusinessOpen, loading: hoursLoading } = useBusinessHours();
 
   const maintenanceSetting = settings.maintenance_mode || { enabled: false };
   const visibilitySettings = settings.client_visibility || EMPTY_VISIBILITY_SETTINGS;
-  const isMaintenanceMode = maintenanceSetting?.enabled === true;
-  const maintenanceMessage = maintenanceSetting?.message;
+  const isMaintenanceMode = contextIsMaintenance ?? (maintenanceSetting?.enabled === true);
+  const maintenanceMessage = contextMaintenanceMsg || maintenanceSetting?.message;
 
   const hasActiveOrders = useMemo(() => {
     return orders?.some(o => ['pendiente', 'en_proceso', 'en_envio'].includes(o.status));
@@ -186,6 +191,42 @@ export default function ClientLayout() {
 
   const openPhoneModal = useCallback(() => setPhoneModalOpen(true), [setPhoneModalOpen]);
   const closeAddressModal = useCallback(() => setAddressModalOpen(false), []);
+
+  if (isMaintenanceMode) {
+    return (
+      <div className="client-layout maintenance-layout">
+        <header className="client-header maintenance-header">
+          <div className="header-content-container" style={{ justifyContent: 'center' }}>
+            <div className="logo" style={{ cursor: 'default' }}>
+              <div className="logo-icon-wrapper">
+                <FlameIcon />
+              </div>
+              <h1>
+                <span className="logo-text-entre">ENTRE</span>
+                <span className="logo-text-alas">ALAS</span>
+              </h1>
+            </div>
+          </div>
+        </header>
+
+        <main className="client-main maintenance-main">
+          <div className="client-content-container">
+            <MaintenancePage message={maintenanceMessage} />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (settingsLoading && !settings.maintenance_mode) {
+    return (
+      <div className="client-layout" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="logo-icon-wrapper" style={{ animation: 'pulse 1.5s infinite ease-in-out' }}>
+          <FlameIcon />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -327,7 +368,7 @@ export default function ClientLayout() {
 
       <main className="client-main">
         <div className="client-content-container">
-          {!settingsLoading && isMaintenanceMode ? <MaintenancePage message={maintenanceMessage} /> : <Outlet />}
+          <Outlet />
         </div>
       </main>
 
