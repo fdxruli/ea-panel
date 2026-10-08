@@ -69,6 +69,27 @@
   flex-shrink: 0;
 }
 
+.network-status-dismiss {
+  margin-left: 0.5rem;
+  background: transparent;
+  border: none;
+  color: currentColor;
+  padding: 3px 5px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.network-status-dismiss:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
 .client-header {
   display: flex;
   justify-content: center;

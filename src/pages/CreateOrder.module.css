@@ -589,4 +589,29 @@
 .discardDraftButton:active {
     background-color: rgba(244, 67, 54, 0.20);
 }
+.draftBannerActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.dismissDraftButton {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.dismissDraftButton:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 193, 7, 0.20);
+}
+
 /* ==================== FIN DRAFT BANNER ==================== */
