@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
+import { useSettings } from './SettingsContext';
 
 const CustomerContext = createContext();
 
@@ -17,6 +18,7 @@ const normalizeCustomer = (customer) => {
 
 
 export const CustomerProvider = ({ children }) => {
+  const { isMaintenanceMode } = useSettings();
   const [phone, setPhone] = useState(() => {
     try {
       return localStorage.getItem(CUSTOMER_PHONE_KEY) || '';
@@ -196,13 +198,18 @@ export const CustomerProvider = ({ children }) => {
       } catch {}
     }
 
+    if (isMaintenanceMode) {
+      if (isMountedRef.current && sessionRestoreIdRef.current === restoreId) setIsCustomerLoading(false);
+      return;
+    }
+
     await fetchActiveTermsIdRef.current?.();
     const canContinueRestore = isMountedRef.current && sessionRestoreIdRef.current === restoreId && localStorage.getItem(CUSTOMER_PHONE_KEY) === savedPhone;
     if (savedPhone && canContinueRestore) {
       await checkAndLoginRef.current?.(savedPhone, { requirePersistedSession: true, restoreId });
     }
     if (isMountedRef.current && sessionRestoreIdRef.current === restoreId) setIsCustomerLoading(false);
-  }, []);
+  }, [isMaintenanceMode]);
 
   useEffect(() => {
     fetchActiveTermsIdRef.current = fetchActiveTermsId;
@@ -210,7 +217,7 @@ export const CustomerProvider = ({ children }) => {
   }, [checkAndLogin, fetchActiveTermsId]);
 
   const reconcileCanonicalCustomer = useCallback(async () => {
-    if (!isMountedRef.current) return;
+    if (isMaintenanceMode || !isMountedRef.current) return;
     const currentPhone = phone || localStorage.getItem(CUSTOMER_PHONE_KEY);
     const currentCustomer = customer;
 
@@ -243,7 +250,7 @@ export const CustomerProvider = ({ children }) => {
     } catch (error) {
       console.warn('[CustomerContext] No se pudo reconciliar la identidad al volver a foco:', error);
     }
-  }, [customer, persistCanonicalCustomer, phone]);
+  }, [customer, isMaintenanceMode, persistCanonicalCustomer, phone]);
 
   useEffect(() => {
     isMountedRef.current = true;

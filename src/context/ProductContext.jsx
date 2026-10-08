@@ -15,6 +15,7 @@ import { createSlug } from '../seo/config';
 import { useAlert } from './AlertContext';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
 import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
+import { useSettings } from './SettingsContext';
 
 const ProductContext = createContext();
 
@@ -58,6 +59,7 @@ const buildSpecialPricesCacheKey = (customerId) => (
 export const useProducts = () => useContext(ProductContext);
 
 export const ProductProvider = ({ children }) => {
+    const { isMaintenanceMode } = useSettings();
     const [baseProducts, setBaseProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [specialPrices, setSpecialPrices] = useState([]);
@@ -144,6 +146,7 @@ export const ProductProvider = ({ children }) => {
     }, []);
 
     const fetchBaseProductsAndCategories = useCallback(async ({ background = false, currentCustomerId = customerId } = {}) => {
+        if (isMaintenanceMode) return null;
         const requestSequence = ++baseFetchSequenceRef.current;
 
         if (!background && isMountedRef.current) {
@@ -219,9 +222,10 @@ export const ProductProvider = ({ children }) => {
                 setLoadingProducts(false);
             }
         }
-    }, [customerId, applyBaseCatalog, persistBaseCatalogCache]);
+    }, [customerId, applyBaseCatalog, persistBaseCatalogCache, isMaintenanceMode]);
 
     const fetchSpecialPrices = useCallback(async (currentCustomerId, { background = false } = {}) => {
+        if (isMaintenanceMode) return null;
         const requestSequence = ++pricesFetchSequenceRef.current;
         const cacheKey = buildSpecialPricesCacheKey(currentCustomerId);
 
@@ -285,9 +289,10 @@ export const ProductProvider = ({ children }) => {
                 setLoadingPrices(false);
             }
         }
-    }, []);
+    }, [isMaintenanceMode]);
 
     const handleBaseChanges = useCallback(() => {
+        if (isMaintenanceMode) return;
         if (baseRealtimeTimerRef.current) {
             clearTimeout(baseRealtimeTimerRef.current);
         }
@@ -298,9 +303,10 @@ export const ProductProvider = ({ children }) => {
             scheduleAlert(baseAlertTimerRef, 'El menu se ha actualizado!', 'info', 0);
             fetchBaseProductsAndCategories({ background: true, currentCustomerId: customerId }).catch(() => { });
         }, BASE_ALERT_DELAY_MS);
-    }, [customerId, fetchBaseProductsAndCategories, scheduleAlert]);
+    }, [customerId, fetchBaseProductsAndCategories, scheduleAlert, isMaintenanceMode]);
 
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
         const baseChannel = supabase.channel('public:products_categories');
 
         baseChannel
@@ -330,9 +336,14 @@ export const ProductProvider = ({ children }) => {
             if (unsubInventoryBroadcast) unsubInventoryBroadcast();
             supabase.removeChannel(baseChannel);
         };
-    }, [handleBaseChanges]);
+    }, [handleBaseChanges, isMaintenanceMode]);
 
     useEffect(() => {
+        if (isMaintenanceMode) {
+            setLoadingProducts(false);
+            return undefined;
+        }
+
         let cancelled = false;
         const catalogCacheKey = `${CACHE_KEYS.PRODUCTS}-${customerId || 'public'}`;
 
@@ -359,10 +370,13 @@ export const ProductProvider = ({ children }) => {
         return () => {
             cancelled = true;
         };
-    }, [customerId, applyBaseCatalog, fetchBaseProductsAndCategories]);
+    }, [customerId, applyBaseCatalog, fetchBaseProductsAndCategories, isMaintenanceMode]);
 
     useEffect(() => {
-        if (loadingProducts) return undefined;
+        if (isMaintenanceMode || loadingProducts) {
+            if (isMaintenanceMode) setLoadingPrices(false);
+            return undefined;
+        }
 
         let cancelled = false;
         const cacheKey = buildSpecialPricesCacheKey(customerId);
@@ -398,9 +412,10 @@ export const ProductProvider = ({ children }) => {
         return () => {
             cancelled = true;
         };
-    }, [customerId, fetchSpecialPrices, loadingProducts]);
+    }, [customerId, fetchSpecialPrices, loadingProducts, isMaintenanceMode]);
 
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
         const reconcileOnFocus = () => {
             if (document.visibilityState !== 'visible' || !isMountedRef.current) return;
             fetchBaseProductsAndCategories({ background: true, currentCustomerId: customerId }).catch(() => { });
@@ -416,9 +431,10 @@ export const ProductProvider = ({ children }) => {
             window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
             window.removeEventListener('online', reconcileOnFocus);
         };
-    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices]);
+    }, [customerId, fetchBaseProductsAndCategories, fetchSpecialPrices, isMaintenanceMode]);
 
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
         const pricesChannel = supabase.channel(`public:special_prices:${customerId || 'global'}`);
 
         const handlePriceChanges = () => {
@@ -460,7 +476,7 @@ export const ProductProvider = ({ children }) => {
             if (unsubDiscountsBroadcast) unsubDiscountsBroadcast();
             supabase.removeChannel(pricesChannel);
         };
-    }, [customerId, fetchSpecialPrices, scheduleAlert]);
+    }, [customerId, fetchSpecialPrices, scheduleAlert, isMaintenanceMode]);
 
     const productsWithAppliedPrices = useMemo(() => {
         if (baseProducts.length === 0) return [];

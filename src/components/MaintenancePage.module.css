@@ -4,19 +4,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh; /* Ocupa toda la altura de la pantalla */
+  min-height: calc(100vh - 65px);
   text-align: center;
-  padding: 2rem;
-  background-color: var(--bg-primary); /* Usa tus variables de color */
+  padding: 2rem 1.5rem;
+  background-color: var(--bg-primary);
   color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 .icon {
-  width: 250px; /* Ajusta el tamaño según necesites */
+  width: 250px;
   height: auto;
   margin-bottom: 2rem;
   max-width: 80%;
-  color: var(--color-primary); /* Puedes darle color al SVG si es adaptable */
+  color: var(--color-primary);
 }
 
 .container h1 {
@@ -30,4 +31,16 @@
   color: var(--text-secondary);
   max-width: 500px;
   line-height: 1.6;
+}
+
+.contactInfo {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+}
+
+.contactInfo a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: underline;
+  word-break: break-all;
 }

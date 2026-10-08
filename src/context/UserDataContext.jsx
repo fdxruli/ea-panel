@@ -11,6 +11,7 @@ import React, {
 import { supabase } from '../lib/supabaseClient';
 import { NETWORK_CONFIRMED_ONLINE_EVENT } from '../lib/networkState';
 import { useCustomer } from './CustomerContext';
+import { useSettings } from './SettingsContext';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL, CACHE_LIMITS } from '../config/cacheConfig';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
@@ -37,6 +38,7 @@ const areValidOrders = (orders, canonicalCustomerId) => (
 );
 
 export const UserDataProvider = ({ children }) => {
+    const { isMaintenanceMode } = useSettings();
     const { phone, customer: canonicalCustomer, isCustomerLoading } = useCustomer();
     const canonicalCustomerId = canonicalCustomer?.id || null;
 
@@ -131,6 +133,10 @@ export const UserDataProvider = ({ children }) => {
     }, []);
 
     const fetchAndCacheUserData = useCallback(async (phoneNumber, expectedCustomerId, { background = false } = {}) => {
+        if (isMaintenanceMode) {
+            setLoading(false);
+            return;
+        }
         const requestId = ++requestIdRef.current;
 
         if (!phoneNumber || !expectedCustomerId) {
@@ -199,6 +205,7 @@ export const UserDataProvider = ({ children }) => {
         fetchOrders,
         invalidateIdentityCaches,
         isCustomerLoading,
+        isMaintenanceMode,
         resetUserData,
         syncUserDataRefs,
     ]);
@@ -208,6 +215,11 @@ export const UserDataProvider = ({ children }) => {
     }, [userData, syncUserDataRefs]);
 
     useEffect(() => {
+        if (isMaintenanceMode) {
+            setLoading(false);
+            return undefined;
+        }
+
         if (isCustomerLoading) {
             if (!initialCache) {
                 setLoading(true);
@@ -267,6 +279,7 @@ export const UserDataProvider = ({ children }) => {
         phone,
         canonicalCustomerId,
         isCustomerLoading,
+        isMaintenanceMode,
         fetchAndCacheUserData,
         initialCache,
         resetUserData,
@@ -274,6 +287,7 @@ export const UserDataProvider = ({ children }) => {
     ]);
 
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
         const customerId = canonicalCustomerId;
         if (!customerId || isCustomerLoading) return undefined;
 
@@ -351,12 +365,15 @@ export const UserDataProvider = ({ children }) => {
         canonicalCustomerId,
         fetchAndCacheUserData,
         isCustomerLoading,
+        isMaintenanceMode,
         phone,
         syncUserDataRefs,
     ]);
 
     // Escuchar broadcast de órdenes para actualización inmediata de clientes
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
+
         const handleBroadcastOrder = (data) => {
             if (!data?.orderCode) return;
             const currentOrders = ordersRef.current || [];
@@ -399,9 +416,11 @@ export const UserDataProvider = ({ children }) => {
             if (unsubAddress) unsubAddress();
             if (unsubCustomer) unsubCustomer();
         };
-    }, [canonicalCustomerId, fetchAndCacheUserData, phone]);
+    }, [canonicalCustomerId, fetchAndCacheUserData, isMaintenanceMode, phone]);
 
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
+
         const reconcileOnFocus = () => {
             if (document.visibilityState !== 'visible' || !phone || !canonicalCustomerId || isCustomerLoading) return;
             fetchAndCacheUserData(phone, canonicalCustomerId, { background: true });
@@ -415,7 +434,7 @@ export const UserDataProvider = ({ children }) => {
             window.removeEventListener(NETWORK_CONFIRMED_ONLINE_EVENT, reconcileOnFocus);
             window.removeEventListener('online', reconcileOnFocus);
         };
-    }, [canonicalCustomerId, fetchAndCacheUserData, isCustomerLoading, phone]);
+    }, [canonicalCustomerId, fetchAndCacheUserData, isCustomerLoading, isMaintenanceMode, phone]);
 
     const logout = useCallback(() => {
         ++requestIdRef.current;

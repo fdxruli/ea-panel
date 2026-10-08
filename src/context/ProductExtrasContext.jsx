@@ -1,7 +1,7 @@
-// src/context/ProductExtrasContext.jsx
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useCustomer } from './CustomerContext';
+import { useSettings } from './SettingsContext';
 import { getCache, setCache } from '../utils/cache';
 import { CACHE_KEYS, CACHE_TTL } from '../config/cacheConfig';
 import { subscribeToStoreBroadcast } from '../lib/broadcastRealtime';
@@ -11,6 +11,7 @@ const ProductExtrasContext = createContext();
 export const useProductExtras = () => useContext(ProductExtrasContext);
 
 export const ProductExtrasProvider = ({ children }) => {
+    const { isMaintenanceMode } = useSettings();
     const { customer: canonicalCustomer } = useCustomer();
     const effectiveCustomerId = canonicalCustomer?.id || null;
 
@@ -50,6 +51,7 @@ export const ProductExtrasProvider = ({ children }) => {
 
     // --- FUNCIÓN PRINCIPAL DE FETCH Y CACHÉ ---
     const fetchAndCacheExtras = useCallback(async (currentCustomerId, options = {}) => {
+        if (isMaintenanceMode) return;
         const { background = false } = options;
 
         if (!background) {
@@ -85,10 +87,15 @@ export const ProductExtrasProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [isMaintenanceMode]);
 
     // --- useEffect para CARGA INICIAL CON STALE-WHILE-REVALIDATE ---
     useEffect(() => {
+        if (isMaintenanceMode) {
+            setLoading(false);
+            return undefined;
+        }
+
         let cancelled = false;
 
         const initializeAndFetch = async () => {
@@ -136,10 +143,12 @@ export const ProductExtrasProvider = ({ children }) => {
         return () => {
             cancelled = true;
         };
-    }, [effectiveCustomerId, fetchAndCacheExtras]);
+    }, [effectiveCustomerId, fetchAndCacheExtras, isMaintenanceMode]);
 
     // --- useEffect para REALTIME CON ACTUALIZACIÓN INCREMENTAL Y BROADCAST ---
     useEffect(() => {
+        if (isMaintenanceMode) return undefined;
+
         const handleChanges = (payload) => {
             if (payload.table === 'product_reviews') {
                 const { eventType, new: newRecord, old: oldRecord } = payload;
@@ -224,7 +233,7 @@ export const ProductExtrasProvider = ({ children }) => {
             if (unsubReviewsBroadcast) unsubReviewsBroadcast();
             if (unsubFavoritesBroadcast) unsubFavoritesBroadcast();
         };
-    }, [customerId, fetchAndCacheExtras]);
+    }, [customerId, fetchAndCacheExtras, isMaintenanceMode]);
 
     const myReviews = useMemo(() => {
         if (!customerId) return [];

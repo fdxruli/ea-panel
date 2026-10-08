@@ -8,7 +8,7 @@ import { useAdminCache } from '../hooks/useAdminCache';
 import { useCacheAdmin } from '../context/CacheAdminContext';
 import { subscribeToTableChanges } from '../lib/sharedAdminRealtime';
 import { broadcastStoreChange } from '../lib/broadcastRealtime';
-import { Info } from 'lucide-react';
+import { Info, AlertTriangle } from 'lucide-react';
 
 const fetchAdminSettings = async () => {
   const [maintenanceResult, visibilityResult] = await Promise.all([
@@ -124,6 +124,18 @@ const MaintenanceModeSection = memo(({
       onChange={onToggle}
       disabled={disabled || saving}
     />
+
+    {maintenanceMode.enabled && (
+      <div className={styles.maintenanceActiveAlert}>
+        <AlertTriangle size={20} className={styles.maintenanceAlertIcon} />
+        <div>
+          <strong>El modo mantenimiento está ACTIVO</strong>
+          <p>
+            Los clientes solo ven la pantalla de mantenimiento. Las consultas de catálogo, productos, horarios y carrito están completamente bloqueadas del lado del cliente.
+          </p>
+        </div>
+      </div>
+    )}
 
     {maintenanceMode.enabled && (
       <div className={styles.messageBox}>
@@ -246,14 +258,14 @@ export default function Settings() {
     try {
       const { error } = await supabase
         .from('settings')
-        .update({ value: maintenanceMode })
+        .update({ value: { enabled: Boolean(maintenanceMode?.enabled), message: maintenanceMode?.message || '' } })
         .eq('key', 'maintenance_mode');
 
       if (error) throw error;
 
       showAlert('Modo mantenimiento guardado exitosamente.');
       invalidate('admin_settings:all');
-      broadcastStoreChange('settings_updated', { key: 'maintenance_mode', value: maintenanceMode });
+      broadcastStoreChange('settings_updated', { key: 'maintenance_mode', value: { enabled: Boolean(maintenanceMode?.enabled), message: maintenanceMode?.message || '' } });
     } catch (error) {
       showAlert(`Error al guardar modo mantenimiento: ${error.message}`);
     } finally {

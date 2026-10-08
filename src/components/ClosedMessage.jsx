@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'; // <-- Import useState and useEffect
 import { useBusinessHours } from '../context/BusinessHoursContext';
+import { useSettings } from '../context/SettingsContext';
 import LoadingSpinner from './LoadingSpinner';
 import FueraHorarioIcon from '../assets/icons/coming-soon1.svg?react';
 import styles from './ClosedMessage.module.css';
 
 const ClosedMessage = () => {
     const { isOpen, message, loading } = useBusinessHours(); // Obtiene el estado y el mensaje del contexto
+    const { isMaintenanceMode } = useSettings();
     // --- NUEVO ESTADO ---
     // Controla si el usuario ha descartado el mensaje en la sesión actual
     const [isVisible, setIsVisible] = useState(true);
@@ -23,6 +25,11 @@ const ClosedMessage = () => {
     const handleCloseOverlay = () => {
         setIsVisible(false); // El usuario descarta el mensaje
     };
+
+    // Si la tienda está en mantenimiento, jamás mostrar el modal de "estamos cerrados"
+    if (isMaintenanceMode) {
+        return null;
+    }
 
     // Aún retorna null si está cargando
     if (loading) {

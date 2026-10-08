@@ -667,3 +667,45 @@
     stroke: currentColor;
   }
 }
+
+/* ============================================
+   MAINTENANCE MODE LAYOUT
+   ============================================ */
+.maintenance-layout {
+  min-height: 100vh;
+  padding-bottom: 0 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.maintenance-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
+}
+
+.maintenance-header .header-content-container {
+  display: flex;
+  justify-content: center !important;
+  align-items: center;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.maintenance-header .logo {
+  grid-column: auto;
+}
+
+.maintenance-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+.maintenance-main .client-content-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+}
+
