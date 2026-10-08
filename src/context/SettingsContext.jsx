@@ -82,6 +82,10 @@ export const SettingsProvider = ({ children }) => {
         };
     }, [cachedSettings, fetchSettings]);
 
+    const getSetting = useCallback((key) => {
+        return settings[key] || null;
+    }, [settings]);
+
     const isMaintenanceMode = Boolean(settings?.maintenance_mode?.enabled);
     const maintenanceMessage = settings?.maintenance_mode?.message || '';
 
