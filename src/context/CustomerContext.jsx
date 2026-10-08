@@ -73,7 +73,7 @@ export const CustomerProvider = ({ children }) => {
       }
       activeTermsIdRef.current = data.id;
       setActiveTermsId(data.id);
-      try { localStorage.setItem('active_terms_id', data.id); } catch {}
+      try { localStorage.setItem('active_terms_id', data.id); } catch (_err) { /* ignore */ }
       return data.id;
     } catch (error) {
       console.error('Error buscando terminos vigentes:', error);
@@ -195,7 +195,9 @@ export const CustomerProvider = ({ children }) => {
           setCustomer(parsed);
           setPhone(savedPhone);
         }
-      } catch {}
+      } catch (_err) {
+        // ignore parse errors
+      }
     }
 
     if (isMaintenanceMode) {
