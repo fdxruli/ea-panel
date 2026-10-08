@@ -52,6 +52,22 @@ const NotificationManager = () => {
   const [syncError, setSyncError] = useState('');
   const [foregroundNotification, setForegroundNotification] = useState(null);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isStatusDismissed, setIsStatusDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('notification_status_dismissed') === 'true';
+    } catch (_err) {
+      return false;
+    }
+  });
+
+  const handleDismissStatus = useCallback(() => {
+    setIsStatusDismissed(true);
+    try {
+      sessionStorage.setItem('notification_status_dismissed', 'true');
+    } catch (_err) {
+      // ignore
+    }
+  }, []);
 
   const pushToast = useCallback((toast) => {
     setForegroundNotification({
@@ -353,13 +369,15 @@ const NotificationManager = () => {
     syncError,
   ]);
 
-  if (!statusCard && !foregroundNotification) {
+  const shouldShowStatusCard = Boolean(statusCard && !isStatusDismissed);
+
+  if (!shouldShowStatusCard && !foregroundNotification) {
     return null;
   }
 
   return (
     <div className={styles.stack} aria-live="polite">
-      {statusCard && (
+      {shouldShowStatusCard && (
         <section className={`${styles.card} ${styles.statusCard}`} role="status">
           <div className={styles.iconWrap}>
             <BellIcon className={styles.icon} />
@@ -381,6 +399,15 @@ const NotificationManager = () => {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            className={styles.dismissButton}
+            onClick={handleDismissStatus}
+            aria-label="Cerrar aviso de notificaciones"
+          >
+            <CloseIcon className={styles.dismissIcon} />
+          </button>
         </section>
       )}
 

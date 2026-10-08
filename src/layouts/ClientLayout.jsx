@@ -94,7 +94,14 @@ export default function ClientLayout() {
     isChecking,
     hasResolvedOnce,
   }), [hasResolvedOnce, isChecking, latencyMs, networkStatus]);
-  const showNetworkBanner = hasResolvedOnce && networkStatus !== NETWORK_STATUS.ONLINE;
+
+  const [isNetworkBannerDismissed, setIsNetworkBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    setIsNetworkBannerDismissed(false);
+  }, [networkStatus]);
+
+  const showNetworkBanner = hasResolvedOnce && networkStatus !== NETWORK_STATUS.ONLINE && !isNetworkBannerDismissed;
   const isOffline = networkStatus === NETWORK_STATUS.OFFLINE;
   const networkBannerMessage = isOffline
     ? 'Viendo menú guardado. Precios y disponibilidad pueden variar.'
@@ -268,6 +275,17 @@ export default function ClientLayout() {
             )}
             <span className="network-status-badge">{networkBannerLabel}</span>
             <span>{networkBannerMessage}</span>
+            <button
+              type="button"
+              className="network-status-dismiss"
+              onClick={() => setIsNetworkBannerDismissed(true)}
+              aria-label="Cerrar aviso de red"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
           </div>
         )}
 

@@ -18,12 +18,28 @@ import RestockSuggestions from '../components/dashboard/RestockSuggestion';
 
 import { loadData, STORES } from '../services/database';
 import { useFeatureConfig } from '../hooks/useFeatureConfig';
-import { ArrowRight, HardDriveDownload, Package } from 'lucide-react';
+import { ArrowRight, HardDriveDownload, Package, X } from 'lucide-react';
 import './DashboardPage.css';
 
 export default function DashboardPage() {
   const [customers, setCustomers] = useState([]);
   const [activeTab, setActiveTab] = useState('stats');
+  const [showDataWarning, setShowDataWarning] = useState(() => {
+    try {
+      return sessionStorage.getItem('dashboard_data_warning_dismissed') !== 'true';
+    } catch (_err) {
+      return true;
+    }
+  });
+
+  const handleDismissDataWarning = () => {
+    setShowDataWarning(false);
+    try {
+      sessionStorage.setItem('dashboard_data_warning_dismissed', 'true');
+    } catch (_err) {
+      // ignore
+    }
+  };
   const navigate = useNavigate();
   const features = useFeatureConfig();
 
@@ -137,9 +153,10 @@ export default function DashboardPage() {
       {/* PESTAÑA: HISTORIAL Y PAPELERA */}
       {activeTab === 'history' && (
         <>
-          <div className="data-warning-banner">
+          {showDataWarning && (
+            <div className="data-warning-banner">
             <span className="data-warning-icon"><HardDriveDownload size={24} aria-hidden="true" /></span>
-            <div>
+            <div className="data-warning-content">
               <strong>Importante: Tus datos viven en este dispositivo.</strong>
               <p style={{ margin: '4px 0 0 0' }}>
                 Lanzo POS guarda toda la información en el navegador. Si borras el historial o las "cookies", podrías perder tus registros.
@@ -162,7 +179,17 @@ export default function DashboardPage() {
                 </button>
               </p>
             </div>
-          </div>
+              <button
+                type="button"
+                className="data-warning-dismiss"
+                onClick={handleDismissDataWarning}
+                aria-label="Cerrar aviso de seguridad"
+                title="Cerrar aviso"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+          )}
           <div className="dashboard-grid-condensed">
             <SalesHistory sales={sales} onDeleteSale={deleteSale} />
             <RecycleBin items={deletedItems} onRestoreItem={restoreItem} />

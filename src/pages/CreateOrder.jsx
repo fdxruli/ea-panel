@@ -17,7 +17,7 @@ import { useCustomersBasicCache } from '../hooks/useCustomersBasicCache';
 import { useCaja } from '../hooks/useCaja';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { showMessageModal } from '../services/utils';
-import { ArrowLeft, ClipboardList, FileText, LockKeyhole } from 'lucide-react';
+import { ArrowLeft, ClipboardList, FileText, LockKeyhole, X } from 'lucide-react';
 // --- FIN PASO A ---
 
 // ==================== ICONOS MEMOIZADOS (Sin cambios) ====================
@@ -686,13 +686,24 @@ export default function CreateOrder() {
                     <span className={styles.draftBannerText}>
                         <FileText size={17} aria-hidden="true" /> Borrador recuperado automáticamente
                     </span>
-                    <button
-                        type="button"
-                        className={styles.discardDraftButton}
-                        onClick={handleDiscardDraft}
-                    >
-                        Descartar / Empezar pedido nuevo
-                    </button>
+                    <div className={styles.draftBannerActions}>
+                        <button
+                            type="button"
+                            className={styles.discardDraftButton}
+                            onClick={handleDiscardDraft}
+                        >
+                            Descartar / Empezar pedido nuevo
+                        </button>
+                        <button
+                            type="button"
+                            className={styles.dismissDraftButton}
+                            onClick={() => setIsDraftRestored(false)}
+                            aria-label="Cerrar aviso de borrador"
+                            title="Mantener borrador y cerrar aviso"
+                        >
+                            <X size={16} aria-hidden="true" />
+                        </button>
+                    </div>
                 </div>
             )}
 

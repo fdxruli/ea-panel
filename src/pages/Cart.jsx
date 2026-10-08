@@ -73,6 +73,7 @@ export default function Cart({ networkState }) {
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDiscountVisible, setDiscountVisible] = useState(false);
     const [isClearModalOpen, setClearModalOpen] = useState(false);
+    const [isWelcomeBannerDismissed, setIsWelcomeBannerDismissed] = useState(false);
     const [availableCoupons, setAvailableCoupons] = useState([]);
     const [loadingCoupons, setLoadingCoupons] = useState(false);
     const closeTimerRef = useRef(null);
@@ -345,31 +346,42 @@ export default function Cart({ networkState }) {
                         </div>
 
                         <div className={styles.cartFooter}>
-                            {welcomeCode && !discount && (
+                            {welcomeCode && !discount && !isWelcomeBannerDismissed && (
                                 <div className={styles.welcomeDiscountBanner}>
                                     <div className={styles.welcomeDiscountText}>
                                         🍗 Cupón de bienvenida disponible: <strong>{welcomeCode}</strong>
                                     </div>
-                                    {customer?.id ? (
+                                    <div className={styles.welcomeDiscountActions}>
+                                        {customer?.id ? (
+                                            <button
+                                                type="button"
+                                                className={styles.applyWelcomeButton}
+                                                onClick={() => handleApplyWelcomeCode(welcomeCode)}
+                                            >
+                                                Aplicar
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className={styles.applyWelcomeButton}
+                                                onClick={() => {
+                                                    handleClose();
+                                                    setPhoneModalOpen(true);
+                                                }}
+                                            >
+                                                Iniciar Sesión
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
-                                            className={styles.applyWelcomeButton}
-                                            onClick={() => handleApplyWelcomeCode(welcomeCode)}
+                                            className={styles.dismissWelcomeButton}
+                                            onClick={() => setIsWelcomeBannerDismissed(true)}
+                                            aria-label="Cerrar aviso de cupón"
+                                            title="Cerrar aviso"
                                         >
-                                            Aplicar
+                                            ✕
                                         </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            className={styles.applyWelcomeButton}
-                                            onClick={() => {
-                                                handleClose();
-                                                setPhoneModalOpen(true);
-                                            }}
-                                        >
-                                            Iniciar Sesión
-                                        </button>
-                                    )}
+                                    </div>
                                 </div>
                             )}
 
